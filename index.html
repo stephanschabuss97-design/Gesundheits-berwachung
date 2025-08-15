@@ -544,19 +544,42 @@ function dl(filename, content, mime){
   URL.revokeObjectURL(a.href);
 }
 
-// webhook sync
+// webhook sync (Supabase REST: braucht Authorization + apikey)
 async function syncWebhook(entry){
   const url = await getConf("webhookUrl");
-  if(!url) return;
-  const key = await getConf("webhookKey");
+  if (!url) return;
+
+  let key = await getConf("webhookKey"); // evtl. mit "Bearer "
+  if (!key) return;
+
+  // für Authorization immer "Bearer <key>" erzeugen,
+  // für "apikey" denselben Key ohne "Bearer " verwenden
+  const authHeader = key.startsWith("Bearer ") ? key : `Bearer ${key}`;
+  const apiKey     = key.replace(/^Bearer\s+/i, "");
+
   try{
-    await fetch(url, {
-      method:"POST",
-      headers: {"Content-Type":"application/json", ...(key?{"Authorization":key}:{})},
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "apikey": apiKey,
+        // Optional: gib das eingefügte Row zurück (hilfreich fürs Debuggen)
+        "Prefer": "return=representation"
+      },
       body: JSON.stringify(entry)
     });
-  }catch(e){
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.warn("Webhook failed", res.status, txt);
+      diag.add(`Webhook-Fehler ${res.status}: ${txt.slice(0,120)}`);
+    } else {
+      diag.add("Webhook: OK");
+    }
+  } catch (e){
     console.warn("Webhook sync failed", e);
+    diag.add("Webhook: Netzwerkfehler");
   }
 }
 
