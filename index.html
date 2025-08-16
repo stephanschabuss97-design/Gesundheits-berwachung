@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V0.8 – Liste Befunde + deleteRemoteBefund)</title>
+<title>Gesundheits-Logger (V0.9 – Arzt-Ansicht: Daily/Befunde + Diagramm)</title>
 <style>
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
@@ -45,7 +45,7 @@
 
   @media print{
     body{background:white;color:black}
-    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart {display:none !important}
+    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports {display:none !important}
     #doctorCard{border:none;box-shadow:none}
     #doctorTitle{font-size:18px;margin-bottom:10px}
     #doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
@@ -67,30 +67,27 @@
   .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
   /* Tabellen */
-/* --- Daily-Tabelle (#tblhealt) --- */
-#tbl{width:100%; border-collapse:separate; border-spacing:0 8px;}
-#tbl thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
-#tbl th, #tbl td{padding:14px 12px; font-size:14px; vertical-align:top;}
-#tbl tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-#tbl tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-#tbl tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-#tbl td.center, #tbl th.center{ text-align:center; white-space:nowrap; }
-#tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
-#tbl td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+  /* --- Daily-Tabelle (#tblhealth) --- */
+  #tbl{width:100%; border-collapse:separate; border-spacing:0 8px;}
+  #tbl thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
+  #tbl th, #tbl td{padding:14px 12px; font-size:14px; vertical-align:top;}
+  #tbl tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+  #tbl tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+  #tbl tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+  #tbl td.center, #tbl th.center{ text-align:center; white-space:nowrap; }
+  #tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
+  #tbl td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
 
-/* --- Befund-Tabelle wie Daily (#tblReports) --- */
-#tblReports{width:100%; border-collapse:separate; border-spacing:0 8px;}
-#tblReports thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
-#tblReports th, #tblReports td{padding:14px 12px; font-size:14px; vertical-align:top;}
-#tblReports tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-#tblReports tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-#tblReports tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-
-/* Helferklassen auch für #tblReports anwenden (wie bei #tbl) */
-#tblReports td.center, #tblReports th.center{ text-align:center; white-space:nowrap; }
-#tblReports td.nowrap, #tblReports th.nowrap{ white-space:nowrap; }
-#tblReports td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
-
+  /* --- Befund-Tabellen (#tblReports / #doctorReportsTable) --- */
+  #tblReports, #doctorReportsTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
+  #tblReports thead th, #doctorReportsTable thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
+  #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
+  #tblReports tbody tr td, #doctorReportsTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+  #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+  #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+  #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center{ text-align:center; white-space:nowrap; }
+  #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
+  #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
 
   #doctorTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
   #doctorTable th, #doctorTable td{padding:12px 10px;}
@@ -100,12 +97,20 @@
 
   .blockTitle{font-weight:800;margin:0 0 8px 0}
 
-  /* Chart panel */
+  /* Chart panel (Daily) */
   #chart .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
   #chart .controls > * {flex:1}
   #chart .controls .half{flex:0 0 calc(50% - 4px)}
   #chart svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
   #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+
+  /* Chart panel (Befunde) */
+  #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  #chartReports .controls > * {flex:1}
+  #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
+  #chartReports svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
+  #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
 
   /* Busy overlay */
@@ -122,7 +127,7 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V0.8</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V0.9</span>
     <div class="spacer"></div>
     <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
     <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -160,10 +165,10 @@
   <pre id="diagLog" class="content" style="margin:0"></pre>
 </div>
 
-<!-- Diagramm-Panel -->
+<!-- Diagramm-Panel (Daily) -->
 <div id="chart" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
   <header>
-    <h4 id="chartTitle">Diagramm</h4>
+    <h4 id="chartTitle">Diagramm (Daily)</h4>
     <button class="btn ghost" id="chartClose" type="button">×</button>
   </header>
   <div class="content">
@@ -181,6 +186,32 @@
     </div>
     <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
     <div class="legend" id="chartLegend"></div>
+    <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+  </div>
+</div>
+
+<!-- Diagramm-Panel (Befunde) -->
+<div id="chartReports" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartReportsTitle">
+  <header>
+    <h4 id="chartReportsTitle">Diagramm (Befunde)</h4>
+    <button class="btn ghost" id="chartReportsClose" type="button">×</button>
+  </header>
+  <div class="content">
+    <div class="controls">
+      <select id="reportMetricSel" class="half">
+        <option value="kreatinin">Kreatinin (mg/dL)</option>
+        <option value="egfr">eGFR (ml/min/1.73m²)</option>
+        <option value="uacr">uACR (mg/g)</option>
+        <option value="kalium">Kalium (mmol/L)</option>
+      </select>
+      <label class="half" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="reportSmoothChk"> Glätten
+      </label>
+      <button class="btn ghost half" id="refreshReportChart" type="button">Neu zeichnen</button>
+      <button class="btn ghost half" id="saveReportPng" type="button">PNG speichern</button>
+    </div>
+    <svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Befund-Verlauf"></svg>
+    <div class="legend" id="chartReportsLegend"></div>
     <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
   </div>
 </div>
@@ -343,21 +374,19 @@
 
       <!-- Wrapper Befunde -->
       <div style="overflow:auto" id="listReportWrap" class="hidden">
-<table id="tblReports">
-  <thead>
-    <tr>
-      <th class="nowrap">Datum</th>
-      <th class="center">Kreatinin</th>
-      <th class="center">eGFR</th>
-      <th class="center">uACR</th>
-      <th class="center">Kalium</th>
-      <th>Kommentar</th>
-      <th class="center">Cloud</th>
-      <th class="nowrap">Aktion</th>
-
-    </tr>
-  </thead>
-
+        <table id="tblReports">
+          <thead>
+            <tr>
+              <th class="nowrap">Datum</th>
+              <th class="center">Kreatinin</th>
+              <th class="center">eGFR</th>
+              <th class="center">uACR</th>
+              <th class="center">Kalium</th>
+              <th>Kommentar</th>
+              <th class="center">Cloud</th>
+              <th class="nowrap">Aktion</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -386,14 +415,24 @@
   <section class="view" id="doctor">
     <section class="card" id="doctorCard">
       <div class="toolbar">
-        <strong id="doctorTitle">Arzt-Ansicht • Daily</strong>
+        <strong id="doctorTitle">Arzt-Ansicht</strong>
         <div class="spacer"></div>
+
+        <!-- Segmented Control: Doctor -->
+        <div class="seg" id="seg-doctor" style="margin:0">
+          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
+          <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
+        </div>
+
         <label class="small">Von <input type="date" id="from" style="width:auto"></label>
         <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
         <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
         <button class="btn ghost" id="printBtn" type="button">Drucken</button>
       </div>
-      <div style="overflow:auto">
+
+      <!-- Wrapper: Daily -->
+      <div style="overflow:auto" id="doctorDailyWrap">
         <table id="doctorTable">
           <thead>
             <tr>
@@ -416,7 +455,25 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="small" style="margin-top:6px">Hinweis: Befund-Ansicht für den Arzt kommt als nächstes (separater Toggle).</div>
+
+      <!-- Wrapper: Befunde -->
+      <div style="overflow:auto" id="doctorReportWrap" class="hidden">
+        <table id="doctorReportsTable">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th class="center">Kreatinin</th>
+              <th class="center">eGFR</th>
+              <th class="center">uACR</th>
+              <th class="center">Kalium</th>
+              <th>Kommentar</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
     </section>
   </section>
 </main>
@@ -437,7 +494,7 @@ window.addEventListener('error', function(e){
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
     const close=document.getElementById('diagClose');
@@ -466,8 +523,8 @@ const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).
 const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); return d.toISOString().slice(0,10); };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
-function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
 function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -611,7 +668,7 @@ function deleteReportLocal(id){
 async function getHeaders(){
   const key = await getConf("webhookKey");
   if(!key) return null;
-  const apiKey = key.replace(/^Bearer\s+/i,"");
+  const apiKey = key.replace(/^Bearer\\s+/i,"");
   const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : `Bearer ${apiKey}`;
   return {
     "Content-Type":"application/json",
@@ -695,7 +752,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -715,7 +772,7 @@ function toCSV(entries){
       e.remote_id ?? ""
     ];
   });
-  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\n]/.test(v)) ? `"${v.replace(/"/g,'""')}"` : v).join(","))].join("\n");
+  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\\n]/.test(v)) ? \`"\${v.replace(/"/g,'""')}"\` : v).join(","))].join("\\n");
   return csv;
 }
 function dl(filename, content, mime){
@@ -750,36 +807,36 @@ function renderTable(entries){
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
-      const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
+      const zeitLabel = e.context === "Morgen" ? \`\${e.time} (Morgens)\` : e.context === "Abend" ? \`\${e.time} (Abends)\` : e.time;
       const synced = e.remote_id ? "☁️" : "";
 
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="nowrap">${e.date}</td>
-        <td class="nowrap">${zeitLabel}</td>
-        <td>${art}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="center">${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td class="center">${e.training ? "Ja" : ""}</td>
-        <td class="center">${e.low_intake ? "Ja" : ""}</td>
-        <td class="center">${e.sick ? "Ja" : ""}</td>
-        <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-        <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-        <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-        <td class="center">${synced}</td>
+      tr.innerHTML = \`
+        <td class="nowrap">\${e.date}</td>
+        <td class="nowrap">\${zeitLabel}</td>
+        <td>\${art}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td class="notes">\${nl2br(notesText)}</td>
+        <td class="center">\${e.training ? "Ja" : ""}</td>
+        <td class="center">\${e.low_intake ? "Ja" : ""}</td>
+        <td class="center">\${e.sick ? "Ja" : ""}</td>
+        <td class="center">\${e.valsartan_missed ? "Ja" : ""}</td>
+        <td class="center">\${e.forxiga_missed ? "Ja" : ""}</td>
+        <td class="center">\${e.nsar_taken ? "Ja" : ""}</td>
+        <td class="center">\${synced}</td>
         <td>
-          <button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button>
+          <button class="btn ghost" data-del="\${e.id}" data-remote="\${e.remote_id ?? ''}">Löschen</button>
         </td>
-      `;
+      \`;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
+    tr.innerHTML = \`<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>\`;
     tbody.appendChild(tr);
   }
 
@@ -827,24 +884,22 @@ async function loadAndRenderReports(){
     .forEach(r=>{
       const synced = r.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
-tr.innerHTML = `
-  <td class="nowrap">${r.datum || ""}</td>
-  <td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-  <td class="center">${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
-  <td class="center">${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
-  <td class="center">${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
-  <td class="notes">${nl2br(r.kommentar || "")}</td>
-  <td class="center">${synced}</td>
-  <td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
-`;
-
-
+      tr.innerHTML = \`
+        <td class="nowrap">\${r.datum || ""}</td>
+        <td class="center">\${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+        <td class="center">\${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
+        <td class="center">\${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
+        <td class="center">\${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
+        <td class="notes">\${nl2br(r.kommentar || "")}</td>
+        <td class="center">\${synced}</td>
+        <td><button class="btn ghost" data-delrep="\${r.id}" data-remote="\${r.remote_id ?? ''}">Löschen</button></td>
+      \`;
       tbody.appendChild(tr);
     });
 
   if(!tbody.children.length){
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
+    tr.innerHTML=\`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>\`;
     tbody.appendChild(tr);
   }
 
@@ -896,27 +951,61 @@ async function renderDoctor(){
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${e.date}</td>
-        <td>${e.time}</td>
-        <td>${art}</td>
-        <td>${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td>${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td>${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td>${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td>${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td>${e.low_intake ? "Ja" : ""}</td>
-        <td>${e.sick ? "Ja" : ""}</td>
-        <td>${e.valsartan_missed ? "Ja" : ""}</td>
-        <td>${e.forxiga_missed ? "Ja" : ""}</td>
-        <td>${e.nsar_taken ? "Ja" : ""}</td>
-      `;
+      tr.innerHTML = \`
+        <td>\${e.date}</td>
+        <td>\${e.time}</td>
+        <td>\${art}</td>
+        <td>\${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td>\${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td>\${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td>\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td>\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="notes">\${nl2br(notesText)}</td>
+        <td>\${e.low_intake ? "Ja" : ""}</td>
+        <td>\${e.sick ? "Ja" : ""}</td>
+        <td>\${e.valsartan_missed ? "Ja" : ""}</td>
+        <td>\${e.forxiga_missed ? "Ja" : ""}</td>
+        <td>\${e.nsar_taken ? "Ja" : ""}</td>
+      \`;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="14" class="small" style="text-align:center;opacity:.7">Keine Einträge im Zeitraum</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+/* ===== Doctor view (Befunde) ===== */
+async function renderDoctorReports(){
+  const tbody = $("#doctorReportsTable tbody");
+  tbody.innerHTML = "";
+  const from = $("#from").value;
+  const to = $("#to").value;
+  const reports = await getAllReports();
+  reports
+    .filter(r=>{
+      if (!r.datum) return false;
+      if (from && r.datum < from) return false;
+      if (to && r.datum > to) return false;
+      return true;
+    })
+    .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()))
+    .forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = \`
+        <td class="nowrap">\${r.datum || ""}</td>
+        <td class="center">\${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+        <td class="center">\${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
+        <td class="center">\${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
+        <td class="center">\${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
+        <td class="notes">\${nl2br(r.kommentar || "")}</td>
+      \`;
+      tbody.appendChild(tr);
+    });
+  if (!tbody.children.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="6" class="small" style="text-align:center;opacity:.7">Keine Befunde im Zeitraum</td>`;
     tbody.appendChild(tr);
   }
 }
@@ -976,8 +1065,8 @@ const chartPanel = {
 
     const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
     const innerW=W-PL-PR, innerH=H-PT-PB;
-    const xmin = Math.min(...xs.filter(Boolean));
-    const xmax = Math.max(...xs.filter(Boolean));
+    const xVals = xs.filter(Boolean);
+    const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
     const allY = series.flatMap(s => s.values.filter(v=>v!=null));
     const ymin = Math.min(...allY);
     const ymax = Math.max(...allY);
@@ -1045,7 +1134,148 @@ const chartPanel = {
       canvas.toBlob(blob=>{
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `diagramm_${new Date().toISOString().slice(0,10)}.png`;
+        a.download = `diagramm_daily_${new Date().toISOString().slice(0,10)}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      },"image/png");
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+};
+
+/* ===== Simple SVG Chart (Befunde) ===== */
+const chartReportsPanel = {
+  el:null, svg:null, legend:null, open:false,
+  init(){
+    this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
+    $("#chartReportsClose").addEventListener("click", ()=>this.hide(), {passive:true});
+    $("#refreshReportChart").addEventListener("click", ()=> this.draw(), {passive:true});
+    $("#saveReportPng").addEventListener("click", ()=> this.savePNG(), {passive:true});
+    $("#reportMetricSel").addEventListener("change", ()=> this.draw(), {passive:true});
+    $("#reportSmoothChk").addEventListener("change", ()=> this.draw(), {passive:true});
+  },
+  toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
+  hide(){ this.open=false; this.el.style.display='none'; },
+  async getFiltered(){
+    const reps = await getAllReports();
+    const from = $("#from").value; const to = $("#to").value;
+    return reps.filter(r=>{ if(!r.datum) return false; if (from && r.datum < from) return false; if (to && r.datum > to) return false; return true; })
+               .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()));
+  },
+  ma(arr, k=3){
+    if(!$("#reportSmoothChk").checked || k<=1) return arr;
+    const out=[]; for(let i=0;i<arr.length;i++){
+      const s = Math.max(0,i-Math.floor(k/2));
+      const e = Math.min(arr.length-1,i+Math.floor(k/2));
+      let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
+      out.push(c?sum/c:null);
+    } return out;
+  },
+  async draw(){
+    const metric = $("#reportMetricSel").value; // kreatinin / egfr / uacr / kalium
+    const data = await this.getFiltered();
+    if(!data.length){
+      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine Befunde im Zeitraum</text>`;
+      this.legend.innerHTML = "";
+      return;
+    }
+    const xs = data.map(r => (r.ts ?? new Date(r.datum).getTime()));
+    const vals = data.map(r => (r[metric] != null ? Number(r[metric]) : null));
+    const series = [{name: metricLabel(metric), values: this.ma(vals), color: "#60a5fa"}];
+
+    const hasAny = series.some(s => s.values.some(v=>v!=null));
+    this.svg.innerHTML=""; this.legend.innerHTML="";
+    if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
+
+    const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
+    const innerW=W-PL-PR, innerH=H-PT-PB;
+    const xVals = xs.filter(Boolean);
+    const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+    const yVals = series[0].values.filter(v=>v!=null);
+    const ymin = Math.min(...yVals), ymax = Math.max(...yVals);
+    const ypad = Math.max((ymax-ymin)*0.08, 1);
+    const y0 = ymin - ypad, y1max = ymax + ypad;
+
+    const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
+    const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
+
+    function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
+    function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
+
+    let grid = "";
+    const ticks = 4;
+    for(let i=0;i<=ticks;i++){
+      const vv = y0 + (i*(y1max-y0)/ticks);
+      const yy = y(vv);
+      grid += line(PL,yy,W-PR,yy,"#22262f");
+      grid += text(PL-6,yy+4, roundSmart(vv).toString());
+    }
+    const month = 30*24*3600*1000;
+    let start = xmin - (xmin % month) + month;
+    for(let t=start; t<xmax; t+=month){
+      const xx = x(t);
+      grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+      const d = new Date(t);
+      const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
+      grid += text(xx, H-8, lbl, "middle");
+    }
+    grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+    grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+    this.svg.insertAdjacentHTML("beforeend", grid);
+
+    function pathFor(values, color){
+      let d = "";
+      values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
+      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+    }
+    function dots(values, color){
+      let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
+      return out;
+    }
+
+    series.forEach(s=>{
+      this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
+      this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+      const dot = document.createElement("span"); dot.className="dot"; dot.style.background=s.color;
+      const label = document.createElement("span"); label.textContent = s.name;
+      const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
+      wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
+    });
+
+    function roundSmart(v){
+      const abs = Math.abs(v);
+      if(abs >= 100) return Math.round(v);
+      if(abs >= 10) return Math.round(v*10)/10;
+      return Math.round(v*100)/100;
+    }
+    function metricLabel(m){
+      switch(m){
+        case "kreatinin": return "Kreatinin (mg/dL)";
+        case "egfr": return "eGFR (ml/min/1.73m²)";
+        case "uacr": return "uACR (mg/g)";
+        case "kalium": return "Kalium (mmol/L)";
+        default: return m;
+      }
+    }
+  },
+  async savePNG(){
+    const svgEl = this.svg;
+    const xml = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = ()=>{
+      const canvas = document.createElement("canvas");
+      canvas.width = svgEl.viewBox.baseVal.width || 640;
+      canvas.height = svgEl.viewBox.baseVal.height || 280;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0);
+      canvas.toBlob(blob=>{
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `diagramm_befunde_${new Date().toISOString().slice(0,10)}.png`;
         a.click();
         URL.revokeObjectURL(a.href);
       },"image/png");
@@ -1070,7 +1300,7 @@ function setTab(name){
   $$(".view").forEach(v=>v.classList.remove("active"));
   $("#"+name).classList.add("active");
   $$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
-  if(name==="doctor"){ renderDoctor(); }
+  if(name==="doctor"){ renderDoctorViewForMode(); }
   if(name==="list"){ loadAndRender(); }
 }
 function bindTabs(){
@@ -1106,6 +1336,32 @@ function bindListSegment(){
       else { await loadAndRender(); }
     }, {passive:true});
   });
+}
+
+/* ===== Doctor Umschaltung (Daily/Befund) ===== */
+function bindDoctorSegment(){
+  const seg = $("#seg-doctor");
+  if(!seg) return;
+  seg.querySelectorAll(".seg-btn").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const mode = b.dataset.mode;
+      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+      $("#doctorDailyWrap").classList.toggle("hidden", mode!=="daily");
+      $("#doctorReportWrap").classList.toggle("hidden", mode!=="befund");
+      $("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
+      if(mode==="daily") await renderDoctor();
+      else await renderDoctorReports();
+    }, {passive:true});
+  });
+}
+function activeDoctorMode(){
+  const btn = $("#seg-doctor .seg-btn.active");
+  return btn ? btn.dataset.mode : "daily";
+}
+async function renderDoctorViewForMode(){
+  const mode = activeDoctorMode();
+  if(mode==="daily") await renderDoctor();
+  else await renderDoctorReports();
 }
 
 /* ===== Save flow (Daily) ===== */
@@ -1151,7 +1407,7 @@ async function saveAll(){
   }
   if(!savedM && !savedA){ alert("Keine Daten eingegeben – nichts zu speichern."); return; }
 
-  loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); flashSaveOk();
+  loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); flashSaveOk();
 }
 async function saveBlock(contextLabel, which){
   if(!blockHasData(which)) return false;
@@ -1227,7 +1483,7 @@ async function syncWebhook(entry, localId){
 /* ===== Main ===== */
 async function main(){
   diag.init(); helpPanel.init(); await initDB();
-  chartPanel.init(); bindTabs();
+  chartPanel.init(); chartReportsPanel.init(); bindTabs();
   $("#date").value = todayStr();
   $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
   $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
@@ -1263,8 +1519,20 @@ async function main(){
   bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 
   $("#saveAllBtn").addEventListener("click", saveAll, {passive:true});
-  $("#applyRange").addEventListener("click", ()=>{ renderDoctor(); if(chartPanel.open) chartPanel.draw(); }, {passive:true});
+  $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); }, {passive:true});
   $("#printBtn").addEventListener("click", ()=> window.print(), {passive:true});
+
+  // "Werte anzeigen" in Arzt-Ansicht: öffnet passendes Panel
+  $("#doctorChartBtn").addEventListener("click", async ()=>{
+    const mode = activeDoctorMode();
+    if(mode==="daily"){
+      chartPanel.toggle();
+      if(chartPanel.open) await chartPanel.draw();
+    } else {
+      chartReportsPanel.toggle();
+      if(chartReportsPanel.open) await chartReportsPanel.draw();
+    }
+  }, {passive:true});
 
   document.addEventListener('keydown', (e)=>{
     const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
@@ -1274,7 +1542,7 @@ async function main(){
   $("#rangeSel").addEventListener("change", loadAndRender);
   $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
   $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
-  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
+  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
 
   $("#saveWebhook").addEventListener("click", async ()=>{
     await putConf("webhookUrl", $("#whUrl").value.trim());
@@ -1286,14 +1554,14 @@ async function main(){
 
   // MANUELLER SYNC (Daily)
   $("#syncBtn").addEventListener("click", async ()=>{
-    if(!confirm("SYNC (Daily) startet:\n1) Backup CSV herunterladen\n2) Ausstehende lokale Einträge an Supabase senden\n3) Lokale Liste leeren\n4) Frische Daten von Supabase laden\nFortfahren?")) return;
+    if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
     setBusy(true);
     $("#syncBtn").disabled = true;
     try{
       const current = await getAllEntries();
       dl("backup_vor_sync.csv", toCSV(current), "text/csv");
       const resPush = await pushPendingToRemote();
-      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      diag.add(\`SYNC: Pending gepusht → OK=\${resPush.pushed}, FAIL=\${resPush.failed}\`);
       await wipeAll();
       const remoteRows = await pullAllFromRemote();
       for(const r of remoteRows){
@@ -1307,9 +1575,10 @@ async function main(){
         };
         await addEntry(entry);
       }
-      await loadAndRender(); await renderDoctor();
+      await loadAndRender(); await renderDoctorViewForMode();
       if(chartPanel.open) await chartPanel.draw();
-      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
+      if(chartReportsPanel.open) await chartReportsPanel.draw();
+      diag.add(\`SYNC: \${remoteRows.length} Einträge vom Server geladen\`);
       alert("Sync abgeschlossen.");
     }catch(e){
       console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
@@ -1322,16 +1591,23 @@ async function main(){
   // Bind Segmented Controls
   bindCaptureSegment();
   bindListSegment();
+  bindDoctorSegment();
 
   // Befund speichern
   $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
 
   // Initial
-  loadAndRender(); renderDoctor();
+  loadAndRender(); renderDoctor(); // default Doctor mode is "daily"
 }
 
 /* boot */
 main();
+
+/* === Debug: Mini-Notizen (nur intern sichtbar im Log-Panel)
+   - Button-Disable-Pattern für Netz-Calls konsequent nutzen (teils umgesetzt).
+   - UX: Nach Befund-Save bleiben Datum/Quelle stehen, Felder geleert.
+   - CSS-Typo gefixt: #tblhealth.
+=== */
 </script>
 </body>
 </html>
