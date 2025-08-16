@@ -499,9 +499,9 @@ const diag = { el:null, logEl:null, open:false, lines:[],
     const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
     const close=document.getElementById('diagClose');
     const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
-    t1.addEventListener('click', toggle, {passive:true});
-    t2.addEventListener('click', toggle, {passive:true});
-    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
+    t1.addEventListener('click', toggle);
+    t2.addEventListener('click', toggle);
+    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
   }
 };
 
@@ -510,9 +510,9 @@ const helpPanel={ el:null, open:false,
   init(){ this.el=document.getElementById('help');
     const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
     const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
-    t1.addEventListener('click', toggle, {passive:true});
-    t2.addEventListener('click', toggle, {passive:true});
-    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
+    t1.addEventListener('click', toggle);
+    t2.addEventListener('click', toggle);
+    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
   }
 };
 
@@ -865,7 +865,7 @@ function renderTable(entries){
         btn.textContent = oldText;
         btn.disabled = false;
       }
-    }, {passive:true});
+    });
   });
 }
 async function loadAndRender(){
@@ -924,7 +924,7 @@ async function loadAndRenderReports(){
       }finally{
         btn.disabled = false; btn.textContent = old;
       }
-    }, {passive:true});
+    });
   });
 }
 
@@ -1015,12 +1015,12 @@ const chartPanel = {
   el:null, svg:null, legend:null, open:false,
   init(){
     this.el = $("#chart"); this.svg = $("#chartSvg"); this.legend = $("#chartLegend");
-    $("#chartClose").addEventListener("click", ()=>this.hide(), {passive:true});
-    $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); }, {passive:true});
-    $("#refreshChart").addEventListener("click", ()=> this.draw(), {passive:true});
-    $("#savePng").addEventListener("click", ()=> this.savePNG(), {passive:true});
-    $("#metricSel").addEventListener("change", ()=> this.draw(), {passive:true});
-    $("#smoothChk").addEventListener("change", ()=> this.draw(), {passive:true});
+    $("#chartClose").addEventListener("click", ()=>this.hide());
+    $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
+    $("#refreshChart").addEventListener("click", ()=> this.draw());
+    $("#savePng").addEventListener("click", ()=> this.savePNG());
+    $("#metricSel").addEventListener("change", ()=> this.draw());
+    $("#smoothChk").addEventListener("change", ()=> this.draw());
   },
   toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
   hide(){ this.open=false; this.el.style.display='none'; },
@@ -1149,11 +1149,11 @@ const chartReportsPanel = {
   el:null, svg:null, legend:null, open:false,
   init(){
     this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
-    $("#chartReportsClose").addEventListener("click", ()=>this.hide(), {passive:true});
-    $("#refreshReportChart").addEventListener("click", ()=> this.draw(), {passive:true});
-    $("#saveReportPng").addEventListener("click", ()=> this.savePNG(), {passive:true});
-    $("#reportMetricSel").addEventListener("change", ()=> this.draw(), {passive:true});
-    $("#reportSmoothChk").addEventListener("change", ()=> this.draw(), {passive:true});
+    $("#chartReportsClose").addEventListener("click", ()=>this.hide());
+    $("#refreshReportChart").addEventListener("click", ()=> this.draw());
+    $("#saveReportPng").addEventListener("click", ()=> this.savePNG());
+    $("#reportMetricSel").addEventListener("change", ()=> this.draw());
+    $("#reportSmoothChk").addEventListener("change", ()=> this.draw());
   },
   toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
   hide(){ this.open=false; this.el.style.display='none'; },
@@ -1305,7 +1305,7 @@ function setTab(name){
 }
 function bindTabs(){
   const handler = (ev)=> setTab(ev.currentTarget.dataset.tab);
-  $$(".tabs .btn").forEach(b=> b.addEventListener("click", handler, {passive:true}));
+  $$(".tabs .btn").forEach(b=> b.addEventListener("click", handler));
 }
 
 /* ===== Capture sub-modes ===== */
@@ -1318,7 +1318,7 @@ function bindCaptureSegment(){
       seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
       $("#entry").classList.toggle("hidden", mode !== "daily");
       $("#entry_befund").classList.toggle("hidden", mode !== "befund");
-    }, {passive:true});
+    });
   });
 }
 
@@ -1334,7 +1334,7 @@ function bindListSegment(){
       $("#listReportWrap").classList.toggle("hidden", mode!=="befund");
       if(mode==="befund"){ await loadAndRenderReports(); }
       else { await loadAndRender(); }
-    }, {passive:true});
+    });
   });
 }
 
@@ -1351,7 +1351,7 @@ function bindDoctorSegment(){
       $("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
       if(mode==="daily") await renderDoctor();
       else await renderDoctorReports();
-    }, {passive:true});
+    });
   });
 }
 function activeDoctorMode(){
@@ -1506,11 +1506,11 @@ async function main(){
       else if (sel.includes("dia"))   softWarnRange(el, 40, 140);
       else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
       else if (sel.includes("weight"))softWarnRange(el, 30, 300);
-    }, {passive:true});
+    });
   });
 
   // Toggle-Handler
-  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h, {passive:true}); };
+  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h); };
   bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
   bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
   bindToggle("#sickToggle", setSick, ()=>sickActive);
@@ -1518,9 +1518,9 @@ async function main(){
   bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
   bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 
-  $("#saveAllBtn").addEventListener("click", saveAll, {passive:true});
-  $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); }, {passive:true});
-  $("#printBtn").addEventListener("click", ()=> window.print(), {passive:true});
+  $("#saveAllBtn").addEventListener("click", saveAll);
+  $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
+  $("#printBtn").addEventListener("click", ()=> window.print());
 
   // "Werte anzeigen" in Arzt-Ansicht: öffnet passendes Panel
   $("#doctorChartBtn").addEventListener("click", async ()=>{
@@ -1532,7 +1532,7 @@ async function main(){
       chartReportsPanel.toggle();
       if(chartReportsPanel.open) await chartReportsPanel.draw();
     }
-  }, {passive:true});
+  });
 
   document.addEventListener('keydown', (e)=>{
     const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
@@ -1594,14 +1594,19 @@ async function main(){
   bindDoctorSegment();
 
   // Befund speichern
-  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
+  $("#saveReportBtn").addEventListener("click", saveReport);
 
   // Initial
   loadAndRender(); renderDoctor(); // default Doctor mode is "daily"
 }
 
 /* boot */
-main();
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", main);
+} else {
+  main();
+}
+
 
 /* === Debug: Mini-Notizen (nur intern sichtbar im Log-Panel)
    - Button-Disable-Pattern für Netz-Calls konsequent nutzen (teils umgesetzt).
