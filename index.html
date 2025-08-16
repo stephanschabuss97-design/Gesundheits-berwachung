@@ -332,19 +332,20 @@
 
       <!-- Wrapper Befunde -->
       <div style="overflow:auto" id="listReportWrap" class="hidden">
-        <table id="tblReports">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th class="center">Kreatinin</th>
-              <th class="center">eGFR</th>
-              <th class="center">uACR</th>
-              <th class="center">Kalium</th>
-              <th>Kommentar</th>
-              <th class="center">Cloud</th>
-              <th>Aktion</th>
-            </tr>
-          </thead>
+<table id="tblReports">
+  <thead>
+    <tr>
+      <th class="nowrap">Datum</th>
+      <th class="center">Kreatinin</th>
+      <th class="center">eGFR</th>
+      <th class="center">uACR</th>
+      <th class="center">Kalium</th>
+      <th>Kommentar</th>
+      <th class="center">Cloud</th>
+      <th>Aktion</th>
+    </tr>
+  </thead>
+
           <tbody></tbody>
         </table>
       </div>
@@ -814,18 +815,17 @@ async function loadAndRenderReports(){
     .forEach(r=>{
       const synced = r.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="nowrap">${r.datum || ""}</td>
-        <td class="center">${r.kreatinin ?? ""}</td>
-        <td class="center">${r.egfr ?? ""}</td>
-        <td class="center">${r.uacr ?? ""}</td>
-        <td class="center">${r.kalium ?? ""}</td>
-        <td class="notes">${esc(r.kommentar||"")}</td>
-        <td class="center">${synced}</td>
-        <td>
-          <button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button>
-        </td>
-      `;
+tr.innerHTML = `
+  <td class="nowrap">${r.datum || ""}</td>
+  <td class="center">${r.kreatinin ?? ""}</td>
+  <td class="center">${r.egfr ?? ""}</td>
+  <td class="center">${r.uacr ?? ""}</td>
+  <td class="center">${r.kalium ?? ""}</td>
+  <td class="notes">${nl2br(r.kommentar || "")}</td>
+  <td class="center">${synced}</td>
+  <td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
+`;
+
       tbody.appendChild(tr);
     });
 
