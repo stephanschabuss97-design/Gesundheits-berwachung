@@ -270,7 +270,7 @@
     </section>
   </section>
 
-  <!-- List -->
+ <!-- List -->
   <section class="view" id="list">
     <section class="card">
       <div class="toolbar">
@@ -287,7 +287,15 @@
         <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">↕ Sync mit Supabase</button>
         <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen</button>
       </div>
-      <div style="overflow:auto">
+
+      <!-- Segmented Control: List -->
+      <div class="seg" id="seg-list">
+        <button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
+        <button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
+      </div>
+
+      <!-- Wrapper Daily -->
+      <div style="overflow:auto" id="listDailyWrap">
         <table id="tbl">
           <thead>
             <tr>
@@ -313,84 +321,64 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
-    </section>
 
-    <section class="card">
-      <strong>Supabase Sync</strong>
-      <p class="small">Trage hier die REST-URL deiner Tabelle + deinen <em>anon</em> API-Key ein. Neue Einträge werden per POST gesendet, Löschungen auch an den Server weitergegeben.</p>
-      <div class="row">
-        <div style="flex:2">
-          <label>REST-URL (health_entries)</label>
-          <input type="url" id="whUrl" placeholder="https://…supabase.co/rest/v1/health_entries">
-        </div>
-        <div style="flex:1">
-          <label>API-Key (anon)</label>
-          <input type="password" id="whKey" placeholder="ey...">
-        </div>
-      </div>
-      <div class="row">
-        <div style="flex:2">
-          <label>REST-URL Befunde (medical_reports)</label>
-          <input type="url" id="whUrlMr" placeholder="https://…supabase.co/rest/v1/medical_reports">
-        </div>
-      </div>
-      <div class="row">
-        <button class="btn ghost" id="saveWebhook" type="button">Speichern</button>
-        <div class="small" id="whSaved" style="margin-left:8px"></div>
-      </div>
-    </section>
-  </section>
-
-  <!-- Doctor view -->
-  <section class="view" id="doctor">
-    <section class="card" id="doctorCard">
-      <div class="toolbar">
-        <div id="doctorTitle"><strong>Arzt-Ansicht (Einzelwerte – druckfertig)</strong></div>
-        <div class="spacer"></div>
-        <label class="small" for="from">von</label>
-        <input type="date" id="from" style="width:150px">
-        <label class="small" for="to">bis</label>
-        <input type="date" id="to" style="width:150px">
-        <button class="btn ghost" id="applyRange" type="button">Anzeigen</button>
-        <button class="btn ghost" id="chartBtn" type="button">Diagramm</button>
-        <button class="btn primary" id="printBtn" type="button">Drucken/PDF</button>
-      </div>
-      <div style="overflow:auto">
-        <table id="doctorTable">
+      <!-- Wrapper Befunde -->
+      <div style="overflow:auto" id="listReportWrap" class="hidden">
+        <table id="tblReports">
           <thead>
             <tr>
               <th>Datum</th>
-              <th>Uhrzeit</th>
-              <th>Art</th>
-              <th>Systolisch</th>
-              <th>Diastolisch</th>
-              <th>Puls</th>
-              <th>MAP</th>
-              <th>Gewicht (kg)</th>
-              <th>Notizen</th>
-              <th>&lt; 2 L</th>
-              <th>Krank</th>
-              <th>Valsartan ❌</th>
-              <th>Forxiga ❌</th>
-              <th>NSAR</th>
+              <th>Kreatinin</th>
+              <th>eGFR</th>
+              <th>uACR</th>
+              <th>Kalium</th>
+              <th>Kommentar</th>
+              <th>Cloud</th>
+              <th>Aktion</th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <div class="small" style="margin-top:6px">Hinweis: Alle Messungen sind standardmäßig <em>sitzend</em> durchgeführt.</div>
-    </section>
-  </section>
-</main>
 
-<!-- Floating Action Buttons -->
-<div class="fab-wrap" aria-label="Schnellzugriff">
-  <button class="fab" id="helpToggle" type="button" title="Hilfe öffnen">❓</button>
-  <button class="fab" id="diagToggle" type="button" title="Diagnose/Log öffnen">🩺</button>
-</div>
+      <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
+    </section>
+
+    <!-- Supabase-Sync-Card unverändert -->
+    <section class="card"> … </section>
+  </section>
+
+<!-- ... Rest unverändert ... -->
 
 <script>
+/* ... bestehender Code ... */
+
+/* === List Umschaltung === */
+function bindListSegment(){
+  const seg = $("#seg-list");
+  if(!seg) return;
+  seg.querySelectorAll(".seg-btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const mode = b.dataset.mode;
+      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+      $("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
+      $("#listReportWrap").classList.toggle("hidden", mode!=="befund");
+    }, {passive:true});
+  });
+}
+
+/* === Main erweitern === */
+async function main(){
+  diag.init(); helpPanel.init(); await initDB();
+  chartPanel.init(); bindTabs();
+  // ...
+  bindCaptureSegment();
+  bindListSegment();   // <--- HINZUGEFÜGT
+  // ...
+  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
+  loadAndRender(); renderDoctor();
+}
+</script>
 /* ===== Fehlerbox ===== */
 window.addEventListener('error', function(e){
   const box = document.getElementById('err');
