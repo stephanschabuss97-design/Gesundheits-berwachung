@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V0.7 – Befund erfassen)</title>
+<title>Gesundheits-Logger (V0.6.1 – Sync stabil)</title>
 <style>
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
@@ -33,7 +34,7 @@
 
   .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.2s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
   @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
-  @keyframes flashPop{0%{transform:scale(1)}50%{transform:1.03}100%{transform:1}}
+  @keyframes flashPop{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
 
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .spacer{flex:1}
@@ -53,19 +54,19 @@
 
   #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
 
-  /* Panels */
+  /* Panels (Diag + Help + Chart) */
   .panel{position:fixed;right:8px;bottom:8px;width:340px;max-height:70vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
   .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
   .panel h4{margin:0;font-size:14px}
   .panel .content{padding:10px;font-size:13px;line-height:1.45}
   #diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
 
-  /* FABs */
+  /* Floating Action Buttons */
   .fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
   .fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
   .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
-  /* Tabellen */
+  /* ====== LISTENANSICHT ====== */
   #tbl{width:100%; border-collapse:separate; border-spacing:0 8px;}
   #tbl thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
   #tbl th, #tbl td{padding:14px 12px; font-size:14px; vertical-align:top;}
@@ -76,6 +77,7 @@
   #tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
   #tbl td.notes, #doctorTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
 
+  /* Doctor table */
   #doctorTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
   #doctorTable th, #doctorTable td{padding:12px 10px;}
   #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
@@ -84,7 +86,7 @@
 
   .blockTitle{font-weight:800;margin:0 0 8px 0}
 
-  /* Chart panel */
+  /* --- Chart panel specific --- */
   #chart .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
   #chart .controls > * {flex:1}
   #chart .controls .half{flex:0 0 calc(50% - 4px)}
@@ -96,17 +98,12 @@
   #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
   #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
   body.is-busy #busy{display:flex}
-
-  /* Segmented Control + helpers */
-  .seg{display:flex;gap:8px;margin:8px 0 12px}
-  .seg .seg-btn.active{background:var(--accent);color:#fff}
-  .hidden{display:none!important}
 </style>
 </head>
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V0.7</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V0.6.1</span>
   </div>
 </header>
 
@@ -172,13 +169,6 @@
 <main>
   <!-- Capture -->
   <section class="view active" id="capture">
-    <!-- Segmented Control: Erfassen -->
-    <div class="seg" id="seg-capture">
-      <button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
-      <button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
-    </div>
-
-    <!-- Daily-Capture (wie bisher) -->
     <section class="card" id="entry">
       <div class="row">
         <div style="flex:1">
@@ -187,6 +177,7 @@
         </div>
       </div>
 
+      <!-- Morgens -->
       <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
         <h3 class="blockTitle">Morgens</h3>
         <div class="row">
@@ -202,6 +193,7 @@
         </div>
       </div>
 
+      <!-- Abends -->
       <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
         <h3 class="blockTitle">Abends</h3>
         <div class="row">
@@ -217,6 +209,7 @@
         </div>
       </div>
 
+      <!-- Gewicht -->
       <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
         <h3 class="blockTitle">Gewicht</h3>
         <div class="row">
@@ -227,6 +220,7 @@
         </div>
       </div>
 
+      <!-- Kommentar -->
       <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
         <h3 class="blockTitle">Kommentar</h3>
         <div class="row">
@@ -236,6 +230,7 @@
         </div>
       </div>
 
+      <!-- Tages-Toggles -->
       <div class="row" style="align-items:center; gap:8px; margin-top:4px">
         <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋 Training heute</button>
         <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
@@ -246,25 +241,9 @@
         <div class="spacer"></div>
       </div>
 
+      <!-- Action -->
       <div class="row" style="align-items:center; gap:8px; margin-top:12px">
         <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-        <div class="spacer"></div>
-      </div>
-    </section>
-
-    <!-- Befund-Capture (neu) -->
-    <section class="card hidden" id="entry_befund">
-      <h3 class="blockTitle">Neuer Befund</h3>
-      <div class="grid">
-        <div><label>Datum</label><input type="date" id="repDate"></div>
-        <div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
-        <div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
-        <div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
-        <div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
-        <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
-      </div>
-      <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
         <div class="spacer"></div>
       </div>
     </section>
@@ -321,18 +300,12 @@
       <p class="small">Trage hier die REST-URL deiner Tabelle + deinen <em>anon</em> API-Key ein. Neue Einträge werden per POST gesendet, Löschungen auch an den Server weitergegeben.</p>
       <div class="row">
         <div style="flex:2">
-          <label>REST-URL (health_entries)</label>
+          <label>REST-URL (z. B. https://…supabase.co/rest/v1/health_entries)</label>
           <input type="url" id="whUrl" placeholder="https://…supabase.co/rest/v1/health_entries">
         </div>
         <div style="flex:1">
           <label>API-Key (anon)</label>
           <input type="password" id="whKey" placeholder="ey...">
-        </div>
-      </div>
-      <div class="row">
-        <div style="flex:2">
-          <label>REST-URL Befunde (medical_reports)</label>
-          <input type="url" id="whUrlMr" placeholder="https://…supabase.co/rest/v1/medical_reports">
         </div>
       </div>
       <div class="row">
@@ -400,7 +373,7 @@ window.addEventListener('error', function(e){
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,20); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(\`[\${t}] \${msg}\`); this.lines=this.lines.slice(0,20); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     document.getElementById('diagToggle').addEventListener('click', ()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; }, {passive:true});
     document.getElementById('diagClose').addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
@@ -434,7 +407,7 @@ function softWarnRange(input, min, max){
   const v = Number(input.value);
   const bad = input.value && (isNaN(v) || v < min || v > max);
   input.style.borderColor = bad ? "#f59e0b" : "#2b2f3a";
-  input.title = bad ? `Ungewöhnlicher Wert (${min}–${max})` : "";
+  input.title = bad ? \`Ungewöhnlicher Wert (\${min}–\${max})\` : "";
 }
 
 /* ===== IndexedDB ===== */
@@ -442,8 +415,7 @@ let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
 function initDB(){
   return new Promise((resolve,reject)=>{
-    // bump: Version 3 (neuer Store "reports")
-    const req = indexedDB.open(DB_NAME, 3);
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e)=>{
       const db = e.target.result;
       if(!db.objectStoreNames.contains(STORE)){
@@ -453,10 +425,6 @@ function initDB(){
         try{ db.transaction(STORE,"versionchange").objectStore(STORE).createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
       }
       if(!db.objectStoreNames.contains(CONF)){ db.createObjectStore(CONF,{keyPath:"key"}); }
-      if(!db.objectStoreNames.contains("reports")){
-        const r = db.createObjectStore("reports",{keyPath:"id",autoIncrement:true});
-        r.createIndex("byDate","datum",{unique:false});
-      }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
     req.onerror = (e)=> reject(e);
@@ -482,7 +450,7 @@ function addEntry(obj){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
     const req = tx.objectStore(STORE).add(obj);
-    req.onsuccess = ()=> res(req.result);
+    req.onsuccess = ()=> res(req.result); // return local id
     req.onerror = (e)=> rej(e);
   });
 }
@@ -525,43 +493,12 @@ function wipeAll(){
   });
 }
 
-/* ===== Reports (Befunde) ===== */
-function addReport(obj){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readwrite");
-    const req = tx.objectStore("reports").add(obj);
-    req.onsuccess = ()=> res(req.result);
-    req.onerror = (e)=> rej(e);
-  });
-}
-function updateReport(id, patch){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readwrite");
-    const store = tx.objectStore("reports");
-    const getReq = store.get(id);
-    getReq.onsuccess = ()=>{
-      const cur = getReq.result; if(!cur){ res(false); return; }
-      store.put(Object.assign({}, cur, patch));
-    };
-    tx.oncomplete = ()=>res(true);
-    tx.onerror = (e)=>rej(e);
-  });
-}
-function getAllReports(){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readonly");
-    const req = tx.objectStore("reports").getAll();
-    req.onsuccess = ()=> res(req.result || []);
-    req.onerror = (e)=> rej(e);
-  });
-}
-
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
   const key = await getConf("webhookKey");
   if(!key) return null;
-  const apiKey = key.replace(/^Bearer\s+/i,"");
-  const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : `Bearer ${apiKey}`;
+  const apiKey = key.replace(/^Bearer\\s+/i,"");
+  const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : \`Bearer \${apiKey}\`;
   return {
     "Content-Type":"application/json",
     "apikey": apiKey,
@@ -577,10 +514,10 @@ async function syncWebhook(entry, localId){
   try{
     const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(entry) });
     if(!res.ok){
-      diag.add(`Webhook-Fehler ${res.status}`);
+      diag.add(\`Webhook-Fehler \${res.status}\`);
       return;
     }
-    const json = await res.json();
+    const json = await res.json(); // array with inserted row
     const remoteId = json?.[0]?.id;
     if(remoteId!=null){
       await updateEntry(localId, { remote_id: remoteId });
@@ -594,7 +531,7 @@ async function deleteRemote(remote_id){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers || !remote_id) return {ok:false};
-  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+  const q = \`\${url}?id=eq.\${encodeURIComponent(remote_id)}\`;
   try{
     const res = await fetch(q, { method:"DELETE", headers });
     return {ok: res.ok, status: res.status};
@@ -606,11 +543,13 @@ async function pullAllFromRemote(){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers) throw new Error("Webhook nicht konfiguriert");
-  const q = `${url}?select=*&order=ts.asc`;
+  const q = \`\${url}?select=*&order=ts.asc\`;
   const res = await fetch(q, { headers });
-  if(!res.ok) throw new Error(`Fetch fehlgeschlagen (${res.status})`);
+  if(!res.ok) throw new Error(\`Fetch fehlgeschlagen (\${res.status})\`);
   return res.json();
 }
+
+/* Zusätzlicher Schritt: Ausstehende lokale Einträge zuerst pushen */
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
@@ -627,24 +566,10 @@ async function pushPendingToRemote(){
       const rid = json?.[0]?.id;
       if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
       else { failed++; }
-      await sleep(50);
+      await sleep(50); // milde Drosselung
     }catch(_){ failed++; }
   }
   return { pushed, failed };
-}
-
-/* ===== Remote für Befunde ===== */
-async function syncReportWebhook(report, localId){
-  const url = await getConf("webhookUrlMr");
-  const headers = await getHeaders();
-  if(!url || !headers) return;
-  try{
-    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(report) });
-    if(!res.ok){ diag.add(`MR-POST Fehler ${res.status}`); return; }
-    const json = await res.json();
-    const remoteId = json?.[0]?.id;
-    if(remoteId){ await updateReport(localId, { remote_id: remoteId }); diag.add("Befund: Webhook OK"); }
-  }catch(e){ diag.add("Befund: Netzwerkfehler"); }
 }
 
 /* ===== CSV/JSON export ===== */
@@ -653,7 +578,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -673,7 +598,7 @@ function toCSV(entries){
       e.remote_id ?? ""
     ];
   });
-  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\n]/.test(v)) ? `"${v.replace(/"/g,'""')}"` : v).join(","))].join("\n");
+  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\\n]/.test(v)) ? \`"\${v.replace(/"/g,'""')}"\` : v).join(","))].join("\\n");
   return csv;
 }
 function dl(filename, content, mime){
@@ -691,6 +616,7 @@ function withinDays(dateISO, days){
   const now = new Date(); const diff = (now - d)/(1000*60*60*24);
   return diff <= Number(days);
 }
+// date DESC, time ASC
 function compareForList(a, b){
   if (a.date !== b.date) return a.date < b.date ? 1 : -1;
   if (a.time < b.time) return -1;
@@ -708,29 +634,29 @@ function renderTable(entries){
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
-      const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
+      const zeitLabel = e.context === "Morgen" ? \`\${e.time} (Morgens)\` : e.context === "Abend" ? \`\${e.time} (Abends)\` : e.time;
       const synced = e.remote_id ? "☁️" : "";
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="nowrap">${e.date}</td>
-        <td class="nowrap">${zeitLabel}</td>
-        <td>${art}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td class="center">${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="center">${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td class="center">${e.training ? "Ja" : ""}</td>
-        <td class="center">${e.low_intake ? "Ja" : ""}</td>
-        <td class="center">${e.sick ? "Ja" : ""}</td>
-        <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-        <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-        <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-        <td class="center">${synced}</td>
+        <td class="nowrap">\${e.date}</td>
+        <td class="nowrap">\${zeitLabel}</td>
+        <td>\${art}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td class="notes">\${nl2br(notesText)}</td>
+        <td class="center">\${e.training ? "Ja" : ""}</td>
+        <td class="center">\${e.low_intake ? "Ja" : ""}</td>
+        <td class="center">\${e.sick ? "Ja" : ""}</td>
+        <td class="center">\${e.valsartan_missed ? "Ja" : ""}</td>
+        <td class="center">\${e.forxiga_missed ? "Ja" : ""}</td>
+        <td class="center">\${e.nsar_taken ? "Ja" : ""}</td>
+        <td class="center">\${synced}</td>
         <td>
-          <button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button>
+          <button class="btn ghost" data-del="\${e.id}" data-remote="\${e.remote_id ?? ''}">Löschen</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -741,6 +667,7 @@ function renderTable(entries){
     tbody.appendChild(tr);
   }
 
+  // delete handlers
   $$("#tbl [data-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const localId = Number(btn.dataset.del);
@@ -751,6 +678,7 @@ function renderTable(entries){
       const oldText = btn.textContent;
       btn.textContent = "Lösche…";
       try{
+        // erst remote, dann lokal
         if(remoteId){
           const r = await deleteRemote(remoteId);
           if(!r.ok){
@@ -798,20 +726,20 @@ async function renderDoctor(){
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${e.date}</td>
-        <td>${e.time}</td>
-        <td>${art}</td>
-        <td>${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td>${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td>${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td>${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td>${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td>${e.low_intake ? "Ja" : ""}</td>
-        <td>${e.sick ? "Ja" : ""}</td>
-        <td>${e.valsartan_missed ? "Ja" : ""}</td>
-        <td>${e.forxiga_missed ? "Ja" : ""}</td>
-        <td>${e.nsar_taken ? "Ja" : ""}</td>
+        <td>\${e.date}</td>
+        <td>\${e.time}</td>
+        <td>\${art}</td>
+        <td>\${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td>\${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td>\${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td>\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td>\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="notes">\${nl2br(notesText)}</td>
+        <td>\${e.low_intake ? "Ja" : ""}</td>
+        <td>\${e.sick ? "Ja" : ""}</td>
+        <td>\${e.valsartan_missed ? "Ja" : ""}</td>
+        <td>\${e.forxiga_missed ? "Ja" : ""}</td>
+        <td>\${e.nsar_taken ? "Ja" : ""}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -822,7 +750,7 @@ async function renderDoctor(){
   }
 }
 
-/* ===== Simple SVG Chart (Daily) ===== */
+/* ===== Simple SVG Chart ===== */
 const chartPanel = {
   el:null, svg:null, legend:null, open:false,
   init(){
@@ -979,10 +907,8 @@ async function main(){
   // Konfiguration vorbefüllen
   const savedUrl = await getConf("webhookUrl");
   const savedKey = await getConf("webhookKey");
-  const savedMrUrl = await getConf("webhookUrlMr");
   if (savedUrl) $("#whUrl").value = savedUrl;
   if (savedKey) $("#whKey").value = savedKey;
-  if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
 
   // Sanfte Warnung
   ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
@@ -1021,22 +947,28 @@ async function main(){
   $("#saveWebhook").addEventListener("click", async ()=>{
     await putConf("webhookUrl", $("#whUrl").value.trim());
     await putConf("webhookKey", $("#whKey").value.trim());
-    await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
     $("#whSaved").textContent = "Gespeichert ✓";
     setTimeout(()=>$("#whSaved").textContent="", 2000);
   });
 
-  // MANUELLER SYNC (Daily)
+  // MANUELLER SYNC – jetzt robust
   $("#syncBtn").addEventListener("click", async ()=>{
     if(!confirm("SYNC startet:\n1) Backup CSV herunterladen\n2) Ausstehende lokale Einträge an Supabase senden\n3) Lokale Liste leeren\n4) Frische Daten von Supabase laden\nFortfahren?")) return;
     setBusy(true);
     $("#syncBtn").disabled = true;
     try{
+      // 1) Backup
       const current = await getAllEntries();
       dl("backup_vor_sync.csv", toCSV(current), "text/csv");
+
+      // 2) Pending pushen
       const resPush = await pushPendingToRemote();
-      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      diag.add(\`SYNC: Pending gepusht → OK=\${resPush.pushed}, FAIL=\${resPush.failed}\`);
+
+      // 3) Lokal wipen
       await wipeAll();
+
+      // 4) Remote ziehen
       const remoteRows = await pullAllFromRemote();
       for(const r of remoteRows){
         const entry = {
@@ -1051,7 +983,7 @@ async function main(){
       }
       await loadAndRender(); await renderDoctor();
       if(chartPanel.open) await chartPanel.draw();
-      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
+      diag.add(\`SYNC: \${remoteRows.length} Einträge vom Server geladen\`);
       alert("Sync abgeschlossen.");
     }catch(e){
       console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
@@ -1060,12 +992,6 @@ async function main(){
       setBusy(false);
     }
   });
-
-  // Capture-Mode Umschaltung
-  bindCaptureSegment();
-
-  // Befund speichern
-  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
 
   loadAndRender(); renderDoctor();
 }
@@ -1083,21 +1009,7 @@ function bindTabs(){
   $$(".tabs .btn").forEach(b=> b.addEventListener("click", handler, {passive:true}));
 }
 
-/* ===== Capture sub-modes ===== */
-function bindCaptureSegment(){
-  const seg = $("#seg-capture");
-  if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const mode = b.dataset.mode;
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#entry").classList.toggle("hidden", mode !== "daily");
-      $("#entry_befund").classList.toggle("hidden", mode !== "befund");
-    }, {passive:true});
-  });
-}
-
-/* ===== Save flow (Daily) ===== */
+/* ===== Save flow ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false;
 function setToggle(el, on, activeText, baseText){
   el.classList.toggle("active", !!on);
@@ -1115,6 +1027,7 @@ function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMiss
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "🧪 NSAR genommen – aktiv", "🧪 NSAR genommen"); }
 
+// Prüft, ob ein Block Daten enthält (inkl. Gewicht)
 function blockHasData(which){
   return !!(
     $(`#time${which}`).value ||
@@ -1162,35 +1075,13 @@ async function saveBlock(contextLabel, which){
     valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken
   };
 
+  // lokal speichern und lokale ID bekommen
   const localId = await addEntry(entry);
+  // sofort versuchen zum Server zu posten und remote_id nachtragen
   await syncWebhook(entry, localId);
   return true;
 }
 
-/* ===== Save flow (Befund) ===== */
-async function saveReport(){
-  const datum = $("#repDate").value || todayStr();
-  const report = {
-    datum,
-    kreatinin: $("#repKrea").value ? Number($("#repKrea").value) : null,
-    egfr:      $("#repEgfr").value ? Number($("#repEgfr").value) : null,
-    uacr:      $("#repUacr").value ? Number($("#repUacr").value) : null,
-    kalium:    $("#repK").value    ? Number($("#repK").value)    : null,
-    kommentar: $("#repNote").value?.trim() || "",
-    source: "manuell",
-    ts: new Date(datum+"T00:00:00").getTime()
-  };
-  const localId = await addReport(report);
-  await syncReportWebhook(report, localId);
-
-  const btn = $("#saveReportBtn");
-  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✅ Befund gespeichert";
-  setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
-
-  ["#repKrea","#repEgfr","#repUacr","#repK","#repNote"].forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
-}
-
-/* boot */
 main();
 </script>
 </body>
