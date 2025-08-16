@@ -67,15 +67,19 @@
   .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
   /* Tabellen */
-  #tbl{width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #tbl thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
-  #tbl th, #tbl td{padding:14px 12px; font-size:14px; vertical-align:top;}
-  #tbl tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #tbl tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #tbl tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-  #tbl td.center, #tbl th.center{ text-align:center; white-space:nowrap; }
-  #tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
-  #tbl td.notes, #doctorTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+/* --- Befund-Tabelle wie Daily (#tblReports) --- */
+#tblReports{width:100%; border-collapse:separate; border-spacing:0 8px;}
+#tblReports thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
+#tblReports th, #tblReports td{padding:14px 12px; font-size:14px; vertical-align:top;}
+#tblReports tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+#tblReports tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+#tblReports tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+
+/* Helferklassen auch für #tblReports anwenden (wie bei #tbl) */
+#tblReports td.center, #tblReports th.center{ text-align:center; white-space:nowrap; }
+#tblReports td.nowrap, #tblReports th.nowrap{ white-space:nowrap; }
+#tblReports td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+
 
   #doctorTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
   #doctorTable th, #doctorTable td{padding:12px 10px;}
