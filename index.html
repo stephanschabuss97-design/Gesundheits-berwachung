@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V0.6.1 – Sync stabil)</title>
+<title>Gesundheits-Logger (V0.5)</title>
 <style>
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
@@ -23,9 +22,7 @@
   input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
   textarea{min-height:64px;resize:vertical}
 
-  .small{font-size:12px;color:var(--muted)}
   .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:600;color:white;background:#2b2f3a;cursor:pointer;touch-action:manipulation;transition: background .25s ease, color .25s ease, transform .06s ease, box-shadow .25s ease}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
   .btn:active{ transform: scale(0.98) }
   .btn.primary{background:var(--accent)}
   .btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color:var(--fg)}
@@ -59,6 +56,8 @@
   .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
   .panel h4{margin:0;font-size:14px}
   .panel .content{padding:10px;font-size:13px;line-height:1.45}
+  .panel .content ul{margin:8px 0 0 18px;padding:0}
+  .panel .content li{margin:4px 0}
   #diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
 
   /* Floating Action Buttons */
@@ -75,7 +74,15 @@
   #tbl tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
   #tbl td.center, #tbl th.center{ text-align:center; white-space:nowrap; }
   #tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
-  #tbl td.notes, #doctorTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+
+  /* Notes fully wrap */
+  #tbl td.notes, #doctorTable td.notes{
+    max-width: 680px;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
 
   /* Doctor table */
   #doctorTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
@@ -93,17 +100,12 @@
   #chart svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
   #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
-
-  /* Busy overlay */
-  #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
-  #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
-  body.is-busy #busy{display:flex}
 </style>
 </head>
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V0.6.1</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V0.5</span>
   </div>
 </header>
 
@@ -122,10 +124,13 @@
   <div class="content">
     <strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzündungsmedikament der Klasse NSAR genommen hast.
     <ul>
-      <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-      <li><em>Kombo-Achtung:</em> Viele „Erkältungs-/Kopfweh“-Mittel enthalten NSAR.</li>
-      <li><em>Bei Nierenkrankheit:</em> NSAR möglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+      <li><em>Beispiele (AT, frei):</em> Ibuprofen (z. B. Ibumed/Ibuflam), Diclofenac (Voltaren Dolo), Naproxen (Aleve).</li>
+      <li><em>Kombo-Achtung:</em> Viele „Erkältungs-/Kopfweh“-Mittel enthalten NSAR. Immer die Wirkstoffe lesen.</li>
+      <li><em>Bei Nierenkrankheit:</em> NSAR möglichst vermeiden und Alternativen mit Arzt besprechen.</li>
     </ul>
+    <hr style="border:none;border-top:1px solid #2b2f3a;margin:10px 0">
+    <p><strong>Krank (Forxiga pausiert)</strong> nur aktivieren, wenn Arzt das Pausieren angeordnet hat.</p>
+    <p><strong>&lt; 2 L getrunken</strong> aktivieren, wenn geschätzt weniger als 2 L/Tag.</p>
   </div>
 </div>
 
@@ -138,7 +143,7 @@
   <pre id="diagLog" class="content" style="margin:0"></pre>
 </div>
 
-<!-- Diagramm-Panel -->
+<!-- Diagramm-Panel (NEU) -->
 <div id="chart" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
   <header>
     <h4 id="chartTitle">Diagramm</h4>
@@ -159,12 +164,11 @@
     </div>
     <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
     <div class="legend" id="chartLegend"></div>
-    <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+    <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis). Einzelwerte bleiben darunter sichtbar.</div>
   </div>
 </div>
 
 <div id="err"></div>
-<div id="busy"><div class="box">⏳ Bitte warten…</div></div>
 
 <main>
   <!-- Capture -->
@@ -237,7 +241,7 @@
         <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
         <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
         <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🥤 &lt; 2 L getrunken</button>
-        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">🧪 NSAR genommen</button>
+        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika (z. B. Ibuprofen, Diclofenac, Naproxen)">🧪 NSAR genommen</button>
         <div class="spacer"></div>
       </div>
 
@@ -263,8 +267,7 @@
         </select>
         <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
         <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">↕ Sync mit Supabase</button>
-        <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen</button>
+        <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle löschen</button>
       </div>
       <div style="overflow:auto">
         <table id="tbl">
@@ -285,7 +288,6 @@
               <th class="center nowrap">Valsartan ❌</th>
               <th class="center nowrap">Forxiga ❌</th>
               <th class="center nowrap">NSAR</th>
-              <th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
               <th>Aktion</th>
             </tr>
           </thead>
@@ -296,20 +298,20 @@
     </section>
 
     <section class="card">
-      <strong>Supabase Sync</strong>
-      <p class="small">Trage hier die REST-URL deiner Tabelle + deinen <em>anon</em> API-Key ein. Neue Einträge werden per POST gesendet, Löschungen auch an den Server weitergegeben.</p>
+      <strong>Optional: Sync Webhook</strong>
+      <p class="small">Trage hier eine URL + API-Key ein, wenn du ein Backend (z. B. Supabase) nutzt. Neue Einträge werden per POST gesendet.</p>
       <div class="row">
         <div style="flex:2">
-          <label>REST-URL (z. B. https://…supabase.co/rest/v1/health_entries)</label>
-          <input type="url" id="whUrl" placeholder="https://…supabase.co/rest/v1/health_entries">
+          <label>Webhook URL</label>
+          <input type="url" id="whUrl" placeholder="https://dein-server.tld/api/bp">
         </div>
         <div style="flex:1">
-          <label>API-Key (anon)</label>
-          <input type="password" id="whKey" placeholder="ey...">
+          <label>API-Key (Header: Authorization)</label>
+          <input type="password" id="whKey" placeholder="optional">
         </div>
       </div>
       <div class="row">
-        <button class="btn ghost" id="saveWebhook" type="button">Speichern</button>
+        <button class="btn ghost" id="saveWebhook" type="button">Webhook speichern</button>
         <div class="small" id="whSaved" style="margin-left:8px"></div>
       </div>
     </section>
@@ -364,23 +366,22 @@
 </div>
 
 <script>
-/* ===== Fehlerbox ===== */
 window.addEventListener('error', function(e){
   const box = document.getElementById('err');
   box.style.display='block';
   box.textContent = 'Fehler: ' + (e.message || e);
 });
 
-/* ===== Diagnostics ===== */
+// Diagnostics
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(\`[\${t}] \${msg}\`); this.lines=this.lines.slice(0,20); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,12); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     document.getElementById('diagToggle').addEventListener('click', ()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; }, {passive:true});
     document.getElementById('diagClose').addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
   }
 };
 
-/* ===== Help panel ===== */
+// Help panel
 const helpPanel={ el:null, open:false,
   init(){ this.el=document.getElementById('help');
     const toggle=document.getElementById('helpToggle'); const close=document.getElementById('helpClose');
@@ -389,42 +390,46 @@ const helpPanel={ el:null, open:false,
   }
 };
 
-/* ===== Helpers ===== */
+// Helpers
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
 const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); return d.toISOString().slice(0,10); };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
+
+// Escape + Umbrüche
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
-function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
-function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function calcMAP(sys, dia){
+  if (sys==null || dia==null) return null;
+  return Number(dia) + (Number(sys)-Number(dia))/3;
+}
 
 /* Sanfte Werte-Warnung (rein visuell) */
 function softWarnRange(input, min, max){
   const v = Number(input.value);
   const bad = input.value && (isNaN(v) || v < min || v > max);
   input.style.borderColor = bad ? "#f59e0b" : "#2b2f3a";
-  input.title = bad ? \`Ungewöhnlicher Wert (\${min}–\${max})\` : "";
+  input.title = bad ? `Ungewöhnlicher Wert (${min}–${max})` : "";
 }
 
-/* ===== IndexedDB ===== */
+// persistent storage (IndexedDB)
 let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
 function initDB(){
   return new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME, 2);
+    const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = (e)=>{
       const db = e.target.result;
       if(!db.objectStoreNames.contains(STORE)){
         const s = db.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
         s.createIndex("byDateTime","dateTime",{unique:false});
-      } else {
-        try{ db.transaction(STORE,"versionchange").objectStore(STORE).createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
       }
-      if(!db.objectStoreNames.contains(CONF)){ db.createObjectStore(CONF,{keyPath:"key"}); }
+      if(!db.objectStoreNames.contains(CONF)){
+        db.createObjectStore(CONF,{keyPath:"key"});
+      }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
     req.onerror = (e)=> reject(e);
@@ -438,7 +443,7 @@ function putConf(key, value){
     tx.onerror = (e)=>rej(e);
   });
 }
-function getConf(key){
+async function getConf(key){
   return new Promise((res,rej)=>{
     const tx = db.transaction(CONF, "readonly");
     const req = tx.objectStore(CONF).get(key);
@@ -449,22 +454,8 @@ function getConf(key){
 function addEntry(obj){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
-    const req = tx.objectStore(STORE).add(obj);
-    req.onsuccess = ()=> res(req.result); // return local id
-    req.onerror = (e)=> rej(e);
-  });
-}
-function updateEntry(id, patch){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    const store = tx.objectStore(STORE);
-    const getReq = store.get(id);
-    getReq.onsuccess = ()=>{
-      const cur = getReq.result; if(!cur){ res(false); return; }
-      const next = Object.assign({}, cur, patch);
-      store.put(next);
-    };
-    tx.oncomplete = ()=>res(true);
+    tx.objectStore(STORE).add(obj);
+    tx.oncomplete = ()=>res();
     tx.onerror = (e)=>rej(e);
   });
 }
@@ -476,7 +467,7 @@ function getAllEntries(){
     req.onerror = (e)=> rej(e);
   });
 }
-function deleteEntryLocal(id){
+function deleteEntry(id){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
     tx.objectStore(STORE).delete(id);
@@ -493,92 +484,37 @@ function wipeAll(){
   });
 }
 
-/* ===== Remote (Supabase REST) ===== */
-async function getHeaders(){
-  const key = await getConf("webhookKey");
-  if(!key) return null;
-  const apiKey = key.replace(/^Bearer\\s+/i,"");
-  const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : \`Bearer \${apiKey}\`;
-  return {
-    "Content-Type":"application/json",
-    "apikey": apiKey,
-    "Authorization": authHeader,
-    "Prefer":"return=representation"
-  };
-}
-async function syncWebhook(entry, localId){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return;
+// UI state + toggles
+let trainingActive = false;
+let lowIntakeActive = false; // < 2 L
+let sickActive = false;
+let valsartanMissed = false;
+let forxigaMissed = false;
+let nsarTaken = false;
 
-  try{
-    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(entry) });
-    if(!res.ok){
-      diag.add(\`Webhook-Fehler \${res.status}\`);
-      return;
-    }
-    const json = await res.json(); // array with inserted row
-    const remoteId = json?.[0]?.id;
-    if(remoteId!=null){
-      await updateEntry(localId, { remote_id: remoteId });
-      diag.add("Webhook: OK");
-    }
-  }catch(e){
-    diag.add("Webhook: Netzwerkfehler");
-  }
+function setToggle(el, on, activeText, baseText){
+  el.classList.toggle("active", !!on);
+  el.setAttribute("aria-pressed", on ? "true" : "false");
+  el.textContent = on ? activeText : baseText;
 }
-async function deleteRemote(remote_id){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers || !remote_id) return {ok:false};
-  const q = \`\${url}?id=eq.\${encodeURIComponent(remote_id)}\`;
-  try{
-    const res = await fetch(q, { method:"DELETE", headers });
-    return {ok: res.ok, status: res.status};
-  }catch(e){
-    return {ok:false, status:0};
-  }
+function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋 Training heute (aktiv)", "🏋 Training heute"); }
+function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🥤 < 2 L – aktiv", "🥤 < 2 L getrunken"); }
+function setSick(on){
+  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
+  if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
+  else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
-async function pullAllFromRemote(){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) throw new Error("Webhook nicht konfiguriert");
-  const q = \`\${url}?select=*&order=ts.asc\`;
-  const res = await fetch(q, { headers });
-  if(!res.ok) throw new Error(\`Fetch fehlgeschlagen (\${res.status})\`);
-  return res.json();
-}
+function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
+function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
+function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "🧪 NSAR genommen – aktiv", "🧪 NSAR genommen"); }
 
-/* Zusätzlicher Schritt: Ausstehende lokale Einträge zuerst pushen */
-async function pushPendingToRemote(){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return { pushed:0, failed:0 };
-  const all = await getAllEntries();
-  const pending = all.filter(e=>!e.remote_id);
-  let pushed=0, failed=0;
-
-  for(const e of pending){
-    try{
-      const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(e) });
-      if(!res.ok){ failed++; continue; }
-      const json = await res.json();
-      const rid = json?.[0]?.id;
-      if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
-      else { failed++; }
-      await sleep(50); // milde Drosselung
-    }catch(_){ failed++; }
-  }
-  return { pushed, failed };
-}
-
-/* ===== CSV/JSON export ===== */
+// CSV/JSON export – mit Training
 function toCSV(entries){
-  const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","ISODateTime","ID","REMOTE_ID"];
+  const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","ISODateTime","ID"];
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -594,11 +530,10 @@ function toCSV(entries){
       e.forxiga_missed ? "Ja" : "",
       e.nsar_taken ? "Ja" : "",
       e.dateTime, 
-      e.id,
-      e.remote_id ?? ""
+      e.id
     ];
   });
-  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\\n]/.test(v)) ? \`"\${v.replace(/"/g,'""')}"\` : v).join(","))].join("\\n");
+  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && v.includes(",")) ? `"${v.replace(/"/g,'""')}"` : v).join(","))].join("\n");
   return csv;
 }
 function dl(filename, content, mime){
@@ -609,20 +544,38 @@ function dl(filename, content, mime){
   URL.revokeObjectURL(a.href);
 }
 
-/* ===== List rendering ===== */
+// webhook sync
+async function syncWebhook(entry){
+  const url = await getConf("webhookUrl");
+  if(!url) return;
+  const key = await getConf("webhookKey");
+  try{
+    await fetch(url, {
+      method:"POST",
+      headers: {"Content-Type":"application/json", ...(key?{"Authorization":key}:{})},
+      body: JSON.stringify(entry)
+    });
+  }catch(e){
+    console.warn("Webhook sync failed", e);
+  }
+}
+
+// ---------- list view rendering ----------
 function withinDays(dateISO, days){
   if (days==="all") return true;
   const d = new Date(dateISO+"T00:00:00");
   const now = new Date(); const diff = (now - d)/(1000*60*60*24);
   return diff <= Number(days);
 }
-// date DESC, time ASC
+
+// NEW: sort helper -> date DESC, time ASC
 function compareForList(a, b){
   if (a.date !== b.date) return a.date < b.date ? 1 : -1;
   if (a.time < b.time) return -1;
   if (a.time > b.time) return 1;
   return 0;
 }
+
 function renderTable(entries){
   const days = $("#rangeSel").value;
   const tbody = $("#tbl tbody");
@@ -634,66 +587,38 @@ function renderTable(entries){
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
-      const zeitLabel = e.context === "Morgen" ? \`\${e.time} (Morgens)\` : e.context === "Abend" ? \`\${e.time} (Abends)\` : e.time;
-      const synced = e.remote_id ? "☁️" : "";
-
+      const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="nowrap">\${e.date}</td>
-        <td class="nowrap">\${zeitLabel}</td>
-        <td>\${art}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td class="notes">\${nl2br(notesText)}</td>
-        <td class="center">\${e.training ? "Ja" : ""}</td>
-        <td class="center">\${e.low_intake ? "Ja" : ""}</td>
-        <td class="center">\${e.sick ? "Ja" : ""}</td>
-        <td class="center">\${e.valsartan_missed ? "Ja" : ""}</td>
-        <td class="center">\${e.forxiga_missed ? "Ja" : ""}</td>
-        <td class="center">\${e.nsar_taken ? "Ja" : ""}</td>
-        <td class="center">\${synced}</td>
-        <td>
-          <button class="btn ghost" data-del="\${e.id}" data-remote="\${e.remote_id ?? ''}">Löschen</button>
-        </td>
+        <td class="nowrap">${e.date}</td>
+        <td class="nowrap">${zeitLabel}</td>
+        <td>${art}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="center">${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td class="notes">${nl2br(notesText)}</td>
+        <td class="center">${e.training ? "Ja" : ""}</td>
+        <td class="center">${e.low_intake ? "Ja" : ""}</td>
+        <td class="center">${e.sick ? "Ja" : ""}</td>
+        <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
+        <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
+        <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
+        <td><button class="btn ghost" data-del="${e.id}">Löschen</button></td>
       `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
+    tr.innerHTML = `<td colspan="16" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
     tbody.appendChild(tr);
   }
-
-  // delete handlers
   $$("#tbl [data-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
-      const localId = Number(btn.dataset.del);
-      const remoteId = btn.dataset.remote || "";
-      if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-
-      btn.disabled = true;
-      const oldText = btn.textContent;
-      btn.textContent = "Lösche…";
-      try{
-        // erst remote, dann lokal
-        if(remoteId){
-          const r = await deleteRemote(remoteId);
-          if(!r.ok){
-            alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Eintrag wird NICHT gelöscht.");
-            return;
-          }
-        }
-        await deleteEntryLocal(localId);
-        await loadAndRender();
-        await renderDoctor();
-        diag.add(remoteId ? "Löschung: Server + lokal OK" : "Löschung: lokal OK");
-      } finally {
-        btn.textContent = oldText;
-        btn.disabled = false;
-      }
+      await deleteEntry(Number(btn.dataset.del));
+      loadAndRender();
+      renderDoctor();
     }, {passive:true});
   });
 }
@@ -702,7 +627,7 @@ async function loadAndRender(){
   renderTable(entries);
 }
 
-/* ===== Doctor view ===== */
+// Doctor view rendering (chronologisch)
 async function renderDoctor(){
   const tbody = $("#doctorTable tbody");
   tbody.innerHTML = "";
@@ -726,20 +651,20 @@ async function renderDoctor(){
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>\${e.date}</td>
-        <td>\${e.time}</td>
-        <td>\${art}</td>
-        <td>\${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td>\${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td>\${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td>\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td>\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="notes">\${nl2br(notesText)}</td>
-        <td>\${e.low_intake ? "Ja" : ""}</td>
-        <td>\${e.sick ? "Ja" : ""}</td>
-        <td>\${e.valsartan_missed ? "Ja" : ""}</td>
-        <td>\${e.forxiga_missed ? "Ja" : ""}</td>
-        <td>\${e.nsar_taken ? "Ja" : ""}</td>
+        <td>${e.date}</td>
+        <td>${e.time}</td>
+        <td>${art}</td>
+        <td>${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td>${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td>${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td>${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td>${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="notes">${nl2br(notesText)}</td>
+        <td>${e.low_intake ? "Ja" : ""}</td>
+        <td>${e.sick ? "Ja" : ""}</td>
+        <td>${e.valsartan_missed ? "Ja" : ""}</td>
+        <td>${e.forxiga_missed ? "Ja" : ""}</td>
+        <td>${e.nsar_taken ? "Ja" : ""}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -750,11 +675,14 @@ async function renderDoctor(){
   }
 }
 
-/* ===== Simple SVG Chart ===== */
+/* ---------- SIMPLE SVG CHART (NEU) ---------- */
+
 const chartPanel = {
   el:null, svg:null, legend:null, open:false,
   init(){
-    this.el = $("#chart"); this.svg = $("#chartSvg"); this.legend = $("#chartLegend");
+    this.el = $("#chart");
+    this.svg = $("#chartSvg");
+    this.legend = $("#chartLegend");
     $("#chartClose").addEventListener("click", ()=>this.hide(), {passive:true});
     $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); }, {passive:true});
     $("#refreshChart").addEventListener("click", ()=> this.draw(), {passive:true});
@@ -767,8 +695,11 @@ const chartPanel = {
   async getFiltered(){
     const entries = await getAllEntries();
     const from = $("#from").value; const to = $("#to").value;
-    return entries.filter(e=>{ if (from && e.date < from) return false; if (to && e.date > to) return false; return true; })
-                  .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+    return entries.filter(e=>{
+      if (from && e.date < from) return false;
+      if (to && e.date > to) return false;
+      return true;
+    }).sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
   },
   ma(arr, k=3){
     if(!$("#smoothChk").checked || k<=1) return arr;
@@ -779,11 +710,15 @@ const chartPanel = {
       out.push(c?sum/c:null);
     } return out;
   },
+  /* Zeichnen */
   async draw(){
     const metric = $("#metricSel").value;
     const data = await this.getFiltered();
+    // Werte extrahieren
     const xs = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
     let series = [];
+    let legend = [];
+
     if(metric==="bp"){
       const y1 = data.map(e => (e.sys!=null? Number(e.sys) : null));
       const y2 = data.map(e => (e.dia!=null? Number(e.dia) : null));
@@ -799,12 +734,20 @@ const chartPanel = {
       series = [{name:"Gewicht (kg)", values:this.ma(y), color:"#f59e0b"}];
     }
 
+    // Wenn keine Zahlen vorhanden -> Hinweis
     const hasAny = series.some(s => s.values.some(v=>v!=null));
-    this.svg.innerHTML=""; this.legend.innerHTML="";
-    if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
+    this.svg.innerHTML="";
+    this.legend.innerHTML="";
+    if(!hasAny){
+      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte im Zeitraum</text>`;
+      return;
+    }
 
+    // Viewport
     const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
     const innerW=W-PL-PR, innerH=H-PT-PB;
+
+    // Achsenbereiche
     const xmin = Math.min(...xs.filter(Boolean));
     const xmax = Math.max(...xs.filter(Boolean));
     const allY = series.flatMap(s => s.values.filter(v=>v!=null));
@@ -816,17 +759,22 @@ const chartPanel = {
     const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
     const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
 
+    // Grid (x: Wochen, y: 4 Linien)
+    const svg = this.svg;
     function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
     function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
 
-    let grid = "";
+    // y-Ticks
     const ticks = 4;
+    let grid = "";
     for(let i=0;i<=ticks;i++){
       const vv = y0 + (i*(y1max-y0)/ticks);
       const yy = y(vv);
       grid += line(PL,yy,W-PR,yy,"#22262f");
       grid += text(PL-6,yy+4, Math.round(vv).toString());
     }
+
+    // x-Ticks (ungefähr wöchentlich)
     const week = 7*24*3600*1000;
     let start = xmin - (xmin % week) + week;
     for(let t=start; t<xmax; t+=week){
@@ -836,22 +784,34 @@ const chartPanel = {
       const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
       grid += text(xx, H-8, lbl, "middle");
     }
+
+    // axes
     grid += line(PL,PT,PL,H-PB,"#2b2f3a");
     grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
-    this.svg.insertAdjacentHTML("beforeend", grid);
+    svg.insertAdjacentHTML("beforeend", grid);
 
+    // Paths
     function pathFor(values, color){
       let d = "";
-      values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
+      values.forEach((v,i)=>{
+        if(v==null || !xs[i]) return;
+        const cmd = (d==="" ? "M" : "L");
+        d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `;
+      });
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
     }
     function dots(values, color){
-      let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
+      let out="";
+      values.forEach((v,i)=>{
+        if(v==null || !xs[i]) return;
+        out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`;
+      });
       return out;
     }
+
     series.forEach(s=>{
-      this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
-      this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+      svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
+      svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
       const dot = document.createElement("span"); dot.className="dot"; dot.style.background=s.color;
       const label = document.createElement("span"); label.textContent = s.name;
       const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
@@ -859,6 +819,7 @@ const chartPanel = {
     });
   },
   async savePNG(){
+    // SVG -> Canvas -> PNG
     const svgEl = this.svg;
     const xml = new XMLSerializer().serializeToString(svgEl);
     const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
@@ -869,7 +830,8 @@ const chartPanel = {
       canvas.width = svgEl.viewBox.baseVal.width || 640;
       canvas.height = svgEl.viewBox.baseVal.height || 280;
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = "#0f1116";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
       ctx.drawImage(img,0,0);
       canvas.toBlob(blob=>{
         const a = document.createElement("a");
@@ -891,28 +853,31 @@ function flashSaveOk(){
   if(!btn) return;
   if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
   btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✅ Gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+  saveFlashTimer = setTimeout(()=>{
+    btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null;
+  }, 1000);
 }
 
-/* ===== Main ===== */
 async function main(){
   diag.init(); helpPanel.init(); await initDB();
-  chartPanel.init(); bindTabs();
+  chartPanel.init(); // NEU
+  bindTabs();
   $("#date").value = todayStr();
   $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
   $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
   $("#to").value = todayStr();
   setTab("capture");
 
-  // Konfiguration vorbefüllen
+  /* Webhook-Inputs beim Start vorbefüllen */
   const savedUrl = await getConf("webhookUrl");
   const savedKey = await getConf("webhookKey");
   if (savedUrl) $("#whUrl").value = savedUrl;
   if (savedKey) $("#whKey").value = savedKey;
 
-  // Sanfte Warnung
+  /* Sanfte Warnung an Eingabefeldern aktivieren */
   ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
-    const el = $(sel); if(!el) return;
+    const el = $(sel);
+    if(!el) return;
     el.addEventListener("input", ()=>{
       if (sel.includes("sys"))        softWarnRange(el, 70, 220);
       else if (sel.includes("dia"))   softWarnRange(el, 40, 140);
@@ -921,8 +886,10 @@ async function main(){
     }, {passive:true});
   });
 
-  // Toggle-Handler
-  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h, {passive:true}); };
+  const bindToggle = (id, setter, getVal)=>{
+    const el = $(id); const h = ()=> setter(!getVal());
+    ["click"].forEach(evt=> el.addEventListener(evt, h, {passive:true}));
+  };
   bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
   bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
   bindToggle("#sickToggle", setSick, ()=>sickActive);
@@ -930,9 +897,9 @@ async function main(){
   bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
   bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 
-  $("#saveAllBtn").addEventListener("click", saveAll, {passive:true});
-  $("#applyRange").addEventListener("click", ()=>{ renderDoctor(); if(chartPanel.open) chartPanel.draw(); }, {passive:true});
-  $("#printBtn").addEventListener("click", ()=> window.print(), {passive:true});
+  document.getElementById("saveAllBtn").addEventListener("click", saveAll, {passive:true});
+  document.getElementById("applyRange").addEventListener("click", ()=>{ renderDoctor(); if(chartPanel.open) chartPanel.draw(); }, {passive:true});
+  document.getElementById("printBtn").addEventListener("click", ()=> window.print(), {passive:true});
 
   document.addEventListener('keydown', (e)=>{
     const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
@@ -942,8 +909,7 @@ async function main(){
   $("#rangeSel").addEventListener("change", loadAndRender);
   $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
   $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
-  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
-
+  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle Einträge auf DIESEM Gerät löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
   $("#saveWebhook").addEventListener("click", async ()=>{
     await putConf("webhookUrl", $("#whUrl").value.trim());
     await putConf("webhookKey", $("#whKey").value.trim());
@@ -951,52 +917,10 @@ async function main(){
     setTimeout(()=>$("#whSaved").textContent="", 2000);
   });
 
-  // MANUELLER SYNC – jetzt robust
-  $("#syncBtn").addEventListener("click", async ()=>{
-    if(!confirm("SYNC startet:\n1) Backup CSV herunterladen\n2) Ausstehende lokale Einträge an Supabase senden\n3) Lokale Liste leeren\n4) Frische Daten von Supabase laden\nFortfahren?")) return;
-    setBusy(true);
-    $("#syncBtn").disabled = true;
-    try{
-      // 1) Backup
-      const current = await getAllEntries();
-      dl("backup_vor_sync.csv", toCSV(current), "text/csv");
-
-      // 2) Pending pushen
-      const resPush = await pushPendingToRemote();
-      diag.add(\`SYNC: Pending gepusht → OK=\${resPush.pushed}, FAIL=\${resPush.failed}\`);
-
-      // 3) Lokal wipen
-      await wipeAll();
-
-      // 4) Remote ziehen
-      const remoteRows = await pullAllFromRemote();
-      for(const r of remoteRows){
-        const entry = {
-          date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-          arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-          weight: r.weight, map: r.map, notes: r.notes,
-          training: r.training, low_intake: r.low_intake, sick: r.sick,
-          valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-          remote_id: r.id
-        };
-        await addEntry(entry);
-      }
-      await loadAndRender(); await renderDoctor();
-      if(chartPanel.open) await chartPanel.draw();
-      diag.add(\`SYNC: \${remoteRows.length} Einträge vom Server geladen\`);
-      alert("Sync abgeschlossen.");
-    }catch(e){
-      console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
-    } finally {
-      $("#syncBtn").disabled = false;
-      setBusy(false);
-    }
-  });
-
   loadAndRender(); renderDoctor();
 }
 
-/* ===== Tabs ===== */
+// Tabs
 function setTab(name){
   $$(".view").forEach(v=>v.classList.remove("active"));
   $("#"+name).classList.add("active");
@@ -1006,26 +930,10 @@ function setTab(name){
 }
 function bindTabs(){
   const handler = (ev)=> setTab(ev.currentTarget.dataset.tab);
-  $$(".tabs .btn").forEach(b=> b.addEventListener("click", handler, {passive:true}));
+  $$(".tabs .btn").forEach(b=>{
+    ["click"].forEach(evt=> b.addEventListener(evt, handler, {passive:true}));
+  });
 }
-
-/* ===== Save flow ===== */
-let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false;
-function setToggle(el, on, activeText, baseText){
-  el.classList.toggle("active", !!on);
-  el.setAttribute("aria-pressed", on ? "true" : "false");
-  el.textContent = on ? activeText : baseText;
-}
-function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋 Training heute (aktiv)", "🏋 Training heute"); }
-function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🥤 < 2 L – aktiv", "🥤 < 2 L getrunken"); }
-function setSick(on){
-  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
-  if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
-  else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
-}
-function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
-function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
-function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "🧪 NSAR genommen – aktiv", "🧪 NSAR genommen"); }
 
 // Prüft, ob ein Block Daten enthält (inkl. Gewicht)
 function blockHasData(which){
@@ -1037,6 +945,8 @@ function blockHasData(which){
     $("#weightDay")?.value
   );
 }
+
+// saveAll & saveBlock
 async function saveAll(){
   const hasM = blockHasData("M");
   const hasA = blockHasData("A");
@@ -1051,17 +961,21 @@ async function saveAll(){
     if(hasM) savedM = await saveBlock("Morgen","M");
     if(hasA) savedA = await saveBlock("Abend","A");
   }
+
   if(!savedM && !savedA){ alert("Keine Daten eingegeben – nichts zu speichern."); return; }
 
   loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); flashSaveOk();
 }
+
 async function saveBlock(contextLabel, which){
   if(!blockHasData(which)) return false;
+
   const date = $("#date").value || todayStr();
   const time = $(`#time${which}`).value || timeStr();
   const sys = $(`#sys${which}`).value ? Number($(`#sys${which}`).value) : null;
   const dia = $(`#dia${which}`).value ? Number($(`#dia${which}`).value) : null;
   const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
+
   const weight = $("#weightDay")?.value ? Number($("#weightDay").value) : null;
   const dayNotes = $("#notesDay").value ? $("#notesDay").value.trim() : "";
   const currentISO = new Date(date+"T"+time).toISOString();
@@ -1075,10 +989,8 @@ async function saveBlock(contextLabel, which){
     valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken
   };
 
-  // lokal speichern und lokale ID bekommen
-  const localId = await addEntry(entry);
-  // sofort versuchen zum Server zu posten und remote_id nachtragen
-  await syncWebhook(entry, localId);
+  await addEntry(entry);
+  await syncWebhook(entry);
   return true;
 }
 
