@@ -772,7 +772,18 @@ function toCSV(entries){
       e.remote_id ?? ""
     ];
   });
-  const csv = [header.join(","), ...rows.map(r=>r.map(v=> (typeof v==="string" && /[",\\n]/.test(v)) ? \`"\${v.replace(/"/g,'""')}"\` : v).join(","))].join("\\n");
+  const csv = [
+  header.join(","),
+  ...rows.map(r =>
+    r.map(v => {
+      if (typeof v === "string" && /[",\n]/.test(v)) {
+        return '"' + v.replace(/"/g, '""') + '"';
+      }
+      return v;
+    }).join(",")
+  )
+].join("\n");
+
   return csv;
 }
 function dl(filename, content, mime){
