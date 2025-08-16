@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V0.7 – Befund erfassen)</title>
+<title>Gesundheits-Logger (V0.8 – Liste Befunde + deleteRemoteBefund)</title>
 <style>
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
@@ -39,6 +39,7 @@
   .spacer{flex:1}
   section.view{display:none}
   section.view.active{display:block}
+
   #doctorTable thead{position:sticky;top:0;background:#0f1116}
   #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
@@ -106,7 +107,10 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V0.7</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V0.8</span>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
+    <button class="btn ghost" id="diagToggle" type="button">Log</button>
   </div>
 </header>
 
@@ -178,7 +182,7 @@
       <button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
     </div>
 
-    <!-- Daily-Capture (wie bisher) -->
+    <!-- Daily-Capture -->
     <section class="card" id="entry">
       <div class="row">
         <div style="flex:1">
@@ -252,7 +256,7 @@
       </div>
     </section>
 
-    <!-- Befund-Capture (neu) -->
+    <!-- Befund-Capture -->
     <section class="card hidden" id="entry_befund">
       <h3 class="blockTitle">Neuer Befund</h3>
       <div class="grid">
@@ -270,7 +274,7 @@
     </section>
   </section>
 
- <!-- List -->
+  <!-- List -->
   <section class="view" id="list">
     <section class="card">
       <div class="toolbar">
@@ -284,8 +288,8 @@
         </select>
         <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
         <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">↕ Sync mit Supabase</button>
-        <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen</button>
+        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">↕ Sync (Daily)</button>
+        <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
       </div>
 
       <!-- Segmented Control: List -->
@@ -328,12 +332,12 @@
           <thead>
             <tr>
               <th>Datum</th>
-              <th>Kreatinin</th>
-              <th>eGFR</th>
-              <th>uACR</th>
-              <th>Kalium</th>
+              <th class="center">Kreatinin</th>
+              <th class="center">eGFR</th>
+              <th class="center">uACR</th>
+              <th class="center">Kalium</th>
               <th>Kommentar</th>
-              <th>Cloud</th>
+              <th class="center">Cloud</th>
               <th>Aktion</th>
             </tr>
           </thead>
@@ -344,41 +348,69 @@
       <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
     </section>
 
-    <!-- Supabase-Sync-Card unverändert -->
-    <section class="card"> … </section>
+    <!-- Webhook-Konfiguration -->
+    <section class="card">
+      <h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
+      <div class="grid">
+        <div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
+        <div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
+        <div><label>Webhook URL (medical_reports)</label><input type="url" id="whUrlMr" placeholder="https://XYZ.supabase.co/rest/v1/medical_reports"></div>
+      </div>
+      <div class="row" style="margin-top:8px;align-items:center">
+        <button class="btn primary" id="saveWebhook" type="button">Speichern</button>
+        <span id="whSaved" class="small" style="margin-left:8px"></span>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
+      </div>
+    </section>
   </section>
 
-<!-- ... Rest unverändert ... -->
+  <!-- Doctor -->
+  <section class="view" id="doctor">
+    <section class="card" id="doctorCard">
+      <div class="toolbar">
+        <strong id="doctorTitle">Arzt-Ansicht • Daily</strong>
+        <div class="spacer"></div>
+        <label class="small">Von <input type="date" id="from" style="width:auto"></label>
+        <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
+        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+        <button class="btn ghost" id="printBtn" type="button">Drucken</button>
+      </div>
+      <div style="overflow:auto">
+        <table id="doctorTable">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Zeit</th>
+              <th>Art</th>
+              <th>Sys</th>
+              <th>Dia</th>
+              <th>Puls</th>
+              <th>MAP</th>
+              <th>Gewicht</th>
+              <th>Notizen</th>
+              <th>&lt; 2 L</th>
+              <th>Krank</th>
+              <th>Valsartan ❌</th>
+              <th>Forxiga ❌</th>
+              <th>NSAR</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="small" style="margin-top:6px">Hinweis: Befund-Ansicht für den Arzt kommt als nächstes (separater Toggle).</div>
+    </section>
+  </section>
+</main>
+
+<!-- einfache FABs -->
+<div class="fab-wrap">
+  <div class="fab" id="helpToggleFab" title="Hilfe">❓</div>
+  <div class="fab" id="diagToggleFab" title="Log">🧪</div>
+</div>
 
 <script>
-/* ... bestehender Code ... */
-
-/* === List Umschaltung === */
-function bindListSegment(){
-  const seg = $("#seg-list");
-  if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const mode = b.dataset.mode;
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
-      $("#listReportWrap").classList.toggle("hidden", mode!=="befund");
-    }, {passive:true});
-  });
-}
-
-/* === Main erweitern === */
-async function main(){
-  diag.init(); helpPanel.init(); await initDB();
-  chartPanel.init(); bindTabs();
-  // ...
-  bindCaptureSegment();
-  bindListSegment();   // <--- HINZUGEFÜGT
-  // ...
-  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
-  loadAndRender(); renderDoctor();
-}
-</script>
 /* ===== Fehlerbox ===== */
 window.addEventListener('error', function(e){
   const box = document.getElementById('err');
@@ -388,18 +420,24 @@ window.addEventListener('error', function(e){
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,20); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
-    document.getElementById('diagToggle').addEventListener('click', ()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; }, {passive:true});
-    document.getElementById('diagClose').addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
+    const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
+    const close=document.getElementById('diagClose');
+    const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+    t1.addEventListener('click', toggle, {passive:true});
+    t2.addEventListener('click', toggle, {passive:true});
+    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
   }
 };
 
 /* ===== Help panel ===== */
 const helpPanel={ el:null, open:false,
   init(){ this.el=document.getElementById('help');
-    const toggle=document.getElementById('helpToggle'); const close=document.getElementById('helpClose');
-    toggle.addEventListener('click', ()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; }, {passive:true});
+    const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
+    const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+    t1.addEventListener('click', toggle, {passive:true});
+    t2.addEventListener('click', toggle, {passive:true});
     close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; }, {passive:true});
   }
 };
@@ -412,7 +450,7 @@ const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); return d.toISOString().slice(0,10); };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
+function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
 function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -430,7 +468,7 @@ let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
 function initDB(){
   return new Promise((resolve,reject)=>{
-    // bump: Version 3 (neuer Store "reports")
+    // Version 3 (Store "reports")
     const req = indexedDB.open(DB_NAME, 3);
     req.onupgradeneeded = (e)=>{
       const db = e.target.result;
@@ -543,6 +581,14 @@ function getAllReports(){
     req.onerror = (e)=> rej(e);
   });
 }
+function deleteReportLocal(id){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction("reports","readwrite");
+    tx.objectStore("reports").delete(id);
+    tx.oncomplete = ()=>res();
+    tx.onerror = (e)=>rej(e);
+  });
+}
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
@@ -556,27 +602,6 @@ async function getHeaders(){
     "Authorization": authHeader,
     "Prefer":"return=representation"
   };
-}
-async function syncWebhook(entry, localId){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return;
-
-  try{
-    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(entry) });
-    if(!res.ok){
-      diag.add(`Webhook-Fehler ${res.status}`);
-      return;
-    }
-    const json = await res.json();
-    const remoteId = json?.[0]?.id;
-    if(remoteId!=null){
-      await updateEntry(localId, { remote_id: remoteId });
-      diag.add("Webhook: OK");
-    }
-  }catch(e){
-    diag.add("Webhook: Netzwerkfehler");
-  }
 }
 async function deleteRemote(remote_id){
   const url = await getConf("webhookUrl");
@@ -634,8 +659,20 @@ async function syncReportWebhook(report, localId){
     if(remoteId){ await updateReport(localId, { remote_id: remoteId }); diag.add("Befund: Webhook OK"); }
   }catch(e){ diag.add("Befund: Netzwerkfehler"); }
 }
+async function deleteRemoteBefund(remote_id){
+  const url = await getConf("webhookUrlMr");
+  const headers = await getHeaders();
+  if(!url || !headers || !remote_id) return {ok:false};
+  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+  try{
+    const res = await fetch(q, { method:"DELETE", headers });
+    return {ok: res.ok, status: res.status};
+  }catch(e){
+    return {ok:false, status:0};
+  }
+}
 
-/* ===== CSV/JSON export ===== */
+/* ===== CSV/JSON export (Daily) ===== */
 function toCSV(entries){
   const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","ISODateTime","ID","REMOTE_ID"];
   const rows = entries.map(e=>{
@@ -672,7 +709,7 @@ function dl(filename, content, mime){
   URL.revokeObjectURL(a.href);
 }
 
-/* ===== List rendering ===== */
+/* ===== List rendering (Daily) ===== */
 function withinDays(dateISO, days){
   if (days==="all") return true;
   const d = new Date(dateISO+"T00:00:00");
@@ -762,7 +799,64 @@ async function loadAndRender(){
   renderTable(entries);
 }
 
-/* ===== Doctor view ===== */
+/* ===== List rendering (Befunde) ===== */
+async function loadAndRenderReports(){
+  const reports = await getAllReports();
+  const tbody = $("#tblReports tbody");
+  tbody.innerHTML = "";
+
+  reports
+    .sort((a,b)=> b.ts - a.ts) // neueste zuerst
+    .forEach(r=>{
+      const synced = r.remote_id ? "☁️" : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="nowrap">${r.datum || ""}</td>
+        <td class="center">${r.kreatinin ?? ""}</td>
+        <td class="center">${r.egfr ?? ""}</td>
+        <td class="center">${r.uacr ?? ""}</td>
+        <td class="center">${r.kalium ?? ""}</td>
+        <td class="notes">${esc(r.kommentar||"")}</td>
+        <td class="center">${synced}</td>
+        <td>
+          <button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  if(!tbody.children.length){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
+    tbody.appendChild(tr);
+  }
+
+  // Delete-Buttons
+  $$("#tblReports [data-delrep]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const localId = Number(btn.dataset.delrep);
+      const remoteId = btn.dataset.remote || "";
+      if(!confirm("Befund wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
+      btn.disabled = true; const old=btn.textContent; btn.textContent = "Lösche…";
+      try{
+        if(remoteId){
+          const r = await deleteRemoteBefund(remoteId);
+          if(!r.ok){
+            alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
+            return;
+          }
+        }
+        await deleteReportLocal(localId);
+        await loadAndRenderReports();
+        diag.add(remoteId ? "Befund-Löschung: Server + lokal OK" : "Befund-Löschung: lokal OK");
+      }finally{
+        btn.disabled = false; btn.textContent = old;
+      }
+    }, {passive:true});
+  });
+}
+
+/* ===== Doctor view (Daily) ===== */
 async function renderDoctor(){
   const tbody = $("#doctorTable tbody");
   tbody.innerHTML = "";
@@ -954,110 +1048,6 @@ function flashSaveOk(){
   saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
-/* ===== Main ===== */
-async function main(){
-  diag.init(); helpPanel.init(); await initDB();
-  chartPanel.init(); bindTabs();
-  $("#date").value = todayStr();
-  $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
-  $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
-  $("#to").value = todayStr();
-  setTab("capture");
-
-  // Konfiguration vorbefüllen
-  const savedUrl = await getConf("webhookUrl");
-  const savedKey = await getConf("webhookKey");
-  const savedMrUrl = await getConf("webhookUrlMr");
-  if (savedUrl) $("#whUrl").value = savedUrl;
-  if (savedKey) $("#whKey").value = savedKey;
-  if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
-
-  // Sanfte Warnung
-  ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
-    const el = $(sel); if(!el) return;
-    el.addEventListener("input", ()=>{
-      if (sel.includes("sys"))        softWarnRange(el, 70, 220);
-      else if (sel.includes("dia"))   softWarnRange(el, 40, 140);
-      else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
-      else if (sel.includes("weight"))softWarnRange(el, 30, 300);
-    }, {passive:true});
-  });
-
-  // Toggle-Handler
-  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h, {passive:true}); };
-  bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
-  bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
-  bindToggle("#sickToggle", setSick, ()=>sickActive);
-  bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
-  bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
-  bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
-
-  $("#saveAllBtn").addEventListener("click", saveAll, {passive:true});
-  $("#applyRange").addEventListener("click", ()=>{ renderDoctor(); if(chartPanel.open) chartPanel.draw(); }, {passive:true});
-  $("#printBtn").addEventListener("click", ()=> window.print(), {passive:true});
-
-  document.addEventListener('keydown', (e)=>{
-    const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-    if(isSave){ e.preventDefault(); saveAll(); }
-  });
-
-  $("#rangeSel").addEventListener("change", loadAndRender);
-  $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
-  $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
-  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
-
-  $("#saveWebhook").addEventListener("click", async ()=>{
-    await putConf("webhookUrl", $("#whUrl").value.trim());
-    await putConf("webhookKey", $("#whKey").value.trim());
-    await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
-    $("#whSaved").textContent = "Gespeichert ✓";
-    setTimeout(()=>$("#whSaved").textContent="", 2000);
-  });
-
-  // MANUELLER SYNC (Daily)
-  $("#syncBtn").addEventListener("click", async ()=>{
-    if(!confirm("SYNC startet:\n1) Backup CSV herunterladen\n2) Ausstehende lokale Einträge an Supabase senden\n3) Lokale Liste leeren\n4) Frische Daten von Supabase laden\nFortfahren?")) return;
-    setBusy(true);
-    $("#syncBtn").disabled = true;
-    try{
-      const current = await getAllEntries();
-      dl("backup_vor_sync.csv", toCSV(current), "text/csv");
-      const resPush = await pushPendingToRemote();
-      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-      await wipeAll();
-      const remoteRows = await pullAllFromRemote();
-      for(const r of remoteRows){
-        const entry = {
-          date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-          arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-          weight: r.weight, map: r.map, notes: r.notes,
-          training: r.training, low_intake: r.low_intake, sick: r.sick,
-          valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-          remote_id: r.id
-        };
-        await addEntry(entry);
-      }
-      await loadAndRender(); await renderDoctor();
-      if(chartPanel.open) await chartPanel.draw();
-      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
-      alert("Sync abgeschlossen.");
-    }catch(e){
-      console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
-    } finally {
-      $("#syncBtn").disabled = false;
-      setBusy(false);
-    }
-  });
-
-  // Capture-Mode Umschaltung
-  bindCaptureSegment();
-
-  // Befund speichern
-  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
-
-  loadAndRender(); renderDoctor();
-}
-
 /* ===== Tabs ===== */
 function setTab(name){
   $$(".view").forEach(v=>v.classList.remove("active"));
@@ -1081,6 +1071,22 @@ function bindCaptureSegment(){
       seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
       $("#entry").classList.toggle("hidden", mode !== "daily");
       $("#entry_befund").classList.toggle("hidden", mode !== "befund");
+    }, {passive:true});
+  });
+}
+
+/* ===== List Umschaltung ===== */
+function bindListSegment(){
+  const seg = $("#seg-list");
+  if(!seg) return;
+  seg.querySelectorAll(".seg-btn").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const mode = b.dataset.mode;
+      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+      $("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
+      $("#listReportWrap").classList.toggle("hidden", mode!=="befund");
+      if(mode==="befund"){ await loadAndRenderReports(); }
+      else { await loadAndRender(); }
     }, {passive:true});
   });
 }
@@ -1176,6 +1182,135 @@ async function saveReport(){
   setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
 
   ["#repKrea","#repEgfr","#repUacr","#repK","#repNote"].forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
+}
+
+/* ===== Webhook Sync (Daily) ===== */
+async function syncWebhook(entry, localId){
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if(!url || !headers) return;
+
+  try{
+    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(entry) });
+    if(!res.ok){
+      diag.add(`Webhook-Fehler ${res.status}`);
+      return;
+    }
+    const json = await res.json();
+    const remoteId = json?.[0]?.id;
+    if(remoteId!=null){
+      await updateEntry(localId, { remote_id: remoteId });
+      diag.add("Webhook: OK");
+    }
+  }catch(e){
+    diag.add("Webhook: Netzwerkfehler");
+  }
+}
+
+/* ===== Main ===== */
+async function main(){
+  diag.init(); helpPanel.init(); await initDB();
+  chartPanel.init(); bindTabs();
+  $("#date").value = todayStr();
+  $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
+  $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
+  $("#to").value = todayStr();
+  setTab("capture");
+
+  // Konfiguration laden
+  const savedUrl = await getConf("webhookUrl");
+  const savedKey = await getConf("webhookKey");
+  const savedMrUrl = await getConf("webhookUrlMr");
+  if (savedUrl) $("#whUrl").value = savedUrl;
+  if (savedKey) $("#whKey").value = savedKey;
+  if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
+
+  // Sanfte Warnung
+  ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
+    const el = $(sel); if(!el) return;
+    el.addEventListener("input", ()=>{
+      if (sel.includes("sys"))        softWarnRange(el, 70, 220);
+      else if (sel.includes("dia"))   softWarnRange(el, 40, 140);
+      else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
+      else if (sel.includes("weight"))softWarnRange(el, 30, 300);
+    }, {passive:true});
+  });
+
+  // Toggle-Handler
+  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h, {passive:true}); };
+  bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
+  bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
+  bindToggle("#sickToggle", setSick, ()=>sickActive);
+  bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
+  bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
+  bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
+
+  $("#saveAllBtn").addEventListener("click", saveAll, {passive:true});
+  $("#applyRange").addEventListener("click", ()=>{ renderDoctor(); if(chartPanel.open) chartPanel.draw(); }, {passive:true});
+  $("#printBtn").addEventListener("click", ()=> window.print(), {passive:true});
+
+  document.addEventListener('keydown', (e)=>{
+    const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
+    if(isSave){ e.preventDefault(); saveAll(); }
+  });
+
+  $("#rangeSel").addEventListener("change", loadAndRender);
+  $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
+  $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
+  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
+
+  $("#saveWebhook").addEventListener("click", async ()=>{
+    await putConf("webhookUrl", $("#whUrl").value.trim());
+    await putConf("webhookKey", $("#whKey").value.trim());
+    await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
+    $("#whSaved").textContent = "Gespeichert ✓";
+    setTimeout(()=>$("#whSaved").textContent="", 2000);
+  });
+
+  // MANUELLER SYNC (Daily)
+  $("#syncBtn").addEventListener("click", async ()=>{
+    if(!confirm("SYNC (Daily) startet:\n1) Backup CSV herunterladen\n2) Ausstehende lokale Einträge an Supabase senden\n3) Lokale Liste leeren\n4) Frische Daten von Supabase laden\nFortfahren?")) return;
+    setBusy(true);
+    $("#syncBtn").disabled = true;
+    try{
+      const current = await getAllEntries();
+      dl("backup_vor_sync.csv", toCSV(current), "text/csv");
+      const resPush = await pushPendingToRemote();
+      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      await wipeAll();
+      const remoteRows = await pullAllFromRemote();
+      for(const r of remoteRows){
+        const entry = {
+          date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+          arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+          weight: r.weight, map: r.map, notes: r.notes,
+          training: r.training, low_intake: r.low_intake, sick: r.sick,
+          valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+          remote_id: r.id
+        };
+        await addEntry(entry);
+      }
+      await loadAndRender(); await renderDoctor();
+      if(chartPanel.open) await chartPanel.draw();
+      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
+      alert("Sync abgeschlossen.");
+    }catch(e){
+      console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
+    } finally {
+      $("#syncBtn").disabled = false;
+      setBusy(false);
+    }
+  });
+
+  // Bind Segmented Controls
+  bindCaptureSegment();
+  bindListSegment();
+
+  // Befund speichern
+  $("#saveReportBtn").addEventListener("click", saveReport, {passive:true});
+
+  // Initial
+  loadAndRender(); renderDoctor();
 }
 
 /* boot */
