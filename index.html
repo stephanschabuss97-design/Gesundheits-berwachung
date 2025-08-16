@@ -494,7 +494,7 @@ window.addEventListener('error', function(e){
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
     const close=document.getElementById('diagClose');
@@ -524,7 +524,7 @@ const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); return d.toISOString().slice(0,10); };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
+function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
 function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
@@ -668,7 +668,7 @@ function deleteReportLocal(id){
 async function getHeaders(){
   const key = await getConf("webhookKey");
   if(!key) return null;
-  const apiKey = key.replace(/^Bearer\\s+/i,"");
+  const apiKey = key.replace(/^Bearer\s+/i,"");
   const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : `Bearer ${apiKey}`;
   return {
     "Content-Type":"application/json",
@@ -752,7 +752,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -818,36 +818,36 @@ function renderTable(entries){
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
-      const zeitLabel = e.context === "Morgen" ? \`\${e.time} (Morgens)\` : e.context === "Abend" ? \`\${e.time} (Abends)\` : e.time;
+      const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
       const synced = e.remote_id ? "☁️" : "";
 
       const tr = document.createElement("tr");
-      tr.innerHTML = \`
-        <td class="nowrap">\${e.date}</td>
-        <td class="nowrap">\${zeitLabel}</td>
-        <td>\${art}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="center">\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td class="notes">\${nl2br(notesText)}</td>
-        <td class="center">\${e.training ? "Ja" : ""}</td>
-        <td class="center">\${e.low_intake ? "Ja" : ""}</td>
-        <td class="center">\${e.sick ? "Ja" : ""}</td>
-        <td class="center">\${e.valsartan_missed ? "Ja" : ""}</td>
-        <td class="center">\${e.forxiga_missed ? "Ja" : ""}</td>
-        <td class="center">\${e.nsar_taken ? "Ja" : ""}</td>
-        <td class="center">\${synced}</td>
+      tr.innerHTML = `
+        <td class="nowrap">${e.date}</td>
+        <td class="nowrap">${zeitLabel}</td>
+        <td>${art}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td class="center">${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="center">${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td class="notes">${nl2br(notesText)}</td>
+        <td class="center">${e.training ? "Ja" : ""}</td>
+        <td class="center">${e.low_intake ? "Ja" : ""}</td>
+        <td class="center">${e.sick ? "Ja" : ""}</td>
+        <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
+        <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
+        <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
+        <td class="center">${synced}</td>
         <td>
-          <button class="btn ghost" data-del="\${e.id}" data-remote="\${e.remote_id ?? ''}">Löschen</button>
+          <button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button>
         </td>
-      \`;
+      `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = \`<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>\`;
+    tr.innerHTML = `<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
     tbody.appendChild(tr);
   }
 
@@ -895,22 +895,22 @@ async function loadAndRenderReports(){
     .forEach(r=>{
       const synced = r.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
-      tr.innerHTML = \`
-        <td class="nowrap">\${r.datum || ""}</td>
-        <td class="center">\${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-        <td class="center">\${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
-        <td class="center">\${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
-        <td class="center">\${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
-        <td class="notes">\${nl2br(r.kommentar || "")}</td>
-        <td class="center">\${synced}</td>
-        <td><button class="btn ghost" data-delrep="\${r.id}" data-remote="\${r.remote_id ?? ''}">Löschen</button></td>
-      \`;
+      tr.innerHTML = `
+        <td class="nowrap">${r.datum || ""}</td>
+        <td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+        <td class="center">${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
+        <td class="center">${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
+        <td class="center">${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
+        <td class="notes">${nl2br(r.kommentar || "")}</td>
+        <td class="center">${synced}</td>
+        <td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
+      `;
       tbody.appendChild(tr);
     });
 
   if(!tbody.children.length){
     const tr=document.createElement("tr");
-    tr.innerHTML=\`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>\`;
+    tr.innerHTML=`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
     tbody.appendChild(tr);
   }
 
@@ -962,22 +962,22 @@ async function renderDoctor(){
       const art = isTrainingOnly ? "Training" : "Messung";
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
-      tr.innerHTML = \`
-        <td>\${e.date}</td>
-        <td>\${e.time}</td>
-        <td>\${art}</td>
-        <td>\${isTrainingOnly ? "" : (e.sys??"")}</td>
-        <td>\${isTrainingOnly ? "" : (e.dia??"")}</td>
-        <td>\${isTrainingOnly ? "" : (e.pulse??"")}</td>
-        <td>\${isTrainingOnly ? "" : fmtNum(e.map)}</td>
-        <td>\${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
-        <td class="notes">\${nl2br(notesText)}</td>
-        <td>\${e.low_intake ? "Ja" : ""}</td>
-        <td>\${e.sick ? "Ja" : ""}</td>
-        <td>\${e.valsartan_missed ? "Ja" : ""}</td>
-        <td>\${e.forxiga_missed ? "Ja" : ""}</td>
-        <td>\${e.nsar_taken ? "Ja" : ""}</td>
-      \`;
+      tr.innerHTML = `
+        <td>${e.date}</td>
+        <td>${e.time}</td>
+        <td>${art}</td>
+        <td>${isTrainingOnly ? "" : (e.sys??"")}</td>
+        <td>${isTrainingOnly ? "" : (e.dia??"")}</td>
+        <td>${isTrainingOnly ? "" : (e.pulse??"")}</td>
+        <td>${isTrainingOnly ? "" : fmtNum(e.map)}</td>
+        <td>${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
+        <td class="notes">${nl2br(notesText)}</td>
+        <td>${e.low_intake ? "Ja" : ""}</td>
+        <td>${e.sick ? "Ja" : ""}</td>
+        <td>${e.valsartan_missed ? "Ja" : ""}</td>
+        <td>${e.forxiga_missed ? "Ja" : ""}</td>
+        <td>${e.nsar_taken ? "Ja" : ""}</td>
+      `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
@@ -1004,14 +1004,14 @@ async function renderDoctorReports(){
     .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()))
     .forEach(r=>{
       const tr = document.createElement("tr");
-      tr.innerHTML = \`
-        <td class="nowrap">\${r.datum || ""}</td>
-        <td class="center">\${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-        <td class="center">\${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
-        <td class="center">\${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
-        <td class="center">\${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
-        <td class="notes">\${nl2br(r.kommentar || "")}</td>
-      \`;
+      tr.innerHTML = `
+        <td class="nowrap">${r.datum || ""}</td>
+        <td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+        <td class="center">${r.egfr      != null ? Number(r.egfr).toFixed(0)      : ""}</td>
+        <td class="center">${r.uacr      != null ? Number(r.uacr).toFixed(0)      : ""}</td>
+        <td class="center">${r.kalium    != null ? Number(r.kalium).toFixed(1)    : ""}</td>
+        <td class="notes">${nl2br(r.kommentar || "")}</td>
+      `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
