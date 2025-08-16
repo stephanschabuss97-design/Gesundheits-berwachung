@@ -1572,7 +1572,7 @@ async function main(){
       const current = await getAllEntries();
       dl("backup_vor_sync.csv", toCSV(current), "text/csv");
       const resPush = await pushPendingToRemote();
-      diag.add(\`SYNC: Pending gepusht → OK=\${resPush.pushed}, FAIL=\${resPush.failed}\`);
+diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
       await wipeAll();
       const remoteRows = await pullAllFromRemote();
       for(const r of remoteRows){
@@ -1589,7 +1589,7 @@ async function main(){
       await loadAndRender(); await renderDoctorViewForMode();
       if(chartPanel.open) await chartPanel.draw();
       if(chartReportsPanel.open) await chartReportsPanel.draw();
-      diag.add(\`SYNC: \${remoteRows.length} Einträge vom Server geladen\`);
+diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
       alert("Sync abgeschlossen.");
     }catch(e){
       console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
