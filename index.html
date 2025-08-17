@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V0.9 – Arzt-Ansicht: Daily/Befunde + Diagramm)</title>
+<title>Gesundheits-Logger (V1.0 – Realtime & Auto-Sync)</title>
 <style>
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
@@ -67,58 +67,31 @@
   .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
   /* Tabellen */
-  /* --- Daily-Tabelle (#tblhealth) --- */
-  #tbl{width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #tbl thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
-  #tbl th, #tbl td{padding:14px 12px; font-size:14px; vertical-align:top;}
-  #tbl tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #tbl tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #tbl tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-  #tbl td.center, #tbl th.center{ text-align:center; white-space:nowrap; }
-  #tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
-  #tbl td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
-
-  /* --- Befund-Tabellen (#tblReports / #doctorReportsTable) --- */
-  #tblReports, #doctorReportsTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #tblReports thead th, #doctorReportsTable thead th{position:sticky; top:0; background:#0f1116; z-index:1;}
-  #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
-  #tblReports tbody tr td, #doctorReportsTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-  #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center{ text-align:center; white-space:nowrap; }
-  #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
-  #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
-
-  #doctorTable{width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #doctorTable th, #doctorTable td{padding:12px 10px;}
-  #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+  #tbl, #tblReports, #doctorReportsTable, #doctorTable {width:100%; border-collapse:separate; border-spacing:0 8px;}
+  #tbl thead th, #tblReports thead th, #doctorReportsTable thead th {position:sticky; top:0; background:#0f1116; z-index:1;}
+  #tbl th, #tbl td, #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
+  #tbl tbody tr td, #tblReports tbody tr td, #doctorReportsTable tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+  #tbl tbody tr td:first-child, #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child, #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+  #tbl tbody tr td:last-child, #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child, #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+  #tbl td.center, #tbl th.center, #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center, #doctorTable td.center, #doctorTable th.center{ text-align:center; white-space:nowrap; }
+  #tbl td.nowrap, #tbl th.nowrap, #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
+  #tbl td.notes, #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
 
   .blockTitle{font-weight:800;margin:0 0 8px 0}
 
-  /* Chart panel (Daily) */
-  #chart .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-  #chart .controls > * {flex:1}
-  #chart .controls .half{flex:0 0 calc(50% - 4px)}
-  #chart svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
-  #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
-
-  /* Chart panel (Befunde) */
-  #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-  #chartReports .controls > * {flex:1}
-  #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
-  #chartReports svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
-  #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+  /* Chart panel */
+  #chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  #chart .controls > *, #chartReports .controls > * {flex:1}
+  #chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
+  #chart svg, #chartReports svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
+  #chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
 
   /* Busy overlay */
   #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
   #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
-  body.is-busy #busy{display:flex}
 
-  /* Segmented Control + helpers */
   .seg{display:flex;gap:8px;margin:8px 0 12px}
   .seg .seg-btn.active{background:var(--accent);color:#fff}
   .hidden{display:none!important}
@@ -127,7 +100,7 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V0.9</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V1.0</span>
     <div class="spacer"></div>
     <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
     <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -222,7 +195,6 @@
 <main>
   <!-- Capture -->
   <section class="view active" id="capture">
-    <!-- Segmented Control: Erfassen -->
     <div class="seg" id="seg-capture">
       <button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
       <button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
@@ -338,7 +310,6 @@
         <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
       </div>
 
-      <!-- Segmented Control: List -->
       <div class="seg" id="seg-list">
         <button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
         <button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
@@ -418,7 +389,6 @@
         <strong id="doctorTitle">Arzt-Ansicht</strong>
         <div class="spacer"></div>
 
-        <!-- Segmented Control: Doctor -->
         <div class="seg" id="seg-doctor" style="margin:0">
           <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
           <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
@@ -431,7 +401,6 @@
         <button class="btn ghost" id="printBtn" type="button">Drucken</button>
       </div>
 
-      <!-- Wrapper: Daily -->
       <div style="overflow:auto" id="doctorDailyWrap">
         <table id="doctorTable">
           <thead>
@@ -456,7 +425,6 @@
         </table>
       </div>
 
-      <!-- Wrapper: Befunde -->
       <div style="overflow:auto" id="doctorReportWrap" class="hidden">
         <table id="doctorReportsTable">
           <thead>
@@ -478,11 +446,13 @@
   </section>
 </main>
 
-<!-- einfache FABs -->
 <div class="fab-wrap">
   <div class="fab" id="helpToggleFab" title="Hilfe">❓</div>
   <div class="fab" id="diagToggleFab" title="Log">🧪</div>
 </div>
+
+<!-- Supabase (UMD, v2) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
 /* ===== Fehlerbox ===== */
@@ -494,7 +464,7 @@ window.addEventListener('unhandledrejection', (e)=>{
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,50); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
     const close=document.getElementById('diagClose');
@@ -521,47 +491,44 @@ const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
 const pad2 = n => n.toString().padStart(2,'0');
-const todayStr = () => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-};
+const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
 function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-/* Sanfte Werte-Warnung (rein visuell) */
-function softWarnRange(input, min, max){
-  const v = Number(input.value);
-  const bad = input.value && (isNaN(v) || v < min || v > max);
-  input.style.borderColor = bad ? "#f59e0b" : "#2b2f3a";
-  input.title = bad ? `Ungewöhnlicher Wert (${min}–${max})` : "";
-}
 
 /* ===== IndexedDB ===== */
 let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
 function initDB(){
   return new Promise((resolve,reject)=>{
-    // Version 3 (Store "reports")
-    const req = indexedDB.open(DB_NAME, 3);
+    // Bump: Version 4 – Indizes für remote_id (Entries & Reports)
+    const req = indexedDB.open(DB_NAME, 4);
     req.onupgradeneeded = (e)=>{
       const db = e.target.result;
+      // entries
       if(!db.objectStoreNames.contains(STORE)){
         const s = db.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
         s.createIndex("byDateTime","dateTime",{unique:false});
+        s.createIndex("byRemote","remote_id",{unique:false});
       } else {
-        try{ db.transaction(STORE,"versionchange").objectStore(STORE).createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
+        const s = e.target.transaction.objectStore(STORE);
+        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
+        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
       }
+      // config
       if(!db.objectStoreNames.contains(CONF)){ db.createObjectStore(CONF,{keyPath:"key"}); }
+      // reports
       if(!db.objectStoreNames.contains("reports")){
         const r = db.createObjectStore("reports",{keyPath:"id",autoIncrement:true});
         r.createIndex("byDate","datum",{unique:false});
+        r.createIndex("byRemote","remote_id",{unique:false});
+      } else {
+        const r = e.target.transaction.objectStore("reports");
+        try{ r.createIndex("byDate","datum",{unique:false}); }catch(_){}
+        try{ r.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
       }
     };
     req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
@@ -614,6 +581,15 @@ function getAllEntries(){
     req.onerror = (e)=> rej(e);
   });
 }
+function getEntryByRemoteId(remoteId){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(STORE,"readonly");
+    const idx = tx.objectStore(STORE).index("byRemote");
+    const req = idx.getAll(remoteId);
+    req.onsuccess = ()=> res(req.result?.[0] ?? null);
+    req.onerror = (e)=> rej(e);
+  });
+}
 function deleteEntryLocal(id){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
@@ -661,6 +637,15 @@ function getAllReports(){
     req.onerror = (e)=> rej(e);
   });
 }
+function getReportByRemoteId(remoteId){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction("reports","readonly");
+    const idx = tx.objectStore("reports").index("byRemote");
+    const req = idx.getAll(remoteId);
+    req.onsuccess = ()=> res(req.result?.[0] ?? null);
+    req.onerror = (e)=> rej(e);
+  });
+}
 function deleteReportLocal(id){
   return new Promise((res,rej)=>{
     const tx = db.transaction("reports","readwrite");
@@ -674,7 +659,7 @@ function deleteReportLocal(id){
 async function getHeaders(){
   const key = await getConf("webhookKey");
   if(!key) return null;
-  const apiKey = key.replace(/^Bearer\s+/i,"");
+  const apiKey = key.replace(/^Bearer\\s+/i,"");
   const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : `Bearer ${apiKey}`;
   return {
     "Content-Type":"application/json",
@@ -695,7 +680,7 @@ async function deleteRemote(remote_id){
     return {ok:false, status:0};
   }
 }
-  async function deleteRemoteBefund(remote_id){
+async function deleteRemoteBefund(remote_id){
   const url = await getConf("webhookUrlMr");
   const headers = await getHeaders();
   if(!url || !headers || !remote_id) return {ok:false};
@@ -716,6 +701,15 @@ async function pullAllFromRemote(){
   if(!res.ok) throw new Error(`Fetch fehlgeschlagen (${res.status})`);
   return res.json();
 }
+async function pullAllReportsFromRemote(){
+  const url = await getConf("webhookUrlMr");
+  const headers = await getHeaders();
+  if(!url || !headers) return [];
+  const q = `${url}?select=*&order=datum.asc`;
+  const res = await fetch(q, { headers });
+  if(!res.ok) return [];
+  return res.json();
+}
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
@@ -723,11 +717,10 @@ async function pushPendingToRemote(){
   const all = await getAllEntries();
   const pending = all.filter(e=>!e.remote_id);
   let pushed=0, failed=0;
-
   for(const e of pending){
     try{
-const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
-const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
+      const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
+      const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
       if(!res.ok){ failed++; continue; }
       const json = await res.json();
       const rid = json?.[0]?.id;
@@ -739,15 +732,13 @@ const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe
   return { pushed, failed };
 }
 
-/* ===== Remote für Befunde ===== */
+/* ===== Remote für Befunde (POST) ===== */
 async function syncReportWebhook(report, localId){
   const url = await getConf("webhookUrlMr");
   const headers = await getHeaders();
   if(!url || !headers) return;
-
-  // ❗Nur erlaubte Spalten schicken (KEIN ts, KEIN date_time, KEIN id)
   const payload = {
-    datum: report.datum,                      // YYYY-MM-DD
+    datum: report.datum,
     kreatinin: report.kreatinin ?? null,
     egfr:      report.egfr ?? null,
     uacr:      report.uacr ?? null,
@@ -759,12 +750,10 @@ async function syncReportWebhook(report, localId){
     kommentar: report.kommentar ?? null,
     source:    report.source ?? "manuell"
   };
-
   try{
     const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(payload) });
     if(!res.ok){
-      const txt = await res.text();                // besseres Debugging
-      diag.add(`MR-POST Fehler ${res.status}: ${txt}`);
+      const txt = await res.text(); diag.add(`MR-POST Fehler ${res.status}: ${txt}`);
       return;
     }
     const json = await res.json();
@@ -779,7 +768,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -800,17 +789,11 @@ function toCSV(entries){
     ];
   });
   const csv = [
-  header.join(","),
-  ...rows.map(r =>
-    r.map(v => {
-      if (typeof v === "string" && /[",\n]/.test(v)) {
-        return '"' + v.replace(/"/g, '""') + '"';
-      }
-      return v;
-    }).join(",")
-  )
-].join("\n");
-
+    header.join(","),
+    ...rows.map(r =>
+      r.map(v => (typeof v === "string" && /[",\\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v).join(",")
+    )
+  ].join("\\n");
   return csv;
 }
 function dl(filename, content, mime){
@@ -847,7 +830,6 @@ function renderTable(entries){
       const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
       const synced = e.remote_id ? "☁️" : "";
-
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="nowrap">${e.date}</td>
@@ -866,9 +848,7 @@ function renderTable(entries){
         <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
         <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
         <td class="center">${synced}</td>
-        <td>
-          <button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button>
-        </td>
+        <td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -877,13 +857,11 @@ function renderTable(entries){
     tr.innerHTML = `<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
     tbody.appendChild(tr);
   }
-
   $$("#tbl [data-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const localId = Number(btn.dataset.del);
       const remoteId = btn.dataset.remote || "";
       if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-
       btn.disabled = true;
       const oldText = btn.textContent;
       btn.textContent = "Lösche…";
@@ -898,6 +876,7 @@ function renderTable(entries){
         await deleteEntryLocal(localId);
         await loadAndRender();
         await renderDoctor();
+        if(chartPanel.open) chartPanel.draw();
         diag.add(remoteId ? "Löschung: Server + lokal OK" : "Löschung: lokal OK");
       } finally {
         btn.textContent = oldText;
@@ -916,9 +895,8 @@ async function loadAndRenderReports(){
   const reports = await getAllReports();
   const tbody = $("#tblReports tbody");
   tbody.innerHTML = "";
-
   reports
-    .sort((a,b)=> b.ts - a.ts) // neueste zuerst
+    .sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
     .forEach(r=>{
       const synced = r.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
@@ -934,14 +912,11 @@ async function loadAndRenderReports(){
       `;
       tbody.appendChild(tr);
     });
-
   if(!tbody.children.length){
     const tr=document.createElement("tr");
     tr.innerHTML=`<td colspan="8" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
     tbody.appendChild(tr);
   }
-
-  // Delete-Buttons
   $$("#tblReports [data-delrep]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const localId = Number(btn.dataset.delrep);
@@ -950,14 +925,15 @@ async function loadAndRenderReports(){
       btn.disabled = true; const old=btn.textContent; btn.textContent = "Lösche…";
       try{
         if(remoteId){
-  const r = await deleteRemoteBefund(remoteId);
-  if(!r.ok){
-    alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
-    return;
-  }
-}
+          const r = await deleteRemoteBefund(remoteId);
+          if(!r.ok){
+            alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
+            return;
+          }
+        }
         await deleteReportLocal(localId);
         await loadAndRenderReports();
+        if(chartReportsPanel.open) chartReportsPanel.draw();
         diag.add(remoteId ? "Befund-Löschung: Server + lokal OK" : "Befund-Löschung: lokal OK");
       }finally{
         btn.disabled = false; btn.textContent = old;
@@ -966,7 +942,7 @@ async function loadAndRenderReports(){
   });
 }
 
-/* ===== Doctor view (Daily) ===== */
+/* ===== Doctor view ===== */
 async function renderDoctor(){
   const tbody = $("#doctorTable tbody");
   tbody.innerHTML = "";
@@ -979,11 +955,7 @@ async function renderDoctor(){
       if (to && e.date > to) return false;
       return true;
     })
-    .sort((a,b)=>{
-      const ta = (typeof a.ts === "number") ? a.ts : Date.parse(a.dateTime);
-      const tb = (typeof b.ts === "number") ? b.ts : Date.parse(b.dateTime);
-      return ta - tb;
-    })
+    .sort((a,b)=> ( (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)) ))
     .forEach(e=>{
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
@@ -1013,8 +985,6 @@ async function renderDoctor(){
     tbody.appendChild(tr);
   }
 }
-
-/* ===== Doctor view (Befunde) ===== */
 async function renderDoctorReports(){
   const tbody = $("#doctorReportsTable tbody");
   tbody.innerHTML = "";
@@ -1096,11 +1066,9 @@ const chartPanel = {
       const y = data.map(e => (e.weight!=null? Number(e.weight) : null));
       series = [{name:"Gewicht (kg)", values:this.ma(y), color:"#f59e0b"}];
     }
-
     const hasAny = series.some(s => s.values.some(v=>v!=null));
     this.svg.innerHTML=""; this.legend.innerHTML="";
     if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
-
     const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
     const innerW=W-PL-PR, innerH=H-PT-PB;
     const xVals = xs.filter(Boolean);
@@ -1110,13 +1078,10 @@ const chartPanel = {
     const ymax = Math.max(...allY);
     const ypad = Math.max( (ymax-ymin)*0.08, 1 );
     const y0 = ymin - ypad, y1max = ymax + ypad;
-
     const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
     const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
-
     function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
     function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
-
     let grid = "";
     const ticks = 4;
     for(let i=0;i<=ticks;i++){
@@ -1137,7 +1102,6 @@ const chartPanel = {
     grid += line(PL,PT,PL,H-PB,"#2b2f3a");
     grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
     this.svg.insertAdjacentHTML("beforeend", grid);
-
     function pathFor(values, color){
       let d = "";
       values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
@@ -1211,7 +1175,7 @@ const chartReportsPanel = {
     } return out;
   },
   async draw(){
-    const metric = $("#reportMetricSel").value; // kreatinin / egfr / uacr / kalium
+    const metric = $("#reportMetricSel").value;
     const data = await this.getFiltered();
     if(!data.length){
       this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine Befunde im Zeitraum</text>`;
@@ -1221,11 +1185,9 @@ const chartReportsPanel = {
     const xs = data.map(r => (r.ts ?? new Date(r.datum).getTime()));
     const vals = data.map(r => (r[metric] != null ? Number(r[metric]) : null));
     const series = [{name: metricLabel(metric), values: this.ma(vals), color: "#60a5fa"}];
-
     const hasAny = series.some(s => s.values.some(v=>v!=null));
     this.svg.innerHTML=""; this.legend.innerHTML="";
     if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
-
     const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
     const innerW=W-PL-PR, innerH=H-PT-PB;
     const xVals = xs.filter(Boolean);
@@ -1234,13 +1196,10 @@ const chartReportsPanel = {
     const ymin = Math.min(...yVals), ymax = Math.max(...yVals);
     const ypad = Math.max((ymax-ymin)*0.08, 1);
     const y0 = ymin - ypad, y1max = ymax + ypad;
-
     const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
     const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
-
     function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
     function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
-
     let grid = "";
     const ticks = 4;
     for(let i=0;i<=ticks;i++){
@@ -1261,7 +1220,6 @@ const chartReportsPanel = {
     grid += line(PL,PT,PL,H-PB,"#2b2f3a");
     grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
     this.svg.insertAdjacentHTML("beforeend", grid);
-
     function pathFor(values, color){
       let d = "";
       values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
@@ -1271,7 +1229,6 @@ const chartReportsPanel = {
       let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
       return out;
     }
-
     series.forEach(s=>{
       this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
       this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
@@ -1280,7 +1237,6 @@ const chartReportsPanel = {
       const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
       wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
     });
-
     function roundSmart(v){
       const abs = Math.abs(v);
       if(abs >= 100) return Math.round(v);
@@ -1333,7 +1289,7 @@ function flashSaveOk(){
   saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
-/* ===== Tabs ===== */
+/* ===== Tabs / Segments ===== */
 function setTab(name){
   $$(".view").forEach(v=>v.classList.remove("active"));
   $("#"+name).classList.add("active");
@@ -1341,15 +1297,9 @@ function setTab(name){
   if(name==="doctor"){ renderDoctorViewForMode(); }
   if(name==="list"){ loadAndRender(); }
 }
-function bindTabs(){
-  const handler = (ev)=> setTab(ev.currentTarget.dataset.tab);
-  $$(".tabs .btn").forEach(b=> b.addEventListener("click", handler));
-}
-
-/* ===== Capture sub-modes ===== */
+function bindTabs(){ $$(".tabs .btn").forEach(b=> b.addEventListener("click", e=> setTab(e.currentTarget.dataset.tab))); }
 function bindCaptureSegment(){
-  const seg = $("#seg-capture");
-  if(!seg) return;
+  const seg = $("#seg-capture"); if(!seg) return;
   seg.querySelectorAll(".seg-btn").forEach(b=>{
     b.addEventListener("click", ()=>{
       const mode = b.dataset.mode;
@@ -1359,11 +1309,8 @@ function bindCaptureSegment(){
     });
   });
 }
-
-/* ===== List Umschaltung ===== */
 function bindListSegment(){
-  const seg = $("#seg-list");
-  if(!seg) return;
+  const seg = $("#seg-list"); if(!seg) return;
   seg.querySelectorAll(".seg-btn").forEach(b=>{
     b.addEventListener("click", async ()=>{
       const mode = b.dataset.mode;
@@ -1375,11 +1322,8 @@ function bindListSegment(){
     });
   });
 }
-
-/* ===== Doctor Umschaltung (Daily/Befund) ===== */
 function bindDoctorSegment(){
-  const seg = $("#seg-doctor");
-  if(!seg) return;
+  const seg = $("#seg-doctor"); if(!seg) return;
   seg.querySelectorAll(".seg-btn").forEach(b=>{
     b.addEventListener("click", async ()=>{
       const mode = b.dataset.mode;
@@ -1402,7 +1346,7 @@ async function renderDoctorViewForMode(){
   else await renderDoctorReports();
 }
 
-/* ===== Save flow (Daily) ===== */
+/* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false;
 function setToggle(el, on, activeText, baseText){
   el.classList.toggle("active", !!on);
@@ -1419,7 +1363,6 @@ function setSick(on){
 function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "🧪 NSAR genommen – aktiv", "🧪 NSAR genommen"); }
-
 function blockHasData(which){
   return !!(
     $(`#time${which}`).value ||
@@ -1436,7 +1379,6 @@ async function saveAll(){
   const mVitals = $("#timeM").value || $("#sysM").value || $("#diaM").value || $("#pulseM").value;
   const aVitals = $("#timeA").value || $("#sysA").value || $("#diaA").value || $("#pulseA").value;
   const weightOnly = !!(weightVal && !mVitals && !aVitals);
-
   let savedM = false, savedA = false;
   if(weightOnly){ savedM = await saveBlock("Morgen","M"); }
   else{
@@ -1444,7 +1386,6 @@ async function saveAll(){
     if(hasA) savedA = await saveBlock("Abend","A");
   }
   if(!savedM && !savedA){ alert("Keine Daten eingegeben – nichts zu speichern."); return; }
-
   loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); flashSaveOk();
 }
 async function saveBlock(contextLabel, which){
@@ -1458,7 +1399,6 @@ async function saveBlock(contextLabel, which){
   const dayNotes = $("#notesDay").value ? $("#notesDay").value.trim() : "";
   const currentISO = new Date(date+"T"+time).toISOString();
   const ts = new Date(date+"T"+time).getTime();
-
   const entry = {
     date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
     sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
@@ -1466,13 +1406,10 @@ async function saveBlock(contextLabel, which){
     training: trainingActive, low_intake: lowIntakeActive, sick: sickActive,
     valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken
   };
-
   const localId = await addEntry(entry);
   await syncWebhook(entry, localId);
   return true;
 }
-
-/* ===== Save flow (Befund) ===== */
 async function saveReport(){
   const datum = $("#repDate").value || todayStr();
   const report = {
@@ -1487,27 +1424,19 @@ async function saveReport(){
   };
   const localId = await addReport(report);
   await syncReportWebhook(report, localId);
-
   const btn = $("#saveReportBtn");
   const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✅ Befund gespeichert";
   setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
-
   ["#repKrea","#repEgfr","#repUacr","#repK","#repNote"].forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
 }
-
-/* ===== Webhook Sync (Daily) ===== */
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers) return;
-
   try{
-const { id: _d1, remote_id: _d2, ...safe } = entry;
-const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
-    if(!res.ok){
-      diag.add(`Webhook-Fehler ${res.status}`);
-      return;
-    }
+    const { id: _d1, remote_id: _d2, ...safe } = entry;
+    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
+    if(!res.ok){ diag.add(`Webhook-Fehler ${res.status}`); return; }
     const json = await res.json();
     const remoteId = json?.[0]?.id;
     if(remoteId!=null){
@@ -1516,6 +1445,178 @@ const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe
     }
   }catch(e){
     diag.add("Webhook: Netzwerkfehler");
+  }
+}
+
+/* ===== Realtime / Auto-Sync ===== */
+let sbClient = null;
+function baseUrlFromRest(restUrl){
+  if(!restUrl) return null;
+  const i = restUrl.indexOf("/rest/");
+  return i>0 ? restUrl.slice(0, i) : null;
+}
+async function ensureSupabaseClient(){
+  if(sbClient) return sbClient;
+  const rest = await getConf("webhookUrl");
+  const keyConf = await getConf("webhookKey");
+  if(!rest || !keyConf){ diag.add("Supabase Realtime: fehlende Konfiguration"); return null; }
+  const supabaseUrl = baseUrlFromRest(rest);
+  const apiKey = keyConf.replace(/^Bearer\\s+/i,"");
+  if(!supabaseUrl || !apiKey){ diag.add("Supabase Realtime: ungültige URL/Key"); return null; }
+  sbClient = window.supabase.createClient(supabaseUrl, apiKey, {
+    auth: { persistSession:false, autoRefreshToken:false }
+  });
+  diag.add("Supabase Realtime: Client initialisiert");
+  return sbClient;
+}
+async function setupRealtime(){
+  const supa = await ensureSupabaseClient();
+  if(!supa) return;
+
+  // health_entries
+  supa.channel('ch_health_entries')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'health_entries' }, async (payload)=>{
+      const et = payload.eventType; const n = payload.new; const o = payload.old;
+      if(et === 'INSERT' || et === 'UPDATE'){
+        const row = n;
+        const mapped = {
+          date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
+          arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
+          weight: row.weight, map: row.map, notes: row.notes,
+          training: row.training, low_intake: row.low_intake, sick: row.sick,
+          valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
+          remote_id: row.id
+        };
+        const existing = await getEntryByRemoteId(row.id);
+        if(existing){ await updateEntry(existing.id, mapped); }
+        else{ await addEntry(mapped); }
+        await loadAndRender();
+        if(activeDoctorMode()==="daily") await renderDoctor();
+        if(chartPanel.open) chartPanel.draw();
+        diag.add(`Realtime health_entries: ${et}`);
+      }
+      if(et === 'DELETE'){
+        const rid = o?.id;
+        if(rid!=null){
+          const existing = await getEntryByRemoteId(rid);
+          if(existing){ await deleteEntryLocal(existing.id); }
+          await loadAndRender();
+          if(activeDoctorMode()==="daily") await renderDoctor();
+          if(chartPanel.open) chartPanel.draw();
+          diag.add("Realtime health_entries: DELETE");
+        }
+      }
+    })
+    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); });
+
+  // medical_reports
+  supa.channel('ch_medical_reports')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'medical_reports' }, async (payload)=>{
+      const et = payload.eventType; const n = payload.new; const o = payload.old;
+      if(et === 'INSERT' || et === 'UPDATE'){
+        const row = n;
+        const mapped = {
+          datum: row.datum,
+          kreatinin: row.kreatinin ?? null,
+          egfr: row.egfr ?? null,
+          uacr: row.uacr ?? null,
+          kalium: row.kalium ?? null,
+          hba1c: row.hba1c ?? null,
+          ldl: row.ldl ?? null,
+          hdl: row.hdl ?? null,
+          haematurie: row.haematurie ?? null,
+          kommentar: row.kommentar ?? "",
+          source: row.source ?? "manuell",
+          ts: row.ts ?? new Date((row.datum||'')+"T00:00:00").getTime(),
+          remote_id: row.id
+        };
+        const existing = await getReportByRemoteId(row.id);
+        if(existing){ await updateReport(existing.id, mapped); }
+        else{ await addReport(mapped); }
+        await loadAndRenderReports();
+        if(activeDoctorMode()==="befund") await renderDoctorReports();
+        if(chartReportsPanel.open) chartReportsPanel.draw();
+        diag.add(`Realtime medical_reports: ${et}`);
+      }
+      if(et === 'DELETE'){
+        const rid = o?.id;
+        if(rid!=null){
+          const existing = await getReportByRemoteId(rid);
+          if(existing){ await deleteReportLocal(existing.id); }
+          await loadAndRenderReports();
+          if(activeDoctorMode()==="befund") await renderDoctorReports();
+          if(chartReportsPanel.open) chartReportsPanel.draw();
+          diag.add("Realtime medical_reports: DELETE");
+        }
+      }
+    })
+    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); });
+}
+async function reconcileFromRemote(){
+  // Daily
+  const remoteRows = await pullAllFromRemote();
+  const seen = new Set(remoteRows.map(r=>r.id));
+  for(const r of remoteRows){
+    const mapped = {
+      date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+      arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+      weight: r.weight, map: r.map, notes: r.notes,
+      training: r.training, low_intake: r.low_intake, sick: r.sick,
+      valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+      remote_id: r.id
+    };
+    const existing = await getEntryByRemoteId(r.id);
+    if(existing){ await updateEntry(existing.id, mapped); }
+    else { await addEntry(mapped); }
+  }
+  // Entferne lokale Einträge, die serverseitig gelöscht wurden
+  const allLocal = await getAllEntries();
+  for(const e of allLocal){
+    if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
+  }
+  await loadAndRender();
+  await renderDoctorViewForMode();
+  if(chartPanel.open) chartPanel.draw();
+}
+async function reconcileReportsFromRemote(){
+  const remoteRows = await pullAllReportsFromRemote();
+  const seen = new Set(remoteRows.map(r=>r.id));
+  for(const r of remoteRows){
+    const mapped = {
+      datum: r.datum,
+      kreatinin: r.kreatinin ?? null, egfr: r.egfr ?? null, uacr: r.uacr ?? null, kalium: r.kalium ?? null,
+      hba1c: r.hba1c ?? null, ldl: r.ldl ?? null, hdl: r.hdl ?? null, haematurie: r.haematurie ?? null,
+      kommentar: r.kommentar ?? "", source: r.source ?? "remote",
+      ts: r.ts ?? new Date((r.datum||'')+"T00:00:00").getTime(),
+      remote_id: r.id
+    };
+    const existing = await getReportByRemoteId(r.id);
+    if(existing){ await updateReport(existing.id, mapped); }
+    else{ await addReport(mapped); }
+  }
+  const allLocal = await getAllReports();
+  for(const r of allLocal){
+    if(r.remote_id && !seen.has(r.remote_id)){ await deleteReportLocal(r.id); }
+  }
+  await loadAndRenderReports();
+  if(activeDoctorMode()==="befund") await renderDoctorReports();
+  if(chartReportsPanel.open) chartReportsPanel.draw();
+}
+async function initialAutoSync(){
+  const headers = await getHeaders();
+  const url = await getConf("webhookUrl");
+  if(!headers || !url){ diag.add("Auto-Sync: keine Konfiguration – übersprungen"); return; }
+  setBusy(true);
+  try{
+    const push = await pushPendingToRemote();
+    if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
+    await reconcileFromRemote();
+    await reconcileReportsFromRemote();
+    diag.add("Auto-Sync: Abgleich fertig (ohne Wipe)");
+  }catch(e){
+    diag.add("Auto-Sync: Fehler – " + (e.message||e));
+  }finally{
+    setBusy(false);
   }
 }
 
@@ -1549,7 +1650,7 @@ async function main(){
   });
 
   // Toggle-Handler
-  const bindToggle = (id, setter, getVal)=>{ const el=$(id); const h=()=> setter(!getVal()); el.addEventListener("click", h); };
+  const bindToggle = (id, setter, getVal)=>{ const el=$(id); el.addEventListener("click", ()=> setter(!getVal())); };
   bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
   bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
   bindToggle("#sickToggle", setSick, ()=>sickActive);
@@ -1561,16 +1662,10 @@ async function main(){
   $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
   $("#printBtn").addEventListener("click", ()=> window.print());
 
-  // "Werte anzeigen" in Arzt-Ansicht: öffnet passendes Panel
   $("#doctorChartBtn").addEventListener("click", async ()=>{
     const mode = activeDoctorMode();
-    if(mode==="daily"){
-      chartPanel.toggle();
-      if(chartPanel.open) await chartPanel.draw();
-    } else {
-      chartReportsPanel.toggle();
-      if(chartReportsPanel.open) await chartReportsPanel.draw();
-    }
+    if(mode==="daily"){ chartPanel.toggle(); if(chartPanel.open) await chartPanel.draw(); }
+    else { chartReportsPanel.toggle(); if(chartReportsPanel.open) await chartReportsPanel.draw(); }
   });
 
   document.addEventListener('keydown', (e)=>{
@@ -1589,9 +1684,11 @@ async function main(){
     await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
     $("#whSaved").textContent = "Gespeichert ✓";
     setTimeout(()=>$("#whSaved").textContent="", 2000);
+    // Realtime-Client neu initialisieren
+    sbClient = null; await ensureSupabaseClient(); await setupRealtime(); diag.add("Konfig gespeichert & Realtime (re)initialisiert");
   });
 
-  // MANUELLER SYNC (Daily)
+  // MANUELLER SYNC (Daily) – bleibt als „Last Resort“
   $("#syncBtn").addEventListener("click", async ()=>{
     if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
     setBusy(true);
@@ -1600,7 +1697,7 @@ async function main(){
       const current = await getAllEntries();
       dl("backup_vor_sync.csv", toCSV(current), "text/csv");
       const resPush = await pushPendingToRemote();
-diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
       await wipeAll();
       const remoteRows = await pullAllFromRemote();
       for(const r of remoteRows){
@@ -1617,7 +1714,7 @@ diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}
       await loadAndRender(); await renderDoctorViewForMode();
       if(chartPanel.open) await chartPanel.draw();
       if(chartReportsPanel.open) await chartReportsPanel.draw();
-diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
+      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
       alert("Sync abgeschlossen.");
     }catch(e){
       console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
@@ -1628,15 +1725,28 @@ diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
   });
 
   // Bind Segmented Controls
-  bindCaptureSegment();
-  bindListSegment();
-  bindDoctorSegment();
+  bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
 
   // Befund speichern
   $("#saveReportBtn").addEventListener("click", saveReport);
 
-  // Initial
-  loadAndRender(); renderDoctor(); // default Doctor mode is "daily"
+  // Initial Render
+  await loadAndRender(); await renderDoctor();
+
+  // === V1.0: Auto-Sync beim Start (ohne Wipe) & Realtime ===
+  await initialAutoSync();
+  await ensureSupabaseClient();
+  await setupRealtime();
+
+  // Auto-Push Pending sobald online
+  window.addEventListener('online', async ()=>{
+    const resPush = await pushPendingToRemote();
+    if(resPush.pushed || resPush.failed){
+      diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      await reconcileFromRemote();
+      await reconcileReportsFromRemote();
+    }
+  });
 }
 
 /* boot */
@@ -1646,11 +1756,11 @@ if (document.readyState === "loading") {
   main();
 }
 
-
-/* === Debug: Mini-Notizen (nur intern sichtbar im Log-Panel)
-   - Button-Disable-Pattern für Netz-Calls konsequent nutzen (teils umgesetzt).
-   - UX: Nach Befund-Save bleiben Datum/Quelle stehen, Felder geleert.
-   - CSS-Typo gefixt: #tblhealth.
+/* === Debug-Notizen
+ - V1.0: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+ - Auto-Sync: push pending → reconcile (Entries + Reports) ohne Wipe.
+ - Realtime-Events: INSERT/UPDATE → upsert, DELETE → lokal entfernen.
+ - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
 </body>
