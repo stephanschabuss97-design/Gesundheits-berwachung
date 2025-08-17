@@ -486,10 +486,10 @@
 
 <script>
 /* ===== Fehlerbox ===== */
-window.addEventListener('error', function(e){
+window.addEventListener('unhandledrejection', (e)=>{
   const box = document.getElementById('err');
   box.style.display='block';
-  box.textContent = 'Fehler: ' + (e.message || e);
+  box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
 });
 
 /* ===== Diagnostics ===== */
@@ -685,6 +685,18 @@ async function getHeaders(){
 }
 async function deleteRemote(remote_id){
   const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if(!url || !headers || !remote_id) return {ok:false};
+  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+  try{
+    const res = await fetch(q, { method:"DELETE", headers });
+    return {ok: res.ok, status: res.status};
+  }catch(e){
+    return {ok:false, status:0};
+  }
+}
+  async function deleteRemoteBefund(remote_id){
+  const url = await getConf("webhookUrlMr");
   const headers = await getHeaders();
   if(!url || !headers || !remote_id) return {ok:false};
   const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
