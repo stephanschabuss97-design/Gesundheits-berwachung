@@ -38,10 +38,6 @@
   50%  { transform: scale(1.03) }
   100% { transform: scale(1) }
 }
-  
-<button class="btn primary" id="googleLoginBtn" type="button">
-  Mit Google anmelden
-</button>
 
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .spacer{flex:1}
@@ -1593,12 +1589,6 @@ async function ensureSupabaseClient(){
   return sbClient;
 }
 
-  document.getElementById('googleLoginBtn').addEventListener('click', async () => {
-  const redirectTo = window.location.origin; // kommt nach Login hierher zurück
-  const { data, error } = await sbClient.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo }
-  });
   if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
 });
   
