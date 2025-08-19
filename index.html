@@ -516,6 +516,15 @@ function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Numb
 function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
+  function softWarnRange(el, min, max){
+  const v = Number(el.value);
+  if (!isNaN(v) && (v < min || v > max)) {
+    el.style.outline = '2px solid var(--warn)';
+  } else {
+    el.style.outline = '';
+  }
+}
+
 /* ===== IndexedDB ===== */
 let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
@@ -1618,14 +1627,22 @@ async function reconcileReportsFromRemote(){
   const remoteRows = await pullAllReportsFromRemote();
   const seen = new Set(remoteRows.map(r=>r.id));
   for(const r of remoteRows){
-    const mapped = {
-      datum: r.datum,
-      kreatinin: r.kreatinin ?? null, egfr: r.egfr ?? null, uacr: r.uacr ?? null, kalium: r.kalium ?? null,
-      hba1c: r.hba1c ?? null, ldl: r.ldl ?? null, hdl: r.hdl ?? null, haematurie: r.haematurie ?? null, cystatin_c: r.cystatin_c ?? null,
-      , kommentar: r.kommentar ?? "", source: r.source ?? "remote",
-      ts: r.ts ?? new Date((r.datum||'')+"T00:00:00").getTime(),
-      remote_id: r.id
-    };
+const mapped = {
+  datum: r.datum,
+  kreatinin: r.kreatinin ?? null,
+  egfr: r.egfr ?? null,
+  uacr: r.uacr ?? null,
+  kalium: r.kalium ?? null,
+  hba1c: r.hba1c ?? null,
+  ldl: r.ldl ?? null,
+  hdl: r.hdl ?? null,
+  haematurie: r.haematurie ?? null,
+  cystatin_c: r.cystatin_c ?? null,
+  kommentar: r.kommentar ?? "",
+  source: r.source ?? "remote",
+  ts: r.ts ?? new Date((r.datum || '') + "T00:00:00").getTime(),
+  remote_id: r.id
+};
     const existing = await getReportByRemoteId(r.id);
     if(existing){ await updateReport(existing.id, mapped); }
     else{ await addReport(mapped); }
