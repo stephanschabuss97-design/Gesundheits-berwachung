@@ -827,10 +827,10 @@ function bindAuthButtons(){
       alert('Bitte zuerst unter "Webhook / Supabase" die REST-URLs und den API-Key speichern.');
       return;
     }
-    const { error } = await supa.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
+const { error } = await supa.auth.signInWithOAuth({
+  provider: 'google',
+  options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
+});
     if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
   });
 
