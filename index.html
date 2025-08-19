@@ -695,22 +695,24 @@ function deleteReportLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  const key = await getConf("webhookKey");       // dein ANON key (aus dem UI-Feld)
-  if(!key) return null;
-  const anonKey = key.replace(/^Bearer\s+/i,"");
+  // dein anonKey aus config holen (bleibt gleich!)
+  const key = await getConf("webhookKey");
+  const anonKey = key?.replace(/^Bearer\s+/i, "");
 
-  // Holt das User‑JWT aus der aktuellen Session
+  // Session von Supabase abholen (Google Login → JWT)
   const { data: { session } } = await sbClient.auth.getSession();
   const jwt = session?.access_token;
-  if (!jwt) return null;
+
+  if (!anonKey || !jwt) return null;
 
   return {
     "Content-Type": "application/json",
-    "apikey": anonKey,                // bleibt Pflicht-Header
-    "Authorization": `Bearer ${jwt}`, // >>> User-JWT, NICHT der API-Key
+    "apikey": anonKey,               // braucht Supabase für REST
+    "Authorization": `Bearer ${jwt}`,// DEIN Google-Login Token
     "Prefer": "return=representation"
   };
 }
+
 async function deleteRemote(remote_id){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
