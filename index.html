@@ -908,10 +908,12 @@ async function requireSession(){
   return !!session;
 }
 
-  const { data: { session } } = await supa.auth.getSession();
+async function requireSession(){
+  const { data: { session } } = await sbClient.auth.getSession();
   const email = session?.user?.email || '';
   setUserUi(email);
   showLoginBar(!session);
+  setAuthGuard(!!session);
   return !!session;
 }
 
