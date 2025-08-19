@@ -888,7 +888,7 @@ function toCSV(entries){
   const csv = [
     header.join(","),
     ...rows.map(r =>
-      r.map(v => (typeof v === "string" && /[",\\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v).join(",")
+      r.map(v => (typeof v === "string" && /[",\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v)
     )
   ].join("\n");
   return csv;
@@ -1588,9 +1588,6 @@ async function ensureSupabaseClient(){
   diag.add("Supabase: Client (Auth) initialisiert");
   return sbClient;
 }
-
-  if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
-});
   
 async function setupRealtime(){
   const supa = await ensureSupabaseClient();
