@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.0 – Realtime & Auto-Sync)</title>
 <style>
+  body.auth-locked main{ opacity: .6; pointer-events: auto; } /* ist sowieso disabled, nur Visual */
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -508,6 +509,34 @@ const helpPanel={ el:null, open:false,
 };
 
 /* ===== Helpers ===== */
+  /* ===== Auth-Guard ===== */
+async function isLoggedIn(){
+  try{
+    if(!sbClient) return false;
+    const { data:{ session } } = await sbClient.auth.getSession();
+    return !!session;
+  }catch{ return false; }
+}
+
+/** Schaltet die komplette App frei/zu (außer Hilfe/Log/Google-Login) */
+function setAuthGuard(logged){
+  const disabled = !logged;
+  const allowIds = new Set(['googleLoginBtn','helpToggle','diagToggle','helpToggleFab','diagToggleFab']);
+  // alles im <main> sperren/freigeben
+  document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
+    if(allowIds.has(el.id)) return;                 // Hilfe/Log & Login immer bedienbar
+    if(el.id === 'logoutBtn') return;               // Abmelden bleibt klickbar, sobald sichtbar
+    el.disabled = disabled;
+  });
+  // Tabs sperren
+  document.querySelectorAll('nav.tabs button').forEach(b=>{
+    if(allowIds.has(b.id)) return;
+    b.disabled = disabled;
+  });
+  // optisches Feedback (optional)
+  document.body.classList.toggle('auth-locked', disabled);
+}
+
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
@@ -844,12 +873,14 @@ const { error } = await supa.auth.signInWithOAuth({
 
 // Beim Start Session prüfen
 async function requireSession(){
-  const supa = await ensureSupabaseClient();
-  if (!supa) { 
-    setUserUi('');
-    showLoginBar(true);
-    return false;
-  }
+  const { data: { session } } = await sbClient.auth.getSession();
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  setAuthGuard(!!session);          // <— NEU: UI sperren/freigeben
+  return !!session;
+}
+
   const { data: { session } } = await supa.auth.getSession();
   const email = session?.user?.email || '';
   setUserUi(email);
@@ -859,14 +890,14 @@ async function requireSession(){
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
 function watchAuthState(){
-  ensureSupabaseClient().then((supa)=>{
-    if (!supa) return; // noch nicht konfiguriert
-    supa.auth.onAuthStateChange(async (_event, session)=>{
-      const email = session?.user?.email || '';
-      setUserUi(email);
-      showLoginBar(!session);
-      if (session) { await afterLoginBoot(); }
-    });
+  sbClient.auth.onAuthStateChange(async (_event, session)=>{
+    const email = session?.user?.email || '';
+    setUserUi(email);
+    showLoginBar(!session);
+    setAuthGuard(!!session);        // <— NEU: UI sperren/freigeben
+    if(session){
+      await afterLoginBoot();
+    }
   });
 }
 
@@ -1501,6 +1532,7 @@ function blockHasData(which){
   );
 }
 async function saveAll(){
+    if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
   const hasM = blockHasData("M");
   const hasA = blockHasData("A");
   const weightVal = $("#weightDay")?.value;
@@ -1539,6 +1571,7 @@ async function saveBlock(contextLabel, which){
   return true;
 }
 async function saveReport(){
+    if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
   const datum = $("#repDate").value || todayStr();
   const report = {
     datum,
