@@ -33,7 +33,12 @@
 
   .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.2s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
   @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
-  @keyframes flashPop{0%{transform:scale(1)}50%{transform:1.03}100%{transform:1}}
+@keyframes flashPop {
+  0%   { transform: scale(1) }
+  50%  { transform: scale(1.03) }
+  100% { transform: scale(1) }
+}
+
 
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .spacer{flex:1}
@@ -687,15 +692,20 @@ function deleteReportLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  const key = await getConf("webhookKey");
+  const key = await getConf("webhookKey");       // dein ANON key (aus dem UI-Feld)
   if(!key) return null;
-  const apiKey = key.replace(/^Bearer\\s+/i,"");
-  const authHeader = key.trim().toLowerCase().startsWith("bearer ") ? key.trim() : `Bearer ${apiKey}`;
+  const anonKey = key.replace(/^Bearer\s+/i,"");
+
+  // Holt das User‑JWT aus der aktuellen Session
+  const { data: { session } } = await sbClient.auth.getSession();
+  const jwt = session?.access_token;
+  if (!jwt) return null;
+
   return {
-    "Content-Type":"application/json",
-    "apikey": apiKey,
-    "Authorization": authHeader,
-    "Prefer":"return=representation"
+    "Content-Type": "application/json",
+    "apikey": anonKey,                // bleibt Pflicht-Header
+    "Authorization": `Bearer ${jwt}`, // >>> User-JWT, NICHT der API-Key
+    "Prefer": "return=representation"
   };
 }
 async function deleteRemote(remote_id){
@@ -791,6 +801,61 @@ async function syncReportWebhook(report, localId){
     const remoteId = json?.[0]?.id;
     if(remoteId){ await updateReport(localId, { remote_id: remoteId }); diag.add("Befund: Webhook OK"); }
   }catch(e){ diag.add("Befund: Netzwerkfehler"); }
+}
+function showLoginBar(show){
+  const bar = document.getElementById('loginBar');
+  if (bar) bar.style.display = show ? 'flex' : 'none';
+}
+function setUserUi(email){
+  document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
+  document.getElementById('logoutBtn').style.display = email ? '' : 'none';
+}
+
+// Buttons binden (einmalig, z. B. in main())
+function bindAuthButtons(){
+  const gbtn = document.getElementById('googleLoginBtn');
+  const lout = document.getElementById('logoutBtn');
+  if (gbtn) gbtn.addEventListener('click', async ()=>{
+    const { error } = await sbClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
+  });
+  if (lout) lout.addEventListener('click', async ()=>{
+    await sbClient.auth.signOut();
+    setUserUi('');
+    showLoginBar(true);
+  });
+}
+
+// Beim Start Session prüfen
+async function requireSession(){
+  const { data: { session } } = await sbClient.auth.getSession();
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  return !!session;
+}
+
+// Reagiert auch auf spätere Logins (z. B. nach Redirect)
+function watchAuthState(){
+  sbClient.auth.onAuthStateChange(async (_event, session)=>{
+    const email = session?.user?.email || '';
+    setUserUi(email);
+    showLoginBar(!session);
+    if(session){
+      await afterLoginBoot(); // App hochfahren, siehe unten
+    }
+  });
+}
+
+// Alles, was NACH Login laufen soll (deine bestehende Logik)
+async function afterLoginBoot(){
+  await initialAutoSync();
+  await setupRealtime();
+  await loadAndRender();
+  await renderDoctor();
 }
 
 /* ===== CSV/JSON export (Daily) ===== */
@@ -1498,25 +1563,31 @@ async function syncWebhook(entry, localId){
 
 /* ===== Realtime / Auto-Sync ===== */
 let sbClient = null;
+
 function baseUrlFromRest(restUrl){
   if(!restUrl) return null;
   const i = restUrl.indexOf("/rest/");
   return i>0 ? restUrl.slice(0, i) : null;
 }
+
 async function ensureSupabaseClient(){
-  if(sbClient) return sbClient;
+  if (sbClient) return sbClient;
+
   const rest = await getConf("webhookUrl");
-  const keyConf = await getConf("webhookKey");
-  if(!rest || !keyConf){ diag.add("Supabase Realtime: fehlende Konfiguration"); return null; }
+  const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
+  if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); return null; }
+
   const supabaseUrl = baseUrlFromRest(rest);
-  const apiKey = keyConf.replace(/^Bearer\\s+/i,"");
-  if(!supabaseUrl || !apiKey){ diag.add("Supabase Realtime: ungültige URL/Key"); return null; }
-  sbClient = window.supabase.createClient(supabaseUrl, apiKey, {
-    auth: { persistSession:false, autoRefreshToken:false }
+  const anonKey = keyConf.replace(/^Bearer\s+/i,"");
+  if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
+
+  sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
+    auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
   });
-  diag.add("Supabase Realtime: Client initialisiert");
+  diag.add("Supabase: Client (Auth) initialisiert");
   return sbClient;
 }
+
 async function setupRealtime(){
   const supa = await ensureSupabaseClient();
   if(!supa) return;
@@ -1686,6 +1757,15 @@ async function main(){
   $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
   $("#to").value = todayStr();
   setTab("capture");
+await ensureSupabaseClient();
+bindAuthButtons();
+watchAuthState();
+
+// Wenn schon eingeloggt → App starten, sonst Login-Leiste zeigen
+const hasSession = await requireSession();
+if (hasSession) {
+  await afterLoginBoot();
+}
 
   // Konfiguration laden
   const savedUrl = await getConf("webhookUrl");
@@ -1741,8 +1821,6 @@ async function main(){
     await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
     $("#whSaved").textContent = "Gespeichert ✓";
     setTimeout(()=>$("#whSaved").textContent="", 2000);
-    // Realtime-Client neu initialisieren
-    sbClient = null; await ensureSupabaseClient(); await setupRealtime(); diag.add("Konfig gespeichert & Realtime (re)initialisiert");
   });
 
   // MANUELLER SYNC (Daily) – bleibt als „Last Resort“
@@ -1790,10 +1868,12 @@ async function main(){
   // Initial Render
   await loadAndRender(); await renderDoctor();
 
-  // === V1.0: Auto-Sync beim Start (ohne Wipe) & Realtime ===
-  await initialAutoSync();
-  await ensureSupabaseClient();
-  await setupRealtime();
+    // === V1.0: Auto-Sync beim Start (ohne Wipe) & Realtime ===
+  if (!window.__booted) {
+    await initialAutoSync();
+    await setupRealtime();
+    window.__booted = true;
+  }
 
   // Auto-Push Pending sobald online
   window.addEventListener('online', async ()=>{
@@ -1820,5 +1900,11 @@ if (document.readyState === "loading") {
  - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
+  <!-- Google-Login (einfach) -->
+<div id="loginBar" style="position:fixed;left:8px;bottom:8px;z-index:10000;display:none;gap:8px">
+  <button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
+  <span id="whoAmI" class="small" style="margin-left:8px"></span>
+  <button class="btn ghost" id="logoutBtn" type="button" style="display:none">Abmelden</button>
+</div>
 </body>
 </html>
