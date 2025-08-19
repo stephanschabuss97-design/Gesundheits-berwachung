@@ -691,20 +691,24 @@ function deleteReportLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  // dein anonKey aus config holen (bleibt gleich!)
+  // anonKey aus der Konfiguration
   const key = await getConf("webhookKey");
   const anonKey = key?.replace(/^Bearer\s+/i, "");
 
-  // Session von Supabase abholen (Google Login → JWT)
-  const { data: { session } } = await sbClient.auth.getSession();
+  // Supabase-Client sicherstellen
+  const supa = await ensureSupabaseClient();
+  if (!supa) return null;
+
+  // Session (Google Login) holen
+  const { data: { session } } = await supa.auth.getSession();
   const jwt = session?.access_token;
 
   if (!anonKey || !jwt) return null;
 
   return {
     "Content-Type": "application/json",
-    "apikey": anonKey,               // braucht Supabase für REST
-    "Authorization": `Bearer ${jwt}`,// DEIN Google-Login Token
+    "apikey": anonKey,                // braucht Supabase REST
+    "Authorization": `Bearer ${jwt}`, // dein Google-Login JWT
     "Prefer": "return=representation"
   };
 }
@@ -816,15 +820,23 @@ function setUserUi(email){
 function bindAuthButtons(){
   const gbtn = document.getElementById('googleLoginBtn');
   const lout = document.getElementById('logoutBtn');
+
   if (gbtn) gbtn.addEventListener('click', async ()=>{
-    const { error } = await sbClient.auth.signInWithOAuth({
+    const supa = await ensureSupabaseClient();
+    if (!supa) { 
+      alert('Bitte zuerst unter "Webhook / Supabase" die REST-URLs und den API-Key speichern.');
+      return;
+    }
+    const { error } = await supa.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin }
     });
     if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
   });
+
   if (lout) lout.addEventListener('click', async ()=>{
-    await sbClient.auth.signOut();
+    const supa = await ensureSupabaseClient();
+    if (supa) await supa.auth.signOut();
     setUserUi('');
     showLoginBar(true);
   });
@@ -832,7 +844,13 @@ function bindAuthButtons(){
 
 // Beim Start Session prüfen
 async function requireSession(){
-  const { data: { session } } = await sbClient.auth.getSession();
+  const supa = await ensureSupabaseClient();
+  if (!supa) { 
+    setUserUi('');
+    showLoginBar(true);
+    return false;
+  }
+  const { data: { session } } = await supa.auth.getSession();
   const email = session?.user?.email || '';
   setUserUi(email);
   showLoginBar(!session);
@@ -841,13 +859,14 @@ async function requireSession(){
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
 function watchAuthState(){
-  sbClient.auth.onAuthStateChange(async (_event, session)=>{
-    const email = session?.user?.email || '';
-    setUserUi(email);
-    showLoginBar(!session);
-    if(session){
-      await afterLoginBoot(); // App hochfahren, siehe unten
-    }
+  ensureSupabaseClient().then((supa)=>{
+    if (!supa) return; // noch nicht konfiguriert
+    supa.auth.onAuthStateChange(async (_event, session)=>{
+      const email = session?.user?.email || '';
+      setUserUi(email);
+      showLoginBar(!session);
+      if (session) { await afterLoginBoot(); }
+    });
   });
 }
 
