@@ -481,7 +481,7 @@ window.addEventListener('unhandledrejection', (e)=>{
 
 /* ===== Diagnostics ===== */
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\\n'); },
+  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
     const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
     const close=document.getElementById('diagClose');
@@ -511,9 +511,13 @@ const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\\n/g, "<br>"); }
+function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
-function setBusy(on){ document.body.classList.toggle('is-busy', !!on); }
+ function setBusy(on){
+   document.body.classList.toggle('is-busy', !!on);
+   const b = document.getElementById('busy');
+   if (b) b.style.display = on ? 'flex' : 'none';
+}
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
   function softWarnRange(el, min, max){
@@ -795,7 +799,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\\n/g," ");
+    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -820,7 +824,7 @@ function toCSV(entries){
     ...rows.map(r =>
       r.map(v => (typeof v === "string" && /[",\\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v).join(",")
     )
-  ].join("\\n");
+  ].join("\n");
   return csv;
 }
 function dl(filename, content, mime){
