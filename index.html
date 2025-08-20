@@ -870,6 +870,7 @@ await teardownRealtime();   // <- Channels sauber schließen
 __booted = false;           // <- erlaubt späteren Re-Login-Start
 setUserUi('');
 showLoginBar(true);
+    setAuthGuard(false);
   });
 }
 
@@ -940,12 +941,10 @@ function toCSV(entries){
       e.remote_id ?? ""
     ];
   });
-  const csv = [
-    header.join(","),
-    ...rows.map(r =>
-      r.map(v => (typeof v === "string" && /[",\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v)
-    )
-  ].join("\n");
+const csv = [
+  header.join(","),
+  ...rows.map(r => r.map(v => (typeof v === "string" && /[",\n]/.test(v)) ? '"' + v.replace(/"/g,'""') + '"' : v).join(","))
+].join("\n");
   return csv;
 }
 function dl(filename, content, mime){
@@ -1626,8 +1625,9 @@ let sbClient = null;
 function trackChannel(ch){ __channels.push(ch); return ch; }
 async function teardownRealtime(){
   try{
-    await Promise.all(__channels.map(ch => ch.unsubscribe?.()));
-  }catch(_){}
+    __channels.forEach(ch => ch.unsubscribe?.());
+    diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
+  }catch(e){ diag.add("Realtime: unsubscribe error"); }
   __channels = [];
 }
   
@@ -1742,6 +1742,7 @@ async function setupRealtime(){
     })
     .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); })
 );
+  }
 async function reconcileFromRemote(){
   // Daily
   const remoteRows = await pullAllFromRemote();
@@ -1829,7 +1830,7 @@ async function main(){
   setTab("capture");
 await ensureSupabaseClient();
 bindAuthButtons();
-watchAuthState();
+if (sbClient) watchAuthState()
 
 // Wenn schon eingeloggt → App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
@@ -1971,6 +1972,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
