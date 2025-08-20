@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.1 – Realtime & Auto-Sync)</title>
 <style>
-  body.auth-locked main{ opacity: .6; pointer-events: auto; } /* ist sowieso disabled, nur Visual */
+  body.auth-locked main{ opacity: .6; pointer-events: none; } /* gesperrt bis Login */
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -865,26 +865,27 @@ const { error } = await supa.auth.signInWithOAuth({
 
   if (lout) lout.addEventListener('click', async ()=>{
     const supa = await ensureSupabaseClient();
-    if (supa) await supa.auth.signOut();
-    setUserUi('');
-    showLoginBar(true);
+if (supa) await supa.auth.signOut();
+await teardownRealtime();   // <- Channels sauber schließen
+__booted = false;           // <- erlaubt späteren Re-Login-Start
+setUserUi('');
+showLoginBar(true);
   });
 }
 
 // Beim Start Session prüfen
 async function requireSession(){
+  if(!sbClient){
+    setUserUi('');
+    showLoginBar(true);
+    setAuthGuard(false);
+    return false;
+  }
   const { data: { session } } = await sbClient.auth.getSession();
   const email = session?.user?.email || '';
   setUserUi(email);
   showLoginBar(!session);
-  setAuthGuard(!!session);          // <— NEU: UI sperren/freigeben
-  return !!session;
-}
-
-  const { data: { session } } = await supa.auth.getSession();
-  const email = session?.user?.email || '';
-  setUserUi(email);
-  showLoginBar(!session);
+  setAuthGuard(!!session);
   return !!session;
 }
 
@@ -895,14 +896,18 @@ function watchAuthState(){
     setUserUi(email);
     showLoginBar(!session);
     setAuthGuard(!!session);        // <— NEU: UI sperren/freigeben
-    if(session){
-      await afterLoginBoot();
-    }
+ if (session) {
+  await afterLoginBoot(); // dank Guard nur einmal
+}
   });
 }
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
+let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
+
 async function afterLoginBoot(){
+  if (__booted) return;      // <- Guard gegen Doppelstart
+  __booted = true;
   await initialAutoSync();
   await setupRealtime();
   await loadAndRender();
@@ -1617,6 +1622,15 @@ async function syncWebhook(entry, localId){
 /* ===== Realtime / Auto-Sync ===== */
 let sbClient = null;
 
+  let __channels = [];
+function trackChannel(ch){ __channels.push(ch); return ch; }
+async function teardownRealtime(){
+  try{
+    await Promise.all(__channels.map(ch => ch.unsubscribe?.()));
+  }catch(_){}
+  __channels = [];
+}
+  
 function baseUrlFromRest(restUrl){
   if(!restUrl) return null;
   const i = restUrl.indexOf("/rest/");
@@ -1646,6 +1660,7 @@ async function setupRealtime(){
   if(!supa) return;
 
   // health_entries
+  trackChannel(
   supa.channel('ch_health_entries')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'health_entries' }, async (payload)=>{
       const et = payload.eventType; const n = payload.new; const o = payload.old;
@@ -1679,9 +1694,11 @@ async function setupRealtime(){
         }
       }
     })
-    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); });
-
+    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); })
+);
+  
   // medical_reports
+  trackChannel(
   supa.channel('ch_medical_reports')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'medical_reports' }, async (payload)=>{
       const et = payload.eventType; const n = payload.new; const o = payload.old;
@@ -1723,8 +1740,8 @@ async function setupRealtime(){
         }
       }
     })
-    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); });
-}
+    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); })
+);
 async function reconcileFromRemote(){
   // Daily
   const remoteRows = await pullAllFromRemote();
@@ -1921,13 +1938,6 @@ if (hasSession) {
   // Initial Render
   await loadAndRender(); await renderDoctor();
 
-    // === V1.1: Auto-Sync beim Start (ohne Wipe) & Realtime ===
-  if (!window.__booted) {
-    await initialAutoSync();
-    await setupRealtime();
-    window.__booted = true;
-  }
-
   // Auto-Push Pending sobald online
   window.addEventListener('online', async ()=>{
     const resPush = await pushPendingToRemote();
@@ -1961,5 +1971,6 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
