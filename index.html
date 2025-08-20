@@ -162,7 +162,7 @@
       <button class="btn ghost half" id="refreshChart" type="button">Neu zeichnen</button>
       <button class="btn ghost half" id="savePng" type="button">PNG speichern</button>
     </div>
-    <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
+    <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
     <div class="legend" id="chartLegend"></div>
     <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
   </div>
@@ -192,7 +192,7 @@
       <button class="btn ghost half" id="refreshReportChart" type="button">Neu zeichnen</button>
       <button class="btn ghost half" id="saveReportPng" type="button">PNG speichern</button>
     </div>
-    <svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Befund-Verlauf"></svg>
+    <svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Befund-Verlauf"></svg>
     <div class="legend" id="chartReportsLegend"></div>
     <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
   </div>
@@ -521,7 +521,10 @@ async function isLoggedIn(){
 /** Schaltet die komplette App frei/zu (außer Hilfe/Log/Google-Login) */
 function setAuthGuard(logged){
   const disabled = !logged;
-  const allowIds = new Set(['googleLoginBtn','helpToggle','diagToggle','helpToggleFab','diagToggleFab']);
+  const allowIds = new Set([
+    'googleLoginBtn','helpToggle','diagToggle','helpToggleFab','diagToggleFab',
+    'tab-list','saveWebhook','whUrl','whKey','whUrlMr'
+  ]);
   // alles im <main> sperren/freigeben
   document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
     if(allowIds.has(el.id)) return;                 // Hilfe/Log & Login immer bedienbar
@@ -819,7 +822,6 @@ async function syncReportWebhook(report, localId){
     kalium:    report.kalium ?? null,
     hba1c:     report.hba1c ?? null,
     ldl:       report.ldl ?? null,
-    hdl:       report.hdl ?? null,
     haematurie:report.haematurie ?? null,
     cystatin_c: report.cystatin_c ?? null,
     kommentar: report.kommentar ?? null,
@@ -910,10 +912,11 @@ async function afterLoginBoot(){
   if (__booted) return;      // <- Guard gegen Doppelstart
   __booted = true;
   await initialAutoSync();
-  await setupRealtime();
+  await teardownRealtime();
+await setupRealtime();;
   await loadAndRender();
   await renderDoctor();
-}
+  }
 
 /* ===== CSV/JSON export (Daily) ===== */
 function toCSV(entries){
@@ -1027,8 +1030,8 @@ function renderTable(entries){
         await deleteEntryLocal(localId);
         await loadAndRender();
         await renderDoctor();
-        if(chartPanel.open) chartPanel.draw();
-        diag.add(remoteId ? "Löschung: Server + lokal OK" : "Löschung: lokal OK");
+        if(chartPanel.open) await chartPanel.draw();
+        if(chartReportsPanel.open) await chartReportsPanel.draw();
       } finally {
         btn.textContent = oldText;
         btn.disabled = false;
@@ -1086,10 +1089,10 @@ tr.innerHTML = `
             return;
           }
         }
-        await deleteReportLocal(localId);
-        await loadAndRenderReports();
-        if(chartReportsPanel.open) chartReportsPanel.draw();
-        diag.add(remoteId ? "Befund-Löschung: Server + lokal OK" : "Befund-Löschung: lokal OK");
+await deleteReportLocal(localId);
+await loadAndRenderReports();
+if(activeDoctorMode()==="befund") await renderDoctorReports();
+if(chartReportsPanel.open) await chartReportsPanel.draw();
       }finally{
         btn.disabled = false; btn.textContent = old;
       }
@@ -1531,38 +1534,55 @@ function blockHasData(which){
     $(`#time${which}`).value ||
     $(`#sys${which}`).value ||
     $(`#dia${which}`).value ||
-    $(`#pulse${which}`).value ||
-    $("#weightDay")?.value
+    $(`#pulse${which}`).value
   );
 }
 async function saveAll(){
-    if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+  if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+
   const hasM = blockHasData("M");
   const hasA = blockHasData("A");
+
   const weightVal = $("#weightDay")?.value;
   const mVitals = $("#timeM").value || $("#sysM").value || $("#diaM").value || $("#pulseM").value;
   const aVitals = $("#timeA").value || $("#sysA").value || $("#diaA").value || $("#pulseA").value;
   const weightOnly = !!(weightVal && !mVitals && !aVitals);
+
   let savedM = false, savedA = false;
-  if(weightOnly){ savedM = await saveBlock("Morgen","M"); }
-  else{
-    if(hasM) savedM = await saveBlock("Morgen","M");
-    if(hasA) savedA = await saveBlock("Abend","A");
+
+  // Logik: Gewicht nur an einen Block hängen (Prio M -> A), oder Weight-only als Morgeneintrag
+  const attachWeightToM = (hasM || (!hasM && !hasA && weightOnly));
+  const attachWeightToA = (!attachWeightToM && hasA);
+
+  if (weightOnly) {
+    savedM = await saveBlock("Morgen","M", true);
+  } else {
+    if (hasM) savedM = await saveBlock("Morgen","M", attachWeightToM);
+    if (hasA) savedA = await saveBlock("Abend","A", attachWeightToA);
   }
+
   if(!savedM && !savedA){ alert("Keine Daten eingegeben – nichts zu speichern."); return; }
-  loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); flashSaveOk();
+
+  await loadAndRender();
+  await renderDoctorViewForMode();
+  if(chartPanel.open) await chartPanel.draw();
+  if(chartReportsPanel.open) await chartReportsPanel.draw();
+  flashSaveOk();
 }
-async function saveBlock(contextLabel, which){
-  if(!blockHasData(which)) return false;
+
+async function saveBlock(contextLabel, which, includeWeight=false){
+  if(!blockHasData(which) && !includeWeight) return false;
+
   const date = $("#date").value || todayStr();
   const time = $(`#time${which}`).value || timeStr();
   const sys = $(`#sys${which}`).value ? Number($(`#sys${which}`).value) : null;
   const dia = $(`#dia${which}`).value ? Number($(`#dia${which}`).value) : null;
   const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
-  const weight = $("#weightDay")?.value ? Number($("#weightDay").value) : null;
+  const weight = includeWeight && $("#weightDay")?.value ? Number($("#weightDay").value) : null;
   const dayNotes = $("#notesDay").value ? $("#notesDay").value.trim() : "";
   const currentISO = new Date(date+"T"+time).toISOString();
   const ts = new Date(date+"T"+time).getTime();
+
   const entry = {
     date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
     sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
@@ -1574,6 +1594,7 @@ async function saveBlock(contextLabel, which){
   await syncWebhook(entry, localId);
   return true;
 }
+
 async function saveReport(){
     if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
   const datum = $("#repDate").value || todayStr();
@@ -1623,13 +1644,16 @@ let sbClient = null;
 
   let __channels = [];
 function trackChannel(ch){ __channels.push(ch); return ch; }
-async function teardownRealtime(){
+function teardownRealtime(){
   try{
     __channels.forEach(ch => ch.unsubscribe?.());
     diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
   }catch(e){ diag.add("Realtime: unsubscribe error"); }
   __channels = [];
 }
+
+window.addEventListener('beforeunload', teardownRealtime);
+
   
 function baseUrlFromRest(restUrl){
   if(!restUrl) return null;
@@ -1713,7 +1737,6 @@ async function setupRealtime(){
           cystatin_c: row.cystatin_c ?? null,
           hba1c: row.hba1c ?? null,
           ldl: row.ldl ?? null,
-          hdl: row.hdl ?? null,
           haematurie: row.haematurie ?? null,
           kommentar: row.kommentar ?? "",
           source: row.source ?? "manuell",
@@ -1781,7 +1804,6 @@ const mapped = {
   kalium: r.kalium ?? null,
   hba1c: r.hba1c ?? null,
   ldl: r.ldl ?? null,
-  hdl: r.hdl ?? null,
   haematurie: r.haematurie ?? null,
   cystatin_c: r.cystatin_c ?? null,
   kommentar: r.kommentar ?? "",
@@ -1845,6 +1867,9 @@ if (hasSession) {
   if (savedUrl) $("#whUrl").value = savedUrl;
   if (savedKey) $("#whKey").value = savedKey;
   if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
+  if (!savedUrl || !savedKey) {
+  setTab("list"); // Nutzer sieht sofort die Konfig-Sektion
+}
 
   // Sanfte Warnung
   ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
@@ -1886,13 +1911,29 @@ if (hasSession) {
   $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
   $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
 
-  $("#saveWebhook").addEventListener("click", async ()=>{
-    await putConf("webhookUrl", $("#whUrl").value.trim());
-    await putConf("webhookKey", $("#whKey").value.trim());
-    await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
-    $("#whSaved").textContent = "Gespeichert ✓";
-    setTimeout(()=>$("#whSaved").textContent="", 2000);
-  });
+// --- Save Webhook / Supabase (mit service_role-Guard) ---
+$("#saveWebhook").addEventListener("click", async ()=>{
+  const rawKey = $("#whKey").value.trim();
+  if (isServiceRoleKey(rawKey)) {
+    alert("Der eingetragene API-Key sieht nach einem service_role Key aus – dieser darf NIEMALS im Browser verwendet werden.\n\nBitte einen ANON Public Key verwenden.");
+    return;
+  }
+
+  await putConf("webhookUrl", $("#whUrl").value.trim());
+  await putConf("webhookKey", rawKey);
+  await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
+
+  $("#whSaved").textContent = "Gespeichert ✓";
+  setTimeout(()=>$("#whSaved").textContent="", 2000);
+
+  // Supabase-Client nach neuer Konfig sofort initialisieren
+  await ensureSupabaseClient();
+  const hasSessionNow = await requireSession();
+  if (hasSessionNow) {
+    await afterLoginBoot();
+  }
+});
+
 
   // MANUELLER SYNC (Daily) – bleibt als „Last Resort“
   $("#syncBtn").addEventListener("click", async ()=>{
@@ -1972,6 +2013,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
