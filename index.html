@@ -1,4 +1,7 @@
+Ich will nur A). Stimmt der Code so?
+
 <!DOCTYPE html>
+
 <html lang="de">
 <head>
 <meta charset="utf-8" />
@@ -23,84 +26,111 @@
   input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
   textarea{min-height:64px;resize:vertical}
 
-  .small{font-size:12px;color:var(--muted)}
-  .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:600;color:white;background:#2b2f3a;cursor:pointer;touch-action:manipulation;transition: background .25s ease, color .25s ease, transform .06s ease, box-shadow .25s ease}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  .btn:active{ transform: scale(0.98) }
-  .btn.primary{background:var(--accent)}
-  .btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color:var(--fg)}
-  .btn.warn{background:var(--warn);color:#1a1200}
-  .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
+.small{font-size:12px;color\:var(--muted)}
+.btn{appearance\:none;border\:none;border-radius:12px;padding:12px 14px;font-weight:600;color\:white;background:#2b2f3a;cursor\:pointer;touch-action\:manipulation;transition: background .25s ease, color .25s ease, transform .06s ease, box-shadow .25s ease}
+.btn\:disabled{opacity:.6;cursor\:not-allowed}
+.btn\:active{ transform: scale(0.98) }
+.btn.primary{background\:var(--accent)}
+.btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color\:var(--fg)}
+.btn.warn{background\:var(--warn);color:#1a1200}
+.btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 
-  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.2s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
-  @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+.btn.flash{background\:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation\:flashGradient 1.2s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
+@keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes flashPop {
-  0%   { transform: scale(1) }
-  50%  { transform: scale(1.03) }
-  100% { transform: scale(1) }
+0%   { transform: scale(1) }
+50%  { transform: scale(1.03) }
+100% { transform: scale(1) }
 }
 
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .spacer{flex:1}
-  section.view{display:none}
-  section.view.active{display:block}
+.toolbar{display\:flex;gap:8px;flex-wrap\:wrap;align-items\:center}
+.spacer{flex:1}
+section.view{display\:none}
+section.view\.active{display\:block}
 
-  #doctorTable thead{position:sticky;top:0;background:#0f1116}
-  #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
+\#doctorTable thead{position\:sticky;top:0;background:#0f1116}
+\#doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
-  @media print{
-    body{background:white;color:black}
-    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports {display:none !important}
-    #doctorCard{border:none;box-shadow:none}
-    #doctorTitle{font-size:18px;margin-bottom:10px}
-    #doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
-    #doctorTable{border:1px solid #999}
-  }
+@media print{
+body{background\:white;color\:black}
+header, nav.tabs, .toolbar, .card\:not(#doctorCard), .fab-wrap, #chart, #chartReports {display\:none !important}
+\#doctorCard{border\:none;box-shadow\:none}
+\#doctorTitle{font-size:18px;margin-bottom:10px}
+\#doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
+\#doctorTable{border:1px solid #999}
+}
 
-  #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
+\#err{position\:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display\:none;z-index:9999}
 
-  /* Panels */
-  .panel{position:fixed;right:8px;bottom:8px;width:340px;max-height:70vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
-  .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
-  .panel h4{margin:0;font-size:14px}
-  .panel .content{padding:10px;font-size:13px;line-height:1.45}
-  #diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
+/\* Panels */
+.panel{position\:fixed;right:8px;bottom:8px;width:340px;max-height:70vh;overflow\:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display\:none;z-index:9998}
+/* Chart-Panels größer & mittig */
+\#chart.panel, #chartReports.panel{
+width: min(96vw, 900px);
+max-height: 86vh;
+left: 50%;
+right: auto;
+transform: translateX(-50%);
+bottom: 6vh; /* etwas Luft nach unten \*/
+}
 
-  /* FABs */
-  .fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
-  .fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
-  .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
+/\* Auf sehr kleinen Screens: praktisch Vollbild \*/
+@media (max-width: 480px){
+\#chart.panel, #chartReports.panel{
+width: 98vw;
+max-height: 90vh;
+bottom: 4vh;
+}
+}
+.panel header{display\:flex;gap:6px;align-items\:center;justify-content\:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
+.panel h4{margin:0;font-size:14px}
+.panel .content{padding:10px;font-size:13px;line-height:1.45}
+\#diag pre{margin:0;padding:8px;font-size:12px;white-space\:pre-wrap}
 
-  /* Tabellen */
-  #tbl, #tblReports, #doctorReportsTable, #doctorTable {width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #tbl thead th, #tblReports thead th, #doctorReportsTable thead th {position:sticky; top:0; background:#0f1116; z-index:1;}
-  #tbl th, #tbl td, #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
-  #tbl tbody tr td, #tblReports tbody tr td, #doctorReportsTable tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #tbl tbody tr td:first-child, #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child, #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #tbl tbody tr td:last-child, #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child, #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-  #tbl td.center, #tbl th.center, #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center, #doctorTable td.center, #doctorTable th.center{ text-align:center; white-space:nowrap; }
-  #tbl td.nowrap, #tbl th.nowrap, #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
-  #tbl td.notes, #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+/\* FABs \*/
+.fab-wrap{position\:fixed;right:8px;bottom:8px;display\:flex;flex-direction\:column;gap:8px;z-index:9999}
+.fab{width:48px;height:48px;border-radius:50%;display\:flex;align-items\:center;justify-content\:center;border:1px solid #2b2f3a;background:#0f1116;cursor\:pointer}
+.fab\:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
-  .blockTitle{font-weight:800;margin:0 0 8px 0}
+/\* Tabellen \*/
+\#tbl, #tblReports, #doctorReportsTable, #doctorTable {width:100%; border-collapse\:separate; border-spacing:0 8px;}
+\#tbl thead th, #tblReports thead th, #doctorReportsTable thead th {position\:sticky; top:0; background:#0f1116; z-index:1;}
+\#tbl th, #tbl td, #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align\:top;}
+\#tbl tbody tr td, #tblReports tbody tr td, #doctorReportsTable tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+\#tbl tbody tr td\:first-child, #tblReports tbody tr td\:first-child, #doctorReportsTable tbody tr td\:first-child, #doctorTable tbody tr td\:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+\#tbl tbody tr td\:last-child, #tblReports tbody tr td\:last-child, #doctorReportsTable tbody tr td\:last-child, #doctorTable tbody tr td\:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+\#tbl td.center, #tbl th.center, #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center, #doctorTable td.center, #doctorTable th.center{ text-align\:center; white-space\:nowrap; }
+\#tbl td.nowrap, #tbl th.nowrap, #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space\:nowrap; }
+\#tbl td.notes, #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap\:anywhere; line-height:1.4; }
 
-  /* Chart panel */
-  #chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-  #chart .controls > *, #chartReports .controls > * {flex:1}
-  #chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
-  #chart svg, #chartReports svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
-  #chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.blockTitle{font-weight:800;margin:0 0 8px 0}
 
-  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
+/\* Chart panel \*/
+\#chart .controls, #chartReports .controls{display\:flex;gap:8px;flex-wrap\:wrap;align-items\:center;margin-bottom:8px}
+\#chart .controls > *, #chartReports .controls > \* {flex:1}
+\#chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
+\#chart svg, #chartReports svg{
+width: 100%;
+height: 60vh;        /* responsive Höhe */
+min-height: 260px;   /* nicht kleiner als vorher */
+max-height: 72vh;    /* Deckel, damit Buttons sichtbar bleiben \*/
+display: block;
+background: #0f1116;
+border: 1px solid #2b2f3a;
+border-radius: 10px;
+}
+\#chart .legend, #chartReports .legend{display\:flex;gap:10px;font-size:12px;color\:var(--muted);margin-top:6px;flex-wrap\:wrap}
 
-  /* Busy overlay */
-  #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
-  #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;display\:inline-block;margin-right:6px;border:1px solid #000}
 
-  .seg{display:flex;gap:8px;margin:8px 0 12px}
-  .seg .seg-btn.active{background:var(--accent);color:#fff}
-  .hidden{display:none!important}
-</style>
+/\* Busy overlay \*/
+\#busy{position\:fixed;inset:0;display\:none;align-items\:center;justify-content\:center;background\:rgba(0,0,0,.45);backdrop-filter\:blur(2px);z-index:99998}
+\#busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
+
+.seg{display\:flex;gap:8px;margin:8px 0 12px}
+.seg .seg-btn.active{background\:var(--accent);color:#fff}
+.hidden{display\:none!important} </style>
+
 </head>
 <body>
 <header>
@@ -119,6 +149,7 @@
 </nav>
 
 <!-- Hilfe-Panel -->
+
 <div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
   <header>
     <h4 id="helpTitle">Hilfe • Was soll ich ankreuzen?</h4>
@@ -135,6 +166,7 @@
 </div>
 
 <!-- Diagnose-Panel -->
+
 <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
   <header>
     <h4 id="diagTitle">Touch-Log</h4>
@@ -144,6 +176,7 @@
 </div>
 
 <!-- Diagramm-Panel (Daily) -->
+
 <div id="chart" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
   <header>
     <h4 id="chartTitle">Diagramm (Daily)</h4>
@@ -169,6 +202,7 @@
 </div>
 
 <!-- Diagramm-Panel (Befunde) -->
+
 <div id="chartReports" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartReportsTitle">
   <header>
     <h4 id="chartReportsTitle">Diagramm (Befunde)</h4>
@@ -209,103 +243,107 @@
       <button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
     </div>
 
-    <!-- Daily-Capture -->
-    <section class="card" id="entry">
-      <div class="row">
-        <div style="flex:1">
-          <label>Datum</label>
-          <input type="date" id="date">
-        </div>
-      </div>
+```
+<!-- Daily-Capture -->
+<section class="card" id="entry">
+  <div class="row">
+    <div style="flex:1">
+      <label>Datum</label>
+      <input type="date" id="date">
+    </div>
+  </div>
 
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Morgens</h3>
-        <div class="row">
-          <div style="width:130px">
-            <label>Uhrzeit</label>
-            <input type="time" id="timeM" step="60">
-          </div>
-        </div>
-        <div class="grid">
-          <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
-          <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-          <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-        </div>
+  <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+    <h3 class="blockTitle">Morgens</h3>
+    <div class="row">
+      <div style="width:130px">
+        <label>Uhrzeit</label>
+        <input type="time" id="timeM" step="60">
       </div>
+    </div>
+    <div class="grid">
+      <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
+      <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+      <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+    </div>
+  </div>
 
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Abends</h3>
-        <div class="row">
-          <div style="width:130px">
-            <label>Uhrzeit</label>
-            <input type="time" id="timeA" step="60">
-          </div>
-        </div>
-        <div class="grid">
-          <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-          <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-          <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-        </div>
+  <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+    <h3 class="blockTitle">Abends</h3>
+    <div class="row">
+      <div style="width:130px">
+        <label>Uhrzeit</label>
+        <input type="time" id="timeA" step="60">
       </div>
+    </div>
+    <div class="grid">
+      <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+      <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+      <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+    </div>
+  </div>
 
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Gewicht</h3>
-        <div class="row">
-          <div style="flex:1">
-            <label>Gewicht (kg)</label>
-            <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-          </div>
-        </div>
+  <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+    <h3 class="blockTitle">Gewicht</h3>
+    <div class="row">
+      <div style="flex:1">
+        <label>Gewicht (kg)</label>
+        <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
       </div>
+    </div>
+  </div>
 
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Kommentar</h3>
-        <div class="row">
-          <div style="flex:1">
-            <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
-          </div>
-        </div>
+  <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+    <h3 class="blockTitle">Kommentar</h3>
+    <div class="row">
+      <div style="flex:1">
+        <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
       </div>
+    </div>
+  </div>
 
-      <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋 Training heute</button>
-        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
-        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
-        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
-        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🥤 &lt; 2 L getrunken</button>
-        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">🧪 NSAR genommen</button>
-        <div class="spacer"></div>
-      </div>
+  <div class="row" style="align-items:center; gap:8px; margin-top:4px">
+    <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋 Training heute</button>
+    <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
+    <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
+    <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
+    <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🥤 &lt; 2 L getrunken</button>
+    <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">🧪 NSAR genommen</button>
+    <div class="spacer"></div>
+  </div>
 
-      <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-        <div class="spacer"></div>
-      </div>
-    </section>
+  <div class="row" style="align-items:center; gap:8px; margin-top:12px">
+    <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
+    <div class="spacer"></div>
+  </div>
+</section>
 
-    <!-- Befund-Capture -->
-    <section class="card hidden" id="entry_befund">
-      <h3 class="blockTitle">Neuer Befund</h3>
-      <div class="grid">
-        <div><label>Datum</label><input type="date" id="repDate"></div>
-        <div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
-        <div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
-        <div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
-        <div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
-        <div><label>Cystatin C (mg/L)</label><input type="number" step="0.01" id="repCys"></div>
-        <div><label>Hämaturie (Ery/µL)</label><input type="number" step="1" id="repHaem"></div>
-        <div><label>LDL (mg/dL)</label><input type="number" step="1" id="repLDL"></div>
-        <div><label>HbA1c (%)</label><input type="number" step="0.1" id="repHbA1c"></div>
-        <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
-      </div>
-      <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
-        <div class="spacer"></div>
-      </div>
-    </section>
+<!-- Befund-Capture -->
+<section class="card hidden" id="entry_befund">
+  <h3 class="blockTitle">Neuer Befund</h3>
+  <div class="grid">
+    <div><label>Datum</label><input type="date" id="repDate"></div>
+    <div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
+    <div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
+    <div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
+    <div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
+    <div><label>Cystatin C (mg/L)</label><input type="number" step="0.01" id="repCys"></div>
+    <div><label>Hämaturie (Ery/µL)</label><input type="number" step="1" id="repHaem"></div>
+    <div><label>LDL (mg/dL)</label><input type="number" step="1" id="repLDL"></div>
+    <div><label>HbA1c (%)</label><input type="number" step="0.1" id="repHbA1c"></div>
+    <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
+  </div>
+  <div class="row" style="align-items:center; gap:8px; margin-top:12px">
+    <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
+    <div class="spacer"></div>
+  </div>
+</section>
+```
+
   </section>
 
   <!-- List -->
+
   <section class="view" id="list">
     <section class="card">
       <div class="toolbar">
@@ -323,127 +361,134 @@
         <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
       </div>
 
-      <div class="seg" id="seg-list">
-        <button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
-        <button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
-      </div>
+```
+  <div class="seg" id="seg-list">
+    <button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
+    <button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
+  </div>
 
-      <!-- Wrapper Daily -->
-      <div style="overflow:auto" id="listDailyWrap">
-        <table id="tbl">
-          <thead>
-            <tr>
-              <th class="nowrap">Datum</th>
-              <th class="nowrap">Zeit</th>
-              <th>Art</th>
-              <th class="center nowrap">Syst</th>
-              <th class="center nowrap">Diast</th>
-              <th class="center nowrap">Puls</th>
-              <th class="center nowrap">Gewicht</th>
-              <th class="center nowrap">MAP</th>
-              <th>Notizen</th>
-              <th class="center nowrap">Training</th>
-              <th class="center nowrap">&lt; 2 L</th>
-              <th class="center nowrap">Krank</th>
-              <th class="center nowrap">Valsartan ❌</th>
-              <th class="center nowrap">Forxiga ❌</th>
-              <th class="center nowrap">NSAR</th>
-              <th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
-              <th>Aktion</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Wrapper Daily -->
+  <div style="overflow:auto" id="listDailyWrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th class="nowrap">Datum</th>
+          <th class="nowrap">Zeit</th>
+          <th>Art</th>
+          <th class="center nowrap">Syst</th>
+          <th class="center nowrap">Diast</th>
+          <th class="center nowrap">Puls</th>
+          <th class="center nowrap">Gewicht</th>
+          <th class="center nowrap">MAP</th>
+          <th>Notizen</th>
+          <th class="center nowrap">Training</th>
+          <th class="center nowrap">&lt; 2 L</th>
+          <th class="center nowrap">Krank</th>
+          <th class="center nowrap">Valsartan ❌</th>
+          <th class="center nowrap">Forxiga ❌</th>
+          <th class="center nowrap">NSAR</th>
+          <th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
+          <th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <!-- Wrapper Befunde -->
-      <div style="overflow:auto" id="listReportWrap" class="hidden">
-        <table id="tblReports">
-          <thead>
-            <tr>
-      <th class="nowrap">Datum</th>
-      <th class="center">Kreatinin</th>
-      <th class="center">eGFR</th>
-      <th class="center">uACR</th>
-      <th class="center">Kalium</th>
-      <th class="center">Cystatin&nbsp;C</th>
-      <th class="center">Hämaturie</th>
-      <th class="center">LDL</th>
-      <th class="center">HbA1c</th>
-              <th>Kommentar</th>
-              <th class="center">Cloud</th>
-              <th class="nowrap">Aktion</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <!-- Wrapper Befunde -->
+  <div style="overflow:auto" id="listReportWrap" class="hidden">
+    <table id="tblReports">
+      <thead>
+        <tr>
+  <th class="nowrap">Datum</th>
+  <th class="center">Kreatinin</th>
+  <th class="center">eGFR</th>
+  <th class="center">uACR</th>
+  <th class="center">Kalium</th>
+  <th class="center">Cystatin&nbsp;C</th>
+  <th class="center">Hämaturie</th>
+  <th class="center">LDL</th>
+  <th class="center">HbA1c</th>
+          <th>Kommentar</th>
+          <th class="center">Cloud</th>
+          <th class="nowrap">Aktion</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
-    </section>
+  <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
+</section>
 
-    <!-- Webhook-Konfiguration -->
-    <section class="card">
-      <h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
-      <div class="grid">
-        <div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
-        <div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
-        <div><label>Webhook URL (medical_reports)</label><input type="url" id="whUrlMr" placeholder="https://XYZ.supabase.co/rest/v1/medical_reports"></div>
-      </div>
-      <div class="row" style="margin-top:8px;align-items:center">
-        <button class="btn primary" id="saveWebhook" type="button">Speichern</button>
-        <span id="whSaved" class="small" style="margin-left:8px"></span>
-        <div class="spacer"></div>
-        <button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
-      </div>
-    </section>
+<!-- Webhook-Konfiguration -->
+<section class="card">
+  <h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
+  <div class="grid">
+    <div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
+    <div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
+    <div><label>Webhook URL (medical_reports)</label><input type="url" id="whUrlMr" placeholder="https://XYZ.supabase.co/rest/v1/medical_reports"></div>
+  </div>
+  <div class="row" style="margin-top:8px;align-items:center">
+    <button class="btn primary" id="saveWebhook" type="button">Speichern</button>
+    <span id="whSaved" class="small" style="margin-left:8px"></span>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
+  </div>
+</section>
+```
+
   </section>
 
   <!-- Doctor -->
+
   <section class="view" id="doctor">
     <section class="card" id="doctorCard">
       <div class="toolbar">
         <strong id="doctorTitle">Arzt-Ansicht</strong>
         <div class="spacer"></div>
 
-        <div class="seg" id="seg-doctor" style="margin:0">
-          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
-          <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
-        </div>
+```
+    <div class="seg" id="seg-doctor" style="margin:0">
+      <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
+      <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
+    </div>
 
-        <label class="small">Von <input type="date" id="from" style="width:auto"></label>
-        <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
-        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-        <button class="btn ghost" id="printBtn" type="button">Drucken</button>
-      </div>
+    <label class="small">Von <input type="date" id="from" style="width:auto"></label>
+    <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
+    <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+    <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+    <button class="btn ghost" id="printBtn" type="button">Drucken</button>
+  </div>
 
-      <div style="overflow:auto" id="doctorDailyWrap">
-        <table id="doctorTable">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Zeit</th>
-              <th>Art</th>
-              <th>Sys</th>
-              <th>Dia</th>
-              <th>Puls</th>
-              <th>MAP</th>
-              <th>Gewicht</th>
-              <th>Notizen</th>
-              <th>&lt; 2 L</th>
-              <th>Krank</th>
-              <th>Valsartan ❌</th>
-              <th>Forxiga ❌</th>
-              <th>NSAR</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+  <div style="overflow:auto" id="doctorDailyWrap">
+    <table id="doctorTable">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Zeit</th>
+          <th>Art</th>
+          <th>Sys</th>
+          <th>Dia</th>
+          <th>Puls</th>
+          <th>MAP</th>
+          <th>Gewicht</th>
+          <th>Notizen</th>
+          <th>&lt; 2 L</th>
+          <th>Krank</th>
+          <th>Valsartan ❌</th>
+          <th>Forxiga ❌</th>
+          <th>NSAR</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <div style="overflow:auto" id="doctorReportWrap" class="hidden">
-        <table id="doctorReportsTable">
+  <div style="overflow:auto" id="doctorReportWrap" class="hidden">
+    <table id="doctorReportsTable">
+```
+
   <thead>
     <tr>
       <th>Datum</th>
@@ -459,12 +504,15 @@
     </tr>
   </thead>
 
-          <tbody></tbody>
-        </table>
-      </div>
+```
+      <tbody></tbody>
+    </table>
+  </div>
 
-      <div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
-    </section>
+  <div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
+</section>
+```
+
   </section>
 </main>
 
@@ -474,6 +522,7 @@
 </div>
 
 <!-- Supabase (UMD, v2) -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
@@ -878,13 +927,6 @@ async function requireSession(){
   setUserUi(email);
   showLoginBar(!session);
   setAuthGuard(!!session);          // <— NEU: UI sperren/freigeben
-  return !!session;
-}
-
-  const { data: { session } } = await supa.auth.getSession();
-  const email = session?.user?.email || '';
-  setUserUi(email);
-  showLoginBar(!session);
   return !!session;
 }
 
@@ -1953,7 +1995,9 @@ if (document.readyState === "loading") {
  - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
+
   <!-- Google-Login (einfach) -->
+
 <div id="loginBar" style="position:fixed;left:8px;bottom:8px;z-index:10000;display:none;gap:8px">
   <button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
   <span id="whoAmI" class="small" style="margin-left:8px"></span>
