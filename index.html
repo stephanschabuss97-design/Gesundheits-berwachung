@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.1 – Realtime & Auto-Sync)</title>
 <style>
-  body.auth-locked main{ opacity: .6; pointer-events: none; } /* gesperrt bis Login */
+  body.auth-locked main{ opacity: .6; }
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -509,6 +509,12 @@ const helpPanel={ el:null, open:false,
 };
 
 /* ===== Helpers ===== */
+  // --- Service-Role-Schutz (NIEMALS im Browser) ---
+function isServiceRoleKey(raw){
+  const k = String(raw||"").trim().replace(/^Bearer\s+/i, "");
+  return /service_role/i.test(k);
+}
+
   /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
   try{
@@ -723,24 +729,21 @@ function deleteReportLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  // anonKey aus der Konfiguration
   const key = await getConf("webhookKey");
-  const anonKey = key?.replace(/^Bearer\s+/i, "");
+  if (!key || isServiceRoleKey(key)) return null;   // NEU: blocken
+  const anonKey = key.replace(/^Bearer\s+/i, "");
 
-  // Supabase-Client sicherstellen
   const supa = await ensureSupabaseClient();
   if (!supa) return null;
 
-  // Session (Google Login) holen
   const { data: { session } } = await supa.auth.getSession();
   const jwt = session?.access_token;
-
   if (!anonKey || !jwt) return null;
 
   return {
     "Content-Type": "application/json",
-    "apikey": anonKey,                // braucht Supabase REST
-    "Authorization": `Bearer ${jwt}`, // dein Google-Login JWT
+    "apikey": anonKey,
+    "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
 }
@@ -1668,6 +1671,12 @@ async function ensureSupabaseClient(){
   const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
   if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); return null; }
 
+  // NEU: niemals mit service_role starten
+  if (isServiceRoleKey(keyConf)) {
+    diag.add("Sicherheitsblock: service_role Key erkannt – Abbruch");
+    return null;
+  }
+
   const supabaseUrl = baseUrlFromRest(rest);
   const anonKey = keyConf.replace(/^Bearer\s+/i,"");
   if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
@@ -2013,6 +2022,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
