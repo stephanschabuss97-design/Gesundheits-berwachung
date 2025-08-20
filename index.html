@@ -60,7 +60,8 @@
   #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
 
   /* Panels */
-  .panel{position:fixed;right:8px;bottom:8px;width:340px;max-height:70vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
+   .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
+   .panel.chart{ width:min(92vw, 820px); }
   .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
   .panel h4{margin:0;font-size:14px}
   .panel .content{padding:10px;font-size:13px;line-height:1.45}
@@ -88,7 +89,7 @@
   #chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
   #chart .controls > *, #chartReports .controls > * {flex:1}
   #chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
-  #chart svg, #chartReports svg{width:100%;height:260px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
+  #chart svg, #chartReports svg{width:100%;height:340px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
   #chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
   .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
@@ -144,7 +145,7 @@
 </div>
 
 <!-- Diagramm-Panel (Daily) -->
-<div id="chart" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
+<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
   <header>
     <h4 id="chartTitle">Diagramm (Daily)</h4>
     <button class="btn ghost" id="chartClose" type="button">×</button>
@@ -169,7 +170,7 @@
 </div>
 
 <!-- Diagramm-Panel (Befunde) -->
-<div id="chartReports" class="panel" role="dialog" aria-modal="false" aria-labelledby="chartReportsTitle">
+<div id="chartReports" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartReportsTitle">
   <header>
     <h4 id="chartReportsTitle">Diagramm (Befunde)</h4>
     <button class="btn ghost" id="chartReportsClose" type="button">×</button>
@@ -273,6 +274,8 @@
         <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
         <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
         <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🥤 &lt; 2 L getrunken</button>
+        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
+        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
         <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">🧪 NSAR genommen</button>
         <div class="spacer"></div>
       </div>
@@ -348,7 +351,10 @@
               <th class="center nowrap">Valsartan ❌</th>
               <th class="center nowrap">Forxiga ❌</th>
               <th class="center nowrap">NSAR</th>
+              <th class="center nowrap">Salz &gt; 5 g</th>
+              <th class="center nowrap">Zucker &gt; 10 g</th>
               <th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
+
               <th>Aktion</th>
             </tr>
           </thead>
@@ -432,6 +438,8 @@
               <th>Gewicht</th>
               <th>Notizen</th>
               <th>&lt; 2 L</th>
+              <th>Salz &gt; 5 g</th>
+              <th>Zucker &gt; 10 g</th>
               <th>Krank</th>
               <th>Valsartan ❌</th>
               <th>Forxiga ❌</th>
@@ -923,7 +931,7 @@ await setupRealtime();;
 
 /* ===== CSV/JSON export (Daily) ===== */
 function toCSV(entries){
-  const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","ISODateTime","ID","REMOTE_ID"];
+  const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
@@ -942,9 +950,12 @@ function toCSV(entries){
       e.valsartan_missed ? "Ja" : "", 
       e.forxiga_missed ? "Ja" : "",
       e.nsar_taken ? "Ja" : "",
+      e.salt_high ? "Ja" : "",
+      e.sugar_high ? "Ja" : "",
       e.dateTime, 
       e.id,
       e.remote_id ?? ""
+
     ];
   });
 const csv = [
@@ -1004,14 +1015,17 @@ function renderTable(entries){
         <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
         <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
         <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
+        <td class="center">${e.salt_high ? "Ja" : ""}</td>
+        <td class="center">${e.sugar_high ? "Ja" : ""}</td>
         <td class="center">${synced}</td>
+
         <td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
       `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="17" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
+    tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
     tbody.appendChild(tr);
   }
   $$("#tbl [data-del]").forEach(btn=>{
@@ -1137,12 +1151,15 @@ async function renderDoctor(){
         <td>${e.valsartan_missed ? "Ja" : ""}</td>
         <td>${e.forxiga_missed ? "Ja" : ""}</td>
         <td>${e.nsar_taken ? "Ja" : ""}</td>
+        <td>${e.salt_high ? "Ja" : ""}</td>
+        <td>${e.sugar_high ? "Ja" : ""}</td>
+
       `;
       tbody.appendChild(tr);
     });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="14" class="small" style="text-align:center;opacity:.7">Keine Einträge im Zeitraum</td>`;
+    tr.innerHTML = `<td colspan="16" class="small" style="text-align:center;opacity:.7">Keine Einträge im Zeitraum</td>`;
     tbody.appendChild(tr);
   }
 }
@@ -1234,7 +1251,7 @@ const chartPanel = {
     const hasAny = series.some(s => s.values.some(v=>v!=null));
     this.svg.innerHTML=""; this.legend.innerHTML="";
     if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
-    const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
+    const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
     const innerW=W-PL-PR, innerH=H-PT-PB;
     const xVals = xs.filter(Boolean);
     const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
@@ -1516,7 +1533,8 @@ async function renderDoctorViewForMode(){
 }
 
 /* ===== Save flows ===== */
-let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false;
+let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
+    saltHigh=false, sugarHigh=false;
 function setToggle(el, on, activeText, baseText){
   el.classList.toggle("active", !!on);
   el.setAttribute("aria-pressed", on ? "true" : "false");
@@ -1524,6 +1542,8 @@ function setToggle(el, on, activeText, baseText){
 }
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋 Training heute (aktiv)", "🏋 Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🥤 < 2 L – aktiv", "🥤 < 2 L getrunken"); }
+  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
+function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
 function setSick(on){
   sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
   if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
@@ -1586,13 +1606,15 @@ async function saveBlock(contextLabel, which, includeWeight=false){
   const currentISO = new Date(date+"T"+time).toISOString();
   const ts = new Date(date+"T"+time).getTime();
 
-  const entry = {
-    date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
-    sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-    notes: dayNotes,
-    training: trainingActive, low_intake: lowIntakeActive, sick: sickActive,
-    valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken
-  };
+const entry = {
+  date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
+  sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+  notes: dayNotes,
+  training: trainingActive, low_intake: lowIntakeActive, sick: sickActive,
+  valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken,
+  salt_high: saltHigh, sugar_high: sugarHigh
+};
+
   const localId = await addEntry(entry);
   await syncWebhook(entry, localId);
   return true;
@@ -1899,6 +1921,8 @@ if (hasSession) {
   bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
   bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
   bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
+  bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
+  bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
   $("#saveAllBtn").addEventListener("click", saveAll);
   $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
@@ -2022,6 +2046,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
