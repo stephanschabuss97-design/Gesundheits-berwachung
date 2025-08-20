@@ -105,7 +105,7 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V1.0</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V1.1</span>
     <div class="spacer"></div>
     <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
     <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1921,7 +1921,7 @@ if (hasSession) {
   // Initial Render
   await loadAndRender(); await renderDoctor();
 
-    // === V1.0: Auto-Sync beim Start (ohne Wipe) & Realtime ===
+    // === V1.1: Auto-Sync beim Start (ohne Wipe) & Realtime ===
   if (!window.__booted) {
     await initialAutoSync();
     await setupRealtime();
@@ -1947,7 +1947,7 @@ if (document.readyState === "loading") {
 }
 
 /* === Debug-Notizen
- - V1.0: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+ - V1.1: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
  - Auto-Sync: push pending → reconcile (Entries + Reports) ohne Wipe.
  - Realtime-Events: INSERT/UPDATE → upsert, DELETE → lokal entfernen.
  - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
@@ -1961,4 +1961,5 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
