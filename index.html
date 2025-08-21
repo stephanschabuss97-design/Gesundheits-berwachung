@@ -205,7 +205,7 @@
 </div>
 
 <div id="err" role="status" aria-live="polite"></div>
-<div id="busy"><div class="box">? Bitte warten…</div></div>
+<div id="busy"><div class="box">⏳ Bitte warten…</div></div>
 
 <main>
   <!-- Capture -->
@@ -274,19 +274,19 @@
       </div>
 
       <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">?? Training heute</button>
-        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">?? Krank (Forxiga pausiert)</button>
-        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">?? Valsartan vergessen</button>
-        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">?? Forxiga vergessen</button>
-        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">?? &lt; 2 L getrunken</button>
-        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">?? &gt; 5 g Salz</button>
-        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">?? &gt; 10 g Zucker</button>
-        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">?? NSAR genommen</button>
+        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
+        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
+        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
+        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
+        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
+        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
+        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
+        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
         <div class="spacer"></div>
       </div>
 
       <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveAllBtn" type="button">?? Speichern</button>
+        <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
         <div class="spacer"></div>
       </div>
     </section>
@@ -307,7 +307,7 @@
         <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
       </div>
       <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveReportBtn" type="button">?? Befund speichern</button>
+        <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
         <div class="spacer"></div>
       </div>
     </section>
@@ -327,7 +327,7 @@
         </select>
         <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
         <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">? Sync (Daily)</button>
+        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
         <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
       </div>
 
@@ -482,8 +482,8 @@
 </main>
 
 <div class="fab-wrap">
-  <div class="fab" id="helpToggleFab" title="Hilfe">?</div>
-  <div class="fab" id="diagToggleFab" title="Log">??</div>
+  <div class="fab" id="helpToggleFab" title="Hilfe">❓</div>
+  <div class="fab" id="diagToggleFab" title="Log">📜</div>
 </div>
 
 <!-- Supabase (UMD, v2) -->
@@ -1017,9 +1017,9 @@ function renderTable(entries){
     .forEach(e=>{
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
-      const notesText = isTrainingOnly ? ("?? Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
+      const notesText = isTrainingOnly ? ("🏋️ Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
-      const synced = e.remote_id ? "??" : "";
+      const synced = e.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="nowrap">${e.date}</td>
@@ -1094,7 +1094,7 @@ async function loadAndRenderReports(){
   reports
     .sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
     .forEach(r=>{
-      const synced = r.remote_id ? "??" : "";
+      const synced = r.remote_id ? "☁️" : "";
       const tr = document.createElement("tr");
 tr.innerHTML = `
   <td class="nowrap">${r.datum || ""}</td>
@@ -1160,7 +1160,7 @@ async function renderDoctor(){
     .forEach(e=>{
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
-      const notesText = isTrainingOnly ? ("?? Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
+      const notesText = isTrainingOnly ? ("🏋️ Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${e.date}</td>
@@ -1501,8 +1501,8 @@ function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
   if(!btn) return;
   if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '? Gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '?? Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
+  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
 /* ===== Tabs / Segments ===== */
@@ -1570,18 +1570,18 @@ function setToggle(el, on, activeText, baseText){
   el.setAttribute("aria-pressed", on ? "true" : "false");
   el.textContent = on ? activeText : baseText;
 }
-function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "?? Training heute (aktiv)", "?? Training heute"); }
-function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "?? < 2 L – aktiv", "?? < 2 L getrunken"); }
-  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "?? > 5 g Salz – aktiv", "?? > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "?? > 10 g Zucker – aktiv", "?? > 10 g Zucker"); }
+function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋️ Training heute (aktiv)", "🏋️ Training heute"); }
+function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🚰 < 2 L – aktiv", "🚰 < 2 L getrunken"); }
+  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
+function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
 function setSick(on){
-  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "?? Krank (Forxiga pausiert) – aktiv", "?? Krank (Forxiga pausiert)");
+  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
   if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
   else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
-function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "?? Valsartan vergessen – aktiv", "?? Valsartan vergessen"); }
-function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "?? Forxiga vergessen – aktiv", "?? Forxiga vergessen"); }
-function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "?? NSAR genommen – aktiv", "?? NSAR genommen"); }
+function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
+function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
+function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "⚠️ NSAR genommen – aktiv", "⚠️ NSAR genommen"); }
 function blockHasData(which){
   return !!(
     $(`#time${which}`).value ||
@@ -1692,7 +1692,7 @@ async function saveReport(){
   const localId = await addReport(report);
   await syncReportWebhook(report, localId);
   const btn = $("#saveReportBtn");
-  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="? Befund gespeichert";
+  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✔️ Befund gespeichert";
   setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
     ["#repKrea","#repEgfr","#repUacr","#repK","#repCys","#repHaem","#repLDL","#repHbA1c","#repNote"]
     .forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
@@ -2024,7 +2024,7 @@ $("#saveWebhook").addEventListener("click", async ()=>{
   await putConf("webhookKey", rawKey);
   await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
 
-  $("#whSaved").textContent = "Gespeichert ?";
+  $("#whSaved").textContent = "Gespeichert ✓";
   setTimeout(()=>$("#whSaved").textContent="", 2000);
 
   // Supabase-Client nach neuer Konfig sofort initialisieren
@@ -2116,3 +2116,4 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
