@@ -286,14 +286,14 @@
   <div style="display:flex;align-items:center;gap:10px">
     <h1>Gesundheits-Logger</h1><span class="small">V1.3</span>
     <div class="spacer"></div>
-    <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
-    <button class="btn ghost" id="diagToggle" type="button">Log</button>
+<button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
+<button class="btn ghost" id="diagToggle" type="button">Log</button>
+<button class="btn ghost" id="listHeaderBtn" type="button">Liste</button>
   </div>
 </header>
 
 <nav class="tabs">
   <button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
-  <button class="btn ghost" data-tab="list" id="tab-list" type="button">Liste</button>
   <button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
 </nav>
 
@@ -636,11 +636,6 @@
   </section>
 </main>
 
-<div class="fab-wrap">
-  <div class="fab" id="helpToggleFab" title="Hilfe">❓</div>
-  <div class="fab" id="diagToggleFab" title="Log">📜</div>
-</div>
-
 <!-- Supabase (UMD, v2) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
@@ -678,23 +673,23 @@ window.addEventListener('unhandledrejection', (e)=>{
 const diag = { el:null, logEl:null, open:false, lines:[],
   add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
-    const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
-    const close=document.getElementById('diagClose');
-    const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
-    t1.addEventListener('click', toggle);
-    t2.addEventListener('click', toggle);
-    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
+const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
+const close=document.getElementById('diagClose');
+const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+t1.addEventListener('click', toggle);
+if (t2) t2.addEventListener('click', toggle);
+close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
   }
 };
 
 /* ===== Help panel ===== */
 const helpPanel={ el:null, open:false,
   init(){ this.el=document.getElementById('help');
-    const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
-    const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
-    t1.addEventListener('click', toggle);
-    t2.addEventListener('click', toggle);
-    close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
+const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
+const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+t1.addEventListener('click', toggle);
+if (t2) t2.addEventListener('click', toggle);
+close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
   }
 };
 
@@ -717,10 +712,10 @@ async function isLoggedIn(){
 /** Schaltet die komplette App frei/zu (außer Hilfe/Log/Google-Login) */
 function setAuthGuard(logged){
   const disabled = !logged;
-  const allowIds = new Set([
-    'googleLoginBtn','helpToggle','diagToggle','helpToggleFab','diagToggleFab',
-    'tab-list','saveWebhook','whUrl','whKey','whUrlMr'
-  ]);
+const allowIds = new Set([
+  'googleLoginBtn','helpToggle','diagToggle','listHeaderBtn',
+  'saveWebhook','whUrl','whKey','whUrlMr'
+]);
   // alles im <main> sperren/freigeben
   document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
     if(allowIds.has(el.id)) return;                 // Hilfe/Log & Login immer bedienbar
@@ -2315,6 +2310,8 @@ async function main(){
   if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey",  `Bearer ${SUPABASE_ANON_DEFAULT}`);
 } catch (_) {}
   chartPanel.init(); chartReportsPanel.init(); bindTabs();
+const listHeaderBtn = document.getElementById('listHeaderBtn');
+if (listHeaderBtn) listHeaderBtn.addEventListener('click', ()=> setTab('list'));
   $("#date").value = todayStr();
   $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
   $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
@@ -2516,4 +2513,5 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
