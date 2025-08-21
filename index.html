@@ -146,7 +146,14 @@
 
 /* Spalte C – Spezialinfos */
 .doctor-view .col-special{ display:grid; grid-template-rows:auto auto 1fr; gap:6px; }
-.doctor-view .weight-line{ display:flex; justify-content:space-between; align-items:center; min-height:34px; }
+/* kleines Kärtchen rechts – wirkt wie eigene Karte */
+.doctor-view .weight-line{
+  display:flex; justify-content:space-between; align-items:center;
+  min-height:44px; padding:8px 10px;
+  background:#0f1116; border:1px solid #2b2f3a; border-radius:10px;
+  font-weight:600;
+}
+.doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
 .doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
@@ -173,10 +180,12 @@
     min-width: 4ch;
     white-space: nowrap;
   }
-  .doctor-view .flags{
-    grid-template-columns: repeat(2, max-content);
-    gap:10px;
-  }
+/* Desktop: Reihe mit Wrap; Mobile bleibt unten (siehe @media) */
+.doctor-view .flags{
+  display:grid;
+  grid-template-columns: repeat(6, max-content);
+  justify-content:start; align-items:center;
+  column-gap:14px; row-gap:6px; margin-top:6px;
 }
 
   /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
@@ -214,7 +223,7 @@
     grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
   }
   .doctor-view .flags{
-    grid-template-columns: repeat(2, max-content);
+    grid-template-columns: repeat(3, max-content);
   }
 }
 
@@ -1378,7 +1387,7 @@ async function renderDoctor(){
         evening: { sys:null, dia:null, pulse:null, map:null },
         weight: null,
         notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false }
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false }
       };
       days.set(e.date, d);
     }
@@ -1407,16 +1416,17 @@ async function renderDoctor(){
       if (e.notes) d.notes = e.notes;
     }
     // Trainings-only → als Hinweis in Notizen, falls keine vorhanden
-    if (isTrainingOnly && !d.notes){
-      d.notes = e.notes ? ("🏋️ Training – " + e.notes) : "🏋️ Training";
-    }
-
+if (isTrainingOnly){
+  d.flags.training = true;
+  if (e.notes && !d.notes) d.notes = e.notes;
+}
     // Flags (Spezial): Wasser/Salz/Zucker/Krank/Medikamente
-    if (e.low_intake)      d.flags.water_lt2  = true;
-    if (e.salt_high)       d.flags.salt_gt5   = true;
-    if (e.sugar_high)      d.flags.sugar_gt10 = true;
-    if (e.sick)            d.flags.sick       = true;
-    if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
+if (e.low_intake)      d.flags.water_lt2  = true;
+if (e.salt_high)       d.flags.salt_gt5   = true;
+if (e.sugar_high)      d.flags.sugar_gt10 = true;
+if (e.sick)            d.flags.sick       = true;
+if (e.training)        d.flags.training   = true;
+if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
   }
 
   const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
@@ -1458,13 +1468,14 @@ async function renderDoctor(){
           <div class="num">${dash(fmtNum(day.weight))}</div>
         </div>
 
-        <div class="flags">
-          <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
-          <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-          <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
-          <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
-          <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
-        </div>
+<div class="flags">
+  <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
+  <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
+  <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+  <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
+  <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+  <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
+</div>
 
         <div class="notes">${nl2br(day.notes || "")}</div>
       </div>
@@ -2505,3 +2516,4 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
