@@ -63,6 +63,87 @@
 
   #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
 
+  /* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
+.doctor-view .doctor-day{
+  display:grid;
+  grid-template-columns: 1.2fr 2fr 1.6fr; /* A: Datum | B: Messungen | C: Spezial */
+  gap:12px;
+  align-items:stretch;
+  padding:12px 14px;
+  margin:8px 0;
+  border-radius:12px;
+  background:var(--card);
+  border:1px solid #242833;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+
+/* Spalte A – Datum */
+.doctor-view .col-date{
+  display:flex; align-items:center;
+  font-weight:800;
+  font-size:clamp(16px,1.6vw,20px);
+  letter-spacing:.2px;
+}
+
+/* Spalte B – Messungen */
+.doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
+.doctor-view .measure-head{
+  display:grid; grid-template-columns:1fr repeat(4,1fr);
+  font-size:12px; opacity:.8;
+}
+.doctor-view .measure-grid{
+  display:grid; grid-template-columns:1fr repeat(4,1fr);
+  grid-auto-rows:34px; gap:4px;
+}
+.doctor-view .measure-row{ display:contents; }
+.doctor-view .label{ display:flex; align-items:center; font-size:13px; opacity:.9; }
+
+/* Zahlenbild */
+.doctor-view .num{
+  font-variant-numeric: tabular-nums lining-nums;
+  -moz-font-feature-settings:"tnum","lnum";
+  -webkit-font-feature-settings:"tnum","lnum";
+  font-feature-settings:"tnum","lnum";
+  text-align:right;
+  display:flex; align-items:center; justify-content:flex-end;
+}
+
+/* Spalte C – Spezialinfos */
+.doctor-view .col-special{ display:grid; grid-template-rows:auto auto 1fr; gap:6px; }
+.doctor-view .weight-line{ display:flex; justify-content:space-between; align-items:center; min-height:34px; }
+.doctor-view .flags{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
+.doctor-view .flag-box{
+  width:16px; height:16px; border:1.5px solid #2b2f3a; border-radius:3px; display:inline-block; position:relative;
+}
+.doctor-view .flag-box.on::after{
+  content:""; position:absolute; inset:2px; background:var(--accent); border-radius:2px;
+}
+
+/* Notizen: im Screen 3 Zeilen, im Druck voll */
+.doctor-view .notes{
+  min-height:34px; font-size:13px; line-height:1.35;
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+  word-break:break-word;
+}
+
+/* Responsive: mobil stacked */
+@media (max-width: 860px){
+  .doctor-view .doctor-day{ grid-template-columns:1fr; gap:10px; }
+  .doctor-view .measure-head{ font-size:11px; }
+}
+
+/* Print-Optimierung */
+@media print{
+  .doctor-view .doctor-day{
+    background:#fff; border:1px solid #000; box-shadow:none;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .doctor-view .notes{ -webkit-line-clamp:unset; overflow:visible; }
+}
+
   /* Panels */
    .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
    .panel.chart{ width:min(92vw, 820px); }
@@ -433,31 +514,9 @@
         <button class="btn ghost" id="printBtn" type="button">Drucken</button>
       </div>
 
-      <div style="overflow:auto" id="doctorDailyWrap">
-        <table id="doctorTable">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Zeit</th>
-              <th>Art</th>
-              <th>Sys</th>
-              <th>Dia</th>
-              <th>Puls</th>
-              <th>MAP</th>
-              <th>Gewicht</th>
-              <th>Notizen</th>
-              <th>&lt; 2 L</th>
-              <th>Salz &gt; 5 g</th>
-              <th>Zucker &gt; 10 g</th>
-              <th>Krank</th>
-              <th>Valsartan ?</th>
-              <th>Forxiga ?</th>
-              <th>NSAR</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+<div style="overflow:auto" id="doctorDailyWrap">
+  <div class="doctor-view" id="doctorView"></div>
+</div>
 
       <div style="overflow:auto" id="doctorReportWrap" class="hidden">
         <table id="doctorReportsTable">
@@ -1199,63 +1258,144 @@ if(chartReportsPanel.open) await chartReportsPanel.draw();
 }
 
 /* ===== Doctor view ===== */
-  const __t0 = performance.now();
+const __t0 = performance.now();
 async function renderDoctor(){
-  const tbody = $("#doctorTable tbody");
-  tbody.innerHTML = "";
+  const host = $("#doctorView");
+  if (!host) return;
+  host.innerHTML = "";
+
+  // Helpers (nur Anzeige)
+  const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
+  const onClass = b => (b ? "on" : "");
+  const fmtDateDE = (iso) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+  };
+
+  // 1) Filter + Sort wie bisher
   const from = $("#from").value;
-  const to = $("#to").value;
+  const to   = $("#to").value;
   const entries = await getAllEntries();
-  entries
-    .filter(e=>{
+  const list = entries
+    .filter(e => {
       if (from && e.date < from) return false;
-      if (to && e.date > to) return false;
+      if (to   && e.date > to)   return false;
       return true;
     })
-    .sort((a,b)=> ( (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)) ))
-    .forEach(e=>{
-const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement    = !isDaySummary && !isTrainingOnly;
+    .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
 
+  // 2) Tagesobjekte aufbauen (nur Darstellung)
+  const days = new Map();
+  for (const e of list){
+    let d = days.get(e.date);
+    if (!d){
+      d = {
+        date: e.date,
+        morning: { sys:null, dia:null, pulse:null, map:null },
+        evening: { sys:null, dia:null, pulse:null, map:null },
+        weight: null,
+        notes: "",
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false }
+      };
+      days.set(e.date, d);
+    }
 
-const art = isDaySummary
-  ? "Tageszusammenfassung"
-  : (isTrainingOnly ? "Training" : "Messung");
+    const legacyWeightOnly = isWeightOnly(e);
+    const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+    const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
+    const isMeasurement    = !isDaySummary && !isTrainingOnly;
 
-const notesText = isTrainingOnly
-  ? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-  : (e.notes || "");
+    // Messblöcke
+    if (isMeasurement && e.context === "Morgen"){
+      d.morning.sys   = e.sys ?? null;
+      d.morning.dia   = e.dia ?? null;
+      d.morning.pulse = e.pulse ?? null;
+      d.morning.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+    } else if (isMeasurement && e.context === "Abend"){
+      d.evening.sys   = e.sys ?? null;
+      d.evening.dia   = e.dia ?? null;
+      d.evening.pulse = e.pulse ?? null;
+      d.evening.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+    }
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${e.date}</td>
-        <td>${e.time}</td>
-        <td>${art}</td>
-        <td>${isMeasurement ? (e.sys ?? "") : ""}</td>
-        <td>${isMeasurement ? (e.dia ?? "") : ""}</td>
-        <td>${isMeasurement ? (e.pulse ?? "") : ""}</td>
-        <td>${isMeasurement ? fmtNum(e.map) : ""}</td>
-        <td>${isDaySummary ? fmtNum(e.weight) : ""}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td>${e.low_intake ? "Ja" : ""}</td>
-        <td>${e.salt_high ? "Ja" : ""}</td>
-        <td>${e.sugar_high ? "Ja" : ""}</td>
-        <td>${e.sick ? "Ja" : ""}</td>
-        <td>${e.valsartan_missed ? "Ja" : ""}</td>
-        <td>${e.forxiga_missed ? "Ja" : ""}</td>
-        <td>${e.nsar_taken ? "Ja" : ""}</td>
+    // Tageszusammenfassung / Gewicht / Notizen
+    if (isDaySummary){
+      if (e.weight != null) d.weight = e.weight;
+      if (e.notes) d.notes = e.notes;
+    }
+    // Trainings-only → als Hinweis in Notizen, falls keine vorhanden
+    if (isTrainingOnly && !d.notes){
+      d.notes = e.notes ? ("🏋️ Training – " + e.notes) : "🏋️ Training";
+    }
 
-      `;
-      tbody.appendChild(tr);
-    });
-  if (!tbody.children.length) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="16" class="small" style="text-align:center;opacity:.7">Keine Einträge im Zeitraum</td>`;
-    tbody.appendChild(tr);
+    // Flags (Spezial): Wasser/Salz/Zucker/Krank/Medikamente
+    if (e.low_intake)      d.flags.water_lt2  = true;
+    if (e.salt_high)       d.flags.salt_gt5   = true;
+    if (e.sugar_high)      d.flags.sugar_gt10 = true;
+    if (e.sick)            d.flags.sick       = true;
+    if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
+  }
+
+  const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+
+  // 3) Renderer pro Tag (-> 3 Spalten)
+  const renderDoctorDay = (day) => `
+    <section class="doctor-day" data-date="${day.date}">
+      <!-- Spalte A: Datum -->
+      <div class="col-date">${fmtDateDE(day.date)}</div>
+
+      <!-- Spalte B: Messungen -->
+      <div class="col-measure">
+        <div class="measure-head">
+          <div></div>
+          <div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
+        </div>
+        <div class="measure-grid">
+          <div class="measure-row">
+            <div class="label">morgens</div>
+            <div class="num">${dash(day.morning.sys)}</div>
+            <div class="num">${dash(day.morning.dia)}</div>
+            <div class="num">${dash(day.morning.pulse)}</div>
+            <div class="num">${dash(fmtNum(day.morning.map))}</div>
+          </div>
+          <div class="measure-row">
+            <div class="label">abends</div>
+            <div class="num">${dash(day.evening.sys)}</div>
+            <div class="num">${dash(day.evening.dia)}</div>
+            <div class="num">${dash(day.evening.pulse)}</div>
+            <div class="num">${dash(fmtNum(day.evening.map))}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spalte C: Spezial -->
+      <div class="col-special">
+        <div class="weight-line">
+          <div>Gewicht</div>
+          <div class="num">${dash(fmtNum(day.weight))}</div>
+        </div>
+
+        <div class="flags">
+          <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
+          <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
+          <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+          <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
+          <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+        </div>
+
+        <div class="notes">${nl2br(day.notes || "")}</div>
+      </div>
+    </section>
+  `;
+
+  // 4) Rendern oder Leerzustand
+  if (!daysArr.length){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+  } else {
+    host.innerHTML = daysArr.map(renderDoctorDay).join("");
   }
 }
+
 async function renderDoctorReports(){
   const tbody = $("#doctorReportsTable tbody");
   tbody.innerHTML = "";
@@ -2282,6 +2422,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
