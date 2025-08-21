@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.2)</title>
 <style>
-  body.auth-locked main{ opacity: .6; }
+  body.auth-locked main{ opacity:.6; pointer-events:none; }
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -50,7 +50,11 @@
 
   @media print{
     body{background:white;color:black}
-    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports {display:none !important}
+    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports, #diag { display:none !important; }
+  body { color:#000; background:#fff; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { border:1px solid #555; padding:4px 6px; }
+  .doctor-view, .report-view { page-break-inside:avoid; }
     #doctorCard{border:none;box-shadow:none}
     #doctorTitle{font-size:18px;margin-bottom:10px}
     #doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
@@ -101,6 +105,7 @@
   .seg{display:flex;gap:8px;margin:8px 0 12px}
   .seg .seg-btn.active{background:var(--accent);color:#fff}
   .hidden{display:none!important}
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -199,8 +204,8 @@
   </div>
 </div>
 
-<div id="err"></div>
-<div id="busy"><div class="box">⏳ Bitte warten…</div></div>
+<div id="err" role="status" aria-live="polite"></div>
+<div id="busy"><div class="box">? Bitte warten…</div></div>
 
 <main>
   <!-- Capture -->
@@ -269,19 +274,19 @@
       </div>
 
       <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋 Training heute</button>
-        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
-        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
-        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
-        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🥤 &lt; 2 L getrunken</button>
-        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
-        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
-        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">🧪 NSAR genommen</button>
+        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">?? Training heute</button>
+        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">?? Krank (Forxiga pausiert)</button>
+        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">?? Valsartan vergessen</button>
+        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">?? Forxiga vergessen</button>
+        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">?? &lt; 2 L getrunken</button>
+        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">?? &gt; 5 g Salz</button>
+        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">?? &gt; 10 g Zucker</button>
+        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">?? NSAR genommen</button>
         <div class="spacer"></div>
       </div>
 
       <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
+        <button class="btn primary" id="saveAllBtn" type="button">?? Speichern</button>
         <div class="spacer"></div>
       </div>
     </section>
@@ -302,7 +307,7 @@
         <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
       </div>
       <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
+        <button class="btn primary" id="saveReportBtn" type="button">?? Befund speichern</button>
         <div class="spacer"></div>
       </div>
     </section>
@@ -322,7 +327,7 @@
         </select>
         <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
         <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">↕ Sync (Daily)</button>
+        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">? Sync (Daily)</button>
         <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
       </div>
 
@@ -348,8 +353,8 @@
               <th class="center nowrap">Training</th>
               <th class="center nowrap">&lt; 2 L</th>
               <th class="center nowrap">Krank</th>
-              <th class="center nowrap">Valsartan ❌</th>
-              <th class="center nowrap">Forxiga ❌</th>
+              <th class="center nowrap">Valsartan ?</th>
+              <th class="center nowrap">Forxiga ?</th>
               <th class="center nowrap">NSAR</th>
               <th class="center nowrap">Salz &gt; 5 g</th>
               <th class="center nowrap">Zucker &gt; 10 g</th>
@@ -441,8 +446,8 @@
               <th>Salz &gt; 5 g</th>
               <th>Zucker &gt; 10 g</th>
               <th>Krank</th>
-              <th>Valsartan ❌</th>
-              <th>Forxiga ❌</th>
+              <th>Valsartan ?</th>
+              <th>Forxiga ?</th>
               <th>NSAR</th>
             </tr>
           </thead>
@@ -477,8 +482,8 @@
 </main>
 
 <div class="fab-wrap">
-  <div class="fab" id="helpToggleFab" title="Hilfe">❓</div>
-  <div class="fab" id="diagToggleFab" title="Log">🧪</div>
+  <div class="fab" id="helpToggleFab" title="Hilfe">?</div>
+  <div class="fab" id="diagToggleFab" title="Log">??</div>
 </div>
 
 <!-- Supabase (UMD, v2) -->
@@ -493,6 +498,22 @@ window.addEventListener('unhandledrejection', (e)=>{
 });
 
 /* ===== Diagnostics ===== */
+  const perfStats = (() => {
+  const buckets = Object.create(null);
+  const add = (k, ms) => (buckets[k] ??= []).push(ms);
+  const pct = (arr, p) => {
+    if (!arr.length) return 0;
+    const a = [...arr].sort((x,y)=>x-y);
+    const i = Math.ceil((p/100)*a.length)-1;
+    return a[Math.max(0, Math.min(i, a.length-1))];
+  };
+  const snap = (k) => {
+    const arr = buckets[k] || [];
+    return { count: arr.length, p50: pct(arr,50), p95: pct(arr,95), p99: pct(arr,99) };
+  };
+  return { add, snap };
+})();
+
 const diag = { el:null, logEl:null, open:false, lines:[],
   add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
   init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
@@ -762,7 +783,7 @@ async function deleteRemote(remote_id){
   if(!url || !headers || !remote_id) return {ok:false};
   const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
   try{
-    const res = await fetch(q, { method:"DELETE", headers });
+    const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
     return {ok: res.ok, status: res.status};
   }catch(e){
     return {ok:false, status:0};
@@ -774,7 +795,7 @@ async function deleteRemoteBefund(remote_id){
   if(!url || !headers || !remote_id) return {ok:false};
   const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
   try{
-    const res = await fetch(q, { method:"DELETE", headers });
+    const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
     return {ok: res.ok, status: res.status};
   }catch(e){
     return {ok:false, status:0};
@@ -808,7 +829,7 @@ async function pushPendingToRemote(){
   for(const e of pending){
     try{
       const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
-      const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
+      const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(safe) }));
       if(!res.ok){ failed++; continue; }
       const json = await res.json();
       const rid = json?.[0]?.id;
@@ -839,7 +860,7 @@ async function syncReportWebhook(report, localId){
     source:    report.source ?? "manuell"
   };
   try{
-    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(payload) });
+    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
     if(!res.ok){
       const txt = await res.text(); diag.add(`MR-POST Fehler ${res.status}: ${txt}`);
       return;
@@ -935,7 +956,7 @@ function toCSV(entries){
   const rows = entries.map(e=>{
     const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
     const art   = isTrainingOnly ? "Training" : "Messung";
-    const notes = (isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || "")).replace(/\n/g," ");
+    const notes = (isTrainingOnly ? ("🗓️ Training" + (e.notes ? " – " + e.notes : "")) : (e.notes || ""));
     return [
       e.date, e.time, art,
       isTrainingOnly ? "" : (e.sys??""),
@@ -959,8 +980,8 @@ function toCSV(entries){
     ];
   });
 const csv = [
-  header.join(","),
-  ...rows.map(r => r.map(v => (typeof v === "string" && /[",\n]/.test(v)) ? '"' + v.replace(/"/g,'""') + '"' : v).join(","))
+  header.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","),
+  ...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(","))
 ].join("\n");
   return csv;
 }
@@ -989,15 +1010,16 @@ function renderTable(entries){
   const days = $("#rangeSel").value;
   const tbody = $("#tbl tbody");
   tbody.innerHTML = "";
+  const __t0 = performance.now();
   entries
     .filter(e=>withinDays(e.date, days))
     .sort(compareForList)
     .forEach(e=>{
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
-      const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
+      const notesText = isTrainingOnly ? ("?? Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const zeitLabel = e.context === "Morgen" ? `${e.time} (Morgens)` : e.context === "Abend" ? `${e.time} (Abends)` : e.time;
-      const synced = e.remote_id ? "☁️" : "";
+      const synced = e.remote_id ? "??" : "";
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="nowrap">${e.date}</td>
@@ -1057,9 +1079,12 @@ function renderTable(entries){
   });
 }
 async function loadAndRender(){
+  const t0 = performance.now();
   const entries = await getAllEntries();
   renderTable(entries);
-}
+  { const s = (perfStats.add('renderList', performance.now()-t0), perfStats.snap('renderList'));
+     diag.add(`[perf] renderList p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
+ }
 
 /* ===== List rendering (Befunde) ===== */
 async function loadAndRenderReports(){
@@ -1069,7 +1094,7 @@ async function loadAndRenderReports(){
   reports
     .sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
     .forEach(r=>{
-      const synced = r.remote_id ? "☁️" : "";
+      const synced = r.remote_id ? "??" : "";
       const tr = document.createElement("tr");
 tr.innerHTML = `
   <td class="nowrap">${r.datum || ""}</td>
@@ -1118,6 +1143,7 @@ if(chartReportsPanel.open) await chartReportsPanel.draw();
 }
 
 /* ===== Doctor view ===== */
+  const __t0 = performance.now();
 async function renderDoctor(){
   const tbody = $("#doctorTable tbody");
   tbody.innerHTML = "";
@@ -1134,7 +1160,7 @@ async function renderDoctor(){
     .forEach(e=>{
       const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
       const art = isTrainingOnly ? "Training" : "Messung";
-      const notesText = isTrainingOnly ? ("🏋 Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
+      const notesText = isTrainingOnly ? ("?? Training" + (e.notes ? " – " + e.notes : "")) : (e.notes||"");
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${e.date}</td>
@@ -1147,12 +1173,12 @@ async function renderDoctor(){
         <td>${isTrainingOnly ? "" : fmtNum(e.weight)}</td>
         <td class="notes">${nl2br(notesText)}</td>
         <td>${e.low_intake ? "Ja" : ""}</td>
+        <td>${e.salt_high ? "Ja" : ""}</td>
+        <td>${e.sugar_high ? "Ja" : ""}</td>
         <td>${e.sick ? "Ja" : ""}</td>
         <td>${e.valsartan_missed ? "Ja" : ""}</td>
         <td>${e.forxiga_missed ? "Ja" : ""}</td>
         <td>${e.nsar_taken ? "Ja" : ""}</td>
-        <td>${e.salt_high ? "Ja" : ""}</td>
-        <td>${e.sugar_high ? "Ja" : ""}</td>
 
       `;
       tbody.appendChild(tr);
@@ -1230,6 +1256,7 @@ const chartPanel = {
     } return out;
   },
   async draw(){
+    const __t0 = performance.now();
     const metric = $("#metricSel").value;
     const data = await this.getFiltered();
     const xs = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
@@ -1300,8 +1327,11 @@ const chartPanel = {
       const label = document.createElement("span"); label.textContent = s.name;
       const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
       wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
+      const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.snap('drawChart'));
+      diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
     });
-  },
+    },
+  
   async savePNG(){
     const svgEl = this.svg;
     const xml = new XMLSerializer().serializeToString(svgEl);
@@ -1471,8 +1501,8 @@ function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
   if(!btn) return;
   if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✅ Gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '? Gespeichert';
+  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '?? Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
 /* ===== Tabs / Segments ===== */
@@ -1540,18 +1570,18 @@ function setToggle(el, on, activeText, baseText){
   el.setAttribute("aria-pressed", on ? "true" : "false");
   el.textContent = on ? activeText : baseText;
 }
-function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋 Training heute (aktiv)", "🏋 Training heute"); }
-function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🥤 < 2 L – aktiv", "🥤 < 2 L getrunken"); }
-  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
+function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "?? Training heute (aktiv)", "?? Training heute"); }
+function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "?? < 2 L – aktiv", "?? < 2 L getrunken"); }
+  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "?? > 5 g Salz – aktiv", "?? > 5 g Salz"); }
+function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "?? > 10 g Zucker – aktiv", "?? > 10 g Zucker"); }
 function setSick(on){
-  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
+  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "?? Krank (Forxiga pausiert) – aktiv", "?? Krank (Forxiga pausiert)");
   if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
   else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
-function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
-function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
-function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "🧪 NSAR genommen – aktiv", "🧪 NSAR genommen"); }
+function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "?? Valsartan vergessen – aktiv", "?? Valsartan vergessen"); }
+function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "?? Forxiga vergessen – aktiv", "?? Forxiga vergessen"); }
+function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "?? NSAR genommen – aktiv", "?? NSAR genommen"); }
 function blockHasData(which){
   return !!(
     $(`#time${which}`).value ||
@@ -1561,6 +1591,7 @@ function blockHasData(which){
   );
 }
 async function saveAll(){
+  const __t0 = performance.now();
   if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 
   const hasM = blockHasData("M");
@@ -1577,6 +1608,19 @@ async function saveAll(){
   const attachWeightToM = (hasM || (!hasM && !hasA && weightOnly));
   const attachWeightToA = (!attachWeightToM && hasA);
 
+// Flags/Notes-only?
+const dayNotes = ($("#notesDay").value || "").trim();
+const hasFlagsOnly = !hasM && !hasA && !weightOnly && (
+  trainingActive || lowIntakeActive || sickActive ||
+  valsartanMissed || forxigaMissed || nsarTaken ||
+  saltHigh || sugarHigh || dayNotes.length > 0
+);
+
+if (hasFlagsOnly) {
+  // speichere einen „Morgen“-Marker ohne Vitalwerte
+  await saveBlock("Morgen", "M", /*includeWeight=*/false, /*force=*/true);
+}
+  
   if (weightOnly) {
     savedM = await saveBlock("Morgen","M", true);
   } else {
@@ -1590,12 +1634,12 @@ async function saveAll(){
   await renderDoctorViewForMode();
   if(chartPanel.open) await chartPanel.draw();
   if(chartReportsPanel.open) await chartReportsPanel.draw();
+  { const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
+  diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
   flashSaveOk();
 }
 
-async function saveBlock(contextLabel, which, includeWeight=false){
-  if(!blockHasData(which) && !includeWeight) return false;
-
+async function saveBlock(contextLabel, which, includeWeight=false, force=false){
   const date = $("#date").value || todayStr();
   const time = $(`#time${which}`).value || timeStr();
   const sys = $(`#sys${which}`).value ? Number($(`#sys${which}`).value) : null;
@@ -1603,17 +1647,25 @@ async function saveBlock(contextLabel, which, includeWeight=false){
   const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
   const weight = includeWeight && $("#weightDay")?.value ? Number($("#weightDay").value) : null;
   const dayNotes = $("#notesDay").value ? $("#notesDay").value.trim() : "";
-  const currentISO = new Date(date+"T"+time).toISOString();
-  const ts = new Date(date+"T"+time).getTime();
 
-const entry = {
-  date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
-  sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-  notes: dayNotes,
-  training: trainingActive, low_intake: lowIntakeActive, sick: sickActive,
-  valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken,
-  salt_high: saltHigh, sugar_high: sugarHigh
-};
+  // nur abbrechen, wenn wirklich gar nichts zu speichern ist
+  const nothingToSave = !sys && !dia && !pulse && !weight && !dayNotes &&
+    !trainingActive && !lowIntakeActive && !sickActive &&
+    !valsartanMissed && !forxigaMissed && !nsarTaken &&
+    !saltHigh && !sugarHigh;
+
+  if (!force && nothingToSave) return false;
+  const currentISO = new Date(date + "T" + time).toISOString();
+  const ts = new Date(date + "T" + time).getTime();
+
+  const entry = {
+    date, time, dateTime: currentISO, ts, context: contextLabel, arm: "links", position: "sitzend",
+    sys, dia, pulse, weight, map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+    notes: dayNotes,
+    training: trainingActive, low_intake: lowIntakeActive, sick: sickActive,
+    valsartan_missed: valsartanMissed, forxiga_missed: forxigaMissed, nsar_taken: nsarTaken,
+    salt_high: saltHigh, sugar_high: sugarHigh
+  };
 
   const localId = await addEntry(entry);
   await syncWebhook(entry, localId);
@@ -1640,10 +1692,23 @@ async function saveReport(){
   const localId = await addReport(report);
   await syncReportWebhook(report, localId);
   const btn = $("#saveReportBtn");
-  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✅ Befund gespeichert";
+  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="? Befund gespeichert";
   setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
     ["#repKrea","#repEgfr","#repUacr","#repK","#repCys","#repHaem","#repLDL","#repHbA1c","#repNote"]
     .forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
+}
+  async function withRetry(fn, {tries=3, base=300}={}) {
+  let lastErr;
+  for (let i=0;i<tries;i++){
+    try { return await fn(); }
+    catch (e) {
+      const code = e?.status ?? e?.response?.status ?? 0;
+      if (!(code >= 500 && code < 600)) throw e;
+      await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
@@ -1651,7 +1716,7 @@ async function syncWebhook(entry, localId){
   if(!url || !headers) return;
   try{
     const { id: _d1, remote_id: _d2, ...safe } = entry;
-    const res = await fetch(url, { method:"POST", headers, body: JSON.stringify(safe) });
+    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(safe) }));
     if(!res.ok){ diag.add(`Webhook-Fehler ${res.status}`); return; }
     const json = await res.json();
     const remoteId = json?.[0]?.id;
@@ -1721,14 +1786,15 @@ async function setupRealtime(){
       const et = payload.eventType; const n = payload.new; const o = payload.old;
       if(et === 'INSERT' || et === 'UPDATE'){
         const row = n;
-        const mapped = {
-          date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
-          arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
-          weight: row.weight, map: row.map, notes: row.notes,
-          training: row.training, low_intake: row.low_intake, sick: row.sick,
-          valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
-          remote_id: row.id
-        };
+const mapped = {
+  date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
+  arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
+  weight: row.weight, map: row.map, notes: row.notes,
+  training: row.training, low_intake: row.low_intake, sick: row.sick,
+  valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
+  salt_high: row.salt_high, sugar_high: row.sugar_high,                // <<< hinzufügen
+  remote_id: row.id
+};
         const existing = await getEntryByRemoteId(row.id);
         if(existing){ await updateEntry(existing.id, mapped); }
         else{ await addEntry(mapped); }
@@ -1802,14 +1868,16 @@ async function reconcileFromRemote(){
   const remoteRows = await pullAllFromRemote();
   const seen = new Set(remoteRows.map(r=>r.id));
   for(const r of remoteRows){
-    const mapped = {
-      date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-      arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-      weight: r.weight, map: r.map, notes: r.notes,
-      training: r.training, low_intake: r.low_intake, sick: r.sick,
-      valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-      remote_id: r.id
-    };
+const mapped = {
+  date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+  arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+  weight: r.weight, map: r.map, notes: r.notes,
+  training: r.training, low_intake: r.low_intake, sick: r.sick,
+  valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+  salt_high: r.salt_high, sugar_high: r.sugar_high,                    // <<< hinzufügen
+  remote_id: r.id
+};
+
     const existing = await getEntryByRemoteId(r.id);
     if(existing){ await updateEntry(existing.id, mapped); }
     else { await addEntry(mapped); }
@@ -1885,7 +1953,7 @@ await ensureSupabaseClient();
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
-// Wenn schon eingeloggt → App starten, sonst Login-Leiste zeigen
+// Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot();
@@ -1956,7 +2024,7 @@ $("#saveWebhook").addEventListener("click", async ()=>{
   await putConf("webhookKey", rawKey);
   await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
 
-  $("#whSaved").textContent = "Gespeichert ✓";
+  $("#whSaved").textContent = "Gespeichert ?";
   setTimeout(()=>$("#whSaved").textContent="", 2000);
 
   // Supabase-Client nach neuer Konfig sofort initialisieren
@@ -1977,18 +2045,20 @@ $("#saveWebhook").addEventListener("click", async ()=>{
       const current = await getAllEntries();
       dl("backup_vor_sync.csv", toCSV(current), "text/csv");
       const resPush = await pushPendingToRemote();
-      diag.add(`SYNC: Pending gepusht → OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      diag.add(`SYNC: Pending gepusht ? OK=${resPush.pushed}, FAIL=${resPush.failed}`);
       await wipeAll();
       const remoteRows = await pullAllFromRemote();
       for(const r of remoteRows){
-        const entry = {
-          date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-          arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-          weight: r.weight, map: r.map, notes: r.notes,
-          training: r.training, low_intake: r.low_intake, sick: r.sick,
-          valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-          remote_id: r.id
-        };
+const entry = {
+  date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+  arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+  weight: r.weight, map: r.map, notes: r.notes,
+  training: r.training, low_intake: r.low_intake, sick: r.sick,
+  valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+  salt_high: r.salt_high, sugar_high: r.sugar_high,                    // <<< hinzufügen
+  remote_id: r.id
+};
+
         await addEntry(entry);
       }
       await loadAndRender(); await renderDoctorViewForMode();
@@ -2033,8 +2103,8 @@ if (document.readyState === "loading") {
 
 /* === Debug-Notizen
  - V1.2: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
- - Auto-Sync: push pending → reconcile (Entries + Reports) ohne Wipe.
- - Realtime-Events: INSERT/UPDATE → upsert, DELETE → lokal entfernen.
+ - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
+ - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
  - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
@@ -2046,11 +2116,3 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
-
