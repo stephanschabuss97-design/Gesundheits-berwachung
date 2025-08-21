@@ -66,7 +66,8 @@
   /* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
 .doctor-view .doctor-day{
   display:grid;
-  grid-template-columns: 1.2fr 2fr 1.6fr; /* A: Datum | B: Messungen | C: Spezial */
+  /* A | B | C: stabilere Proportionen am Desktop */
+  grid-template-columns: 18% 46% 36%;
   gap:12px;
   align-items:stretch;
   padding:12px 14px;
@@ -89,14 +90,22 @@
 
 /* Spalte B – Messungen */
 .doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
+/* Kopf und Werte-Spalten: gleiche Breiten wie Zahlen, Label links fix */
 .doctor-view .measure-head{
-  display:grid; grid-template-columns:1fr repeat(4,1fr);
+  display:grid;
+  grid-template-columns: minmax(90px, 1fr) repeat(4, minmax(72px, 0.9fr));
   font-size:12px; opacity:.8;
 }
 .doctor-view .measure-grid{
-  display:grid; grid-template-columns:1fr repeat(4,1fr);
+  display:grid;
+  grid-template-columns: minmax(90px, 1fr) repeat(4, minmax(72px, 0.9fr));
   grid-auto-rows:34px; gap:4px;
 }
+
+/* Head-Zellen als Flex: rechtsbündig wie die Zahlen */
+.doctor-view .measure-head > div{ display:flex; align-items:center; }
+.doctor-view .measure-head > div:first-child{ justify-content:flex-start; }
+.doctor-view .measure-head > div:not(:first-child){ justify-content:flex-end; }
 .doctor-view .measure-row{ display:contents; }
 .doctor-view .label{ display:flex; align-items:center; font-size:13px; opacity:.9; }
 
@@ -108,12 +117,20 @@
   font-feature-settings:"tnum","lnum";
   text-align:right;
   display:flex; align-items:center; justify-content:flex-end;
+
+  min-width: 4ch;       /* Basisschutz gegen Abschneiden */
+  white-space: nowrap;
+}
+
+  .doctor-view .measure-grid .num,
+.doctor-view .col-special .num{
+  text-align:right; justify-content:flex-end;
 }
 
 /* Spalte C – Spezialinfos */
 .doctor-view .col-special{ display:grid; grid-template-rows:auto auto 1fr; gap:6px; }
 .doctor-view .weight-line{ display:flex; justify-content:space-between; align-items:center; min-height:34px; }
-.doctor-view .flags{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
   width:16px; height:16px; border:1.5px solid #2b2f3a; border-radius:3px; display:inline-block; position:relative;
@@ -131,8 +148,49 @@
 
 /* Responsive: mobil stacked */
 @media (max-width: 860px){
-  .doctor-view .doctor-day{ grid-template-columns:1fr; gap:10px; }
-  .doctor-view .measure-head{ font-size:11px; }
+  .doctor-view .doctor-day{
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;                /* etwas kompakter */
+  }
+
+  /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
+  }
+  .doctor-view .measure-head{ font-size: 11px; }
+
+  /* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
+  .doctor-view .num{
+    min-width: 4.5ch;             /* ~ „96.7“ passt sicher */
+    flex: 0 0 auto;
+  }
+  .doctor-view .col-special .weight-line .num{
+    min-width: 5ch;               /* „84.5“ o. Ä. */
+  }
+
+  /* Flags: in 2–3 Spalten umbrechen statt zu strecken */
+.doctor-view .flags{
+  display:grid;
+  grid-template-columns: repeat(5, max-content);
+  justify-content: start;
+  align-items:center;
+  column-gap: 14px;
+  row-gap: 6px;
+}
+  .doctor-view .flag span:last-child{ white-space: nowrap; } /* kein „Medikamer…“ Abbruch */
+}
+
+/* Extra-eng (≤ 390px Breite) – falls nötig noch schmaler */
+@media (max-width: 390px){
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
+  }
+  .doctor-view .flags{
+    grid-template-columns: repeat(2, max-content);
+  }
 }
 
 /* Print-Optimierung */
@@ -2422,6 +2480,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
