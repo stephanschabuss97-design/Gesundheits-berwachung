@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.2)</title>
+<title>Gesundheits-Logger (V1.3)</title>
 <style>
   body.auth-locked main{ opacity:.6; }
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
@@ -32,7 +32,7 @@
   .btn.warn{background:var(--warn);color:#1a1200}
   .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 
-  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.2s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
+  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
   @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes flashPop {
   0%   { transform: scale(1) }
@@ -111,7 +111,7 @@
 <body>
 <header>
   <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V1.2</span>
+    <h1>Gesundheits-Logger</h1><span class="small">V1.3</span>
     <div class="spacer"></div>
     <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
     <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -2248,7 +2248,7 @@ if (document.readyState === "loading") {
 }
 
 /* === Debug-Notizen
- - V1.2: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+ - V1.3: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
  - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
  - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
  - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
@@ -2262,6 +2262,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
