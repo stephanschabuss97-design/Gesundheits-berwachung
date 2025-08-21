@@ -594,6 +594,12 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
+  // „Legacy“: Measurement‑Eintrag, der nur Gewicht enthält
+function isWeightOnly(e){
+  const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
+  return !hasVitals && (e?.weight != null);
+}
+
  function setBusy(on){
    document.body.classList.toggle('is-busy', !!on);
    const b = document.getElementById('busy');
@@ -964,13 +970,24 @@ await setupRealtime();;
 function toCSV(entries){
   const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
   const rows = entries.map(e=>{
+const legacyWeightOnly = isWeightOnly(e);
 const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary  = e.context === "Tag";
+const isDaySummary  = (e.context === "Tag") || legacyWeightOnly;
 const isMeasurement = !isDaySummary && !isTrainingOnly;
 
 const art = isDaySummary
   ? "Tageszusammenfassung"
   : (isTrainingOnly ? "Training" : "Messung");
+
+const notesText = isTrainingOnly
+  ? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
+  : (e.notes || "");
+
+const zeitLabel =
+  isDaySummary
+    ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
+    : (e.context === "Morgen" ? `${e.time} (Morgens)` :
+       e.context === "Abend"  ? `${e.time} (Abends)`  : e.time);
 
 const notes = isTrainingOnly
   ? ("🗓️ Training" + (e.notes ? " – " + e.notes : ""))
@@ -1029,59 +1046,60 @@ function renderTable(entries){
   const days = $("#rangeSel").value;
   const tbody = $("#tbl tbody");
   tbody.innerHTML = "";
-  const __t0 = performance.now();
-  entries
-    .filter(e=>withinDays(e.date, days))
-    .sort(compareForList)
-    .forEach(e=>{
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary  = e.context === "Tag";
-const isMeasurement = !isDaySummary && !isTrainingOnly;
 
-const art = isDaySummary
-  ? "Tageszusammenfassung"
-  : (isTrainingOnly ? "Training" : "Messung");
+  const list = entries
+    .filter(e => withinDays(e.date, days))
+    .sort(compareForList);
 
+  list.forEach(e=>{
+    const legacyWeightOnly = isWeightOnly(e);
+    const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+    const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
+    const isMeasurement    = !isDaySummary && !isTrainingOnly;
+
+    const art = isDaySummary ? "Tageszusammenfassung" : (isTrainingOnly ? "Training" : "Messung");
+
+    const zeitLabel = isDaySummary
+      ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
+      : (e.context === "Morgen" ? `${e.time} (Morgens)` :
+         e.context === "Abend"  ? `${e.time} (Abends)`  : e.time);
+
+    const synced = e.remote_id ? "☁️" : "";
 const notesText = isTrainingOnly
   ? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
   : (e.notes || "");
 
-const zeitLabel =
-  isDaySummary
-    ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-    : (e.context === "Morgen" ? `${e.time} (Morgens)` :
-       e.context === "Abend"  ? `${e.time} (Abends)`  : e.time);
-      const synced = e.remote_id ? "☁️" : "";
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="nowrap">${e.date}</td>
-        <td class="nowrap">${zeitLabel}</td>
-        <td>${art}</td>
-        <td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
-        <td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
-        <td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
-        <td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
-        <td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
-        <td class="notes">${nl2br(notesText)}</td>
-        <td class="center">${e.training ? "Ja" : ""}</td>
-        <td class="center">${e.low_intake ? "Ja" : ""}</td>
-        <td class="center">${e.sick ? "Ja" : ""}</td>
-        <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-        <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-        <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-        <td class="center">${e.salt_high ? "Ja" : ""}</td>
-        <td class="center">${e.sugar_high ? "Ja" : ""}</td>
-        <td class="center">${synced}</td>
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="nowrap">${e.date}</td>
+      <td class="nowrap">${zeitLabel}</td>
+      <td>${art}</td>
+      <td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
+      <td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
+      <td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
+      <td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
+      <td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
+      <td class="notes">${nl2br(notesText)}</td>
+      <td class="center">${e.training ? "Ja" : ""}</td>
+      <td class="center">${e.low_intake ? "Ja" : ""}</td>
+      <td class="center">${e.sick ? "Ja" : ""}</td>
+      <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
+      <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
+      <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
+      <td class="center">${e.salt_high ? "Ja" : ""}</td>
+      <td class="center">${e.sugar_high ? "Ja" : ""}</td>
+      <td class="center">${synced}</td>
+      <td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-        <td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
   if (!tbody.children.length) {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
     tbody.appendChild(tr);
   }
+
   $$("#tbl [data-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const localId = Number(btn.dataset.del);
@@ -1110,6 +1128,7 @@ const zeitLabel =
     });
   });
 }
+
 async function loadAndRender(){
   const t0 = performance.now();
   const entries = await getAllEntries();
@@ -1190,9 +1209,11 @@ async function renderDoctor(){
     })
     .sort((a,b)=> ( (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)) ))
     .forEach(e=>{
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary  = e.context === "Tag";
-const isMeasurement = !isDaySummary && !isTrainingOnly;
+const legacyWeightOnly = isWeightOnly(e);
+const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
+const isMeasurement    = !isDaySummary && !isTrainingOnly;
+
 
 const art = isDaySummary
   ? "Tageszusammenfassung"
@@ -1759,39 +1780,7 @@ async function saveDaySummary(){
   await syncWebhook(entry, localId);
   return true;
 }
-
-  // WICHTIG: Gewicht wird NICHT mehr in Measurement-Blöcken gespeichert.
-  const weight = null;
-
-  // Measurement-Eintrag nur, wenn wirklich vitale Werte vorhanden sind
-  const nothingToSave = !sys && !dia && !pulse;
-  if (!force && nothingToSave) return false;
-
-  const currentISO = new Date(date + "T" + time).toISOString();
-  const ts = new Date(date + "T" + time).getTime();
-
-  // Flags/Notizen sind ab jetzt Tages-Summary – hier bewusst LEER halten
-  const entry = {
-    date, time, dateTime: currentISO, ts,
-    context: contextLabel, arm: "links", position: "sitzend",
-    sys, dia, pulse, weight,
-    map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-    notes: "",                    // Notiz nur in der Tageszusammenfassung
-    training: false,
-    low_intake: false,
-    sick: false,
-    valsartan_missed: false,
-    forxiga_missed: false,
-    nsar_taken: false,
-    salt_high: false,
-    sugar_high: false
-  };
-
-  const localId = await addEntry(entry);
-  await syncWebhook(entry, localId);
-  return true;
-}
-
+  
 async function saveReport(){
     if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
   const datum = $("#repDate").value || todayStr();
@@ -2223,15 +2212,22 @@ const entry = {
   // Initial Render
   await loadAndRender(); await renderDoctor();
 
-    updateDaySummaryBadge(); // Badge einmal initial setzen
-    const disableVitals = shouldShow; // true = „Tageszusammenfassung aktiv“
-  ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
-    const el = $(sel);
-    if (!el) return;
-    el.disabled = disableVitals;
-    el.style.opacity = disableVitals ? 0.6 : 1;
-  });
+function daySummaryActive(){
+  const w = ($("#weightDay")?.value || "").trim();
+  const n = ($("#notesDay")?.value  || "").trim();
+  return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
+            valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
+}
 
+// In main(), direkt nach updateDaySummaryBadge():
+updateDaySummaryBadge();
+const disableVitals = daySummaryActive();
+["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
+  const el = $(sel);
+  if (!el) return;
+  el.disabled = disableVitals;
+  el.style.opacity = disableVitals ? 0.6 : 1;
+});
 
   // Auto-Push Pending sobald online
   window.addEventListener('online', async ()=>{
@@ -2266,6 +2262,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
