@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.2)</title>
 <style>
-  body.auth-locked main{ opacity:.6; pointer-events:none; }
+  body.auth-locked main{ opacity:.6; }
   :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -394,7 +394,7 @@
     </section>
 
     <!-- Webhook-Konfiguration -->
-    <section class="card">
+    <section class="card" id="webhookCard">
       <h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
       <div class="grid">
         <div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
@@ -490,6 +490,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
+/* ===== Supabase Defaults (ANON only – niemals service_role!) ===== */
+const SUPABASE_URL_DEFAULT  = "https://jlylmservssinsavlkdi.supabase.co";
+const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
+const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_entries`;
+const DEFAULT_WEBHOOK_REPORTS = `${SUPABASE_URL_DEFAULT}/rest/v1/medical_reports`;
+
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
   const box = document.getElementById('err');
@@ -1943,6 +1949,14 @@ async function initialAutoSync(){
 /* ===== Main ===== */
 async function main(){
   diag.init(); helpPanel.init(); await initDB();
+  try {
+  const haveUrl = await getConf("webhookUrl");
+  const haveKey = await getConf("webhookKey");
+  const haveMr  = await getConf("webhookUrlMr");
+  if (!haveUrl && SUPABASE_URL_DEFAULT)  await putConf("webhookUrl",  DEFAULT_WEBHOOK_ENTRIES);
+  if (!haveMr  && SUPABASE_URL_DEFAULT)  await putConf("webhookUrlMr", DEFAULT_WEBHOOK_REPORTS);
+  if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey",  `Bearer ${SUPABASE_ANON_DEFAULT}`);
+} catch (_) {}
   chartPanel.init(); chartReportsPanel.init(); bindTabs();
   $("#date").value = todayStr();
   $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
@@ -2116,4 +2130,5 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
