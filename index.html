@@ -3,109 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4)</title>
+<title>Gesundheits-Logger (V1.3)</title>
 <style>
-  body.auth-locked main{ opacity:.6; }
-  :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
-  header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.7));backdrop-filter:blur(6px);z-index:10;padding:10px 12px;border-bottom:1px solid #1f232b}
-  h1{margin:0;font-size:20px}
-  nav.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:54px;background:rgba(11,12,16,.9);backdrop-filter:blur(6px);z-index:11}
-  nav.tabs button{flex:1;min-width:100px;touch-action:manipulation}
-  main{padding:12px;position:relative;z-index:1}
-  .card{background:var(--card);border:1px solid #242833;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-  @media (max-width:640px){ .grid{grid-template-columns:1fr} }
-  label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-  input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
-  textarea{min-height:64px;resize:vertical}
+body.auth-locked main{ opacity:.6; }
+:root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
+header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.7));backdrop-filter:blur(6px);z-index:10;padding:10px 12px;border-bottom:1px solid #1f232b}
+h1{margin:0;font-size:20px}
+nav.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:54px;background:rgba(11,12,16,.9);backdrop-filter:blur(6px);z-index:11}
+nav.tabs button{flex:1;min-width:100px;touch-action:manipulation}
+main{padding:12px;position:relative;z-index:1}
+.card{background:var(--card);border:1px solid #242833;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:640px){ .grid{grid-template-columns:1fr} }
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
+textarea{min-height:64px;resize:vertical}
 
-  .small{font-size:12px;color:var(--muted)}
-  .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:600;color:white;background:#2b2f3a;cursor:pointer;touch-action:manipulation;transition: background .25s ease, color .25s ease, transform .06s ease, box-shadow .25s ease}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  .btn:active{ transform: scale(0.98) }
-  .btn.primary{background:var(--accent)}
-  .btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color:var(--fg)}
-  .btn.warn{background:var(--warn);color:#1a1200}
-  .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
+.small{font-size:12px;color:var(--muted)}
+.btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:600;color:white;background:#2b2f3a;cursor:pointer;touch-action:manipulation;transition: background .25s ease, color .25s ease, transform .06s ease, box-shadow .25s ease}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn:active{ transform: scale(0.98) }
+.btn.primary{background:var(--accent)}
+.btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color:var(--fg)}
+.btn.warn{background:var(--warn);color:#1a1200}
+.btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 
-  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.1s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
-
-  @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+.btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
+@keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes flashPop {
-  0%   { transform: scale(1) }
-  50%  { transform: scale(1.03) }
-  100% { transform: scale(1) }
+0% { transform: scale(1) }
+50% { transform: scale(1.03) }
+100% { transform: scale(1) }
 }
 
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .spacer{flex:1}
-  section.view{display:none}
-  section.view.active{display:block}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+section.view{display:none}
+section.view.active{display:block}
 
-  #doctorTable thead{position:sticky;top:0;background:#0f1116}
-  #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
+#doctorTable thead{position:sticky;top:0;background:#0f1116}
+#doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
-  @media print{
-    body{background:white;color:black}
-    header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports, #diag { display:none !important; }
-  body { color:#000; background:#fff; }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  th, td { border:1px solid #555; padding:4px 6px; }
-  .doctor-view, .report-view { page-break-inside:avoid; }
-    #doctorCard{border:none;box-shadow:none}
-    #doctorTitle{font-size:18px;margin-bottom:10px}
-    #doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
-    #doctorTable{border:1px solid #999}
-  }
+@media print{
+body{background:white;color:black}
+header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports, #diag { display:none !important; }
+body { color:#000; background:#fff; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th, td { border:1px solid #555; padding:4px 6px; }
+.doctor-view, .report-view { page-break-inside:avoid; }
+#doctorCard{border:none;box-shadow:none}
+#doctorTitle{font-size:18px;margin-bottom:10px}
+#doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
+#doctorTable{border:1px solid #999}
+}
 
-  #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
+#err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
 
-  /* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
+/* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
 .doctor-view .doctor-day{
-  display:grid;
-  grid-template-columns: 1fr;      /* Standard = gestapelt */
-  gap:12px;
-  align-items:start;
-  padding:12px 14px;
-  margin:8px 0;
-  border-radius:12px;
-  background:var(--card);
-  border:1px solid #242833;
-  box-shadow:0 6px 18px rgba(0,0,0,.25);
-  page-break-inside:avoid;
-  break-inside:avoid;
+display:grid;
+grid-template-columns: 1fr; /* Standard = gestapelt */
+gap:12px;
+align-items:start;
+padding:12px 14px;
+margin:8px 0;
+border-radius:12px;
+background:var(--card);
+border:1px solid #242833;
+box-shadow:0 6px 18px rgba(0,0,0,.25);
+page-break-inside:avoid;
+break-inside:avoid;
 }
 
 /* Tablet/Desktop: nebeneinander */
 @media (min-width: 900px){
-  .doctor-view .doctor-day{
-    grid-template-columns: 18% 46% 36%;
-  }
+.doctor-view .doctor-day{
+grid-template-columns: 18% 46% 36%;
+}
 }
 
 /* Zwischenbereich: 2 Spalten */
 @media (min-width: 600px) and (max-width: 899px){
-  .doctor-view .doctor-day{
-    grid-template-columns: 40% 60%;
-    grid-template-areas:
-      "date measure"
-      "date special";
-  }
-  .doctor-view .col-date{ grid-area: date; }
-  .doctor-view .col-measure{ grid-area: measure; }
-  .doctor-view .col-special{ grid-area: special; }
+.doctor-view .doctor-day{
+grid-template-columns: 40% 60%;
+grid-template-areas:
+"date measure"
+"date special";
+}
+.doctor-view .col-date{ grid-area: date; }
+.doctor-view .col-measure{ grid-area: measure; }
+.doctor-view .col-special{ grid-area: special; }
 }
 
 /* Spalte A – Datum */
 .doctor-view .col-date{
-  display:flex; align-items:center;
-  font-weight:800;
-  font-size:clamp(16px,1.6vw,20px);
-  letter-spacing:.2px;
+display:flex; align-items:center;
+font-weight:800;
+font-size:clamp(16px,1.6vw,20px);
+letter-spacing:.2px;
 }
 
 /* Spalte B – Messungen */
@@ -113,9 +112,9 @@
 /* Kopf und Werte-Spalten: gleiche Breiten wie Zahlen, Label links fix */
 .doctor-view .measure-head,
 .doctor-view .measure-grid{
-  display:grid;
-  grid-template-columns: minmax(70px, auto) repeat(4, 1fr);
-  gap:4px;
+display:grid;
+grid-template-columns: minmax(70px, auto) repeat(4, 1fr);
+gap:4px;
 }
 .doctor-view .measure-head{ font-size:12px; opacity:.8; }
 
@@ -129,512 +128,512 @@
 
 /* Zahlenbild */
 .doctor-view .num{
-  font-variant-numeric: tabular-nums lining-nums;
-  -moz-font-feature-settings:"tnum","lnum";
-  -webkit-font-feature-settings:"tnum","lnum";
-  font-feature-settings:"tnum","lnum";
-  text-align:right;
-  display:flex; align-items:center; justify-content:flex-end;
+font-variant-numeric: tabular-nums lining-nums;
+-moz-font-feature-settings:"tnum","lnum";
+-webkit-font-feature-settings:"tnum","lnum";
+font-feature-settings:"tnum","lnum";
+text-align:right;
+display:flex; align-items:center; justify-content:flex-end;
 
-  min-width: 4ch;       /* Basisschutz gegen Abschneiden */
-  white-space: nowrap;
+min-width: 4ch; /* Basisschutz gegen Abschneiden */
+white-space: nowrap;
 }
 
-  .doctor-view .measure-grid .num,
+.doctor-view .measure-grid .num,
 .doctor-view .col-special .num{
-  text-align:right; justify-content:flex-end;
+text-align:right; justify-content:flex-end;
 }
 
 /* Spalte C – Spezialinfos */
 .doctor-view .col-special{ display:grid; grid-template-rows:auto auto 1fr; gap:6px; }
 /* kleines Kärtchen rechts – wirkt wie eigene Karte */
 .doctor-view .weight-line{
-  display:flex; justify-content:space-between; align-items:center;
-  min-height:44px; padding:8px 10px;
-  background:#0f1116; border:1px solid #2b2f3a; border-radius:10px;
-  font-weight:600;
+display:flex; justify-content:space-between; align-items:center;
+min-height:44px; padding:8px 10px;
+background:#0f1116; border:1px solid #2b2f3a; border-radius:10px;
+font-weight:600;
 }
 .doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
 .doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
-  width:16px; height:16px; border:1.5px solid #2b2f3a; border-radius:3px; display:inline-block; position:relative;
+width:16px; height:16px; border:1.5px solid #2b2f3a; border-radius:3px; display:inline-block; position:relative;
 }
 .doctor-view .flag-box.on::after{
-  content:""; position:absolute; inset:2px; background:var(--accent); border-radius:2px;
+content:""; position:absolute; inset:2px; background:var(--accent); border-radius:2px;
 }
 
 /* Notizen: im Screen 3 Zeilen, im Druck voll */
 .doctor-view .notes{
-  min-height:34px; font-size:13px; line-height:1.35;
-  overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
-  word-break:break-word;
+min-height:34px; font-size:13px; line-height:1.35;
+overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+word-break:break-word;
 }
 
 /* Mobile-Optimierung */
 @media (max-width: 599px){
-  .doctor-view .measure-head,
-  .doctor-view .measure-grid{
-    grid-template-columns: minmax(66px, auto) repeat(4, 1fr);
-  }
-  .doctor-view .num{
-    min-width: 4ch;
-    white-space: nowrap;
-  }
+.doctor-view .measure-head,
+.doctor-view .measure-grid{
+grid-template-columns: minmax(66px, auto) repeat(4, 1fr);
+}
+.doctor-view .num{
+min-width: 4ch;
+white-space: nowrap;
+}
 /* Desktop: Reihe mit Wrap; Mobile bleibt unten (siehe @media) */
 .doctor-view .flags{
-  display:grid;
-  grid-template-columns: repeat(6, max-content);
-  justify-content:start; align-items:center;
-  column-gap:14px; row-gap:6px; margin-top:6px;
+display:grid;
+grid-template-columns: repeat(6, max-content);
+justify-content:start; align-items:center;
+column-gap:14px; row-gap:6px; margin-top:6px;
 }
 
-  /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
-  .doctor-view .measure-head,
-  .doctor-view .measure-grid{
-    grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
-  }
-  .doctor-view .measure-head{ font-size: 11px; }
+/* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
+.doctor-view .measure-head,
+.doctor-view .measure-grid{
+grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
+}
+.doctor-view .measure-head{ font-size: 11px; }
 
-  /* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
-  .doctor-view .num{
-    min-width: 4.5ch;             /* ~ „96.7“ passt sicher */
-    flex: 0 0 auto;
-  }
-  .doctor-view .col-special .weight-line .num{
-    min-width: 5ch;               /* „84.5“ o. Ä. */
-  }
+/* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
+.doctor-view .num{
+min-width: 4.5ch; /* ~ „96.7“ passt sicher */
+flex: 0 0 auto;
+}
+.doctor-view .col-special .weight-line .num{
+min-width: 5ch; /* „84.5“ o. Ä. */
+}
 
-  /* Flags: in 2–3 Spalten umbrechen statt zu strecken */
+/* Flags: in 2–3 Spalten umbrechen statt zu strecken */
 .doctor-view .flags{
-  display:grid;
-  grid-template-columns: repeat(5, max-content);
-  justify-content: start;
-  align-items:center;
-  column-gap: 14px;
-  row-gap: 6px;
+display:grid;
+grid-template-columns: repeat(5, max-content);
+justify-content: start;
+align-items:center;
+column-gap: 14px;
+row-gap: 6px;
 }
-  .doctor-view .flag span:last-child{ white-space: nowrap; } /* kein „Medikamer…“ Abbruch */
+.doctor-view .flag span:last-child{ white-space: nowrap; } /* kein „Medikamer…“ Abbruch */
 }
 
 /* Extra-eng (≤ 390px Breite) – falls nötig noch schmaler */
 @media (max-width: 390px){
-  .doctor-view .measure-head,
-  .doctor-view .measure-grid{
-    grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
-  }
-  .doctor-view .flags{
-    grid-template-columns: repeat(3, max-content);
-  }
+.doctor-view .measure-head,
+.doctor-view .measure-grid{
+grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
+}
+.doctor-view .flags{
+grid-template-columns: repeat(3, max-content);
+}
 }
 
 /* Print-Optimierung */
 @media print{
-  .doctor-view .doctor-day{
-    background:#fff; border:1px solid #000; box-shadow:none;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact;
-  }
-  .doctor-view .notes{ -webkit-line-clamp:unset; overflow:visible; }
+.doctor-view .doctor-day{
+background:#fff; border:1px solid #000; box-shadow:none;
+-webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+.doctor-view .notes{ -webkit-line-clamp:unset; overflow:visible; }
 }
 
-  /* Panels */
-   .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
-   .panel.chart{ width:min(92vw, 820px); }
-  .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
-  .panel h4{margin:0;font-size:14px}
-  .panel .content{padding:10px;font-size:13px;line-height:1.45}
-  #diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
+/* Panels */
+.panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
+.panel.chart{ width:min(92vw, 820px); }
+.panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
+.panel h4{margin:0;font-size:14px}
+.panel .content{padding:10px;font-size:13px;line-height:1.45}
+#diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
 
-  /* FABs */
-  .fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
-  .fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
-  .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
+/* FABs */
+.fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
+.fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
-  /* Tabellen */
-  #tbl, #tblReports, #doctorReportsTable, #doctorTable {width:100%; border-collapse:separate; border-spacing:0 8px;}
-  #tbl thead th, #tblReports thead th, #doctorReportsTable thead th {position:sticky; top:0; background:#0f1116; z-index:1;}
-  #tbl th, #tbl td, #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
-  #tbl tbody tr td, #tblReports tbody tr td, #doctorReportsTable tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-  #tbl tbody tr td:first-child, #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child, #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-  #tbl tbody tr td:last-child, #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child, #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-  #tbl td.center, #tbl th.center, #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center, #doctorTable td.center, #doctorTable th.center{ text-align:center; white-space:nowrap; }
-  #tbl td.nowrap, #tbl th.nowrap, #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
-  #tbl td.notes, #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
+/* Tabellen */
+#tbl, #tblReports, #doctorReportsTable, #doctorTable {width:100%; border-collapse:separate; border-spacing:0 8px;}
+#tbl thead th, #tblReports thead th, #doctorReportsTable thead th {position:sticky; top:0; background:#0f1116; z-index:1;}
+#tbl th, #tbl td, #tblReports th, #tblReports td, #doctorReportsTable th, #doctorReportsTable td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
+#tbl tbody tr td, #tblReports tbody tr td, #doctorReportsTable tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
+#tbl tbody tr td:first-child, #tblReports tbody tr td:first-child, #doctorReportsTable tbody tr td:first-child, #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
+#tbl tbody tr td:last-child, #tblReports tbody tr td:last-child, #doctorReportsTable tbody tr td:last-child, #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
+#tbl td.center, #tbl th.center, #tblReports td.center, #tblReports th.center, #doctorReportsTable td.center, #doctorReportsTable th.center, #doctorTable td.center, #doctorTable th.center{ text-align:center; white-space:nowrap; }
+#tbl td.nowrap, #tbl th.nowrap, #tblReports td.nowrap, #tblReports th.nowrap, #doctorReportsTable td.nowrap, #doctorReportsTable th.nowrap{ white-space:nowrap; }
+#tbl td.notes, #tblReports td.notes, #doctorReportsTable td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
 
-  .blockTitle{font-weight:800;margin:0 0 8px 0}
+.blockTitle{font-weight:800;margin:0 0 8px 0}
 
-  /* Chart panel */
-  #chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-  #chart .controls > *, #chartReports .controls > * {flex:1}
-  #chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
-  #chart svg, #chartReports svg{width:100%;height:340px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
-  #chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+/* Chart panel */
+#chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+#chart .controls > *, #chartReports .controls > * {flex:1}
+#chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
+#chart svg, #chartReports svg{width:100%;height:340px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
+#chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
-  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
 
-  /* Busy overlay */
-  #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
-  #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
+/* Busy overlay */
+#busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
+#busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
 
-  .seg{display:flex;gap:8px;margin:8px 0 12px}
-  .seg .seg-btn.active{background:var(--accent);color:#fff}
-  .hidden{display:none!important}
-  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.seg{display:flex;gap:8px;margin:8px 0 12px}
+.seg .seg-btn.active{background:var(--accent);color:#fff}
+.hidden{display:none!important}
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 </style>
 </head>
 <body>
 <header>
-  <div style="display:flex;align-items:center;gap:10px">
-    <h1>Gesundheits-Logger</h1><span class="small">V1.4</span>
-    <div class="spacer"></div>
+<div style="display:flex;align-items:center;gap:10px">
+<h1>Gesundheits-Logger</h1><span class="small">V1.3</span>
+<div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
 <button class="btn ghost" id="listHeaderBtn" type="button">Liste</button>
-  </div>
+</div>
 </header>
 
 <nav class="tabs">
-  <button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
-  <button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
+<button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
+<button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
 </nav>
 
 <!-- Hilfe-Panel -->
 <div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
-  <header>
-    <h4 id="helpTitle">Hilfe • Was soll ich ankreuzen?</h4>
-    <button class="btn ghost" id="helpClose" type="button">×</button>
-  </header>
-  <div class="content">
-    <strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzündungsmedikament der Klasse NSAR genommen hast.
-    <ul>
-      <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-      <li><em>Kombo-Achtung:</em> Viele „Erkältungs-/Kopfweh“-Mittel enthalten NSAR.</li>
-      <li><em>Bei Nierenkrankheit:</em> NSAR möglichst vermeiden, Alternativen mit Arzt besprechen.</li>
-    </ul>
-  </div>
+<header>
+<h4 id="helpTitle">Hilfe • Was soll ich ankreuzen?</h4>
+<button class="btn ghost" id="helpClose" type="button">×</button>
+</header>
+<div class="content">
+<strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzündungsmedikament der Klasse NSAR genommen hast.
+<ul>
+<li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
+<li><em>Kombo-Achtung:</em> Viele „Erkältungs-/Kopfweh“-Mittel enthalten NSAR.</li>
+<li><em>Bei Nierenkrankheit:</em> NSAR möglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+</ul>
+</div>
 </div>
 
 <!-- Diagnose-Panel -->
 <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
-  <header>
-    <h4 id="diagTitle">Touch-Log</h4>
-    <button class="btn ghost" id="diagClose" type="button">×</button>
-  </header>
-  <pre id="diagLog" class="content" style="margin:0"></pre>
+<header>
+<h4 id="diagTitle">Touch-Log</h4>
+<button class="btn ghost" id="diagClose" type="button">×</button>
+</header>
+<pre id="diagLog" class="content" style="margin:0"></pre>
 </div>
 
 <!-- Diagramm-Panel (Daily) -->
 <div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
-  <header>
-    <h4 id="chartTitle">Diagramm (Daily)</h4>
-    <button class="btn ghost" id="chartClose" type="button">×</button>
-  </header>
-  <div class="content">
-    <div class="controls">
-      <select id="metricSel" class="half">
-        <option value="bp">Blutdruck (Sys/Dia)</option>
-        <option value="pulse">Puls</option>
-        <option value="weight">Gewicht</option>
-      </select>
-      <label class="half" style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="smoothChk"> Glätten
-      </label>
-      <button class="btn ghost half" id="refreshChart" type="button">Neu zeichnen</button>
-      <button class="btn ghost half" id="savePng" type="button">PNG speichern</button>
-    </div>
-    <svg id="chartSvg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
-    <div class="legend" id="chartLegend"></div>
-    <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
-  </div>
+<header>
+<h4 id="chartTitle">Diagramm (Daily)</h4>
+<button class="btn ghost" id="chartClose" type="button">×</button>
+</header>
+<div class="content">
+<div class="controls">
+<select id="metricSel" class="half">
+<option value="bp">Blutdruck (Sys/Dia)</option>
+<option value="pulse">Puls</option>
+<option value="weight">Gewicht</option>
+</select>
+<label class="half" style="display:flex;align-items:center;gap:8px">
+<input type="checkbox" id="smoothChk"> Glätten
+</label>
+<button class="btn ghost half" id="refreshChart" type="button">Neu zeichnen</button>
+<button class="btn ghost half" id="savePng" type="button">PNG speichern</button>
+</div>
+<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
+<div class="legend" id="chartLegend"></div>
+<div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+</div>
 </div>
 
 <!-- Diagramm-Panel (Befunde) -->
 <div id="chartReports" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartReportsTitle">
-  <header>
-    <h4 id="chartReportsTitle">Diagramm (Befunde)</h4>
-    <button class="btn ghost" id="chartReportsClose" type="button">×</button>
-  </header>
-  <div class="content">
-    <div class="controls">
+<header>
+<h4 id="chartReportsTitle">Diagramm (Befunde)</h4>
+<button class="btn ghost" id="chartReportsClose" type="button">×</button>
+</header>
+<div class="content">
+<div class="controls">
 <select id="reportMetricSel" class="half">
-  <option value="kreatinin">Kreatinin (mg/dL)</option>
-  <option value="egfr">eGFR (ml/min/1.73m²)</option>
-  <option value="uacr">uACR (mg/g)</option>
-  <option value="kalium">Kalium (mmol/L)</option>
-  <option value="cystatin_c">Cystatin C (mg/L)</option>
-  <option value="haematurie">Hämaturie (Ery/µL)</option>
-  <option value="ldl">LDL (mg/dL)</option>
-  <option value="hba1c">HbA1c (%)</option>
+<option value="kreatinin">Kreatinin (mg/dL)</option>
+<option value="egfr">eGFR (ml/min/1.73m²)</option>
+<option value="uacr">uACR (mg/g)</option>
+<option value="kalium">Kalium (mmol/L)</option>
+<option value="cystatin_c">Cystatin C (mg/L)</option>
+<option value="haematurie">Hämaturie (Ery/µL)</option>
+<option value="ldl">LDL (mg/dL)</option>
+<option value="hba1c">HbA1c (%)</option>
 </select>
-      <label class="half" style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="reportSmoothChk"> Glätten
-      </label>
-      <button class="btn ghost half" id="refreshReportChart" type="button">Neu zeichnen</button>
-      <button class="btn ghost half" id="saveReportPng" type="button">PNG speichern</button>
-    </div>
-    <svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Befund-Verlauf"></svg>
-    <div class="legend" id="chartReportsLegend"></div>
-    <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
-  </div>
+<label class="half" style="display:flex;align-items:center;gap:8px">
+<input type="checkbox" id="reportSmoothChk"> Glätten
+</label>
+<button class="btn ghost half" id="refreshReportChart" type="button">Neu zeichnen</button>
+<button class="btn ghost half" id="saveReportPng" type="button">PNG speichern</button>
+</div>
+<svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Befund-Verlauf"></svg>
+<div class="legend" id="chartReportsLegend"></div>
+<div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+</div>
 </div>
 
 <div id="err" role="status" aria-live="polite"></div>
 <div id="busy"><div class="box">⏳ Bitte warten…</div></div>
 
 <main>
-  <!-- Capture -->
-  <section class="view active" id="capture">
-    <div class="seg" id="seg-capture">
-      <button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
-      <button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
-    </div>
-
-    <!-- Daily-Capture -->
-    <section class="card" id="entry">
-      <div class="row">
-        <div style="flex:1">
-          <label>Datum</label>
-          <input type="date" id="date">
-        </div>
-      </div>
-
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Morgens</h3>
-        <div class="row">
-          <div style="width:130px">
-            <label>Uhrzeit</label>
-            <input type="time" id="timeM" step="60">
-          </div>
-        </div>
-        <div class="grid">
-          <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
-          <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-          <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-        </div>
-      </div>
-
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Abends</h3>
-        <div class="row">
-          <div style="width:130px">
-            <label>Uhrzeit</label>
-            <input type="time" id="timeA" step="60">
-          </div>
-        </div>
-        <div class="grid">
-          <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-          <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-          <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-        </div>
-      </div>
-
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Gewicht</h3>
-        <div class="row">
-          <div style="flex:1">
-            <label>Gewicht (kg)</label>
-            <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-        <h3 class="blockTitle">Kommentar</h3>
-        <div class="row">
-          <div style="flex:1">
-            <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-        <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
-        <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
-        <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
-        <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
-        <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
-        <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
-        <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
-        <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
-        <div class="spacer"></div>
-      </div>
-
-      <div id="daySummaryBadge" style="display:none; margin:6px 0; padding:6px 10px; background:#4f46e5; color:white; border-radius:8px; font-size:0.95em; text-align:center;">
-  📊 Tageszusammenfassung aktiv – es werden Gewicht / Notiz / Tages-Flags gespeichert
+<!-- Capture -->
+<section class="view active" id="capture">
+<div class="seg" id="seg-capture">
+<button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
+<button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
 </div>
 
-      <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-        <div class="spacer"></div>
-      </div>
-    </section>
+<!-- Daily-Capture -->
+<section class="card" id="entry">
+<div class="row">
+<div style="flex:1">
+<label>Datum</label>
+<input type="date" id="date">
+</div>
+</div>
 
-    <!-- Befund-Capture -->
-    <section class="card hidden" id="entry_befund">
-      <h3 class="blockTitle">Neuer Befund</h3>
-      <div class="grid">
-        <div><label>Datum</label><input type="date" id="repDate"></div>
-        <div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
-        <div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
-        <div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
-        <div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
-        <div><label>Cystatin C (mg/L)</label><input type="number" step="0.01" id="repCys"></div>
-        <div><label>Hämaturie (Ery/µL)</label><input type="number" step="1" id="repHaem"></div>
-        <div><label>LDL (mg/dL)</label><input type="number" step="1" id="repLDL"></div>
-        <div><label>HbA1c (%)</label><input type="number" step="0.1" id="repHbA1c"></div>
-        <div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
-      </div>
-      <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-        <button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
-        <div class="spacer"></div>
-      </div>
-    </section>
-  </section>
+<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+<h3 class="blockTitle">Morgens</h3>
+<div class="row">
+<div style="width:130px">
+<label>Uhrzeit</label>
+<input type="time" id="timeM" step="60">
+</div>
+</div>
+<div class="grid">
+<div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
+<div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+<div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+</div>
+</div>
 
-  <!-- List -->
-  <section class="view" id="list">
-    <section class="card">
-      <div class="toolbar">
-        <strong>Deine Einträge (Bearbeiten/Export)</strong>
-        <div class="spacer"></div>
-        <select id="rangeSel">
-          <option value="all">alle</option>
-          <option value="7">letzte 7 Tage</option>
-          <option value="30">letzte 30 Tage</option>
-          <option value="90">letzte 90 Tage</option>
-        </select>
-        <button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
-        <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-        <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
-        <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
-      </div>
+<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+<h3 class="blockTitle">Abends</h3>
+<div class="row">
+<div style="width:130px">
+<label>Uhrzeit</label>
+<input type="time" id="timeA" step="60">
+</div>
+</div>
+<div class="grid">
+<div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+<div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+<div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+</div>
+</div>
 
-      <div class="seg" id="seg-list">
-        <button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
-        <button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
-      </div>
+<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+<h3 class="blockTitle">Gewicht</h3>
+<div class="row">
+<div style="flex:1">
+<label>Gewicht (kg)</label>
+<input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+</div>
+</div>
+</div>
 
-      <!-- Wrapper Daily -->
-      <div style="overflow:auto" id="listDailyWrap">
-        <table id="tbl">
-          <thead>
-            <tr>
-              <th class="nowrap">Datum</th>
-              <th class="nowrap">Zeit</th>
-              <th>Art</th>
-              <th class="center nowrap">Syst</th>
-              <th class="center nowrap">Diast</th>
-              <th class="center nowrap">Puls</th>
-              <th class="center nowrap">Gewicht</th>
-              <th class="center nowrap">MAP</th>
-              <th>Notizen</th>
-              <th class="center nowrap">Training</th>
-              <th class="center nowrap">&lt; 2 L</th>
-              <th class="center nowrap">Krank</th>
-              <th class="center nowrap">Valsartan ?</th>
-              <th class="center nowrap">Forxiga ?</th>
-              <th class="center nowrap">NSAR</th>
-              <th class="center nowrap">Salz &gt; 5 g</th>
-              <th class="center nowrap">Zucker &gt; 10 g</th>
-              <th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
+<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+<h3 class="blockTitle">Kommentar</h3>
+<div class="row">
+<div style="flex:1">
+<textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
+</div>
+</div>
+</div>
 
-              <th>Aktion</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+<div class="row" style="align-items:center; gap:8px; margin-top:4px">
+<button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
+<button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
+<button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
+<button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
+<button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
+<button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
+<button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
+<button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
+<div class="spacer"></div>
+</div>
 
-      <!-- Wrapper Befunde -->
-      <div style="overflow:auto" id="listReportWrap" class="hidden">
-        <table id="tblReports">
-          <thead>
-            <tr>
-      <th class="nowrap">Datum</th>
-      <th class="center">Kreatinin</th>
-      <th class="center">eGFR</th>
-      <th class="center">uACR</th>
-      <th class="center">Kalium</th>
-      <th class="center">Cystatin&nbsp;C</th>
-      <th class="center">Hämaturie</th>
-      <th class="center">LDL</th>
-      <th class="center">HbA1c</th>
-              <th>Kommentar</th>
-              <th class="center">Cloud</th>
-              <th class="nowrap">Aktion</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+<div id="daySummaryBadge" style="display:none; margin:6px 0; padding:6px 10px; background:#4f46e5; color:white; border-radius:8px; font-size:0.95em; text-align:center;">
+📊 Tageszusammenfassung aktiv – es werden Gewicht / Notiz / Tages-Flags gespeichert
+</div>
 
-      <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
-    </section>
+<div class="row" style="align-items:center; gap:8px; margin-top:12px">
+<button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
+<div class="spacer"></div>
+</div>
+</section>
 
-    <!-- Webhook-Konfiguration -->
-    <section class="card" id="webhookCard">
-      <h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
-      <div class="grid">
-        <div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
-        <div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
-        <div><label>Webhook URL (medical_reports)</label><input type="url" id="whUrlMr" placeholder="https://XYZ.supabase.co/rest/v1/medical_reports"></div>
-      </div>
-      <div class="row" style="margin-top:8px;align-items:center">
-        <button class="btn primary" id="saveWebhook" type="button">Speichern</button>
-        <span id="whSaved" class="small" style="margin-left:8px"></span>
-        <div class="spacer"></div>
-        <button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
-      </div>
-    </section>
-  </section>
+<!-- Befund-Capture -->
+<section class="card hidden" id="entry_befund">
+<h3 class="blockTitle">Neuer Befund</h3>
+<div class="grid">
+<div><label>Datum</label><input type="date" id="repDate"></div>
+<div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
+<div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
+<div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
+<div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
+<div><label>Cystatin C (mg/L)</label><input type="number" step="0.01" id="repCys"></div>
+<div><label>Hämaturie (Ery/µL)</label><input type="number" step="1" id="repHaem"></div>
+<div><label>LDL (mg/dL)</label><input type="number" step="1" id="repLDL"></div>
+<div><label>HbA1c (%)</label><input type="number" step="0.1" id="repHbA1c"></div>
+<div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
+</div>
+<div class="row" style="align-items:center; gap:8px; margin-top:12px">
+<button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
+<div class="spacer"></div>
+</div>
+</section>
+</section>
 
-  <!-- Doctor -->
-  <section class="view" id="doctor">
-    <section class="card" id="doctorCard">
-      <div class="toolbar">
-        <strong id="doctorTitle">Arzt-Ansicht</strong>
-        <div class="spacer"></div>
+<!-- List -->
+<section class="view" id="list">
+<section class="card">
+<div class="toolbar">
+<strong>Deine Einträge (Bearbeiten/Export)</strong>
+<div class="spacer"></div>
+<select id="rangeSel">
+<option value="all">alle</option>
+<option value="7">letzte 7 Tage</option>
+<option value="30">letzte 30 Tage</option>
+<option value="90">letzte 90 Tage</option>
+</select>
+<button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
+<button class="btn ghost" id="exportJson" type="button">Export JSON</button>
+<button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
+<button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
+</div>
 
-        <div class="seg" id="seg-doctor" style="margin:0">
-          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
-          <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
-        </div>
+<div class="seg" id="seg-list">
+<button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
+<button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
+</div>
 
-        <label class="small">Von <input type="date" id="from" style="width:auto"></label>
-        <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
-        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-        <button class="btn ghost" id="printBtn" type="button">Drucken</button>
-      </div>
+<!-- Wrapper Daily -->
+<div style="overflow:auto" id="listDailyWrap">
+<table id="tbl">
+<thead>
+<tr>
+<th class="nowrap">Datum</th>
+<th class="nowrap">Zeit</th>
+<th>Art</th>
+<th class="center nowrap">Syst</th>
+<th class="center nowrap">Diast</th>
+<th class="center nowrap">Puls</th>
+<th class="center nowrap">Gewicht</th>
+<th class="center nowrap">MAP</th>
+<th>Notizen</th>
+<th class="center nowrap">Training</th>
+<th class="center nowrap">&lt; 2 L</th>
+<th class="center nowrap">Krank</th>
+<th class="center nowrap">Valsartan ?</th>
+<th class="center nowrap">Forxiga ?</th>
+<th class="center nowrap">NSAR</th>
+<th class="center nowrap">Salz &gt; 5 g</th>
+<th class="center nowrap">Zucker &gt; 10 g</th>
+<th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
+
+<th>Aktion</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!-- Wrapper Befunde -->
+<div style="overflow:auto" id="listReportWrap" class="hidden">
+<table id="tblReports">
+<thead>
+<tr>
+<th class="nowrap">Datum</th>
+<th class="center">Kreatinin</th>
+<th class="center">eGFR</th>
+<th class="center">uACR</th>
+<th class="center">Kalium</th>
+<th class="center">Cystatin&nbsp;C</th>
+<th class="center">Hämaturie</th>
+<th class="center">LDL</th>
+<th class="center">HbA1c</th>
+<th>Kommentar</th>
+<th class="center">Cloud</th>
+<th class="nowrap">Aktion</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
+</section>
+
+<!-- Webhook-Konfiguration -->
+<section class="card" id="webhookCard">
+<h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
+<div class="grid">
+<div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
+<div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
+<div><label>Webhook URL (medical_reports)</label><input type="url" id="whUrlMr" placeholder="https://XYZ.supabase.co/rest/v1/medical_reports"></div>
+</div>
+<div class="row" style="margin-top:8px;align-items:center">
+<button class="btn primary" id="saveWebhook" type="button">Speichern</button>
+<span id="whSaved" class="small" style="margin-left:8px"></span>
+<div class="spacer"></div>
+<button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
+</div>
+</section>
+</section>
+
+<!-- Doctor -->
+<section class="view" id="doctor">
+<section class="card" id="doctorCard">
+<div class="toolbar">
+<strong id="doctorTitle">Arzt-Ansicht</strong>
+<div class="spacer"></div>
+
+<div class="seg" id="seg-doctor" style="margin:0">
+<button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
+<button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
+</div>
+
+<label class="small">Von <input type="date" id="from" style="width:auto"></label>
+<label class="small">Bis <input type="date" id="to" style="width:auto"></label>
+<button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+<button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+<button class="btn ghost" id="printBtn" type="button">Drucken</button>
+</div>
 
 <div style="overflow:auto" id="doctorDailyWrap">
-  <div class="doctor-view" id="doctorView"></div>
+<div class="doctor-view" id="doctorView"></div>
 </div>
 
-      <div style="overflow:auto" id="doctorReportWrap" class="hidden">
-        <table id="doctorReportsTable">
-  <thead>
-    <tr>
-      <th>Datum</th>
-      <th class="center">Kreatinin</th>
-      <th class="center">eGFR</th>
-      <th class="center">uACR</th>
-      <th class="center">Kalium</th>
-      <th class="center">Cystatin&nbsp;C</th>
-      <th class="center">Hämaturie</th>
-      <th class="center">LDL</th>
-      <th class="center">HbA1c</th>
-      <th>Kommentar</th>
-    </tr>
-  </thead>
+<div style="overflow:auto" id="doctorReportWrap" class="hidden">
+<table id="doctorReportsTable">
+<thead>
+<tr>
+<th>Datum</th>
+<th class="center">Kreatinin</th>
+<th class="center">eGFR</th>
+<th class="center">uACR</th>
+<th class="center">Kalium</th>
+<th class="center">Cystatin&nbsp;C</th>
+<th class="center">Hämaturie</th>
+<th class="center">LDL</th>
+<th class="center">HbA1c</th>
+<th>Kommentar</th>
+</tr>
+</thead>
 
-          <tbody></tbody>
-        </table>
-      </div>
+<tbody></tbody>
+</table>
+</div>
 
-      <div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
-    </section>
-  </section>
+<div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
+</section>
+</section>
 </main>
 
 <!-- Supabase (UMD, v2) -->
@@ -642,94 +641,94 @@
 
 <script>
 /* ===== Supabase Defaults (ANON only – niemals service_role!) ===== */
-const SUPABASE_URL_DEFAULT  = "https://jlylmservssinsavlkdi.supabase.co";
+const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_entries`;
 const DEFAULT_WEBHOOK_REPORTS = `${SUPABASE_URL_DEFAULT}/rest/v1/medical_reports`;
 
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
-  const box = document.getElementById('err');
-  box.style.display='block';
-  box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+const box = document.getElementById('err');
+box.style.display='block';
+box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
 });
 
 /* ===== Diagnostics ===== */
-  const perfStats = (() => {
-  const buckets = Object.create(null);
-  const add = (k, ms) => (buckets[k] ??= []).push(ms);
-  const pct = (arr, p) => {
-    if (!arr.length) return 0;
-    const a = [...arr].sort((x,y)=>x-y);
-    const i = Math.ceil((p/100)*a.length)-1;
-    return a[Math.max(0, Math.min(i, a.length-1))];
-  };
-  const snap = (k) => {
-    const arr = buckets[k] || [];
-    return { count: arr.length, p50: pct(arr,50), p95: pct(arr,95), p99: pct(arr,99) };
-  };
-  return { add, snap };
+const perfStats = (() => {
+const buckets = Object.create(null);
+const add = (k, ms) => (buckets[k] ??= []).push(ms);
+const pct = (arr, p) => {
+if (!arr.length) return 0;
+const a = [...arr].sort((x,y)=>x-y);
+const i = Math.ceil((p/100)*a.length)-1;
+return a[Math.max(0, Math.min(i, a.length-1))];
+};
+const snap = (k) => {
+const arr = buckets[k] || [];
+return { count: arr.length, p50: pct(arr,50), p95: pct(arr,95), p99: pct(arr,99) };
+};
+return { add, snap };
 })();
 
 const diag = { el:null, logEl:null, open:false, lines:[],
-  add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
-  init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
+add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
+init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
 const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
 const close=document.getElementById('diagClose');
 const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
 close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
-  }
+}
 };
 
 /* ===== Help panel ===== */
 const helpPanel={ el:null, open:false,
-  init(){ this.el=document.getElementById('help');
+init(){ this.el=document.getElementById('help');
 const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
 const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
 close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
-  }
+}
 };
 
 /* ===== Helpers ===== */
-  // --- Service-Role-Schutz (NIEMALS im Browser) ---
+// --- Service-Role-Schutz (NIEMALS im Browser) ---
 function isServiceRoleKey(raw){
-  const k = String(raw||"").trim().replace(/^Bearer\s+/i, "");
-  return /service_role/i.test(k);
+const k = String(raw||"").trim().replace(/^Bearer\s+/i, "");
+return /service_role/i.test(k);
 }
 
-  /* ===== Auth-Guard ===== */
+/* ===== Auth-Guard ===== */
 async function isLoggedIn(){
-  try{
-    if(!sbClient) return false;
-    const { data:{ session } } = await sbClient.auth.getSession();
-    return !!session;
-  }catch{ return false; }
+try{
+if(!sbClient) return false;
+const { data:{ session } } = await sbClient.auth.getSession();
+return !!session;
+}catch{ return false; }
 }
 
 /** Schaltet die komplette App frei/zu (außer Hilfe/Log/Google-Login) */
 function setAuthGuard(logged){
-  const disabled = !logged;
+const disabled = !logged;
 const allowIds = new Set([
-  'googleLoginBtn','helpToggle','diagToggle','listHeaderBtn',
-  'saveWebhook','whUrl','whKey','whUrlMr'
+'googleLoginBtn','helpToggle','diagToggle','listHeaderBtn',
+'saveWebhook','whUrl','whKey','whUrlMr'
 ]);
-  // alles im <main> sperren/freigeben
-  document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
-    if(allowIds.has(el.id)) return;                 // Hilfe/Log & Login immer bedienbar
-    if(el.id === 'logoutBtn') return;               // Abmelden bleibt klickbar, sobald sichtbar
-    el.disabled = disabled;
-  });
-  // Tabs sperren
-  document.querySelectorAll('nav.tabs button').forEach(b=>{
-    if(allowIds.has(b.id)) return;
-    b.disabled = disabled;
-  });
-  // optisches Feedback (optional)
-  document.body.classList.toggle('auth-locked', disabled);
+// alles im <main> sperren/freigeben
+document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
+if(allowIds.has(el.id)) return; // Hilfe/Log & Login immer bedienbar
+if(el.id === 'logoutBtn') return; // Abmelden bleibt klickbar, sobald sichtbar
+el.disabled = disabled;
+});
+// Tabs sperren
+document.querySelectorAll('nav.tabs button').forEach(b=>{
+if(allowIds.has(b.id)) return;
+b.disabled = disabled;
+});
+// optisches Feedback (optional)
+document.body.classList.toggle('auth-locked', disabled);
 }
 
 const $ = sel => document.querySelector(sel);
@@ -741,1694 +740,1583 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
-  // „Legacy“: Measurement‑Eintrag, der nur Gewicht enthält
+// „Legacy“: Measurement Eintrag, der nur Gewicht enthält
 function isWeightOnly(e){
-  const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
-  return !hasVitals && (e?.weight != null);
+const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
+return !hasVitals && (e?.weight != null);
 }
 
- function setBusy(on){
-   document.body.classList.toggle('is-busy', !!on);
-   const b = document.getElementById('busy');
-   if (b) b.style.display = on ? 'flex' : 'none';
+function setBusy(on){
+document.body.classList.toggle('is-busy', !!on);
+const b = document.getElementById('busy');
+if (b) b.style.display = on ? 'flex' : 'none';
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-  function softWarnRange(el, min, max){
-  const v = Number(el.value);
-  if (!isNaN(v) && (v < min || v > max)) {
-    el.style.outline = '2px solid var(--warn)';
-  } else {
-    el.style.outline = '';
-  }
+function softWarnRange(el, min, max){
+const v = Number(el.value);
+if (!isNaN(v) && (v < min || v > max)) {
+el.style.outline = '2px solid var(--warn)';
+} else {
+el.style.outline = '';
+}
 }
 
 /* ===== IndexedDB ===== */
 let db;
 const DB_NAME="healthlog_db"; const STORE="entries"; const CONF="config";
 function initDB(){
-  return new Promise((resolve,reject)=>{
-    // Bump: Version 4 – Indizes für remote_id (Entries & Reports)
-    const req = indexedDB.open(DB_NAME, 4);
-    req.onupgradeneeded = (e)=>{
-      const db = e.target.result;
-      // entries
-      if(!db.objectStoreNames.contains(STORE)){
-        const s = db.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
-        s.createIndex("byDateTime","dateTime",{unique:false});
-        s.createIndex("byRemote","remote_id",{unique:false});
-      } else {
-        const s = e.target.transaction.objectStore(STORE);
-        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
-        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
-      }
-      // config
-      if(!db.objectStoreNames.contains(CONF)){ db.createObjectStore(CONF,{keyPath:"key"}); }
-      // reports
-      if(!db.objectStoreNames.contains("reports")){
-        const r = db.createObjectStore("reports",{keyPath:"id",autoIncrement:true});
-        r.createIndex("byDate","datum",{unique:false});
-        r.createIndex("byRemote","remote_id",{unique:false});
-      } else {
-        const r = e.target.transaction.objectStore("reports");
-        try{ r.createIndex("byDate","datum",{unique:false}); }catch(_){}
-        try{ r.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
-      }
-    };
-    req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
-    req.onerror = (e)=> reject(e);
-  });
+return new Promise((resolve,reject)=>{
+// Bump: Version 4 – Indizes für remote_id (Entries & Reports)
+const req = indexedDB.open(DB_NAME, 4);
+req.onupgradeneeded = (e)=>{
+const db = e.target.result;
+// entries
+if(!db.objectStoreNames.contains(STORE)){
+const s = db.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
+s.createIndex("byDateTime","dateTime",{unique:false});
+s.createIndex("byRemote","remote_id",{unique:false});
+} else {
+const s = e.target.transaction.objectStore(STORE);
+try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
+try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
+}
+// config
+if(!db.objectStoreNames.contains(CONF)){ db.createObjectStore(CONF,{keyPath:"key"}); }
+// reports
+if(!db.objectStoreNames.contains("reports")){
+const r = db.createObjectStore("reports",{keyPath:"id",autoIncrement:true});
+r.createIndex("byDate","datum",{unique:false});
+r.createIndex("byRemote","remote_id",{unique:false});
+} else {
+const r = e.target.transaction.objectStore("reports");
+try{ r.createIndex("byDate","datum",{unique:false}); }catch(_){}
+try{ r.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
+}
+};
+req.onsuccess = (e)=>{ db = e.target.result; resolve(); };
+req.onerror = (e)=> reject(e);
+});
 }
 function putConf(key, value){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(CONF, "readwrite");
-    tx.objectStore(CONF).put({key, value});
-    tx.oncomplete = ()=>res();
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(CONF, "readwrite");
+tx.objectStore(CONF).put({key, value});
+tx.oncomplete = ()=>res();
+tx.onerror = (e)=>rej(e);
+});
 }
 function getConf(key){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(CONF, "readonly");
-    const req = tx.objectStore(CONF).get(key);
-    req.onsuccess = ()=> res(req.result?.value ?? null);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(CONF, "readonly");
+const req = tx.objectStore(CONF).get(key);
+req.onsuccess = ()=> res(req.result?.value ?? null);
+req.onerror = (e)=> rej(e);
+});
 }
 function addEntry(obj){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    const req = tx.objectStore(STORE).add(obj);
-    req.onsuccess = ()=> res(req.result);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readwrite");
+const req = tx.objectStore(STORE).add(obj);
+req.onsuccess = ()=> res(req.result);
+req.onerror = (e)=> rej(e);
+});
 }
 function updateEntry(id, patch){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    const store = tx.objectStore(STORE);
-    const getReq = store.get(id);
-    getReq.onsuccess = ()=>{
-      const cur = getReq.result; if(!cur){ res(false); return; }
-      const next = Object.assign({}, cur, patch);
-      store.put(next);
-    };
-    tx.oncomplete = ()=>res(true);
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readwrite");
+const store = tx.objectStore(STORE);
+const getReq = store.get(id);
+getReq.onsuccess = ()=>{
+const cur = getReq.result; if(!cur){ res(false); return; }
+const next = Object.assign({}, cur, patch);
+store.put(next);
+};
+tx.oncomplete = ()=>res(true);
+tx.onerror = (e)=>rej(e);
+});
 }
 function getAllEntries(){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readonly");
-    const req = tx.objectStore(STORE).getAll();
-    req.onsuccess = ()=> res(req.result || []);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readonly");
+const req = tx.objectStore(STORE).getAll();
+req.onsuccess = ()=> res(req.result || []);
+req.onerror = (e)=> rej(e);
+});
 }
 function getEntryByRemoteId(remoteId){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readonly");
-    const idx = tx.objectStore(STORE).index("byRemote");
-    const req = idx.getAll(remoteId);
-    req.onsuccess = ()=> res(req.result?.[0] ?? null);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readonly");
+const idx = tx.objectStore(STORE).index("byRemote");
+const req = idx.getAll(remoteId);
+req.onsuccess = ()=> res(req.result?.[0] ?? null);
+req.onerror = (e)=> rej(e);
+});
 }
 function deleteEntryLocal(id){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete = ()=>res();
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readwrite");
+tx.objectStore(STORE).delete(id);
+tx.oncomplete = ()=>res();
+tx.onerror = (e)=>rej(e);
+});
 }
 function wipeAll(){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).clear();
-    tx.oncomplete = ()=>res();
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction(STORE,"readwrite");
+tx.objectStore(STORE).clear();
+tx.oncomplete = ()=>res();
+tx.onerror = (e)=>rej(e);
+});
 }
 
 /* ===== Reports (Befunde) ===== */
 function addReport(obj){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readwrite");
-    const req = tx.objectStore("reports").add(obj);
-    req.onsuccess = ()=> res(req.result);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction("reports","readwrite");
+const req = tx.objectStore("reports").add(obj);
+req.onsuccess = ()=> res(req.result);
+req.onerror = (e)=> rej(e);
+});
 }
 function updateReport(id, patch){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readwrite");
-    const store = tx.objectStore("reports");
-    const getReq = store.get(id);
-    getReq.onsuccess = ()=>{
-      const cur = getReq.result; if(!cur){ res(false); return; }
-      store.put(Object.assign({}, cur, patch));
-    };
-    tx.oncomplete = ()=>res(true);
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction("reports","readwrite");
+const store = tx.objectStore("reports");
+const getReq = store.get(id);
+getReq.onsuccess = ()=>{
+const cur = getReq.result; if(!cur){ res(false); return; }
+store.put(Object.assign({}, cur, patch));
+};
+tx.oncomplete = ()=>res(true);
+tx.onerror = (e)=>rej(e);
+});
 }
 function getAllReports(){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readonly");
-    const req = tx.objectStore("reports").getAll();
-    req.onsuccess = ()=> res(req.result || []);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction("reports","readonly");
+const req = tx.objectStore("reports").getAll();
+req.onsuccess = ()=> res(req.result || []);
+req.onerror = (e)=> rej(e);
+});
 }
 function getReportByRemoteId(remoteId){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readonly");
-    const idx = tx.objectStore("reports").index("byRemote");
-    const req = idx.getAll(remoteId);
-    req.onsuccess = ()=> res(req.result?.[0] ?? null);
-    req.onerror = (e)=> rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction("reports","readonly");
+const idx = tx.objectStore("reports").index("byRemote");
+const req = idx.getAll(remoteId);
+req.onsuccess = ()=> res(req.result?.[0] ?? null);
+req.onerror = (e)=> rej(e);
+});
 }
 function deleteReportLocal(id){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction("reports","readwrite");
-    tx.objectStore("reports").delete(id);
-    tx.oncomplete = ()=>res();
-    tx.onerror = (e)=>rej(e);
-  });
+return new Promise((res,rej)=>{
+const tx = db.transaction("reports","readwrite");
+tx.objectStore("reports").delete(id);
+tx.oncomplete = ()=>res();
+tx.onerror = (e)=>rej(e);
+});
 }
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  const key = await getConf("webhookKey");
-  if (!key || isServiceRoleKey(key)) return null;   // NEU: blocken
-  const anonKey = key.replace(/^Bearer\s+/i, "");
+const key = await getConf("webhookKey");
+if (!key || isServiceRoleKey(key)) return null; // NEU: blocken
+const anonKey = key.replace(/^Bearer\s+/i, "");
 
-  const supa = await ensureSupabaseClient();
-  if (!supa) return null;
+const supa = await ensureSupabaseClient();
+if (!supa) return null;
 
-  const { data: { session } } = await supa.auth.getSession();
-  const jwt = session?.access_token;
-  if (!anonKey || !jwt) return null;
+const { data: { session } } = await supa.auth.getSession();
+const jwt = session?.access_token;
+if (!anonKey || !jwt) return null;
 
-  return {
-    "Content-Type": "application/json",
-    "apikey": anonKey,
-    "Authorization": `Bearer ${jwt}`,
-    "Prefer": "return=representation"
-  };
+return {
+"Content-Type": "application/json",
+"apikey": anonKey,
+"Authorization": `Bearer ${jwt}`,
+"Prefer": "return=representation"
+};
 }
 
 async function deleteRemote(remote_id){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers || !remote_id) return {ok:false};
-  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
-  try{
-    const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
-    return {ok: res.ok, status: res.status};
-  }catch(e){
-    return {ok:false, status:0};
-  }
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers || !remote_id) return {ok:false};
+const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+try{
+const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
+return {ok: res.ok, status: res.status};
+}catch(e){
+return {ok:false, status:0};
+}
 }
 async function deleteRemoteBefund(remote_id){
-  const url = await getConf("webhookUrlMr");
-  const headers = await getHeaders();
-  if(!url || !headers || !remote_id) return {ok:false};
-  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
-  try{
-    const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
-    return {ok: res.ok, status: res.status};
-  }catch(e){
-    return {ok:false, status:0};
-  }
+const url = await getConf("webhookUrlMr");
+const headers = await getHeaders();
+if(!url || !headers || !remote_id) return {ok:false};
+const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+try{
+const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
+return {ok: res.ok, status: res.status};
+}catch(e){
+return {ok:false, status:0};
+}
 }
 async function pullAllFromRemote(){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) throw new Error("Webhook nicht konfiguriert");
-  const q = `${url}?select=*&order=ts.asc`;
-  const res = await fetch(q, { headers });
-  if(!res.ok) throw new Error(`Fetch fehlgeschlagen (${res.status})`);
-  return res.json();
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) throw new Error("Webhook nicht konfiguriert");
+const q = `${url}?select=*&order=ts.asc`;
+const res = await fetch(q, { headers });
+if(!res.ok) throw new Error(`Fetch fehlgeschlagen (${res.status})`);
+return res.json();
 }
 async function pullAllReportsFromRemote(){
-  const url = await getConf("webhookUrlMr");
-  const headers = await getHeaders();
-  if(!url || !headers) return [];
-  const q = `${url}?select=*&order=datum.asc`;
-  const res = await fetch(q, { headers });
-  if(!res.ok) return [];
-  return res.json();
+const url = await getConf("webhookUrlMr");
+const headers = await getHeaders();
+if(!url || !headers) return [];
+const q = `${url}?select=*&order=datum.asc`;
+const res = await fetch(q, { headers });
+if(!res.ok) return [];
+return res.json();
 }
 async function pushPendingToRemote(){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return { pushed:0, failed:0 };
-  const all = await getAllEntries();
-  const pending = all.filter(e=>!e.remote_id);
-  let pushed=0, failed=0;
-  for(const e of pending){
-    try{
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) return { pushed:0, failed:0 };
+const all = await getAllEntries();
+const pending = all.filter(e=>!e.remote_id);
+let pushed=0, failed=0;
+for(const e of pending){
+try{
 const uid = await getUserId();
 const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
 const payload = uid ? { ...safe, user_id: uid } : safe;
 const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
-      if(!res.ok){ failed++; continue; }
-      const json = await res.json();
-      const rid = json?.[0]?.id;
-      if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
-      else { failed++; }
-      await sleep(50);
-    }catch(_){ failed++; }
-  }
-  return { pushed, failed };
+if(!res.ok){ failed++; continue; }
+const json = await res.json();
+const rid = json?.[0]?.id;
+if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
+else { failed++; }
+await sleep(50);
+}catch(_){ failed++; }
+}
+return { pushed, failed };
 }
 
 /* ===== Remote für Befunde (POST) ===== */
 async function syncReportWebhook(report, localId){
-  const url = await getConf("webhookUrlMr");
-  const headers = await getHeaders();
-  if(!url || !headers) return;
+const url = await getConf("webhookUrlMr");
+const headers = await getHeaders();
+if(!url || !headers) return;
 const uid = await getUserId();
 const payload = {
-  datum: report.datum,
-  kreatinin: report.kreatinin ?? null,
-  egfr:      report.egfr ?? null,
-  uacr:      report.uacr ?? null,
-  kalium:    report.kalium ?? null,
-  hba1c:     report.hba1c ?? null,
-  ldl:       report.ldl ?? null,
-  haematurie:report.haematurie ?? null,
-  cystatin_c: report.cystatin_c ?? null,
-  kommentar: report.kommentar ?? null,
-  source:    report.source ?? "manuell",
-  ...(uid ? { user_id: uid } : {})
+datum: report.datum,
+kreatinin: report.kreatinin ?? null,
+egfr: report.egfr ?? null,
+uacr: report.uacr ?? null,
+kalium: report.kalium ?? null,
+hba1c: report.hba1c ?? null,
+ldl: report.ldl ?? null,
+haematurie:report.haematurie ?? null,
+cystatin_c: report.cystatin_c ?? null,
+kommentar: report.kommentar ?? null,
+source: report.source ?? "manuell",
+...(uid ? { user_id: uid } : {})
 };
 
-  try{
-    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
-    if(!res.ok){
-      const txt = await res.text(); diag.add(`MR-POST Fehler ${res.status}: ${txt}`);
-      return;
-    }
-    const json = await res.json();
-    const remoteId = json?.[0]?.id;
-    if(remoteId){ await updateReport(localId, { remote_id: remoteId }); diag.add("Befund: Webhook OK"); }
-  }catch(e){ diag.add("Befund: Netzwerkfehler"); }
+try{
+const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+if(!res.ok){
+const txt = await res.text(); diag.add(`MR-POST Fehler ${res.status}: ${txt}`);
+return;
+}
+const json = await res.json();
+const remoteId = json?.[0]?.id;
+if(remoteId){ await updateReport(localId, { remote_id: remoteId }); diag.add("Befund: Webhook OK"); }
+}catch(e){ diag.add("Befund: Netzwerkfehler"); }
 }
 function showLoginBar(show){
-  const bar = document.getElementById('loginBar');
-  if (bar) bar.style.display = show ? 'flex' : 'none';
+const bar = document.getElementById('loginBar');
+if (bar) bar.style.display = show ? 'flex' : 'none';
 }
 function setUserUi(email){
-  document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
-  document.getElementById('logoutBtn').style.display = email ? '' : 'none';
+document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
+document.getElementById('logoutBtn').style.display = email ? '' : 'none';
 }
 
 // Buttons binden (einmalig, z. B. in main())
 function bindAuthButtons(){
-  const gbtn = document.getElementById('googleLoginBtn');
-  const lout = document.getElementById('logoutBtn');
+const gbtn = document.getElementById('googleLoginBtn');
+const lout = document.getElementById('logoutBtn');
 
-  if (gbtn) gbtn.addEventListener('click', async ()=>{
-    const supa = await ensureSupabaseClient();
-    if (!supa) { 
-      alert('Bitte zuerst unter "Webhook / Supabase" die REST-URLs und den API-Key speichern.');
-      return;
-    }
+if (gbtn) gbtn.addEventListener('click', async ()=>{
+const supa = await ensureSupabaseClient();
+if (!supa) { 
+alert('Bitte zuerst unter "Webhook / Supabase" die REST-URLs und den API-Key speichern.');
+return;
+}
 const { error } = await supa.auth.signInWithOAuth({
-  provider: 'google',
-  options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
+provider: 'google',
+options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
 });
-    if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
-  });
+if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
+});
 
-  if (lout) lout.addEventListener('click', async ()=>{
-    const supa = await ensureSupabaseClient();
+if (lout) lout.addEventListener('click', async ()=>{
+const supa = await ensureSupabaseClient();
 if (supa) await supa.auth.signOut();
-await teardownRealtime();   // <- Channels sauber schließen
-__booted = false;           // <- erlaubt späteren Re-Login-Start
+await teardownRealtime(); // <- Channels sauber schließen
+__booted = false; // <- erlaubt späteren Re-Login-Start
 setUserUi('');
 showLoginBar(true);
-    setAuthGuard(false);
-  });
+setAuthGuard(false);
+});
 }
 
 // Beim Start Session prüfen
 async function requireSession(){
-  if(!sbClient){
-    setUserUi('');
-    showLoginBar(true);
-    setAuthGuard(false);
-    return false;
-  }
-  const { data: { session } } = await sbClient.auth.getSession();
-  const email = session?.user?.email || '';
-  setUserUi(email);
-  showLoginBar(!session);
-  setAuthGuard(!!session);
-  return !!session;
+if(!sbClient){
+setUserUi('');
+showLoginBar(true);
+setAuthGuard(false);
+return false;
+}
+const { data: { session } } = await sbClient.auth.getSession();
+const email = session?.user?.email || '';
+setUserUi(email);
+showLoginBar(!session);
+setAuthGuard(!!session);
+return !!session;
 }
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
 function watchAuthState(){
-  sbClient.auth.onAuthStateChange(async (_event, session)=>{
-    const email = session?.user?.email || '';
-    setUserUi(email);
-    showLoginBar(!session);
-    setAuthGuard(!!session);        // <— NEU: UI sperren/freigeben
- if (session) {
-  await afterLoginBoot(); // dank Guard nur einmal
+sbClient.auth.onAuthStateChange(async (_event, session)=>{
+const email = session?.user?.email || '';
+setUserUi(email);
+showLoginBar(!session);
+setAuthGuard(!!session); // <— NEU: UI sperren/freigeben
+if (session) {
+await afterLoginBoot(); // dank Guard nur einmal
 }
-  });
+});
 }
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
 
 async function afterLoginBoot(){
-  if (__booted) return;      // <- Guard gegen Doppelstart
-  __booted = true;
-  await initialAutoSync();
-  await teardownRealtime();
+if (__booted) return; // <- Guard gegen Doppelstart
+__booted = true;
+await initialAutoSync();
+await teardownRealtime();
 await setupRealtime();;
-  await loadAndRender();
-  await renderDoctor();
-  }
+await loadAndRender();
+await renderDoctor();
+}
 
 /* ===== CSV/JSON export (Daily) ===== */
 function toCSV(entries){
-  const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
-  const rows = entries.map(e=>{
+const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
+const rows = entries.map(e=>{
 const legacyWeightOnly = isWeightOnly(e);
 const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary  = (e.context === "Tag") || legacyWeightOnly;
+const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
 const isMeasurement = !isDaySummary && !isTrainingOnly;
 
 const art = isDaySummary
-  ? "Tageszusammenfassung"
-  : (isTrainingOnly ? "Training" : "Messung");
+? "Tageszusammenfassung"
+: (isTrainingOnly ? "Training" : "Messung");
 
 const notesText = isTrainingOnly
-  ? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-  : (e.notes || "");
+? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
+: (e.notes || "");
 
 const zeitLabel =
-  isDaySummary
-    ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-    : (e.context === "Morgen" ? `${e.time} (Morgens)` :
-       e.context === "Abend"  ? `${e.time} (Abends)`  : e.time);
+isDaySummary
+? (e.time ? `${e.time} (Tag)` : "– (Tag)")
+: (e.context === "Morgen" ? `${e.time} (Morgens)` :
+e.context === "Abend" ? `${e.time} (Abends)` : e.time);
 
 const notes = isTrainingOnly
-  ? ("🗓️ Training" + (e.notes ? " – " + e.notes : ""))
-  : (e.notes || "");
+? ("🗓️ Training" + (e.notes ? " – " + e.notes : ""))
+: (e.notes || "");
 
-    return [
-      e.date, e.time, art,
-      isMeasurement ? (e.sys ?? "") : "",
-      isMeasurement ? (e.dia ?? "") : "",
-      isMeasurement ? (e.pulse ?? "") : "",
-      isDaySummary ? (e.weight ?? "") : "",
-      isMeasurement ? (e.map ?? "") : "",
-      notes,
-      e.training ? "Ja" : "",
-      e.low_intake ? "Ja" : "",
-      e.sick ? "Ja":"", 
-      e.valsartan_missed ? "Ja" : "", 
-      e.forxiga_missed ? "Ja" : "",
-      e.nsar_taken ? "Ja" : "",
-      e.salt_high ? "Ja" : "",
-      e.sugar_high ? "Ja" : "",
-      e.dateTime, 
-      e.id,
-      e.remote_id ?? ""
+return [
+e.date, e.time, art,
+isMeasurement ? (e.sys ?? "") : "",
+isMeasurement ? (e.dia ?? "") : "",
+isMeasurement ? (e.pulse ?? "") : "",
+isDaySummary ? (e.weight ?? "") : "",
+isMeasurement ? (e.map ?? "") : "",
+notes,
+e.training ? "Ja" : "",
+e.low_intake ? "Ja" : "",
+e.sick ? "Ja":"", 
+e.valsartan_missed ? "Ja" : "", 
+e.forxiga_missed ? "Ja" : "",
+e.nsar_taken ? "Ja" : "",
+e.salt_high ? "Ja" : "",
+e.sugar_high ? "Ja" : "",
+e.dateTime, 
+e.id,
+e.remote_id ?? ""
 
-    ];
-  });
+];
+});
 const csv = [
-  header.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","),
-  ...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(","))
+header.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","),
+...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(","))
 ].join("\n");
-  return csv;
+return csv;
 }
 function dl(filename, content, mime){
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], {type:mime}));
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
+const a = document.createElement("a");
+a.href = URL.createObjectURL(new Blob([content], {type:mime}));
+a.download = filename;
+a.click();
+URL.revokeObjectURL(a.href);
 }
 
 /* ===== List rendering (Daily) ===== */
 function withinDays(dateISO, days){
-  if (days==="all") return true;
-  const d = new Date(dateISO+"T00:00:00");
-  const now = new Date(); const diff = (now - d)/(1000*60*60*24);
-  return diff <= Number(days);
+if (days==="all") return true;
+const d = new Date(dateISO+"T00:00:00");
+const now = new Date(); const diff = (now - d)/(1000*60*60*24);
+return diff <= Number(days);
 }
 function compareForList(a, b){
-  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-  if (a.time < b.time) return -1;
-  if (a.time > b.time) return 1;
-  return 0;
+if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+if (a.time < b.time) return -1;
+if (a.time > b.time) return 1;
+return 0;
 }
 function renderTable(entries){
-  const days = $("#rangeSel").value;
-  const tbody = $("#tbl tbody");
-  tbody.innerHTML = "";
+const days = $("#rangeSel").value;
+const tbody = $("#tbl tbody");
+tbody.innerHTML = "";
 
-  const list = entries
-    .filter(e => withinDays(e.date, days))
-    .sort(compareForList);
+const list = entries
+.filter(e => withinDays(e.date, days))
+.sort(compareForList);
 
-  list.forEach(e=>{
-    const legacyWeightOnly = isWeightOnly(e);
-    const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-    const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
-    const isMeasurement    = !isDaySummary && !isTrainingOnly;
+list.forEach(e=>{
+const legacyWeightOnly = isWeightOnly(e);
+const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
+const isMeasurement = !isDaySummary && !isTrainingOnly;
 
-    const art = isDaySummary ? "Tageszusammenfassung" : (isTrainingOnly ? "Training" : "Messung");
+const art = isDaySummary ? "Tageszusammenfassung" : (isTrainingOnly ? "Training" : "Messung");
 
-    const zeitLabel = isDaySummary
-      ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-      : (e.context === "Morgen" ? `${e.time} (Morgens)` :
-         e.context === "Abend"  ? `${e.time} (Abends)`  : e.time);
+const zeitLabel = isDaySummary
+? (e.time ? `${e.time} (Tag)` : "– (Tag)")
+: (e.context === "Morgen" ? `${e.time} (Morgens)` :
+e.context === "Abend" ? `${e.time} (Abends)` : e.time);
 
-    const synced = e.remote_id ? "☁️" : "";
+const synced = e.remote_id ? "☁️" : "";
 const notesText = isTrainingOnly
-  ? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-  : (e.notes || "");
+? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
+: (e.notes || "");
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="nowrap">${e.date}</td>
-      <td class="nowrap">${zeitLabel}</td>
-      <td>${art}</td>
-      <td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
-      <td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
-      <td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
-      <td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
-      <td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
-      <td class="notes">${nl2br(notesText)}</td>
-      <td class="center">${e.training ? "Ja" : ""}</td>
-      <td class="center">${e.low_intake ? "Ja" : ""}</td>
-      <td class="center">${e.sick ? "Ja" : ""}</td>
-      <td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-      <td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-      <td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-      <td class="center">${e.salt_high ? "Ja" : ""}</td>
-      <td class="center">${e.sugar_high ? "Ja" : ""}</td>
-      <td class="center">${synced}</td>
-      <td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
+const tr = document.createElement("tr");
+tr.innerHTML = `
+<td class="nowrap">${e.date}</td>
+<td class="nowrap">${zeitLabel}</td>
+<td>${art}</td>
+<td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
+<td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
+<td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
+<td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
+<td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
+<td class="notes">${nl2br(notesText)}</td>
+<td class="center">${e.training ? "Ja" : ""}</td>
+<td class="center">${e.low_intake ? "Ja" : ""}</td>
+<td class="center">${e.sick ? "Ja" : ""}</td>
+<td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
+<td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
+<td class="center">${e.nsar_taken ? "Ja" : ""}</td>
+<td class="center">${e.salt_high ? "Ja" : ""}</td>
+<td class="center">${e.sugar_high ? "Ja" : ""}</td>
+<td class="center">${synced}</td>
+<td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
+`;
+tbody.appendChild(tr);
+});
 
-  if (!tbody.children.length) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
-    tbody.appendChild(tr);
-  }
+if (!tbody.children.length) {
+const tr = document.createElement("tr");
+tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
+tbody.appendChild(tr);
+}
 
-  $$("#tbl [data-del]").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
-      const localId = Number(btn.dataset.del);
-      const remoteId = btn.dataset.remote || "";
-      if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-      btn.disabled = true;
-      const oldText = btn.textContent;
-      btn.textContent = "Lösche…";
-      try{
-        if(remoteId){
-          const r = await deleteRemote(remoteId);
-          if(!r.ok){
-            alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Eintrag wird NICHT gelöscht.");
-            return;
-          }
-        }
-        await deleteEntryLocal(localId);
-        await loadAndRender();
-        await renderDoctor();
-        if(chartPanel.open) await chartPanel.draw();
-        if(chartReportsPanel.open) await chartReportsPanel.draw();
-      } finally {
-        btn.textContent = oldText;
-        btn.disabled = false;
-      }
-    });
-  });
+$$("#tbl [data-del]").forEach(btn=>{
+btn.addEventListener("click", async ()=>{
+const localId = Number(btn.dataset.del);
+const remoteId = btn.dataset.remote || "";
+if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
+btn.disabled = true;
+const oldText = btn.textContent;
+btn.textContent = "Lösche…";
+try{
+if(remoteId){
+const r = await deleteRemote(remoteId);
+if(!r.ok){
+alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Eintrag wird NICHT gelöscht.");
+return;
+}
+}
+await deleteEntryLocal(localId);
+await loadAndRender();
+await renderDoctor();
+if(chartPanel.open) await chartPanel.draw();
+if(chartReportsPanel.open) await chartReportsPanel.draw();
+} finally {
+btn.textContent = oldText;
+btn.disabled = false;
+}
+});
+});
 }
 
 async function loadAndRender(){
-  const t0 = performance.now();
-  const entries = await getAllEntries();
-  renderTable(entries);
-  { const s = (perfStats.add('renderList', performance.now()-t0), perfStats.snap('renderList'));
-     diag.add(`[perf] renderList p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
- }
+const t0 = performance.now();
+const entries = await getAllEntries();
+renderTable(entries);
+{ const s = (perfStats.add('renderList', performance.now()-t0), perfStats.snap('renderList'));
+diag.add(`[perf] renderList p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
+}
 
 /* ===== List rendering (Befunde) ===== */
 async function loadAndRenderReports(){
-  const reports = await getAllReports();
-  const tbody = $("#tblReports tbody");
-  tbody.innerHTML = "";
-  reports
-    .sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
-    .forEach(r=>{
-      const synced = r.remote_id ? "☁️" : "";
-      const tr = document.createElement("tr");
+const reports = await getAllReports();
+const tbody = $("#tblReports tbody");
+tbody.innerHTML = "";
+reports
+.sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
+.forEach(r=>{
+const synced = r.remote_id ? "☁️" : "";
+const tr = document.createElement("tr");
 tr.innerHTML = `
-  <td class="nowrap">${r.datum || ""}</td>
-  <td class="center">${r.kreatinin  != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-  <td class="center">${r.egfr       != null ? Number(r.egfr).toFixed(0)      : ""}</td>
-  <td class="center">${r.uacr       != null ? Number(r.uacr).toFixed(0)      : ""}</td>
-  <td class="center">${r.kalium     != null ? Number(r.kalium).toFixed(1)    : ""}</td>
-  <td class="center">${r.cystatin_c != null ? Number(r.cystatin_c).toFixed(2): ""}</td>
-  <td class="center">${r.haematurie != null ? Number(r.haematurie).toFixed(0): ""}</td>
-  <td class="center">${r.ldl        != null ? Number(r.ldl).toFixed(0)       : ""}</td>
-  <td class="center">${r.hba1c      != null ? Number(r.hba1c).toFixed(1)     : ""}</td>
-  <td class="notes">${nl2br(r.kommentar || "")}</td>
-  <td class="center">${synced}</td>
-  <td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
+<td class="nowrap">${r.datum || ""}</td>
+<td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+<td class="center">${r.egfr != null ? Number(r.egfr).toFixed(0) : ""}</td>
+<td class="center">${r.uacr != null ? Number(r.uacr).toFixed(0) : ""}</td>
+<td class="center">${r.kalium != null ? Number(r.kalium).toFixed(1) : ""}</td>
+<td class="center">${r.cystatin_c != null ? Number(r.cystatin_c).toFixed(2): ""}</td>
+<td class="center">${r.haematurie != null ? Number(r.haematurie).toFixed(0): ""}</td>
+<td class="center">${r.ldl != null ? Number(r.ldl).toFixed(0) : ""}</td>
+<td class="center">${r.hba1c != null ? Number(r.hba1c).toFixed(1) : ""}</td>
+<td class="notes">${nl2br(r.kommentar || "")}</td>
+<td class="center">${synced}</td>
+<td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
 `;
-      tbody.appendChild(tr);
-    });
-  if(!tbody.children.length){
-    const tr=document.createElement("tr");
-    tr.innerHTML=`<td colspan="12" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
-    tbody.appendChild(tr);
-  }
-  $$("#tblReports [data-delrep]").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
-      const localId = Number(btn.dataset.delrep);
-      const remoteId = btn.dataset.remote || "";
-      if(!confirm("Befund wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-      btn.disabled = true; const old=btn.textContent; btn.textContent = "Lösche…";
-      try{
-        if(remoteId){
-          const r = await deleteRemoteBefund(remoteId);
-          if(!r.ok){
-            alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
-            return;
-          }
-        }
+tbody.appendChild(tr);
+});
+if(!tbody.children.length){
+const tr=document.createElement("tr");
+tr.innerHTML=`<td colspan="12" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
+tbody.appendChild(tr);
+}
+$$("#tblReports [data-delrep]").forEach(btn=>{
+btn.addEventListener("click", async ()=>{
+const localId = Number(btn.dataset.delrep);
+const remoteId = btn.dataset.remote || "";
+if(!confirm("Befund wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
+btn.disabled = true; const old=btn.textContent; btn.textContent = "Lösche…";
+try{
+if(remoteId){
+const r = await deleteRemoteBefund(remoteId);
+if(!r.ok){
+alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
+return;
+}
+}
 await deleteReportLocal(localId);
 await loadAndRenderReports();
 if(activeDoctorMode()==="befund") await renderDoctorReports();
 if(chartReportsPanel.open) await chartReportsPanel.draw();
-      }finally{
-        btn.disabled = false; btn.textContent = old;
-      }
-    });
-  });
+}finally{
+btn.disabled = false; btn.textContent = old;
+}
+});
+});
 }
 
 /* ===== Doctor view ===== */
 const __t0 = performance.now();
 async function renderDoctor(){
-  const host = $("#doctorView");
-  if (!host) return;
-  host.innerHTML = "";
+const host = $("#doctorView");
+if (!host) return;
+host.innerHTML = "";
 
-  // Helpers (nur Anzeige)
-  const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
-  const onClass = b => (b ? "on" : "");
-  const fmtDateDE = (iso) => {
-    const d = new Date(iso + "T00:00:00");
-    return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
-  };
+// Helpers (nur Anzeige)
+const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
+const onClass = b => (b ? "on" : "");
+const fmtDateDE = (iso) => {
+const d = new Date(iso + "T00:00:00");
+return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+};
 
-  // 1) Filter + Sort wie bisher
-  const from = $("#from").value;
-  const to   = $("#to").value;
-  const entries = await getAllEntries();
-  const list = entries
-    .filter(e => {
-      if (from && e.date < from) return false;
-      if (to   && e.date > to)   return false;
-      return true;
-    })
-    .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+// 1) Filter + Sort wie bisher
+const from = $("#from").value;
+const to = $("#to").value;
+const entries = await getAllEntries();
+const list = entries
+.filter(e => {
+if (from && e.date < from) return false;
+if (to && e.date > to) return false;
+return true;
+})
+.sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
 
-  // 2) Tagesobjekte aufbauen (nur Darstellung)
-  const days = new Map();
-  for (const e of list){
-    let d = days.get(e.date);
-    if (!d){
-      d = {
-        date: e.date,
-        morning: { sys:null, dia:null, pulse:null, map:null },
-        evening: { sys:null, dia:null, pulse:null, map:null },
-        weight: null,
-        notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false }
-      };
-      days.set(e.date, d);
-    }
-
-    const legacyWeightOnly = isWeightOnly(e);
-    const isTrainingOnly   = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-    const isDaySummary     = (e.context === "Tag") || legacyWeightOnly;
-    const isMeasurement    = !isDaySummary && !isTrainingOnly;
-
-    // Messblöcke
-    if (isMeasurement && e.context === "Morgen"){
-      d.morning.sys   = e.sys ?? null;
-      d.morning.dia   = e.dia ?? null;
-      d.morning.pulse = e.pulse ?? null;
-      d.morning.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
-    } else if (isMeasurement && e.context === "Abend"){
-      d.evening.sys   = e.sys ?? null;
-      d.evening.dia   = e.dia ?? null;
-      d.evening.pulse = e.pulse ?? null;
-      d.evening.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
-    }
-
-    // Tageszusammenfassung / Gewicht / Notizen
-    if (isDaySummary){
-      if (e.weight != null) d.weight = e.weight;
-      if (e.notes) d.notes = e.notes;
-    }
-    // Trainings-only → als Hinweis in Notizen, falls keine vorhanden
-if (isTrainingOnly){
-  d.flags.training = true;
-  if (e.notes && !d.notes) d.notes = e.notes;
+// 2) Tagesobjekte aufbauen (nur Darstellung)
+const days = new Map();
+for (const e of list){
+let d = days.get(e.date);
+if (!d){
+d = {
+date: e.date,
+morning: { sys:null, dia:null, pulse:null, map:null },
+evening: { sys:null, dia:null, pulse:null, map:null },
+weight: null,
+notes: "",
+flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false }
+};
+days.set(e.date, d);
 }
-    // Flags (Spezial): Wasser/Salz/Zucker/Krank/Medikamente
-if (e.low_intake)      d.flags.water_lt2  = true;
-if (e.salt_high)       d.flags.salt_gt5   = true;
-if (e.sugar_high)      d.flags.sugar_gt10 = true;
-if (e.sick)            d.flags.sick       = true;
-if (e.training)        d.flags.training   = true;
+
+const legacyWeightOnly = isWeightOnly(e);
+const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
+const isMeasurement = !isDaySummary && !isTrainingOnly;
+
+// Messblöcke
+if (isMeasurement && e.context === "Morgen"){
+d.morning.sys = e.sys ?? null;
+d.morning.dia = e.dia ?? null;
+d.morning.pulse = e.pulse ?? null;
+d.morning.map = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+} else if (isMeasurement && e.context === "Abend"){
+d.evening.sys = e.sys ?? null;
+d.evening.dia = e.dia ?? null;
+d.evening.pulse = e.pulse ?? null;
+d.evening.map = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+}
+
+// Tageszusammenfassung / Gewicht / Notizen
+if (isDaySummary){
+if (e.weight != null) d.weight = e.weight;
+if (e.notes) d.notes = e.notes;
+}
+// Trainings-only → als Hinweis in Notizen, falls keine vorhanden
+if (isTrainingOnly){
+d.flags.training = true;
+if (e.notes && !d.notes) d.notes = e.notes;
+}
+// Flags (Spezial): Wasser/Salz/Zucker/Krank/Medikamente
+if (e.low_intake) d.flags.water_lt2 = true;
+if (e.salt_high) d.flags.salt_gt5 = true;
+if (e.sugar_high) d.flags.sugar_gt10 = true;
+if (e.sick) d.flags.sick = true;
+if (e.training) d.flags.training = true;
 if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
-  }
+}
 
-  const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
 
-  // 3) Renderer pro Tag (-> 3 Spalten)
-  const renderDoctorDay = (day) => `
-    <section class="doctor-day" data-date="${day.date}">
-      <!-- Spalte A: Datum -->
-      <div class="col-date">${fmtDateDE(day.date)}</div>
+// 3) Renderer pro Tag (-> 3 Spalten)
+const renderDoctorDay = (day) => `
+<section class="doctor-day" data-date="${day.date}">
+<!-- Spalte A: Datum -->
+<div class="col-date">${fmtDateDE(day.date)}</div>
 
-      <!-- Spalte B: Messungen -->
-      <div class="col-measure">
-        <div class="measure-head">
-          <div></div>
-          <div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
-        </div>
-        <div class="measure-grid">
-          <div class="measure-row">
-            <div class="label">morgens</div>
-            <div class="num">${dash(day.morning.sys)}</div>
-            <div class="num">${dash(day.morning.dia)}</div>
-            <div class="num">${dash(day.morning.pulse)}</div>
-            <div class="num">${dash(fmtNum(day.morning.map))}</div>
-          </div>
-          <div class="measure-row">
-            <div class="label">abends</div>
-            <div class="num">${dash(day.evening.sys)}</div>
-            <div class="num">${dash(day.evening.dia)}</div>
-            <div class="num">${dash(day.evening.pulse)}</div>
-            <div class="num">${dash(fmtNum(day.evening.map))}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Spalte C: Spezial -->
-      <div class="col-special">
-        <div class="weight-line">
-          <div>Gewicht</div>
-          <div class="num">${dash(fmtNum(day.weight))}</div>
-        </div>
-
-<div class="flags">
-  <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
-  <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-  <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
-  <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
-  <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
-  <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
+<!-- Spalte B: Messungen -->
+<div class="col-measure">
+<div class="measure-head">
+<div></div>
+<div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
+</div>
+<div class="measure-grid">
+<div class="measure-row">
+<div class="label">morgens</div>
+<div class="num">${dash(day.morning.sys)}</div>
+<div class="num">${dash(day.morning.dia)}</div>
+<div class="num">${dash(day.morning.pulse)}</div>
+<div class="num">${dash(fmtNum(day.morning.map))}</div>
+</div>
+<div class="measure-row">
+<div class="label">abends</div>
+<div class="num">${dash(day.evening.sys)}</div>
+<div class="num">${dash(day.evening.dia)}</div>
+<div class="num">${dash(day.evening.pulse)}</div>
+<div class="num">${dash(fmtNum(day.evening.map))}</div>
+</div>
+</div>
 </div>
 
-        <div class="notes">${nl2br(day.notes || "")}</div>
-      </div>
-    </section>
-  `;
+<!-- Spalte C: Spezial -->
+<div class="col-special">
+<div class="weight-line">
+<div>Gewicht</div>
+<div class="num">${dash(fmtNum(day.weight))}</div>
+</div>
 
-  // 4) Rendern oder Leerzustand
-  if (!daysArr.length){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
-  } else {
-    host.innerHTML = daysArr.map(renderDoctorDay).join("");
-  }
+<div class="flags">
+<div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
+</div>
+
+<div class="notes">${nl2br(day.notes || "")}</div>
+</div>
+</section>
+`;
+
+// 4) Rendern oder Leerzustand
+if (!daysArr.length){
+host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+} else {
+host.innerHTML = daysArr.map(renderDoctorDay).join("");
+}
 }
 
 async function renderDoctorReports(){
-  const tbody = $("#doctorReportsTable tbody");
-  tbody.innerHTML = "";
-  const from = $("#from").value;
-  const to = $("#to").value;
-  const reports = await getAllReports();
-  reports
-    .filter(r=>{
-      if (!r.datum) return false;
-      if (from && r.datum < from) return false;
-      if (to && r.datum > to) return false;
-      return true;
-    })
-    .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()))
-    .forEach(r=>{
-      const tr = document.createElement("tr");
+const tbody = $("#doctorReportsTable tbody");
+tbody.innerHTML = "";
+const from = $("#from").value;
+const to = $("#to").value;
+const reports = await getAllReports();
+reports
+.filter(r=>{
+if (!r.datum) return false;
+if (from && r.datum < from) return false;
+if (to && r.datum > to) return false;
+return true;
+})
+.sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()))
+.forEach(r=>{
+const tr = document.createElement("tr");
 tr.innerHTML = `
-  <td class="nowrap">${r.datum || ""}</td>
-  <td class="center">${r.kreatinin  != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-  <td class="center">${r.egfr       != null ? Number(r.egfr).toFixed(0)      : ""}</td>
-  <td class="center">${r.uacr       != null ? Number(r.uacr).toFixed(0)      : ""}</td>
-  <td class="center">${r.kalium     != null ? Number(r.kalium).toFixed(1)    : ""}</td>
-  <td class="center">${r.cystatin_c != null ? Number(r.cystatin_c).toFixed(2): ""}</td>
-  <td class="center">${r.haematurie != null ? Number(r.haematurie).toFixed(0): ""}</td>
-  <td class="center">${r.ldl        != null ? Number(r.ldl).toFixed(0)       : ""}</td>
-  <td class="center">${r.hba1c      != null ? Number(r.hba1c).toFixed(1)     : ""}</td>
-  <td class="notes">${nl2br(r.kommentar || "")}</td>
+<td class="nowrap">${r.datum || ""}</td>
+<td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
+<td class="center">${r.egfr != null ? Number(r.egfr).toFixed(0) : ""}</td>
+<td class="center">${r.uacr != null ? Number(r.uacr).toFixed(0) : ""}</td>
+<td class="center">${r.kalium != null ? Number(r.kalium).toFixed(1) : ""}</td>
+<td class="center">${r.cystatin_c != null ? Number(r.cystatin_c).toFixed(2): ""}</td>
+<td class="center">${r.haematurie != null ? Number(r.haematurie).toFixed(0): ""}</td>
+<td class="center">${r.ldl != null ? Number(r.ldl).toFixed(0) : ""}</td>
+<td class="center">${r.hba1c != null ? Number(r.hba1c).toFixed(1) : ""}</td>
+<td class="notes">${nl2br(r.kommentar || "")}</td>
 `;
-      tbody.appendChild(tr);
-    });
-  if (!tbody.children.length) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="10" class="small" style="text-align:center;opacity:.7">Keine Befunde im Zeitraum</td>`;
-    tbody.appendChild(tr);
-  }
+tbody.appendChild(tr);
+});
+if (!tbody.children.length) {
+const tr = document.createElement("tr");
+tr.innerHTML = `<td colspan="10" class="small" style="text-align:center;opacity:.7">Keine Befunde im Zeitraum</td>`;
+tbody.appendChild(tr);
+}
 }
 
 /* ===== Simple SVG Chart (Daily) ===== */
 const chartPanel = {
-  el:null, svg:null, legend:null, open:false,
-  init(){
-    this.el = $("#chart"); this.svg = $("#chartSvg"); this.legend = $("#chartLegend");
-    $("#chartClose").addEventListener("click", ()=>this.hide());
-    $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
-    $("#refreshChart").addEventListener("click", ()=> this.draw());
-    $("#savePng").addEventListener("click", ()=> this.savePNG());
-    $("#metricSel").addEventListener("change", ()=> this.draw());
-    $("#smoothChk").addEventListener("change", ()=> this.draw());
-  },
-  toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
-  hide(){ this.open=false; this.el.style.display='none'; },
-  async getFiltered(){
-    const entries = await getAllEntries();
-    const from = $("#from").value; const to = $("#to").value;
-    return entries.filter(e=>{ if (from && e.date < from) return false; if (to && e.date > to) return false; return true; })
-                  .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
-  },
-  ma(arr, k=3){
-    if(!$("#smoothChk").checked || k<=1) return arr;
-    const out=[]; for(let i=0;i<arr.length;i++){
-      const s = Math.max(0,i-Math.floor(k/2));
-      const e = Math.min(arr.length-1,i+Math.floor(k/2));
-      let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
-      out.push(c?sum/c:null);
-    } return out;
-  },
+el:null, svg:null, legend:null, open:false,
+init(){
+this.el = $("#chart"); this.svg = $("#chartSvg"); this.legend = $("#chartLegend");
+$("#chartClose").addEventListener("click", ()=>this.hide());
+$("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
+$("#refreshChart").addEventListener("click", ()=> this.draw());
+$("#savePng").addEventListener("click", ()=> this.savePNG());
+$("#metricSel").addEventListener("change", ()=> this.draw());
+$("#smoothChk").addEventListener("change", ()=> this.draw());
+},
+toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
+hide(){ this.open=false; this.el.style.display='none'; },
+async getFiltered(){
+const entries = await getAllEntries();
+const from = $("#from").value; const to = $("#to").value;
+return entries.filter(e=>{ if (from && e.date < from) return false; if (to && e.date > to) return false; return true; })
+.sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+},
+ma(arr, k=3){
+if(!$("#smoothChk").checked || k<=1) return arr;
+const out=[]; for(let i=0;i<arr.length;i++){
+const s = Math.max(0,i-Math.floor(k/2));
+const e = Math.min(arr.length-1,i+Math.floor(k/2));
+let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
+out.push(c?sum/c:null);
+} return out;
+},
 async draw(){
-  const t0 = performance.now();
-
-  // 1) Daten filtern (wie bisher)
-// 1) Daten filtern
-const entries = await this.getFiltered();
-
-// Zeichenfläche und Legende sicher leeren
-this.svg.innerHTML = "";
-this.legend.innerHTML = "";
-
-// Nichts zu plotten?
-if (!entries.length){
-  this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
-  return;
+const __t0 = performance.now();
+const metric = $("#metricSel").value;
+const data = await this.getFiltered();
+const xs = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
+let series = [];
+if(metric==="bp"){
+const y1 = data.map(e => (e.sys!=null? Number(e.sys) : null));
+const y2 = data.map(e => (e.dia!=null? Number(e.dia) : null));
+series = [
+{name:"Systolisch", values:this.ma(y1), color:"#60a5fa"},
+{name:"Diastolisch", values:this.ma(y2), color:"#f472b6"}
+];
+}else if(metric==="pulse"){
+const y = data.map(e => (e.pulse!=null? Number(e.pulse) : null));
+series = [{name:"Puls", values:this.ma(y), color:"#34d399"}];
+}else if(metric==="weight"){
+const y = data.map(e => (e.weight!=null? Number(e.weight) : null));
+series = [{name:"Gewicht (kg)", values:this.ma(y), color:"#f59e0b"}];
 }
-
-  // 2) Tagesliste (geschlossener Bereich) bestimmen
-  const fromISO = $("#from").value || entries[0].date;
-  const toISO   = $("#to").value   || entries[entries.length-1].date;
-
-  const dayMillis = 24*3600*1000;
-const dayMillis = 24*3600*1000;
-let start = new Date(fromISO+"T00:00:00").getTime();
-let end   = new Date(toISO+"T00:00:00").getTime();
-
-// Falls Bereich versehentlich vertauscht ist → korrigieren
-if (isFinite(start) && isFinite(end) && end < start) {
-  const tmp = start; start = end; end = tmp;
-  diag.add("Chart: Datumsspanne getauscht (Bis < Von)");
+const hasAny = series.some(s => s.values.some(v=>v!=null));
+this.svg.innerHTML=""; this.legend.innerHTML="";
+if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
+const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
+const innerW=W-PL-PR, innerH=H-PT-PB;
+const xVals = xs.filter(Boolean);
+const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+const allY = series.flatMap(s => s.values.filter(v=>v!=null));
+const ymin = Math.min(...allY);
+const ymax = Math.max(...allY);
+const ypad = Math.max( (ymax-ymin)*0.08, 1 );
+const y0 = ymin - ypad, y1max = ymax + ypad;
+const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
+const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
+function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
+function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
+let grid = "";
+const ticks = 4;
+for(let i=0;i<=ticks;i++){
+const vv = y0 + (i*(y1max-y0)/ticks);
+const yy = y(vv);
+grid += line(PL,yy,W-PR,yy,"#22262f");
+grid += text(PL-6,yy+4, Math.round(vv).toString());
 }
-
-  const daysCount = Math.max(1, Math.round((end - start)/dayMillis)+1);
-
-  const dayIsoAt = i => {
-    const d = new Date(start + i*dayMillis);
-    return d.toISOString().slice(0,10); // YYYY-MM-DD
-  };
-
-  // 3) Pro Tag aggregieren (Ø Sys/Dia + Flags)
-  const sysAvg = new Array(daysCount).fill(null);
-  const diaAvg = new Array(daysCount).fill(null);
-  const trainBar = new Array(daysCount).fill(0); // 0/1
-  const badBar   = new Array(daysCount).fill(0); // Summe Bad-Flags
-
-  for (let i=0; i<daysCount; i++){
-    const iso = dayIsoAt(i);
-    const dayEntries = entries.filter(e => e.date === iso);
-
-    // Ø/Tag nur aus vorhandenen Messungen
-    const sysVals = dayEntries.map(e => e.sys).filter(v => v!=null && !isNaN(v)).map(Number);
-    const diaVals = dayEntries.map(e => e.dia).filter(v => v!=null && !isNaN(v)).map(Number);
-    if (sysVals.length) sysAvg[i] = sysVals.reduce((a,b)=>a+b,0) / sysVals.length;
-    if (diaVals.length) diaAvg[i] = diaVals.reduce((a,b)=>a+b,0) / diaVals.length;
-
-    // Flags: Training separat (0/1), Bad = Anzahl verschiedener "negativen" Flags
-    const anyTrain = dayEntries.some(e => !!e.training);
-
-    const anyLow   = dayEntries.some(e => !!e.low_intake);
-    const anySalt  = dayEntries.some(e => !!e.salt_high);
-    const anySugar = dayEntries.some(e => !!e.sugar_high);
-    const anySick  = dayEntries.some(e => !!e.sick);
-    const anyVal   = dayEntries.some(e => !!e.valsartan_missed);
-    const anyFor   = dayEntries.some(e => !!e.forxiga_missed);
-    const anyNsar  = dayEntries.some(e => !!e.nsar_taken);
-
-    const badCount = [anyLow,anySalt,anySugar,anySick,anyVal,anyFor,anyNsar].reduce((n,b)=> n + (b?1:0), 0);
-
-    trainBar[i] = anyTrain ? 1 : 0;
-    badBar[i]   = badCount;
-  }
-
-  // Prüfen: gibt es irgendetwas zu zeichnen?
-  const hasLines = (sysAvg.some(v=>v!=null) || diaAvg.some(v=>v!=null));
-  const hasBars  = (trainBar.some(v=>v>0) || badBar.some(v=>v>0));
-  if (!hasLines && !hasBars){
-    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
-    return;
-  }
-
-  // 4) Zeichenfläche
-  const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
-  const innerW=W-PL-PR, innerH=H-PT-PB;
-  const x = i => PL + (i / Math.max(1,daysCount-1)) * innerW;
-  diag.add(`Chart: Tage=${daysCount}, entries=${entries.length}, Range=${fromISO}..${toISO}`);
-
-  // Y‑Skalen (Linien separat von Balken)
-  const lineVals = [
-    ...sysAvg.filter(v=>v!=null),
-    ...diaAvg.filter(v=>v!=null),
-  ];
-  const ymin = lineVals.length ? Math.min(...lineVals) : 0;
-  const ymax = lineVals.length ? Math.max(...lineVals) : 1;
-  const ypad = Math.max((ymax-ymin)*0.08, 1);
-  const y0 = ymin - ypad, y1max = ymax + ypad;
-  const yLine = v => PT + (1 - ((v - y0) / Math.max(1,(y1max - y0)))) * innerH;
-
-  // Bars (kleine Höhe, damit „Hintergrund“ bleibt)
-  const barMax = Math.max(1, Math.max(...trainBar, ...badBar)); // z.B. 7
-  const barAreaH = Math.min(60, innerH*0.35);                   // reservierter Bereich unten
-  const barBaseY = H - PB;                                      // X‑Achse
-  const yBar = v => barBaseY - (v/barMax) * barAreaH;
-  const barWidth = Math.max(2, innerW / Math.max(15, daysCount) * 0.6);
-
-  // Utilities
-  function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
-  function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
-
-  // 5) Grid + Achsen
-  let grid = "";
-  const ticks = 4;
-  for(let i=0;i<=ticks;i++){
-    const vv = y0 + (i*(y1max-y0)/ticks);
-    const yy = yLine(vv);
-    grid += line(PL,yy,W-PR,yy,"#22262f");
-    grid += text(PL-6,yy+4, Math.round(vv).toString());
-  }
-  // Wochen‑Hilfslinien (falls Zeitspanne groß)
-  const tickEvery = Math.ceil(daysCount/8); // ~8 Datumstexte max
-  for(let i=0;i<daysCount;i+=tickEvery){
-    const xx = x(i);
-    grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
-    const d = new Date(start + i*dayMillis);
-    const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
-    grid += text(xx, H-8, lbl, "middle");
-  }
-  grid += line(PL,PT,PL,H-PB,"#2b2f3a");
-  grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
-  this.svg.insertAdjacentHTML("beforeend", grid);
-
-  // 6) Hintergrund‑Balken (erst Training, dann BadFlags – damit Bad vorne liegt)
-  let barsSvg = "";
-  for(let i=0;i<daysCount;i++){
-    const cx = x(i) - barWidth/2;
-    if (trainBar[i] > 0){
-      barsSvg += `<rect x="${cx}" y="${yBar(trainBar[i]).toFixed(1)}" width="${barWidth}" height="${(barBaseY - yBar(trainBar[i])).toFixed(1)}" fill="#34d399" opacity="0.25" />`;
-    }
-    if (badBar[i] > 0){
-      barsSvg += `<rect x="${cx}" y="${yBar(badBar[i]).toFixed(1)}" width="${barWidth}" height="${(barBaseY - yBar(badBar[i])).toFixed(1)}" fill="#f87171" opacity="0.28" />`;
-    }
-  }
-  this.svg.insertAdjacentHTML("beforeend", barsSvg);
-
-  // 7) Linien + Punkte (Sys/Dia Ø/Tag)
-  function pathFor(values, color){
-    let d = "";
-    values.forEach((v,i)=>{ if(v==null) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(i).toFixed(1)},${yLine(v).toFixed(1)} `; });
-    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-  }
-  function dots(values, color){
-    let out=""; values.forEach((v,i)=>{ if(v==null) return; out += `<circle cx="${x(i).toFixed(1)}" cy="${yLine(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
-    return out;
-  }
-
-  const series = [
-    {name:"Systolisch (Ø/Tag)", values: sysAvg, color:"#60a5fa"},
-    {name:"Diastolisch (Ø/Tag)", values: diaAvg, color:"#f472b6"}
-  ];
-
-  const hasAnyLine = series.some(s => s.values.some(v=>v!=null));
-  if (!hasAnyLine && !hasBars){
-    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
-    return;
-  }
-
-  series.forEach(s=>{
-    this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
-    this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
-  });
-
-  // 8) Legende
-  const makeLegendItem = (label, color) => {
-    const dot = document.createElement("span"); dot.className="dot"; dot.style.background=color;
-    const text = document.createElement("span"); text.textContent = label;
-    const wrap = document.createElement("span");
-    wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
-    wrap.appendChild(dot); wrap.appendChild(text);
-    this.legend.appendChild(wrap);
-  };
-  makeLegendItem("Systolisch (Ø/Tag)", "#60a5fa");
-  makeLegendItem("Diastolisch (Ø/Tag)", "#f472b6");
-  makeLegendItem("Training", "#34d399");
-  makeLegendItem("Bad Flags", "#f87171");
-
-  const sPerf = (perfStats.add('drawChartV2', performance.now()-t0), perfStats.snap('drawChartV2'));
-  diag.add(`[perf] drawChart V2 p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+const week = 7*24*3600*1000;
+let start = xmin - (xmin % week) + week;
+for(let t=start; t<xmax; t+=week){
+const xx = x(t);
+grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+const d = new Date(t);
+const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
+grid += text(xx, H-8, lbl, "middle");
 }
-  
-  async savePNG(){
-    const svgEl = this.svg;
-    const xml = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
-    const url = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = ()=>{
-      const canvas = document.createElement("canvas");
-      canvas.width = svgEl.viewBox.baseVal.width || 640;
-      canvas.height = svgEl.viewBox.baseVal.height || 280;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img,0,0);
-      canvas.toBlob(blob=>{
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `diagramm_daily_${new Date().toISOString().slice(0,10)}.png`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      },"image/png");
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  }
+grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+this.svg.insertAdjacentHTML("beforeend", grid);
+function pathFor(values, color){
+let d = "";
+values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
+return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+}
+function dots(values, color){
+let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
+return out;
+}
+series.forEach(s=>{
+this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
+this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+const dot = document.createElement("span"); dot.className="dot"; dot.style.background=s.color;
+const label = document.createElement("span"); label.textContent = s.name;
+const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
+wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
+const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.snap('drawChart'));
+diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+});
+},
+
+async savePNG(){
+const svgEl = this.svg;
+const xml = new XMLSerializer().serializeToString(svgEl);
+const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
+const url = URL.createObjectURL(svgBlob);
+const img = new Image();
+img.onload = ()=>{
+const canvas = document.createElement("canvas");
+canvas.width = svgEl.viewBox.baseVal.width || 640;
+canvas.height = svgEl.viewBox.baseVal.height || 280;
+const ctx = canvas.getContext("2d");
+ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0);
+canvas.toBlob(blob=>{
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = `diagramm_daily_${new Date().toISOString().slice(0,10)}.png`;
+a.click();
+URL.revokeObjectURL(a.href);
+},"image/png");
+URL.revokeObjectURL(url);
+};
+img.src = url;
+}
 };
 
 /* ===== Simple SVG Chart (Befunde) ===== */
 const chartReportsPanel = {
-  el:null, svg:null, legend:null, open:false,
-  init(){
-    this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
-    $("#chartReportsClose").addEventListener("click", ()=>this.hide());
-    $("#refreshReportChart").addEventListener("click", ()=> this.draw());
-    $("#saveReportPng").addEventListener("click", ()=> this.savePNG());
-    $("#reportMetricSel").addEventListener("change", ()=> this.draw());
-    $("#reportSmoothChk").addEventListener("change", ()=> this.draw());
-  },
-  toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
-  hide(){ this.open=false; this.el.style.display='none'; },
-  async getFiltered(){
-    const reps = await getAllReports();
-    const from = $("#from").value; const to = $("#to").value;
-    return reps.filter(r=>{ if(!r.datum) return false; if (from && r.datum < from) return false; if (to && r.datum > to) return false; return true; })
-               .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()));
-  },
-  ma(arr, k=3){
-    if(!$("#reportSmoothChk").checked || k<=1) return arr;
-    const out=[]; for(let i=0;i<arr.length;i++){
-      const s = Math.max(0,i-Math.floor(k/2));
-      const e = Math.min(arr.length-1,i+Math.floor(k/2));
-      let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
-      out.push(c?sum/c:null);
-    } return out;
-  },
-  async draw(){
-    const metric = $("#reportMetricSel").value;
-    const data = await this.getFiltered();
-    if(!data.length){
-      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine Befunde im Zeitraum</text>`;
-      this.legend.innerHTML = "";
-      return;
-    }
-    const xs = data.map(r => (r.ts ?? new Date(r.datum).getTime()));
-    const vals = data.map(r => (r[metric] != null ? Number(r[metric]) : null));
-    const series = [{name: metricLabel(metric), values: this.ma(vals), color: "#60a5fa"}];
-    const hasAny = series.some(s => s.values.some(v=>v!=null));
-    this.svg.innerHTML=""; this.legend.innerHTML="";
-    if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
-    const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
-    const innerW=W-PL-PR, innerH=H-PT-PB;
-    const xVals = xs.filter(Boolean);
-    const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
-    const yVals = series[0].values.filter(v=>v!=null);
-    const ymin = Math.min(...yVals), ymax = Math.max(...yVals);
-    const ypad = Math.max((ymax-ymin)*0.08, 1);
-    const y0 = ymin - ypad, y1max = ymax + ypad;
-    const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
-    const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
-    function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
-    function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
-    let grid = "";
-    const ticks = 4;
-    for(let i=0;i<=ticks;i++){
-      const vv = y0 + (i*(y1max-y0)/ticks);
-      const yy = y(vv);
-      grid += line(PL,yy,W-PR,yy,"#22262f");
-      grid += text(PL-6,yy+4, roundSmart(vv).toString());
-    }
-    const month = 30*24*3600*1000;
-    let start = xmin - (xmin % month) + month;
-    for(let t=start; t<xmax; t+=month){
-      const xx = x(t);
-      grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
-      const d = new Date(t);
-      const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
-      grid += text(xx, H-8, lbl, "middle");
-    }
-    grid += line(PL,PT,PL,H-PB,"#2b2f3a");
-    grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
-    this.svg.insertAdjacentHTML("beforeend", grid);
-    function pathFor(values, color){
-      let d = "";
-      values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
-      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-    }
-    function dots(values, color){
-      let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
-      return out;
-    }
-    series.forEach(s=>{
-      this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
-      this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
-      const dot = document.createElement("span"); dot.className="dot"; dot.style.background=s.color;
-      const label = document.createElement("span"); label.textContent = s.name;
-      const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
-      wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
-    });
-    function roundSmart(v){
-      const abs = Math.abs(v);
-      if(abs >= 100) return Math.round(v);
-      if(abs >= 10) return Math.round(v*10)/10;
-      return Math.round(v*100)/100;
-    }
-function metricLabel(m){
-  switch(m){
-    case "kreatinin":  return "Kreatinin (mg/dL)";
-    case "egfr":       return "eGFR (ml/min/1.73m²)";
-    case "uacr":       return "uACR (mg/g)";
-    case "kalium":     return "Kalium (mmol/L)";
-    case "cystatin_c": return "Cystatin C (mg/L)";
-    case "haematurie": return "Hämaturie (Ery/µL)";
-    case "ldl":        return "LDL (mg/dL)";
-    case "hba1c":      return "HbA1c (%)";
-    default:           return m;
-  }
+el:null, svg:null, legend:null, open:false,
+init(){
+this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
+$("#chartReportsClose").addEventListener("click", ()=>this.hide());
+$("#refreshReportChart").addEventListener("click", ()=> this.draw());
+$("#saveReportPng").addEventListener("click", ()=> this.savePNG());
+$("#reportMetricSel").addEventListener("change", ()=> this.draw());
+$("#reportSmoothChk").addEventListener("change", ()=> this.draw());
+},
+toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
+hide(){ this.open=false; this.el.style.display='none'; },
+async getFiltered(){
+const reps = await getAllReports();
+const from = $("#from").value; const to = $("#to").value;
+return reps.filter(r=>{ if(!r.datum) return false; if (from && r.datum < from) return false; if (to && r.datum > to) return false; return true; })
+.sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()));
+},
+ma(arr, k=3){
+if(!$("#reportSmoothChk").checked || k<=1) return arr;
+const out=[]; for(let i=0;i<arr.length;i++){
+const s = Math.max(0,i-Math.floor(k/2));
+const e = Math.min(arr.length-1,i+Math.floor(k/2));
+let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
+out.push(c?sum/c:null);
+} return out;
+},
+async draw(){
+const metric = $("#reportMetricSel").value;
+const data = await this.getFiltered();
+if(!data.length){
+this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine Befunde im Zeitraum</text>`;
+this.legend.innerHTML = "";
+return;
 }
-  },
-  async savePNG(){
-    const svgEl = this.svg;
-    const xml = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
-    const url = URL.createObjectURL(svgBlob);
-    const img = new Image();
-    img.onload = ()=>{
-      const canvas = document.createElement("canvas");
-      canvas.width = svgEl.viewBox.baseVal.width || 640;
-      canvas.height = svgEl.viewBox.baseVal.height || 280;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img,0,0);
-      canvas.toBlob(blob=>{
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `diagramm_befunde_${new Date().toISOString().slice(0,10)}.png`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      },"image/png");
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  }
+const xs = data.map(r => (r.ts ?? new Date(r.datum).getTime()));
+const vals = data.map(r => (r[metric] != null ? Number(r[metric]) : null));
+const series = [{name: metricLabel(metric), values: this.ma(vals), color: "#60a5fa"}];
+const hasAny = series.some(s => s.values.some(v=>v!=null));
+this.svg.innerHTML=""; this.legend.innerHTML="";
+if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
+const W=640,H=280, PL=48, PR=16, PT=12, PB=28;
+const innerW=W-PL-PR, innerH=H-PT-PB;
+const xVals = xs.filter(Boolean);
+const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+const yVals = series[0].values.filter(v=>v!=null);
+const ymin = Math.min(...yVals), ymax = Math.max(...yVals);
+const ypad = Math.max((ymax-ymin)*0.08, 1);
+const y0 = ymin - ypad, y1max = ymax + ypad;
+const x = t => PL + ( (t - xmin) / Math.max(1,(xmax - xmin)) ) * innerW;
+const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
+function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
+function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
+let grid = "";
+const ticks = 4;
+for(let i=0;i<=ticks;i++){
+const vv = y0 + (i*(y1max-y0)/ticks);
+const yy = y(vv);
+grid += line(PL,yy,W-PR,yy,"#22262f");
+grid += text(PL-6,yy+4, roundSmart(vv).toString());
+}
+const month = 30*24*3600*1000;
+let start = xmin - (xmin % month) + month;
+for(let t=start; t<xmax; t+=month){
+const xx = x(t);
+grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+const d = new Date(t);
+const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
+grid += text(xx, H-8, lbl, "middle");
+}
+grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+this.svg.insertAdjacentHTML("beforeend", grid);
+function pathFor(values, color){
+let d = "";
+values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
+return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+}
+function dots(values, color){
+let out=""; values.forEach((v,i)=>{ if(v==null || !xs[i]) return; out += `<circle cx="${x(xs[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
+return out;
+}
+series.forEach(s=>{
+this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
+this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+const dot = document.createElement("span"); dot.className="dot"; dot.style.background=s.color;
+const label = document.createElement("span"); label.textContent = s.name;
+const wrap = document.createElement("span"); wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
+wrap.appendChild(dot); wrap.appendChild(label); this.legend.appendChild(wrap);
+});
+function roundSmart(v){
+const abs = Math.abs(v);
+if(abs >= 100) return Math.round(v);
+if(abs >= 10) return Math.round(v*10)/10;
+return Math.round(v*100)/100;
+}
+function metricLabel(m){
+switch(m){
+case "kreatinin": return "Kreatinin (mg/dL)";
+case "egfr": return "eGFR (ml/min/1.73m²)";
+case "uacr": return "uACR (mg/g)";
+case "kalium": return "Kalium (mmol/L)";
+case "cystatin_c": return "Cystatin C (mg/L)";
+case "haematurie": return "Hämaturie (Ery/µL)";
+case "ldl": return "LDL (mg/dL)";
+case "hba1c": return "HbA1c (%)";
+default: return m;
+}
+}
+},
+async savePNG(){
+const svgEl = this.svg;
+const xml = new XMLSerializer().serializeToString(svgEl);
+const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
+const url = URL.createObjectURL(svgBlob);
+const img = new Image();
+img.onload = ()=>{
+const canvas = document.createElement("canvas");
+canvas.width = svgEl.viewBox.baseVal.width || 640;
+canvas.height = svgEl.viewBox.baseVal.height || 280;
+const ctx = canvas.getContext("2d");
+ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0);
+canvas.toBlob(blob=>{
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = `diagramm_befunde_${new Date().toISOString().slice(0,10)}.png`;
+a.click();
+URL.revokeObjectURL(a.href);
+},"image/png");
+URL.revokeObjectURL(url);
+};
+img.src = url;
+}
 };
 
 /* --- Button-Flash --- */
 let saveFlashTimer = null;
 function flashSaveOk(){
-  const btn = document.getElementById('saveAllBtn');
-  if(!btn) return;
-  if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+const btn = document.getElementById('saveAllBtn');
+if(!btn) return;
+if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
+btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
+saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
 /* ===== Tabs / Segments ===== */
 function setTab(name){
-  $$(".view").forEach(v=>v.classList.remove("active"));
-  $("#"+name).classList.add("active");
-  $$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
-  if(name==="doctor"){ renderDoctorViewForMode(); }
-  if(name==="list"){ loadAndRender(); }
+$$(".view").forEach(v=>v.classList.remove("active"));
+$("#"+name).classList.add("active");
+$$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
+if(name==="doctor"){ renderDoctorViewForMode(); }
+if(name==="list"){ loadAndRender(); }
 }
 function bindTabs(){ $$(".tabs .btn").forEach(b=> b.addEventListener("click", e=> setTab(e.currentTarget.dataset.tab))); }
 function bindCaptureSegment(){
-  const seg = $("#seg-capture"); if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const mode = b.dataset.mode;
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#entry").classList.toggle("hidden", mode !== "daily");
-      $("#entry_befund").classList.toggle("hidden", mode !== "befund");
-    });
-  });
+const seg = $("#seg-capture"); if(!seg) return;
+seg.querySelectorAll(".seg-btn").forEach(b=>{
+b.addEventListener("click", ()=>{
+const mode = b.dataset.mode;
+seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+$("#entry").classList.toggle("hidden", mode !== "daily");
+$("#entry_befund").classList.toggle("hidden", mode !== "befund");
+});
+});
 }
 function bindListSegment(){
-  const seg = $("#seg-list"); if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      const mode = b.dataset.mode;
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
-      $("#listReportWrap").classList.toggle("hidden", mode!=="befund");
-      if(mode==="befund"){ await loadAndRenderReports(); }
-      else { await loadAndRender(); }
-    });
-  });
+const seg = $("#seg-list"); if(!seg) return;
+seg.querySelectorAll(".seg-btn").forEach(b=>{
+b.addEventListener("click", async ()=>{
+const mode = b.dataset.mode;
+seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+$("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
+$("#listReportWrap").classList.toggle("hidden", mode!=="befund");
+if(mode==="befund"){ await loadAndRenderReports(); }
+else { await loadAndRender(); }
+});
+});
 }
 function bindDoctorSegment(){
-  const seg = $("#seg-doctor"); if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      const mode = b.dataset.mode;
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#doctorDailyWrap").classList.toggle("hidden", mode!=="daily");
-      $("#doctorReportWrap").classList.toggle("hidden", mode!=="befund");
-      $("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
-      if(mode==="daily") await renderDoctor();
-      else await renderDoctorReports();
-    });
-  });
+const seg = $("#seg-doctor"); if(!seg) return;
+seg.querySelectorAll(".seg-btn").forEach(b=>{
+b.addEventListener("click", async ()=>{
+const mode = b.dataset.mode;
+seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
+$("#doctorDailyWrap").classList.toggle("hidden", mode!=="daily");
+$("#doctorReportWrap").classList.toggle("hidden", mode!=="befund");
+$("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
+if(mode==="daily") await renderDoctor();
+else await renderDoctorReports();
+});
+});
 }
 function activeDoctorMode(){
-  const btn = $("#seg-doctor .seg-btn.active");
-  return btn ? btn.dataset.mode : "daily";
+const btn = $("#seg-doctor .seg-btn.active");
+return btn ? btn.dataset.mode : "daily";
 }
 async function renderDoctorViewForMode(){
-  const mode = activeDoctorMode();
-  if(mode==="daily") await renderDoctor();
-  else await renderDoctorReports();
+const mode = activeDoctorMode();
+if(mode==="daily") await renderDoctor();
+else await renderDoctorReports();
 }
 
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
-    saltHigh=false, sugarHigh=false;
+saltHigh=false, sugarHigh=false;
 function setToggle(el, on, activeText, baseText){
-  el.classList.toggle("active", !!on);
-  el.setAttribute("aria-pressed", on ? "true" : "false");
-  el.textContent = on ? activeText : baseText;
+el.classList.toggle("active", !!on);
+el.setAttribute("aria-pressed", on ? "true" : "false");
+el.textContent = on ? activeText : baseText;
 }
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋️ Training heute (aktiv)", "🏋️ Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🚰 < 2 L – aktiv", "🚰 < 2 L getrunken"); }
-  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
+function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
 function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
-  function updateDaySummaryBadge(){
-  const badge = document.getElementById("daySummaryBadge");
-  if (!badge) return;
+function updateDaySummaryBadge(){
+const badge = document.getElementById("daySummaryBadge");
+if (!badge) return;
 
-  const weightVal = ($("#weightDay")?.value || "").trim();
-  const notesVal  = ($("#notesDay")?.value  || "").trim();
+const weightVal = ($("#weightDay")?.value || "").trim();
+const notesVal = ($("#notesDay")?.value || "").trim();
 
-  const hasAnyFlag = !!(
-    trainingActive || lowIntakeActive || sickActive ||
-    valsartanMissed || forxigaMissed || nsarTaken ||
-    saltHigh || sugarHigh
-  );
+const hasAnyFlag = !!(
+trainingActive || lowIntakeActive || sickActive ||
+valsartanMissed || forxigaMissed || nsarTaken ||
+saltHigh || sugarHigh
+);
 
-  const shouldShow = !!(weightVal || notesVal || hasAnyFlag);
-  badge.style.display = shouldShow ? "block" : "none";
+const shouldShow = !!(weightVal || notesVal || hasAnyFlag);
+badge.style.display = shouldShow ? "block" : "none";
 }
 
 function setSick(on){
-  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
-  if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
-  else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
+sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
+if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
+else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
 function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "⚠️ NSAR genommen – aktiv", "⚠️ NSAR genommen"); }
 function blockHasData(which){
-  return !!(
-    $(`#time${which}`).value ||
-    $(`#sys${which}`).value ||
-    $(`#dia${which}`).value ||
-    $(`#pulse${which}`).value
-  );
+return !!(
+$(`#time${which}`).value ||
+$(`#sys${which}`).value ||
+$(`#dia${which}`).value ||
+$(`#pulse${which}`).value
+);
 }
 async function saveAll(){
-  const __t0 = performance.now();
-  if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+const __t0 = performance.now();
+if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 
-  // 1) Erkennen, was heute eingegeben wurde
-  const hasM = blockHasData("M");          // Morgens: irgendein Wert/Time im Block
-  const hasA = blockHasData("A");          // Abends: irgendein Wert/Time im Block
-  const weightVal = $("#weightDay")?.value?.trim();
-  const notes = ($("#notesDay").value || "").trim();
-  const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
-                        valsartanMissed || forxigaMissed || nsarTaken ||
-                        saltHigh || sugarHigh);
-  const hasDaySummary = !!(weightVal || hasAnyFlag || notes);
+// 1) Erkennen, was heute eingegeben wurde
+const hasM = blockHasData("M"); // Morgens: irgendein Wert/Time im Block
+const hasA = blockHasData("A"); // Abends: irgendein Wert/Time im Block
+const weightVal = $("#weightDay")?.value?.trim();
+const notes = ($("#notesDay").value || "").trim();
+const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
+valsartanMissed || forxigaMissed || nsarTaken ||
+saltHigh || sugarHigh);
+const hasDaySummary = !!(weightVal || hasAnyFlag || notes);
 
-  // 2) Speichern in drei klaren Pfaden
-  let saved = false;
-  if (hasM) saved = (await saveBlock("Morgen","M", /*includeWeight=*/false, /*force=*/false)) || saved;
-  if (hasA) saved = (await saveBlock("Abend","A",  /*includeWeight=*/false, /*force=*/false)) || saved;
-  if (hasDaySummary) saved = (await saveDaySummary()) || saved;
+// 2) Speichern in drei klaren Pfaden
+let saved = false;
+if (hasM) saved = (await saveBlock("Morgen","M", /*includeWeight=*/false, /*force=*/false)) || saved;
+if (hasA) saved = (await saveBlock("Abend","A", /*includeWeight=*/false, /*force=*/false)) || saved;
+if (hasDaySummary) saved = (await saveDaySummary()) || saved;
 
-  if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; }
+if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; }
 
-  // 3) UI aktualisieren
-  await loadAndRender();
-  await renderDoctorViewForMode();
-  if(chartPanel.open) await chartPanel.draw();
-  if(chartReportsPanel.open) await chartReportsPanel.draw();
+// 3) UI aktualisieren
+await loadAndRender();
+await renderDoctorViewForMode();
+if(chartPanel.open) await chartPanel.draw();
+if(chartReportsPanel.open) await chartReportsPanel.draw();
 
-  { const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
-    diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
-  flashSaveOk();
+{ const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
+diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
+flashSaveOk();
 }
 
 async function saveBlock(contextLabel, which, includeWeight=false, force=false){
-  const date = $("#date").value || todayStr();
-  const time = $(`#time${which}`).value || timeStr();
+const date = $("#date").value || todayStr();
+const time = $(`#time${which}`).value || timeStr();
 
-  const sys   = $(`#sys${which}`).value   ? Number($(`#sys${which}`).value)   : null;
-  const dia   = $(`#dia${which}`).value   ? Number($(`#dia${which}`).value)   : null;
-  const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
+const sys = $(`#sys${which}`).value ? Number($(`#sys${which}`).value) : null;
+const dia = $(`#dia${which}`).value ? Number($(`#dia${which}`).value) : null;
+const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
 
-  // Nur vitale Werte; Gewicht NICHT mehr in M/A
-  const weight = null;
+// Nur vitale Werte; Gewicht NICHT mehr in M/A
+const weight = null;
 
-  const nothingToSave = !sys && !dia && !pulse;
-  if (!force && nothingToSave) return false;
+const nothingToSave = !sys && !dia && !pulse;
+if (!force && nothingToSave) return false;
 
-  const currentISO = new Date(date + "T" + time).toISOString();
-  const ts = new Date(date + "T" + time).getTime();
+const currentISO = new Date(date + "T" + time).toISOString();
+const ts = new Date(date + "T" + time).getTime();
 
-  const entry = {
-    date, time, dateTime: currentISO, ts,
-    context: contextLabel, arm: "links", position: "sitzend",
-    sys, dia, pulse, weight,
-    map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-    notes: "",
-    training: false,
-    low_intake: false,
-    sick: false,
-    valsartan_missed: false,
-    forxiga_missed: false,
-    nsar_taken: false,
-    salt_high: false,
-    sugar_high: false
-  };
+const entry = {
+date, time, dateTime: currentISO, ts,
+context: contextLabel, arm: "links", position: "sitzend",
+sys, dia, pulse, weight,
+map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+notes: "",
+training: false,
+low_intake: false,
+sick: false,
+valsartan_missed: false,
+forxiga_missed: false,
+nsar_taken: false,
+salt_high: false,
+sugar_high: false
+};
 
-  const localId = await addEntry(entry);
-  await syncWebhook(entry, localId);
-  return true;
+const localId = await addEntry(entry);
+await syncWebhook(entry, localId);
+return true;
 }
 
-  function baseEntry(date, time, contextLabel){
-  const iso = new Date(date + "T" + time).toISOString();
-  const ts  = new Date(date + "T" + time).getTime();
-  return {
-    date, time, dateTime: iso, ts,
-    context: contextLabel, arm: "links", position: "sitzend",
-    sys: null, dia: null, pulse: null, weight: null, map: null,
-    notes: ($("#notesDay").value || "").trim(),
-    training: trainingActive,
-    low_intake: lowIntakeActive,
-    sick: sickActive,
-    valsartan_missed: valsartanMissed,
-    forxiga_missed: forxigaMissed,
-    nsar_taken: nsarTaken,
-    salt_high: saltHigh,
-    sugar_high: sugarHigh
-  };
+function baseEntry(date, time, contextLabel){
+const iso = new Date(date + "T" + time).toISOString();
+const ts = new Date(date + "T" + time).getTime();
+return {
+date, time, dateTime: iso, ts,
+context: contextLabel, arm: "links", position: "sitzend",
+sys: null, dia: null, pulse: null, weight: null, map: null,
+notes: ($("#notesDay").value || "").trim(),
+training: trainingActive,
+low_intake: lowIntakeActive,
+sick: sickActive,
+valsartan_missed: valsartanMissed,
+forxiga_missed: forxigaMissed,
+nsar_taken: nsarTaken,
+salt_high: saltHigh,
+sugar_high: sugarHigh
+};
 }
 
 async function saveDaySummary(){
-  const date = $("#date").value || todayStr();
-  const time = $("#timeA").value || "19:00";
+const date = $("#date").value || todayStr();
+const time = $("#timeA").value || "19:00";
 
-  const entry = baseEntry(date, time, "Tag");
-  const w = $("#weightDay")?.value?.trim();
-  entry.weight = w ? Number(w) : null;
+const entry = baseEntry(date, time, "Tag");
+const w = $("#weightDay")?.value?.trim();
+entry.weight = w ? Number(w) : null;
 
-  const hasContent =
-    (entry.weight != null) ||
-    !!entry.notes ||
-    entry.training || entry.low_intake || entry.sick ||
-    entry.valsartan_missed || entry.forxiga_missed ||
-    entry.nsar_taken || entry.salt_high || entry.sugar_high;
+const hasContent =
+(entry.weight != null) ||
+!!entry.notes ||
+entry.training || entry.low_intake || entry.sick ||
+entry.valsartan_missed || entry.forxiga_missed ||
+entry.nsar_taken || entry.salt_high || entry.sugar_high;
 
-  if (!hasContent) return false;
+if (!hasContent) return false;
 
-  const localId = await addEntry(entry);
-  await syncWebhook(entry, localId);
-  return true;
+const localId = await addEntry(entry);
+await syncWebhook(entry, localId);
+return true;
 }
-  
+
 async function saveReport(){
-    if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
-  const datum = $("#repDate").value || todayStr();
-  const report = {
-    datum,
-    kreatinin: $("#repKrea").value ? Number($("#repKrea").value) : null,
-    egfr:      $("#repEgfr").value ? Number($("#repEgfr").value) : null,
-    uacr:      $("#repUacr").value ? Number($("#repUacr").value) : null,
-    kalium:    $("#repK").value    ? Number($("#repK").value)    : null,
-    cystatin_c: $("#repCys").value    ? Number($("#repCys").value)    : null,
-    haematurie: $("#repHaem").value   ? Number($("#repHaem").value)   : null,
-    ldl:        $("#repLDL").value    ? Number($("#repLDL").value)    : null,
-    hba1c:      $("#repHbA1c").value  ? Number($("#repHbA1c").value)  : null,
-    kommentar: $("#repNote").value?.trim() || "",
-    source: "manuell",
-    ts: new Date(datum+"T00:00:00").getTime()
-  };
-  const localId = await addReport(report);
-  await syncReportWebhook(report, localId);
-  const btn = $("#saveReportBtn");
-  const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✔️ Befund gespeichert";
-  setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
-    ["#repKrea","#repEgfr","#repUacr","#repK","#repCys","#repHaem","#repLDL","#repHbA1c","#repNote"]
-    .forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
+if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+const datum = $("#repDate").value || todayStr();
+const report = {
+datum,
+kreatinin: $("#repKrea").value ? Number($("#repKrea").value) : null,
+egfr: $("#repEgfr").value ? Number($("#repEgfr").value) : null,
+uacr: $("#repUacr").value ? Number($("#repUacr").value) : null,
+kalium: $("#repK").value ? Number($("#repK").value) : null,
+cystatin_c: $("#repCys").value ? Number($("#repCys").value) : null,
+haematurie: $("#repHaem").value ? Number($("#repHaem").value) : null,
+ldl: $("#repLDL").value ? Number($("#repLDL").value) : null,
+hba1c: $("#repHbA1c").value ? Number($("#repHbA1c").value) : null,
+kommentar: $("#repNote").value?.trim() || "",
+source: "manuell",
+ts: new Date(datum+"T00:00:00").getTime()
+};
+const localId = await addReport(report);
+await syncReportWebhook(report, localId);
+const btn = $("#saveReportBtn");
+const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✔️ Befund gespeichert";
+setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
+["#repKrea","#repEgfr","#repUacr","#repK","#repCys","#repHaem","#repLDL","#repHbA1c","#repNote"]
+.forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
 }
-  async function withRetry(fn, {tries=3, base=300}={}) {
-  let lastErr;
-  for (let i=0;i<tries;i++){
-    try { return await fn(); }
-    catch (e) {
-      const code = e?.status ?? e?.response?.status ?? 0;
-      if (!(code >= 500 && code < 600)) throw e;
-      await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
-      lastErr = e;
-    }
-  }
-  throw lastErr;
+async function withRetry(fn, {tries=3, base=300}={}) {
+let lastErr;
+for (let i=0;i<tries;i++){
+try { return await fn(); }
+catch (e) {
+const code = e?.status ?? e?.response?.status ?? 0;
+if (!(code >= 500 && code < 600)) throw e;
+await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
+lastErr = e;
+}
+}
+throw lastErr;
 }
 async function syncWebhook(entry, localId){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return;
-  try{
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) return;
+try{
 const uid = await getUserId();
 const { id: _d1, remote_id: _d2, ...safe } = entry;
 const payload = uid ? { ...safe, user_id: uid } : safe;
 const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
-    if(!res.ok){
-  const txt = await res.text().catch(()=>'?');
-  diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
-  return;
+if(!res.ok){
+const txt = await res.text().catch(()=>'?');
+diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
+return;
 }
-    const json = await res.json();
-    const remoteId = json?.[0]?.id;
-    if(remoteId!=null){
-      await updateEntry(localId, { remote_id: remoteId });
-      diag.add("Webhook: OK");
-    }
-  }catch(e){
-    diag.add("Webhook: Netzwerkfehler");
-  }
+const json = await res.json();
+const remoteId = json?.[0]?.id;
+if(remoteId!=null){
+await updateEntry(localId, { remote_id: remoteId });
+diag.add("Webhook: OK");
+}
+}catch(e){
+diag.add("Webhook: Netzwerkfehler");
+}
 }
 
 /* ===== Realtime / Auto-Sync ===== */
 let sbClient = null;
 
-  let __channels = [];
+let __channels = [];
 function trackChannel(ch){ __channels.push(ch); return ch; }
 function teardownRealtime(){
-  try{
-    __channels.forEach(ch => ch.unsubscribe?.());
-    diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
-  }catch(e){ diag.add("Realtime: unsubscribe error"); }
-  __channels = [];
+try{
+__channels.forEach(ch => ch.unsubscribe?.());
+diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
+}catch(e){ diag.add("Realtime: unsubscribe error"); }
+__channels = [];
 }
 
 window.addEventListener('beforeunload', teardownRealtime);
 
-  
+
 function baseUrlFromRest(restUrl){
-  if(!restUrl) return null;
-  const i = restUrl.indexOf("/rest/");
-  return i>0 ? restUrl.slice(0, i) : null;
+if(!restUrl) return null;
+const i = restUrl.indexOf("/rest/");
+return i>0 ? restUrl.slice(0, i) : null;
 }
 
 async function getUserId(){
-  try{
-    const supa = await ensureSupabaseClient();
-    if(!supa) return null;
-    const { data: { user } } = await supa.auth.getUser();
-    return user?.id ?? null;
-  }catch{ return null; }
+try{
+const supa = await ensureSupabaseClient();
+if(!supa) return null;
+const { data: { user } } = await supa.auth.getUser();
+return user?.id ?? null;
+}catch{ return null; }
 }
-  
+
 async function ensureSupabaseClient(){
-  if (sbClient) return sbClient;
+if (sbClient) return sbClient;
 
-  const rest = await getConf("webhookUrl");
-  const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
-  if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); return null; }
+const rest = await getConf("webhookUrl");
+const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
+if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); return null; }
 
-  // NEU: niemals mit service_role starten
-  if (isServiceRoleKey(keyConf)) {
-    diag.add("Sicherheitsblock: service_role Key erkannt – Abbruch");
-    return null;
-  }
-
-  const supabaseUrl = baseUrlFromRest(rest);
-  const anonKey = keyConf.replace(/^Bearer\s+/i,"");
-  if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
-
-  sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
-    auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
-  });
-  diag.add("Supabase: Client (Auth) initialisiert");
-  return sbClient;
+// NEU: niemals mit service_role starten
+if (isServiceRoleKey(keyConf)) {
+diag.add("Sicherheitsblock: service_role Key erkannt – Abbruch");
+return null;
 }
-  
+
+const supabaseUrl = baseUrlFromRest(rest);
+const anonKey = keyConf.replace(/^Bearer\s+/i,"");
+if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
+
+sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
+auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+});
+diag.add("Supabase: Client (Auth) initialisiert");
+return sbClient;
+}
+
 async function setupRealtime(){
-  const supa = await ensureSupabaseClient();
-  if(!supa) return;
+const supa = await ensureSupabaseClient();
+if(!supa) return;
 
-  // health_entries
-  trackChannel(
-  supa.channel('ch_health_entries')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'health_entries' }, async (payload)=>{
-      const et = payload.eventType; const n = payload.new; const o = payload.old;
-      if(et === 'INSERT' || et === 'UPDATE'){
-        const row = n;
+// health_entries
+trackChannel(
+supa.channel('ch_health_entries')
+.on('postgres_changes', { event: '*', schema: 'public', table: 'health_entries' }, async (payload)=>{
+const et = payload.eventType; const n = payload.new; const o = payload.old;
+if(et === 'INSERT' || et === 'UPDATE'){
+const row = n;
 const mapped = {
-  date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
-  arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
-  weight: row.weight, map: row.map, notes: row.notes,
-  training: row.training, low_intake: row.low_intake, sick: row.sick,
-  valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
-  salt_high: row.salt_high, sugar_high: row.sugar_high,                // <<< hinzufügen
-  remote_id: row.id
+date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
+arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
+weight: row.weight, map: row.map, notes: row.notes,
+training: row.training, low_intake: row.low_intake, sick: row.sick,
+valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
+salt_high: row.salt_high, sugar_high: row.sugar_high, // <<< hinzufügen
+remote_id: row.id
 };
-        const existing = await getEntryByRemoteId(row.id);
-        if(existing){ await updateEntry(existing.id, mapped); }
-        else{ await addEntry(mapped); }
-        await loadAndRender();
-        if(activeDoctorMode()==="daily") await renderDoctor();
-        if(chartPanel.open) chartPanel.draw();
-        diag.add(`Realtime health_entries: ${et}`);
-      }
-      if(et === 'DELETE'){
-        const rid = o?.id;
-        if(rid!=null){
-          const existing = await getEntryByRemoteId(rid);
-          if(existing){ await deleteEntryLocal(existing.id); }
-          await loadAndRender();
-          if(activeDoctorMode()==="daily") await renderDoctor();
-          if(chartPanel.open) chartPanel.draw();
-          diag.add("Realtime health_entries: DELETE");
-        }
-      }
-    })
-    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); })
+const existing = await getEntryByRemoteId(row.id);
+if(existing){ await updateEntry(existing.id, mapped); }
+else{ await addEntry(mapped); }
+await loadAndRender();
+if(activeDoctorMode()==="daily") await renderDoctor();
+if(chartPanel.open) chartPanel.draw();
+diag.add(`Realtime health_entries: ${et}`);
+}
+if(et === 'DELETE'){
+const rid = o?.id;
+if(rid!=null){
+const existing = await getEntryByRemoteId(rid);
+if(existing){ await deleteEntryLocal(existing.id); }
+await loadAndRender();
+if(activeDoctorMode()==="daily") await renderDoctor();
+if(chartPanel.open) chartPanel.draw();
+diag.add("Realtime health_entries: DELETE");
+}
+}
+})
+.subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); })
 );
-  
-  // medical_reports
-  trackChannel(
-  supa.channel('ch_medical_reports')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'medical_reports' }, async (payload)=>{
-      const et = payload.eventType; const n = payload.new; const o = payload.old;
-      if(et === 'INSERT' || et === 'UPDATE'){
-        const row = n;
-        const mapped = {
-          datum: row.datum,
-          kreatinin: row.kreatinin ?? null,
-          egfr: row.egfr ?? null,
-          uacr: row.uacr ?? null,
-          kalium: row.kalium ?? null,
-          cystatin_c: row.cystatin_c ?? null,
-          hba1c: row.hba1c ?? null,
-          ldl: row.ldl ?? null,
-          haematurie: row.haematurie ?? null,
-          kommentar: row.kommentar ?? "",
-          source: row.source ?? "manuell",
-          ts: row.ts ?? new Date((row.datum||'')+"T00:00:00").getTime(),
-          remote_id: row.id
-        };
-        const existing = await getReportByRemoteId(row.id);
-        if(existing){ await updateReport(existing.id, mapped); }
-        else{ await addReport(mapped); }
-        await loadAndRenderReports();
-        if(activeDoctorMode()==="befund") await renderDoctorReports();
-        if(chartReportsPanel.open) chartReportsPanel.draw();
-        diag.add(`Realtime medical_reports: ${et}`);
-      }
-      if(et === 'DELETE'){
-        const rid = o?.id;
-        if(rid!=null){
-          const existing = await getReportByRemoteId(rid);
-          if(existing){ await deleteReportLocal(existing.id); }
-          await loadAndRenderReports();
-          if(activeDoctorMode()==="befund") await renderDoctorReports();
-          if(chartReportsPanel.open) chartReportsPanel.draw();
-          diag.add("Realtime medical_reports: DELETE");
-        }
-      }
-    })
-    .subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); })
+
+// medical_reports
+trackChannel(
+supa.channel('ch_medical_reports')
+.on('postgres_changes', { event: '*', schema: 'public', table: 'medical_reports' }, async (payload)=>{
+const et = payload.eventType; const n = payload.new; const o = payload.old;
+if(et === 'INSERT' || et === 'UPDATE'){
+const row = n;
+const mapped = {
+datum: row.datum,
+kreatinin: row.kreatinin ?? null,
+egfr: row.egfr ?? null,
+uacr: row.uacr ?? null,
+kalium: row.kalium ?? null,
+cystatin_c: row.cystatin_c ?? null,
+hba1c: row.hba1c ?? null,
+ldl: row.ldl ?? null,
+haematurie: row.haematurie ?? null,
+kommentar: row.kommentar ?? "",
+source: row.source ?? "manuell",
+ts: row.ts ?? new Date((row.datum||'')+"T00:00:00").getTime(),
+remote_id: row.id
+};
+const existing = await getReportByRemoteId(row.id);
+if(existing){ await updateReport(existing.id, mapped); }
+else{ await addReport(mapped); }
+await loadAndRenderReports();
+if(activeDoctorMode()==="befund") await renderDoctorReports();
+if(chartReportsPanel.open) chartReportsPanel.draw();
+diag.add(`Realtime medical_reports: ${et}`);
+}
+if(et === 'DELETE'){
+const rid = o?.id;
+if(rid!=null){
+const existing = await getReportByRemoteId(rid);
+if(existing){ await deleteReportLocal(existing.id); }
+await loadAndRenderReports();
+if(activeDoctorMode()==="befund") await renderDoctorReports();
+if(chartReportsPanel.open) chartReportsPanel.draw();
+diag.add("Realtime medical_reports: DELETE");
+}
+}
+})
+.subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime medical_reports: subscribed"); })
 );
-  }
+}
 async function reconcileFromRemote(){
-  // Daily
-  const remoteRows = await pullAllFromRemote();
-  const seen = new Set(remoteRows.map(r=>r.id));
-  for(const r of remoteRows){
+// Daily
+const remoteRows = await pullAllFromRemote();
+const seen = new Set(remoteRows.map(r=>r.id));
+for(const r of remoteRows){
 const mapped = {
-  date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-  arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-  weight: r.weight, map: r.map, notes: r.notes,
-  training: r.training, low_intake: r.low_intake, sick: r.sick,
-  valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-  salt_high: r.salt_high, sugar_high: r.sugar_high,                    // <<< hinzufügen
-  remote_id: r.id
+date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+weight: r.weight, map: r.map, notes: r.notes,
+training: r.training, low_intake: r.low_intake, sick: r.sick,
+valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
+remote_id: r.id
 };
 
-    const existing = await getEntryByRemoteId(r.id);
-    if(existing){ await updateEntry(existing.id, mapped); }
-    else { await addEntry(mapped); }
-  }
-  // Entferne lokale Einträge, die serverseitig gelöscht wurden
-  const allLocal = await getAllEntries();
-  for(const e of allLocal){
-    if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
-  }
-  await loadAndRender();
-  await renderDoctorViewForMode();
-  if(chartPanel.open) chartPanel.draw();
+const existing = await getEntryByRemoteId(r.id);
+if(existing){ await updateEntry(existing.id, mapped); }
+else { await addEntry(mapped); }
+}
+// Entferne lokale Einträge, die serverseitig gelöscht wurden
+const allLocal = await getAllEntries();
+for(const e of allLocal){
+if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
+}
+await loadAndRender();
+await renderDoctorViewForMode();
+if(chartPanel.open) chartPanel.draw();
 }
 async function reconcileReportsFromRemote(){
-  const remoteRows = await pullAllReportsFromRemote();
-  const seen = new Set(remoteRows.map(r=>r.id));
-  for(const r of remoteRows){
+const remoteRows = await pullAllReportsFromRemote();
+const seen = new Set(remoteRows.map(r=>r.id));
+for(const r of remoteRows){
 const mapped = {
-  datum: r.datum,
-  kreatinin: r.kreatinin ?? null,
-  egfr: r.egfr ?? null,
-  uacr: r.uacr ?? null,
-  kalium: r.kalium ?? null,
-  hba1c: r.hba1c ?? null,
-  ldl: r.ldl ?? null,
-  haematurie: r.haematurie ?? null,
-  cystatin_c: r.cystatin_c ?? null,
-  kommentar: r.kommentar ?? "",
-  source: r.source ?? "remote",
-  ts: r.ts ?? new Date((r.datum || '') + "T00:00:00").getTime(),
-  remote_id: r.id
+datum: r.datum,
+kreatinin: r.kreatinin ?? null,
+egfr: r.egfr ?? null,
+uacr: r.uacr ?? null,
+kalium: r.kalium ?? null,
+hba1c: r.hba1c ?? null,
+ldl: r.ldl ?? null,
+haematurie: r.haematurie ?? null,
+cystatin_c: r.cystatin_c ?? null,
+kommentar: r.kommentar ?? "",
+source: r.source ?? "remote",
+ts: r.ts ?? new Date((r.datum || '') + "T00:00:00").getTime(),
+remote_id: r.id
 };
-    const existing = await getReportByRemoteId(r.id);
-    if(existing){ await updateReport(existing.id, mapped); }
-    else{ await addReport(mapped); }
-  }
-  const allLocal = await getAllReports();
-  for(const r of allLocal){
-    if(r.remote_id && !seen.has(r.remote_id)){ await deleteReportLocal(r.id); }
-  }
-  await loadAndRenderReports();
-  if(activeDoctorMode()==="befund") await renderDoctorReports();
-  if(chartReportsPanel.open) chartReportsPanel.draw();
+const existing = await getReportByRemoteId(r.id);
+if(existing){ await updateReport(existing.id, mapped); }
+else{ await addReport(mapped); }
+}
+const allLocal = await getAllReports();
+for(const r of allLocal){
+if(r.remote_id && !seen.has(r.remote_id)){ await deleteReportLocal(r.id); }
+}
+await loadAndRenderReports();
+if(activeDoctorMode()==="befund") await renderDoctorReports();
+if(chartReportsPanel.open) chartReportsPanel.draw();
 }
 async function initialAutoSync(){
-  const headers = await getHeaders();
-  const url = await getConf("webhookUrl");
-  if(!headers || !url){ diag.add("Auto-Sync: keine Konfiguration – übersprungen"); return; }
-  setBusy(true);
-  try{
-    const push = await pushPendingToRemote();
-    if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
-    await reconcileFromRemote();
-    await reconcileReportsFromRemote();
-    diag.add("Auto-Sync: Abgleich fertig (ohne Wipe)");
-  }catch(e){
-    diag.add("Auto-Sync: Fehler – " + (e.message||e));
-  }finally{
-    setBusy(false);
-  }
+const headers = await getHeaders();
+const url = await getConf("webhookUrl");
+if(!headers || !url){ diag.add("Auto-Sync: keine Konfiguration – übersprungen"); return; }
+setBusy(true);
+try{
+const push = await pushPendingToRemote();
+if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
+await reconcileFromRemote();
+await reconcileReportsFromRemote();
+diag.add("Auto-Sync: Abgleich fertig (ohne Wipe)");
+}catch(e){
+diag.add("Auto-Sync: Fehler – " + (e.message||e));
+}finally{
+setBusy(false);
+}
 }
 
 /* ===== Main ===== */
 async function main(){
-  diag.init(); helpPanel.init(); await initDB();
-  try {
-  const haveUrl = await getConf("webhookUrl");
-  const haveKey = await getConf("webhookKey");
-  const haveMr  = await getConf("webhookUrlMr");
-  if (!haveUrl && SUPABASE_URL_DEFAULT)  await putConf("webhookUrl",  DEFAULT_WEBHOOK_ENTRIES);
-  if (!haveMr  && SUPABASE_URL_DEFAULT)  await putConf("webhookUrlMr", DEFAULT_WEBHOOK_REPORTS);
-  if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey",  `Bearer ${SUPABASE_ANON_DEFAULT}`);
+diag.init(); helpPanel.init(); await initDB();
+try {
+const haveUrl = await getConf("webhookUrl");
+const haveKey = await getConf("webhookKey");
+const haveMr = await getConf("webhookUrlMr");
+if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+if (!haveMr && SUPABASE_URL_DEFAULT) await putConf("webhookUrlMr", DEFAULT_WEBHOOK_REPORTS);
+if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
 } catch (_) {}
-  chartPanel.init(); chartReportsPanel.init(); bindTabs();
+chartPanel.init(); chartReportsPanel.init(); bindTabs();
 const listHeaderBtn = document.getElementById('listHeaderBtn');
 if (listHeaderBtn) listHeaderBtn.addEventListener('click', ()=> setTab('list'));
-  $("#date").value = todayStr();
-  $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
-  $("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
-  $("#to").value = todayStr();
-  setTab("capture");
+$("#date").value = todayStr();
+$("#timeM").value = "07:00"; $("#timeA").value = "19:00";
+$("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
+$("#to").value = todayStr();
+setTab("capture");
 await ensureSupabaseClient();
 bindAuthButtons();
 if (sbClient) watchAuthState()
@@ -2436,198 +2324,192 @@ if (sbClient) watchAuthState()
 // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
 if (hasSession) {
-  await afterLoginBoot();
+await afterLoginBoot();
 }
 
-  // Konfiguration laden
-  const savedUrl = await getConf("webhookUrl");
-  const savedKey = await getConf("webhookKey");
-  const savedMrUrl = await getConf("webhookUrlMr");
-  if (savedUrl) $("#whUrl").value = savedUrl;
-  if (savedKey) $("#whKey").value = savedKey;
-  if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
-  if (!savedUrl || !savedKey) {
-  setTab("list"); // Nutzer sieht sofort die Konfig-Sektion
+// Konfiguration laden
+const savedUrl = await getConf("webhookUrl");
+const savedKey = await getConf("webhookKey");
+const savedMrUrl = await getConf("webhookUrlMr");
+if (savedUrl) $("#whUrl").value = savedUrl;
+if (savedKey) $("#whKey").value = savedKey;
+if (savedMrUrl) $("#whUrlMr").value = savedMrUrl;
+if (!savedUrl || !savedKey) {
+setTab("list"); // Nutzer sieht sofort die Konfig-Sektion
 }
 
-  // Sanfte Warnung
-  ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
-    const el = $(sel); if(!el) return;
-    el.addEventListener("input", ()=>{
-      if (sel.includes("sys"))        softWarnRange(el, 70, 220);
-      else if (sel.includes("dia"))   softWarnRange(el, 40, 140);
-      else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
-      else if (sel.includes("weight"))softWarnRange(el, 30, 300);
-    });
-  });
-  
+// Sanfte Warnung
+["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
+const el = $(sel); if(!el) return;
+el.addEventListener("input", ()=>{
+if (sel.includes("sys")) softWarnRange(el, 70, 220);
+else if (sel.includes("dia")) softWarnRange(el, 40, 140);
+else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
+else if (sel.includes("weight"))softWarnRange(el, 30, 300);
+});
+});
+
 // Badge live aktualisieren, wenn Tagesfelder benutzt werden
 const weightEl = $("#weightDay");
-const notesEl  = $("#notesDay");
+const notesEl = $("#notesDay");
 if (weightEl) weightEl.addEventListener("input", updateDaySummaryBadge);
-if (notesEl)  notesEl.addEventListener("input",  updateDaySummaryBadge);
-  
-  // Toggle-Handler
-  const bindToggle = (id, setter, getVal)=>{
-  const el=$(id);
-  el.addEventListener("click", ()=>{
-    setter(!getVal());
-    updateDaySummaryBadge();     // <— HINZUGEFÜGT
-  });
+if (notesEl) notesEl.addEventListener("input", updateDaySummaryBadge);
+
+// Toggle-Handler
+const bindToggle = (id, setter, getVal)=>{
+const el=$(id);
+el.addEventListener("click", ()=>{
+setter(!getVal());
+updateDaySummaryBadge(); // <— HINZUGEFÜGT
+});
 };
-  bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
-  bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
-  bindToggle("#sickToggle", setSick, ()=>sickActive);
-  bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
-  bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
-  bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
-  bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
-  bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
+bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
+bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
+bindToggle("#sickToggle", setSick, ()=>sickActive);
+bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
+bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
+bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
+bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
+bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
-  $("#saveAllBtn").addEventListener("click", saveAll);
-  $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
-  $("#printBtn").addEventListener("click", ()=> window.print());
+$("#saveAllBtn").addEventListener("click", saveAll);
+$("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
+$("#printBtn").addEventListener("click", ()=> window.print());
 
-  $("#doctorChartBtn").addEventListener("click", async ()=>{
-    const mode = activeDoctorMode();
-    if(mode==="daily"){ chartPanel.toggle(); if(chartPanel.open) await chartPanel.draw(); }
-    else { chartReportsPanel.toggle(); if(chartReportsPanel.open) await chartReportsPanel.draw(); }
-  });
+$("#doctorChartBtn").addEventListener("click", async ()=>{
+const mode = activeDoctorMode();
+if(mode==="daily"){ chartPanel.toggle(); if(chartPanel.open) await chartPanel.draw(); }
+else { chartReportsPanel.toggle(); if(chartReportsPanel.open) await chartReportsPanel.draw(); }
+});
 
-  document.addEventListener('keydown', (e)=>{
-    const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-    if(isSave){ e.preventDefault(); saveAll(); }
-  });
+document.addEventListener('keydown', (e)=>{
+const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
+if(isSave){ e.preventDefault(); saveAll(); }
+});
 
-  $("#rangeSel").addEventListener("change", loadAndRender);
-  $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
-  $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
-  $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
+$("#rangeSel").addEventListener("change", loadAndRender);
+$("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
+$("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
+$("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
 
 // --- Save Webhook / Supabase (mit service_role-Guard) ---
 $("#saveWebhook").addEventListener("click", async ()=>{
-  const rawKey = $("#whKey").value.trim();
-  if (isServiceRoleKey(rawKey)) {
-    alert("Der eingetragene API-Key sieht nach einem service_role Key aus – dieser darf NIEMALS im Browser verwendet werden.\n\nBitte einen ANON Public Key verwenden.");
-    return;
-  }
+const rawKey = $("#whKey").value.trim();
+if (isServiceRoleKey(rawKey)) {
+alert("Der eingetragene API-Key sieht nach einem service_role Key aus – dieser darf NIEMALS im Browser verwendet werden.\n\nBitte einen ANON Public Key verwenden.");
+return;
+}
 
-  await putConf("webhookUrl", $("#whUrl").value.trim());
-  await putConf("webhookKey", rawKey);
-  await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
+await putConf("webhookUrl", $("#whUrl").value.trim());
+await putConf("webhookKey", rawKey);
+await putConf("webhookUrlMr", $("#whUrlMr").value.trim());
 
-  $("#whSaved").textContent = "Gespeichert ✓";
-  setTimeout(()=>$("#whSaved").textContent="", 2000);
+$("#whSaved").textContent = "Gespeichert ✓";
+setTimeout(()=>$("#whSaved").textContent="", 2000);
 
-  // Supabase-Client nach neuer Konfig sofort initialisieren
-  await ensureSupabaseClient();
-  const hasSessionNow = await requireSession();
-  if (hasSessionNow) {
-    await afterLoginBoot();
-  }
+// Supabase-Client nach neuer Konfig sofort initialisieren
+await ensureSupabaseClient();
+const hasSessionNow = await requireSession();
+if (hasSessionNow) {
+await afterLoginBoot();
+}
 });
 
 
-  // MANUELLER SYNC (Daily) – bleibt als „Last Resort“
-  $("#syncBtn").addEventListener("click", async ()=>{
-    if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
-    setBusy(true);
-    $("#syncBtn").disabled = true;
-    try{
-      const current = await getAllEntries();
-      dl("backup_vor_sync.csv", toCSV(current), "text/csv");
-      const resPush = await pushPendingToRemote();
-      diag.add(`SYNC: Pending gepusht ? OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-      await wipeAll();
-      const remoteRows = await pullAllFromRemote();
-      for(const r of remoteRows){
+// MANUELLER SYNC (Daily) – bleibt als „Last Resort“
+$("#syncBtn").addEventListener("click", async ()=>{
+if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
+setBusy(true);
+$("#syncBtn").disabled = true;
+try{
+const current = await getAllEntries();
+dl("backup_vor_sync.csv", toCSV(current), "text/csv");
+const resPush = await pushPendingToRemote();
+diag.add(`SYNC: Pending gepusht ? OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+await wipeAll();
+const remoteRows = await pullAllFromRemote();
+for(const r of remoteRows){
 const entry = {
-  date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-  arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-  weight: r.weight, map: r.map, notes: r.notes,
-  training: r.training, low_intake: r.low_intake, sick: r.sick,
-  valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-  salt_high: r.salt_high, sugar_high: r.sugar_high,                    // <<< hinzufügen
-  remote_id: r.id
+date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
+weight: r.weight, map: r.map, notes: r.notes,
+training: r.training, low_intake: r.low_intake, sick: r.sick,
+valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
+remote_id: r.id
 };
 
-        await addEntry(entry);
-      }
-      await loadAndRender(); await renderDoctorViewForMode();
-      if(chartPanel.open) await chartPanel.draw();
-      if(chartReportsPanel.open) await chartReportsPanel.draw();
-      diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
-      alert("Sync abgeschlossen.");
-    }catch(e){
-      console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
-    } finally {
-      $("#syncBtn").disabled = false;
-      setBusy(false);
-    }
-  });
+await addEntry(entry);
+}
+await loadAndRender(); await renderDoctorViewForMode();
+if(chartPanel.open) await chartPanel.draw();
+if(chartReportsPanel.open) await chartReportsPanel.draw();
+diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
+alert("Sync abgeschlossen.");
+}catch(e){
+console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
+} finally {
+$("#syncBtn").disabled = false;
+setBusy(false);
+}
+});
 
-  // Bind Segmented Controls
-  bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
+// Bind Segmented Controls
+bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
 
-  // Befund speichern
-  $("#saveReportBtn").addEventListener("click", saveReport);
+// Befund speichern
+$("#saveReportBtn").addEventListener("click", saveReport);
 
-  // Initial Render
-  await loadAndRender(); await renderDoctor();
+// Initial Render
+await loadAndRender(); await renderDoctor();
 
 function daySummaryActive(){
-  const w = ($("#weightDay")?.value || "").trim();
-  const n = ($("#notesDay")?.value  || "").trim();
-  return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
-            valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
+const w = ($("#weightDay")?.value || "").trim();
+const n = ($("#notesDay")?.value || "").trim();
+return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
+valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
 }
 
 // In main(), direkt nach updateDaySummaryBadge():
 updateDaySummaryBadge();
 const disableVitals = daySummaryActive();
 ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
-  const el = $(sel);
-  if (!el) return;
-  el.disabled = disableVitals;
-  el.style.opacity = disableVitals ? 0.6 : 1;
+const el = $(sel);
+if (!el) return;
+el.disabled = disableVitals;
+el.style.opacity = disableVitals ? 0.6 : 1;
 });
 
-  // Auto-Push Pending sobald online
-  window.addEventListener('online', async ()=>{
-    const resPush = await pushPendingToRemote();
-    if(resPush.pushed || resPush.failed){
-      diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-      await reconcileFromRemote();
-      await reconcileReportsFromRemote();
-    }
-  });
+// Auto-Push Pending sobald online
+window.addEventListener('online', async ()=>{
+const resPush = await pushPendingToRemote();
+if(resPush.pushed || resPush.failed){
+diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+await reconcileFromRemote();
+await reconcileReportsFromRemote();
+}
+});
 }
 
 /* boot */
 if (document.readyState === "loading") {
-  window.addEventListener("DOMContentLoaded", main);
+window.addEventListener("DOMContentLoaded", main);
 } else {
-  main();
+main();
 }
 
 /* === Debug-Notizen
- - V1.4: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
- - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
- - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
- - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
+- V1.3: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+- Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
+- Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
+- UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
-  <!-- Google-Login (einfach) -->
+<!-- Google-Login (einfach) -->
 <div id="loginBar" style="position:fixed;left:8px;bottom:8px;z-index:10000;display:none;gap:8px">
-  <button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
-  <span id="whoAmI" class="small" style="margin-left:8px"></span>
-  <button class="btn ghost" id="logoutBtn" type="button" style="display:none">Abmelden</button>
+<button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
+<span id="whoAmI" class="small" style="margin-left:8px"></span>
+<button class="btn ghost" id="logoutBtn" type="button" style="display:none">Abmelden</button>
 </div>
 </body>
 </html>
-
-
-
-
-
-
