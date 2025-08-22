@@ -32,7 +32,8 @@
   .btn.warn{background:var(--warn);color:#1a1200}
   .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 
-  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
+  .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1.1s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
+
   @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 @keyframes flashPop {
   0%   { transform: scale(1) }
@@ -341,7 +342,7 @@
       <button class="btn ghost half" id="refreshChart" type="button">Neu zeichnen</button>
       <button class="btn ghost half" id="savePng" type="button">PNG speichern</button>
     </div>
-    <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
+    <svg id="chartSvg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
     <div class="legend" id="chartLegend"></div>
     <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
   </div>
@@ -1555,22 +1556,34 @@ async draw(){
   const t0 = performance.now();
 
   // 1) Daten filtern (wie bisher)
-  const entries = await this.getFiltered();
+// 1) Daten filtern
+const entries = await this.getFiltered();
 
-  // Fallback: wenn nichts da, Meldung
-  this.svg.innerHTML = ""; this.legend.innerHTML = "";
-  if (!entries.length){
-    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
-    return;
-  }
+// Zeichenfläche und Legende sicher leeren
+this.svg.innerHTML = "";
+this.legend.innerHTML = "";
+
+// Nichts zu plotten?
+if (!entries.length){
+  this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+  return;
+}
 
   // 2) Tagesliste (geschlossener Bereich) bestimmen
   const fromISO = $("#from").value || entries[0].date;
   const toISO   = $("#to").value   || entries[entries.length-1].date;
 
   const dayMillis = 24*3600*1000;
-  const start = new Date(fromISO+"T00:00:00").getTime();
-  const end   = new Date(toISO+"T00:00:00").getTime();
+const dayMillis = 24*3600*1000;
+let start = new Date(fromISO+"T00:00:00").getTime();
+let end   = new Date(toISO+"T00:00:00").getTime();
+
+// Falls Bereich versehentlich vertauscht ist → korrigieren
+if (isFinite(start) && isFinite(end) && end < start) {
+  const tmp = start; start = end; end = tmp;
+  diag.add("Chart: Datumsspanne getauscht (Bis < Von)");
+}
+
   const daysCount = Math.max(1, Math.round((end - start)/dayMillis)+1);
 
   const dayIsoAt = i => {
@@ -1623,6 +1636,7 @@ async draw(){
   const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
   const innerW=W-PL-PR, innerH=H-PT-PB;
   const x = i => PL + (i / Math.max(1,daysCount-1)) * innerW;
+  diag.add(`Chart: Tage=${daysCount}, entries=${entries.length}, Range=${fromISO}..${toISO}`);
 
   // Y‑Skalen (Linien separat von Balken)
   const lineVals = [
@@ -2611,6 +2625,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
