@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.3)</title>
+<title>Gesundheits-Logger (V1.4)</title>
 <style>
 body.auth-locked main{ opacity:.6; }
 :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
@@ -284,7 +284,7 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <body>
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.3</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -2499,7 +2499,7 @@ main();
 }
 
 /* === Debug-Notizen
-- V1.3: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+- V1.4: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
 - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
