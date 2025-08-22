@@ -1607,65 +1607,6 @@ grid += text(xx, H-8, lbl, "middle");
 grid += line(PL,PT,PL,H-PB,"#2b2f3a");
 grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
 this.svg.insertAdjacentHTML("beforeend", grid);
-
-// === FLAG-BACKGROUND (gestackte Balken: Training [0..1] grün + Bad [1..8] rot) ===
-{
-  const svgEl = this.svg;
-  const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
-  const innerW=W-PL-PR, innerH=H-PT-PB;
-
-  // Eigene Y-Skala für Flags (immer 0..8), unabhängig von BP-Achse:
-  const yFlag = v => PT + (1 - (Math.max(0, Math.min(8, v)) / 8)) * innerH;
-
-  // Balkenbreite: an Tagesanzahl orientieren, leicht schmäler als der Tagsslot
-  const dayCount = Math.max(1, xs.filter(Boolean).length);
-  const barW = Math.max(2, (innerW / dayCount) * 0.6);
-
-  // Flag-Zähler (Training separat, Bad = Summe)
-  const countFlags = (e) => {
-    const training = e?.training ? 1 : 0;
-    const bad =
-      (e?.sick?1:0) +
-      (e?.valsartanMiss?1:0) +
-      (e?.forxigaMiss?1:0) +
-      (e?.lowIntake?1:0) +
-      (e?.saltHigh?1:0) +
-      (e?.sugarHigh?1:0) +
-      (e?.nsar?1:0);
-    return { training, bad };
-  };
-
-  // Rechtecke aufbauen
-  let bars = "";
-  (data||[]).forEach((e,i) => {
-    const t = xs[i];
-    if (!t || !Number.isFinite(t)) return;
-    const xx = PL + ((t - Math.min(...xs.filter(Boolean))) / Math.max(1,(Math.max(...xs.filter(Boolean)) - Math.min(...xs.filter(Boolean))))) * innerW;
-
-    const {training, bad} = countFlags(e);
-    if (training===0 && bad===0) return;
-
-    // Training: von 0 -> training (grün, ~35% Deckkraft)
-    if (training > 0){
-      const yTop = yFlag(training);
-      const yBase = yFlag(0);
-      const h = Math.max(0, yBase - yTop);
-      bars += `<rect x="${(xx - barW/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="#10b981" opacity="0.35" rx="2" />`;
-    }
-    // Bad: von training -> training+bad (rot, ~35% Deckkraft)
-    if (bad > 0){
-      const yTop = yFlag(training + bad);
-      const yBase = yFlag(training);
-      const h = Math.max(0, yBase - yTop);
-      bars += `<rect x="${(xx - barW/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="#ef4444" opacity="0.35" rx="2" />`;
-    }
-  });
-
-  // Erst Flags einfügen (Hintergrund), dann Linien kommen danach wie gehabt
-  svgEl.insertAdjacentHTML("beforeend", bars);
-}
-  
-// === /FLAG-BACKGROUND ===
 function pathFor(values, color){
 let d = "";
 values.forEach((v,i)=>{ if(v==null || !xs[i]) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(xs[i]).toFixed(1)},${y(v).toFixed(1)} `; });
