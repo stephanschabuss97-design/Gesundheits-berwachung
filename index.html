@@ -1551,236 +1551,180 @@ const chartPanel = {
       out.push(c?sum/c:null);
     } return out;
   },
-  async draw(){
-    const __t0 = performance.now();
-    const metric = $("#metricSel").value;
-    const data = await this.getFiltered();
+async draw(){
+  const t0 = performance.now();
 
-    // Helper: Datum -> "YYYY-MM-DD"
-    const dstr = (t)=> {
-      const d = new Date(t);
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,"0");
-      const dd= String(d.getDate()).padStart(2,"0");
-      return `${y}-${m}-${dd}`;
-    };
+  // 1) Daten filtern (wie bisher)
+  const entries = await this.getFiltered();
 
-    // Panel leeren
-    this.svg.innerHTML=""; 
-    this.legend.innerHTML="";
+  // Fallback: wenn nichts da, Meldung
+  this.svg.innerHTML = ""; this.legend.innerHTML = "";
+  if (!entries.length){
+    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+    return;
+  }
 
-    // ---- Gemeinsame Layout-Metriken ----
-    const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
-    const innerW=W-PL-PR, innerH=H-PT-PB;
+  // 2) Tagesliste (geschlossener Bereich) bestimmen
+  const fromISO = $("#from").value || entries[0].date;
+  const toISO   = $("#to").value   || entries[entries.length-1].date;
 
-    // Zeitraum
-    const xsRaw = data.map(e => (e.ts ?? Date.parse(e.dateTime))).filter(Boolean);
-    if (!xsRaw.length){
-      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
-      return;
+  const dayMillis = 24*3600*1000;
+  const start = new Date(fromISO+"T00:00:00").getTime();
+  const end   = new Date(toISO+"T00:00:00").getTime();
+  const daysCount = Math.max(1, Math.round((end - start)/dayMillis)+1);
+
+  const dayIsoAt = i => {
+    const d = new Date(start + i*dayMillis);
+    return d.toISOString().slice(0,10); // YYYY-MM-DD
+  };
+
+  // 3) Pro Tag aggregieren (Ø Sys/Dia + Flags)
+  const sysAvg = new Array(daysCount).fill(null);
+  const diaAvg = new Array(daysCount).fill(null);
+  const trainBar = new Array(daysCount).fill(0); // 0/1
+  const badBar   = new Array(daysCount).fill(0); // Summe Bad-Flags
+
+  for (let i=0; i<daysCount; i++){
+    const iso = dayIsoAt(i);
+    const dayEntries = entries.filter(e => e.date === iso);
+
+    // Ø/Tag nur aus vorhandenen Messungen
+    const sysVals = dayEntries.map(e => e.sys).filter(v => v!=null && !isNaN(v)).map(Number);
+    const diaVals = dayEntries.map(e => e.dia).filter(v => v!=null && !isNaN(v)).map(Number);
+    if (sysVals.length) sysAvg[i] = sysVals.reduce((a,b)=>a+b,0) / sysVals.length;
+    if (diaVals.length) diaAvg[i] = diaVals.reduce((a,b)=>a+b,0) / diaVals.length;
+
+    // Flags: Training separat (0/1), Bad = Anzahl verschiedener "negativen" Flags
+    const anyTrain = dayEntries.some(e => !!e.training);
+
+    const anyLow   = dayEntries.some(e => !!e.low_intake);
+    const anySalt  = dayEntries.some(e => !!e.salt_high);
+    const anySugar = dayEntries.some(e => !!e.sugar_high);
+    const anySick  = dayEntries.some(e => !!e.sick);
+    const anyVal   = dayEntries.some(e => !!e.valsartan_missed);
+    const anyFor   = dayEntries.some(e => !!e.forxiga_missed);
+    const anyNsar  = dayEntries.some(e => !!e.nsar_taken);
+
+    const badCount = [anyLow,anySalt,anySugar,anySick,anyVal,anyFor,anyNsar].reduce((n,b)=> n + (b?1:0), 0);
+
+    trainBar[i] = anyTrain ? 1 : 0;
+    badBar[i]   = badCount;
+  }
+
+  // Prüfen: gibt es irgendetwas zu zeichnen?
+  const hasLines = (sysAvg.some(v=>v!=null) || diaAvg.some(v=>v!=null));
+  const hasBars  = (trainBar.some(v=>v>0) || badBar.some(v=>v>0));
+  if (!hasLines && !hasBars){
+    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+    return;
+  }
+
+  // 4) Zeichenfläche
+  const W=800, H=320, PL=56, PR=20, PT=14, PB=34;
+  const innerW=W-PL-PR, innerH=H-PT-PB;
+  const x = i => PL + (i / Math.max(1,daysCount-1)) * innerW;
+
+  // Y‑Skalen (Linien separat von Balken)
+  const lineVals = [
+    ...sysAvg.filter(v=>v!=null),
+    ...diaAvg.filter(v=>v!=null),
+  ];
+  const ymin = lineVals.length ? Math.min(...lineVals) : 0;
+  const ymax = lineVals.length ? Math.max(...lineVals) : 1;
+  const ypad = Math.max((ymax-ymin)*0.08, 1);
+  const y0 = ymin - ypad, y1max = ymax + ypad;
+  const yLine = v => PT + (1 - ((v - y0) / Math.max(1,(y1max - y0)))) * innerH;
+
+  // Bars (kleine Höhe, damit „Hintergrund“ bleibt)
+  const barMax = Math.max(1, Math.max(...trainBar, ...badBar)); // z.B. 7
+  const barAreaH = Math.min(60, innerH*0.35);                   // reservierter Bereich unten
+  const barBaseY = H - PB;                                      // X‑Achse
+  const yBar = v => barBaseY - (v/barMax) * barAreaH;
+  const barWidth = Math.max(2, innerW / Math.max(15, daysCount) * 0.6);
+
+  // Utilities
+  function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
+  function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
+
+  // 5) Grid + Achsen
+  let grid = "";
+  const ticks = 4;
+  for(let i=0;i<=ticks;i++){
+    const vv = y0 + (i*(y1max-y0)/ticks);
+    const yy = yLine(vv);
+    grid += line(PL,yy,W-PR,yy,"#22262f");
+    grid += text(PL-6,yy+4, Math.round(vv).toString());
+  }
+  // Wochen‑Hilfslinien (falls Zeitspanne groß)
+  const tickEvery = Math.ceil(daysCount/8); // ~8 Datumstexte max
+  for(let i=0;i<daysCount;i+=tickEvery){
+    const xx = x(i);
+    grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+    const d = new Date(start + i*dayMillis);
+    const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
+    grid += text(xx, H-8, lbl, "middle");
+  }
+  grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+  grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+  this.svg.insertAdjacentHTML("beforeend", grid);
+
+  // 6) Hintergrund‑Balken (erst Training, dann BadFlags – damit Bad vorne liegt)
+  let barsSvg = "";
+  for(let i=0;i<daysCount;i++){
+    const cx = x(i) - barWidth/2;
+    if (trainBar[i] > 0){
+      barsSvg += `<rect x="${cx}" y="${yBar(trainBar[i]).toFixed(1)}" width="${barWidth}" height="${(barBaseY - yBar(trainBar[i])).toFixed(1)}" fill="#34d399" opacity="0.25" />`;
     }
-    const xmin = Math.min(...xsRaw), xmax = Math.max(...xsRaw);
-
-    // Erzeuge lückenlose Tages-Buckets zwischen from/to
-    const fromISO = $("#from").value;
-    const toISO   = $("#to").value;
-    const start   = new Date(fromISO || dstr(xmin)); start.setHours(12,0,0,0);
-    const end     = new Date(toISO   || dstr(xmax)); end.setHours(12,0,0,0);
-
-    const days = [];
-    for(let t = +start; t <= +end; t += 24*3600*1000){
-      days.push(t);
+    if (badBar[i] > 0){
+      barsSvg += `<rect x="${cx}" y="${yBar(badBar[i]).toFixed(1)}" width="${barWidth}" height="${(barBaseY - yBar(badBar[i])).toFixed(1)}" fill="#f87171" opacity="0.28" />`;
     }
+  }
+  this.svg.insertAdjacentHTML("beforeend", barsSvg);
 
-    // Tagesaggregation
-    // - Ø Sys/Dia (über alle Messungen des Tages)
-    // - Flags: good = Training? 1:0, bad = Anzahl der gesetzten Bad-Flag-Kategorien (einmal pro Tag)
-    const dayMap = new Map(days.map(t => [dstr(t), {
-      ts:t, syss:[], dias:[], 
-      anyTraining:false,
-      badCats: new Set() // sammelt Namen, wird am Ende zu count
-    }]));
+  // 7) Linien + Punkte (Sys/Dia Ø/Tag)
+  function pathFor(values, color){
+    let d = "";
+    values.forEach((v,i)=>{ if(v==null) return; const cmd = (d==="" ? "M" : "L"); d += `${cmd}${x(i).toFixed(1)},${yLine(v).toFixed(1)} `; });
+    return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+  }
+  function dots(values, color){
+    let out=""; values.forEach((v,i)=>{ if(v==null) return; out += `<circle cx="${x(i).toFixed(1)}" cy="${yLine(v).toFixed(1)}" r="2.2" fill="${color}" />`; });
+    return out;
+  }
 
-    for(const e of data){
-      const key = dstr(e.ts ?? Date.parse(e.dateTime));
-      const b = dayMap.get(key);
-      if(!b) continue;
+  const series = [
+    {name:"Systolisch (Ø/Tag)", values: sysAvg, color:"#60a5fa"},
+    {name:"Diastolisch (Ø/Tag)", values: diaAvg, color:"#f472b6"}
+  ];
 
-      // Messungen sammeln
-      if(e.sys!=null && e.dia!=null){
-        b.syss.push(Number(e.sys));
-        b.dias.push(Number(e.dia));
-      }
+  const hasAnyLine = series.some(s => s.values.some(v=>v!=null));
+  if (!hasAnyLine && !hasBars){
+    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+    return;
+  }
 
-      // Flags einsammeln
-      if (e.training) b.anyTraining = true;
-      // Bad-Kategorien (einmal pro Tag zählen)
-      if (e.low_intake)       b.badCats.add("low_intake");
-      if (e.salt_high)        b.badCats.add("salt_high");
-      if (e.sugar_high)       b.badCats.add("sugar_high");
-      if (e.sick)             b.badCats.add("sick");
-      if (e.valsartan_missed) b.badCats.add("valsartan_missed");
-      if (e.forxiga_missed)   b.badCats.add("forxiga_missed");
-      if (e.nsar_taken)       b.badCats.add("nsar_taken");
-    }
+  series.forEach(s=>{
+    this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
+    this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+  });
 
-    const daySeries = days.map(t=>{
-      const b = dayMap.get(dstr(t));
-      const avg = (arr)=> arr.length ? (arr.reduce((a,c)=>a+c,0)/arr.length) : null;
-      return {
-        ts: t,
-        sys: avg(b.syss),
-        dia: avg(b.dias),
-        good: b.anyTraining ? 1 : 0,
-        bad: b.badCats.size
-      };
-    });
+  // 8) Legende
+  const makeLegendItem = (label, color) => {
+    const dot = document.createElement("span"); dot.className="dot"; dot.style.background=color;
+    const text = document.createElement("span"); text.textContent = label;
+    const wrap = document.createElement("span");
+    wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
+    wrap.appendChild(dot); wrap.appendChild(text);
+    this.legend.appendChild(wrap);
+  };
+  makeLegendItem("Systolisch (Ø/Tag)", "#60a5fa");
+  makeLegendItem("Diastolisch (Ø/Tag)", "#f472b6");
+  makeLegendItem("Training", "#34d399");
+  makeLegendItem("Bad Flags", "#f87171");
 
-    // ---- Achsen / Skalen (links: Blutdruck, rechts: Flags) ----
-    // Blutdruck-Min/Max aus vorhandenen Ø-Values
-    const allSys = daySeries.map(d=>d.sys).filter(v=>v!=null);
-    const allDia = daySeries.map(d=>d.dia).filter(v=>v!=null);
-    const allBP  = allSys.concat(allDia);
-    if(!allBP.length){
-      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine Blutdruckwerte im Zeitraum</text>`;
-      return;
-    }
-    const ymin = Math.min(...allBP);
-    const ymax = Math.max(...allBP);
-    const ypad = Math.max( (ymax-ymin)*0.08, 1 );
-    const y0 = ymin - ypad, y1max = ymax + ypad;
-
-    const x = t => PL + ( (t - +start) / Math.max(1,(+end - +start)) ) * innerW;
-    const y = v => PT + (1 - ( (v - y0) / Math.max(1,(y1max - y0)) )) * innerH;
-
-    // Flags: Max für rechtes "unsichtbares" Y
-    const maxGood = 1;                        // training ist 0/1
-    const maxBad  = Math.max(...daySeries.map(d=>d.bad), 0);
-    const flagsMax = Math.max(maxGood + maxBad, 1);
-    const yF = v => PT + (1 - ( v / flagsMax )) * innerH;
-
-    // ---- Grid (nur linke mmHg-Ticks + Wochenlinien) ----
-    function line(x1,y1,x2,y2, stroke, dash=""){ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`; }
-    function text(tx,ty,str,anchor="end"){ return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`; }
-
-    let grid = "";
-    const ticks = 4;
-    for(let i=0;i<=ticks;i++){
-      const vv = y0 + (i*(y1max-y0)/ticks);
-      const yy = y(vv);
-      grid += line(PL,yy,W-PR,yy,"#22262f");
-      grid += text(PL-6,yy+4, Math.round(vv).toString());
-    }
-    // Wochenmarken
-    const week = 7*24*3600*1000;
-    let startW = +start - (+start % week) + week;
-    for(let t=startW; t<+end; t+=week){
-      const xx = x(t);
-      grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
-      const d = new Date(t);
-      const lbl = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.`;
-      grid += text(xx, H-8, lbl, "middle");
-    }
-    grid += line(PL,PT,PL,H-PB,"#2b2f3a");
-    grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
-    this.svg.insertAdjacentHTML("beforeend", grid);
-
-    // ---- Hintergrund: Stacked Bars (good / bad) mit Transparenz ----
-    // Balkenbreite: ~60% der Tageslücke
-    const gap = days.length>1 ? (x(days[1]) - x(days[0])) : 6;
-    const bw = Math.max(3, gap * 0.6);
-
-    let bars = "";
-    const colGood = "rgba(52, 211, 153, 0.28)";  // #34d399 @ 28% (grünlich)
-    const colBad  = "rgba(245, 158, 11, 0.30)";  // #f59e0b @ 30% (orange)
-
-    daySeries.forEach(d=>{
-      const cx = x(d.ts);
-      // good unten
-      if (d.good>0){
-        const h = yF(d.good) - yF(0);
-        bars += `<rect x="${(cx - bw/2).toFixed(1)}" y="${yF(d.good).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${colGood}" />`;
-      }
-      // bad oben drauf (stack)
-      if (d.bad>0){
-        const hTot = yF(d.good + d.bad);
-        const hTop = (yF(0) - hTot);
-        bars += `<rect x="${(cx - bw/2).toFixed(1)}" y="${hTot.toFixed(1)}" width="${bw.toFixed(1)}" height="${hTop.toFixed(1)}" fill="${colBad}" />`;
-      }
-    });
-    this.svg.insertAdjacentHTML("afterbegin", bars); // hinter die Linien
-
-    // ---- Vordergrund: Blutdruck-Linien (Ø pro Tag) ----
-    const sysVals = daySeries.map(d=>d.sys);
-    const diaVals = daySeries.map(d=>d.dia);
-
-    // Optional glätten
-    const ma = (arr, k=3)=>{
-      if(!$("#smoothChk").checked || k<=1) return arr;
-      const out=[]; 
-      for(let i=0;i<arr.length;i++){
-        const s = Math.max(0,i-Math.floor(k/2));
-        const e = Math.min(arr.length-1,i+Math.floor(k/2));
-        let sum=0, c=0; 
-        for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
-        out.push(c?sum/c:null);
-      } 
-      return out;
-    };
-
-    const sysSm = ma(sysVals), diaSm = ma(diaVals);
-
-    const pathFor = (values, color)=>{
-      let d = "";
-      values.forEach((v,i)=>{
-        if(v==null) return;
-        const cmd = (d==="" ? "M" : "L");
-        d += `${cmd}${x(days[i]).toFixed(1)},${y(v).toFixed(1)} `;
-      });
-      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-    };
-    const dots = (values, color)=>{
-      let out=""; 
-      values.forEach((v,i)=>{ 
-        if(v==null) return; 
-        out += `<circle cx="${x(days[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.2" fill="${color}" />`; 
-      });
-      return out;
-    };
-
-    // Farben wie gehabt
-    const colSys = "#60a5fa"; // blau
-    const colDia = "#f472b6"; // pink
-
-    this.svg.insertAdjacentHTML("beforeend", pathFor(sysSm, colSys));
-    this.svg.insertAdjacentHTML("beforeend", pathFor(diaSm, colDia));
-    this.svg.insertAdjacentHTML("beforeend", dots(sysSm, colSys));
-    this.svg.insertAdjacentHTML("beforeend", dots(diaSm, colDia));
-
-    // Legende
-    const addLegend = (label, color, isBar=false)=>{
-      const dot = document.createElement("span"); 
-      dot.className="dot"; 
-      dot.style.background=color;
-      dot.style.border = isBar ? "1px solid #000" : dot.style.border;
-      const span = document.createElement("span"); 
-      span.textContent = label;
-      const wrap = document.createElement("span"); 
-      wrap.style.display="inline-flex"; 
-      wrap.style.alignItems="center"; 
-      wrap.style.gap="6px";
-      wrap.appendChild(dot); wrap.appendChild(span); 
-      this.legend.appendChild(wrap);
-    };
-    addLegend("Systolisch (Ø/Tag)", colSys);
-    addLegend("Diastolisch (Ø/Tag)", colDia);
-    addLegend("Training", "rgba(52, 211, 153, 0.50)", true);
-    addLegend("Bad Flags", "rgba(245, 158, 11, 0.55)", true);
-
-    // Perf-Log
-    const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.snap('drawChart'));
-    diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
-  },
+  const sPerf = (perfStats.add('drawChartV2', performance.now()-t0), perfStats.snap('drawChartV2'));
+  diag.add(`[perf] drawChart V2 p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+}
   
   async savePNG(){
     const svgEl = this.svg;
@@ -2667,6 +2611,7 @@ if (document.readyState === "loading") {
 </div>
 </body>
 </html>
+
 
 
 
