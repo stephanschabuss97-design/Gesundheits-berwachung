@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.4)</title>
 <style>
-body.auth-locked main{ opacity:.6; }
+body.auth-locked main{ opacity:.6; /* pointer-events:none;  <-- vorerst deaktiviert */ }
 :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -2677,12 +2677,12 @@ main();
 - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
 === */
 </script>
-<!-- Google-Login (einfach) -->
-<div id="loginBar" style="position:fixed;left:8px;bottom:8px;z-index:10000;display:none;gap:8px">
-<button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
-<span id="whoAmI" class="small" style="margin-left:8px"></span>
-<button class="btn ghost" id="logoutBtn" type="button" style="display:none">Abmelden</button>
+<!-- Login-Bar (klein & klickbar, blockiert nichts) -->
+<div id="loginBar" style="position:fixed; bottom:8px; left:8px; display:flex; gap:8px; z-index:10000">
+  <button id="loginBtn" class="btn primary" type="button">Login</button>
+  <button id="logoutBtn" class="btn ghost hidden" type="button">Logout</button>
 </div>
 </body>
 </html>
+
 
