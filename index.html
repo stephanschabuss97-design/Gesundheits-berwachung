@@ -506,6 +506,7 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <button class="btn ghost" id="exportJson" type="button">Export JSON</button>
 <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
 <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
+<button class="btn warn" id="hardResetBtn" type="button" title="Cookies + Cache löschen, Seite neu laden">Seite frisch laden</button>
 </div>
 
 <div class="seg" id="seg-list">
@@ -2391,6 +2392,29 @@ $("#rangeSel").addEventListener("change", loadAndRender);
 $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
 $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
 $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
+  $("#hardResetBtn").addEventListener("click", async () => {
+  if (!confirm("App-Daten (Cache + Cookies) für diese Seite löschen und frisch laden?")) return;
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister().catch(()=>{})));
+    }
+    if (window.caches?.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k).catch(()=>{})));
+    }
+    try { localStorage.clear(); } catch {}
+    try { sessionStorage.clear(); } catch {}
+    document.cookie.split(';').forEach(c => {
+      const name = c.split('=')[0].trim();
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    });
+  } finally {
+    const url = new URL(location.href);
+    url.searchParams.set('fresh', Date.now());
+    location.replace(url.toString());
+  }
+});
 
 // --- Save Webhook / Supabase (mit service_role-Guard) ---
 $("#saveWebhook").addEventListener("click", async ()=>{
@@ -2513,4 +2537,5 @@ main();
 </div>
 </body>
 </html>
+
 
