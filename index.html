@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4)</title>
+<title>Gesundheits-Logger (V1.5)</title>
 <style>
 body.auth-locked main{ opacity:.6; }
 :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
@@ -284,7 +284,7 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <body>
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -494,82 +494,8 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <section class="view" id="list">
 <section class="card">
 <div class="toolbar">
-<strong>Deine Einträge (Bearbeiten/Export)</strong>
-<div class="spacer"></div>
-<select id="rangeSel">
-<option value="all">alle</option>
-<option value="7">letzte 7 Tage</option>
-<option value="30">letzte 30 Tage</option>
-<option value="90">letzte 90 Tage</option>
-</select>
-<button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
-<button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-<button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
-<button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
 <button class="btn warn" id="hardResetBtn" type="button" title="Cookies + Cache löschen, Seite neu laden">Seite frisch laden</button>
 </div>
-
-<div class="seg" id="seg-list">
-<button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
-<button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
-</div>
-
-<!-- Wrapper Daily -->
-<div style="overflow:auto" id="listDailyWrap">
-<table id="tbl">
-<thead>
-<tr>
-<th class="nowrap">Datum</th>
-<th class="nowrap">Zeit</th>
-<th>Art</th>
-<th class="center nowrap">Syst</th>
-<th class="center nowrap">Diast</th>
-<th class="center nowrap">Puls</th>
-<th class="center nowrap">Gewicht</th>
-<th class="center nowrap">MAP</th>
-<th>Notizen</th>
-<th class="center nowrap">Training</th>
-<th class="center nowrap">&lt; 2 L</th>
-<th class="center nowrap">Krank</th>
-<th class="center nowrap">Valsartan ?</th>
-<th class="center nowrap">Forxiga ?</th>
-<th class="center nowrap">NSAR</th>
-<th class="center nowrap">Salz &gt; 5 g</th>
-<th class="center nowrap">Zucker &gt; 10 g</th>
-<th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
-
-<th>Aktion</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-<!-- Wrapper Befunde -->
-<div style="overflow:auto" id="listReportWrap" class="hidden">
-<table id="tblReports">
-<thead>
-<tr>
-<th class="nowrap">Datum</th>
-<th class="center">Kreatinin</th>
-<th class="center">eGFR</th>
-<th class="center">uACR</th>
-<th class="center">Kalium</th>
-<th class="center">Cystatin&nbsp;C</th>
-<th class="center">Hämaturie</th>
-<th class="center">LDL</th>
-<th class="center">HbA1c</th>
-<th>Kommentar</th>
-<th class="center">Cloud</th>
-<th class="nowrap">Aktion</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-<div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
-</section>
 
 <!-- Webhook-Konfiguration -->
 <section class="card" id="webhookCard">
@@ -1114,235 +1040,7 @@ __booted = true;
 await initialAutoSync();
 await teardownRealtime();
 await setupRealtime();;
-await loadAndRender();
 await renderDoctor();
-}
-
-/* ===== CSV/JSON export (Daily) ===== */
-function toCSV(entries){
-const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
-const rows = entries.map(e=>{
-const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = !isDaySummary && !isTrainingOnly;
-
-const art = isDaySummary
-? "Tageszusammenfassung"
-: (isTrainingOnly ? "Training" : "Messung");
-
-const notesText = isTrainingOnly
-? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
-
-const zeitLabel =
-isDaySummary
-? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-: (e.context === "Morgen" ? `${e.time} (Morgens)` :
-e.context === "Abend" ? `${e.time} (Abends)` : e.time);
-
-const notes = isTrainingOnly
-? ("🗓️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
-
-return [
-e.date, e.time, art,
-isMeasurement ? (e.sys ?? "") : "",
-isMeasurement ? (e.dia ?? "") : "",
-isMeasurement ? (e.pulse ?? "") : "",
-isDaySummary ? (e.weight ?? "") : "",
-isMeasurement ? (e.map ?? "") : "",
-notes,
-e.training ? "Ja" : "",
-e.low_intake ? "Ja" : "",
-e.sick ? "Ja":"", 
-e.valsartan_missed ? "Ja" : "", 
-e.forxiga_missed ? "Ja" : "",
-e.nsar_taken ? "Ja" : "",
-e.salt_high ? "Ja" : "",
-e.sugar_high ? "Ja" : "",
-e.dateTime, 
-e.id,
-e.remote_id ?? ""
-
-];
-});
-const csv = [
-header.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","),
-...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(","))
-].join("\n");
-return csv;
-}
-function dl(filename, content, mime){
-const a = document.createElement("a");
-a.href = URL.createObjectURL(new Blob([content], {type:mime}));
-a.download = filename;
-a.click();
-URL.revokeObjectURL(a.href);
-}
-
-/* ===== List rendering (Daily) ===== */
-function withinDays(dateISO, days){
-if (days==="all") return true;
-const d = new Date(dateISO+"T00:00:00");
-const now = new Date(); const diff = (now - d)/(1000*60*60*24);
-return diff <= Number(days);
-}
-function compareForList(a, b){
-if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-if (a.time < b.time) return -1;
-if (a.time > b.time) return 1;
-return 0;
-}
-function renderTable(entries){
-const days = $("#rangeSel").value;
-const tbody = $("#tbl tbody");
-tbody.innerHTML = "";
-
-const list = entries
-.filter(e => withinDays(e.date, days))
-.sort(compareForList);
-
-list.forEach(e=>{
-const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
-const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = !isDaySummary && !isTrainingOnly;
-
-const art = isDaySummary ? "Tageszusammenfassung" : (isTrainingOnly ? "Training" : "Messung");
-
-const zeitLabel = isDaySummary
-? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-: (e.context === "Morgen" ? `${e.time} (Morgens)` :
-e.context === "Abend" ? `${e.time} (Abends)` : e.time);
-
-const synced = e.remote_id ? "☁️" : "";
-const notesText = isTrainingOnly
-? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
-
-const tr = document.createElement("tr");
-tr.innerHTML = `
-<td class="nowrap">${e.date}</td>
-<td class="nowrap">${zeitLabel}</td>
-<td>${art}</td>
-<td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
-<td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
-<td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
-<td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
-<td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
-<td class="notes">${nl2br(notesText)}</td>
-<td class="center">${e.training ? "Ja" : ""}</td>
-<td class="center">${e.low_intake ? "Ja" : ""}</td>
-<td class="center">${e.sick ? "Ja" : ""}</td>
-<td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-<td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-<td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-<td class="center">${e.salt_high ? "Ja" : ""}</td>
-<td class="center">${e.sugar_high ? "Ja" : ""}</td>
-<td class="center">${synced}</td>
-<td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
-`;
-tbody.appendChild(tr);
-});
-
-if (!tbody.children.length) {
-const tr = document.createElement("tr");
-tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
-tbody.appendChild(tr);
-}
-
-$$("#tbl [data-del]").forEach(btn=>{
-btn.addEventListener("click", async ()=>{
-const localId = Number(btn.dataset.del);
-const remoteId = btn.dataset.remote || "";
-if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-btn.disabled = true;
-const oldText = btn.textContent;
-btn.textContent = "Lösche…";
-try{
-if(remoteId){
-const r = await deleteRemote(remoteId);
-if(!r.ok){
-alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Eintrag wird NICHT gelöscht.");
-return;
-}
-}
-await deleteEntryLocal(localId);
-await loadAndRender();
-await renderDoctor();
-if(chartPanel.open) await chartPanel.draw();
-if(chartReportsPanel.open) await chartReportsPanel.draw();
-} finally {
-btn.textContent = oldText;
-btn.disabled = false;
-}
-});
-});
-}
-
-async function loadAndRender(){
-const t0 = performance.now();
-const entries = await getAllEntries();
-renderTable(entries);
-{ const s = (perfStats.add('renderList', performance.now()-t0), perfStats.snap('renderList'));
-diag.add(`[perf] renderList p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
-}
-
-/* ===== List rendering (Befunde) ===== */
-async function loadAndRenderReports(){
-const reports = await getAllReports();
-const tbody = $("#tblReports tbody");
-tbody.innerHTML = "";
-reports
-.sort((a,b)=> (b.ts ?? new Date(b.datum).getTime()) - (a.ts ?? new Date(a.datum).getTime()))
-.forEach(r=>{
-const synced = r.remote_id ? "☁️" : "";
-const tr = document.createElement("tr");
-tr.innerHTML = `
-<td class="nowrap">${r.datum || ""}</td>
-<td class="center">${r.kreatinin != null ? Number(r.kreatinin).toFixed(2) : ""}</td>
-<td class="center">${r.egfr != null ? Number(r.egfr).toFixed(0) : ""}</td>
-<td class="center">${r.uacr != null ? Number(r.uacr).toFixed(0) : ""}</td>
-<td class="center">${r.kalium != null ? Number(r.kalium).toFixed(1) : ""}</td>
-<td class="center">${r.cystatin_c != null ? Number(r.cystatin_c).toFixed(2): ""}</td>
-<td class="center">${r.haematurie != null ? Number(r.haematurie).toFixed(0): ""}</td>
-<td class="center">${r.ldl != null ? Number(r.ldl).toFixed(0) : ""}</td>
-<td class="center">${r.hba1c != null ? Number(r.hba1c).toFixed(1) : ""}</td>
-<td class="notes">${nl2br(r.kommentar || "")}</td>
-<td class="center">${synced}</td>
-<td><button class="btn ghost" data-delrep="${r.id}" data-remote="${r.remote_id ?? ''}">Löschen</button></td>
-`;
-tbody.appendChild(tr);
-});
-if(!tbody.children.length){
-const tr=document.createElement("tr");
-tr.innerHTML=`<td colspan="12" class="small" style="text-align:center;opacity:.7">Keine Befunde vorhanden</td>`;
-tbody.appendChild(tr);
-}
-$$("#tblReports [data-delrep]").forEach(btn=>{
-btn.addEventListener("click", async ()=>{
-const localId = Number(btn.dataset.delrep);
-const remoteId = btn.dataset.remote || "";
-if(!confirm("Befund wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-btn.disabled = true; const old=btn.textContent; btn.textContent = "Lösche…";
-try{
-if(remoteId){
-const r = await deleteRemoteBefund(remoteId);
-if(!r.ok){
-alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Befund wird NICHT gelöscht.");
-return;
-}
-}
-await deleteReportLocal(localId);
-await loadAndRenderReports();
-if(activeDoctorMode()==="befund") await renderDoctorReports();
-if(chartReportsPanel.open) await chartReportsPanel.draw();
-}finally{
-btn.disabled = false; btn.textContent = old;
-}
-});
-});
 }
 
 /* ===== Doctor view ===== */
@@ -1808,7 +1506,6 @@ $$(".view").forEach(v=>v.classList.remove("active"));
 $("#"+name).classList.add("active");
 $$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
 if(name==="doctor"){ renderDoctorViewForMode(); }
-if(name==="list"){ loadAndRender(); }
 }
 function bindTabs(){ $$(".tabs .btn").forEach(b=> b.addEventListener("click", e=> setTab(e.currentTarget.dataset.tab))); }
 function bindCaptureSegment(){
@@ -1822,19 +1519,7 @@ $("#entry_befund").classList.toggle("hidden", mode !== "befund");
 });
 });
 }
-function bindListSegment(){
-const seg = $("#seg-list"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", async ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
-$("#listReportWrap").classList.toggle("hidden", mode!=="befund");
-if(mode==="befund"){ await loadAndRenderReports(); }
-else { await loadAndRender(); }
-});
-});
-}
+
 function bindDoctorSegment(){
 const seg = $("#seg-doctor"); if(!seg) return;
 seg.querySelectorAll(".seg-btn").forEach(b=>{
@@ -1927,7 +1612,6 @@ if (hasDaySummary) saved = (await saveDaySummary()) || saved;
 if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; }
 
 // 3) UI aktualisieren
-await loadAndRender();
 await renderDoctorViewForMode();
 if(chartPanel.open) await chartPanel.draw();
 if(chartReportsPanel.open) await chartReportsPanel.draw();
@@ -2157,7 +1841,6 @@ remote_id: row.id
 const existing = await getEntryByRemoteId(row.id);
 if(existing){ await updateEntry(existing.id, mapped); }
 else{ await addEntry(mapped); }
-await loadAndRender();
 if(activeDoctorMode()==="daily") await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add(`Realtime health_entries: ${et}`);
@@ -2167,7 +1850,6 @@ const rid = o?.id;
 if(rid!=null){
 const existing = await getEntryByRemoteId(rid);
 if(existing){ await deleteEntryLocal(existing.id); }
-await loadAndRender();
 if(activeDoctorMode()==="daily") await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add("Realtime health_entries: DELETE");
@@ -2202,7 +1884,6 @@ remote_id: row.id
 const existing = await getReportByRemoteId(row.id);
 if(existing){ await updateReport(existing.id, mapped); }
 else{ await addReport(mapped); }
-await loadAndRenderReports();
 if(activeDoctorMode()==="befund") await renderDoctorReports();
 if(chartReportsPanel.open) chartReportsPanel.draw();
 diag.add(`Realtime medical_reports: ${et}`);
@@ -2212,7 +1893,6 @@ const rid = o?.id;
 if(rid!=null){
 const existing = await getReportByRemoteId(rid);
 if(existing){ await deleteReportLocal(existing.id); }
-await loadAndRenderReports();
 if(activeDoctorMode()==="befund") await renderDoctorReports();
 if(chartReportsPanel.open) chartReportsPanel.draw();
 diag.add("Realtime medical_reports: DELETE");
@@ -2246,7 +1926,6 @@ const allLocal = await getAllEntries();
 for(const e of allLocal){
 if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
 }
-await loadAndRender();
 await renderDoctorViewForMode();
 if(chartPanel.open) chartPanel.draw();
 }
@@ -2277,7 +1956,6 @@ const allLocal = await getAllReports();
 for(const r of allLocal){
 if(r.remote_id && !seen.has(r.remote_id)){ await deleteReportLocal(r.id); }
 }
-await loadAndRenderReports();
 if(activeDoctorMode()==="befund") await renderDoctorReports();
 if(chartReportsPanel.open) chartReportsPanel.draw();
 }
@@ -2388,10 +2066,6 @@ const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
 if(isSave){ e.preventDefault(); saveAll(); }
 });
 
-$("#rangeSel").addEventListener("change", loadAndRender);
-$("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
-$("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
-$("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); } });
   $("#hardResetBtn").addEventListener("click", async () => {
   if (!confirm("App-Daten (Cache + Cookies) für diese Seite löschen und frisch laden?")) return;
   try {
@@ -2439,53 +2113,14 @@ await afterLoginBoot();
 }
 });
 
-
-// MANUELLER SYNC (Daily) – bleibt als „Last Resort“
-$("#syncBtn").addEventListener("click", async ()=>{
-if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
-setBusy(true);
-$("#syncBtn").disabled = true;
-try{
-const current = await getAllEntries();
-dl("backup_vor_sync.csv", toCSV(current), "text/csv");
-const resPush = await pushPendingToRemote();
-diag.add(`SYNC: Pending gepusht ? OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-await wipeAll();
-const remoteRows = await pullAllFromRemote();
-for(const r of remoteRows){
-const entry = {
-date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, map: r.map, notes: r.notes,
-training: r.training, low_intake: r.low_intake, sick: r.sick,
-valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
-remote_id: r.id
-};
-
-await addEntry(entry);
-}
-await loadAndRender(); await renderDoctorViewForMode();
-if(chartPanel.open) await chartPanel.draw();
-if(chartReportsPanel.open) await chartReportsPanel.draw();
-diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
-alert("Sync abgeschlossen.");
-}catch(e){
-console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
-} finally {
-$("#syncBtn").disabled = false;
-setBusy(false);
-}
-});
-
 // Bind Segmented Controls
-bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
+bindCaptureSegment(); bindDoctorSegment();
 
 // Befund speichern
 $("#saveReportBtn").addEventListener("click", saveReport);
 
 // Initial Render
-await loadAndRender(); await renderDoctor();
+await renderDoctorViewForMode();
 
 function daySummaryActive(){
 const w = ($("#weightDay")?.value || "").trim();
@@ -2523,7 +2158,7 @@ main();
 }
 
 /* === Debug-Notizen
-- V1.4: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+- V1.5: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
 - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
@@ -2537,4 +2172,5 @@ main();
 </div>
 </body>
 </html>
+
 
