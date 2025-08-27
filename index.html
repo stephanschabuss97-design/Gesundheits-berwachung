@@ -1004,32 +1004,28 @@ setAuthGuard(false);
 
 // Beim Start Session prüfen
 async function requireSession(){
-if(!sbClient){
-setUserUi('');
-showLoginBar(true);
-setAuthGuard(false);
-return false;
-}
-const { data: { session } } = await sbClient.auth.getSession();
-const email = session?.user?.email || '';
-setUserUi(email);
-showLoginBar(!session);
-setAuthGuard(!!session);
-return !!session;
+  if(!sbClient){
+    setUserUi('');
+    showLoginBar(true);
+    setAuthGuard(true);   // <- statt false
+    return false;
+  }
+  const { data: { session } } = await sbClient.auth.getSession();
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  setAuthGuard(true);     // <- UI bleibt frei, egal ob eingeloggt
+  return !!session;
 }
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
-function watchAuthState(){
 sbClient.auth.onAuthStateChange(async (_event, session)=>{
-const email = session?.user?.email || '';
-setUserUi(email);
-showLoginBar(!session);
-setAuthGuard(!!session); // <— NEU: UI sperren/freigeben
-if (session) {
-await afterLoginBoot(); // dank Guard nur einmal
-}
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  setAuthGuard(true);     // <- nie mehr sperren
+  if (session) await afterLoginBoot();
 });
-}
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
@@ -2172,5 +2168,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
