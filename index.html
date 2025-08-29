@@ -140,8 +140,8 @@ text-align:right; justify-content:flex-end;
 /* Spalte C – Spezialinfos */
 /* Gewicht: Überschrift + Zahl darunter */
 .doctor-view .weight-line{
-  display: flex;                 /* statt inline-flex */
-  flex-direction: column;        /* untereinander */
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
   gap: 4px;
   background: transparent;
@@ -149,25 +149,18 @@ text-align:right; justify-content:flex-end;
   padding: 0;
   font-weight: 600;
 }
-
-/* „Gewicht“ als Kopf wie MAP-Header */
-.doctor-view .weight-line > :first-child{
+.doctor-view .weight-line > :first-child{  /* Kopf "Gewicht" */
   font-size: 12px;
   opacity: .8;
   font-weight: 600;
   letter-spacing: .2px;
 }
-
-/* Zahl wie Messwerte (ruhige Spalten) */
 .doctor-view .weight-line .num{
   font-variant-numeric: tabular-nums;
-  -moz-font-feature-settings:"tnum","lnum";
-  -webkit-font-feature-settings:"tnum","lnum";
-  font-feature-settings:"tnum","lnum";
   font-size: clamp(16px,1.6vw,20px);
   font-weight: 700;
   line-height: 1.1;
-  text-align: left;              /* in der Spalte linksbündig */
+  text-align: left;
 }
 
 /* Spalten C/D/E: Gewicht | Flags | Kommentar */
@@ -176,7 +169,7 @@ text-align:right; justify-content:flex-end;
   grid-template-columns: minmax(120px, max-content) 220px 1fr; /* C | D | E */
   column-gap: 16px;
   row-gap: 6px;
-  align-items: center; /* Gewicht mittig zur Messzeile */
+  align-items: start; /* <-- alles oben ausrichten */
 }
 
 /* Elemente gezielt in Spalten setzen */
@@ -204,17 +197,19 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 /* Notizen: im Screen 3 Zeilen, im Druck voll */
 /* Kommentar: Titel + Box */
+/* Kommentar: Kopf + Wert, ohne Kasten */
 .doctor-view .notes{
   font-size: 13px;
   line-height: 1.35;
   display: -webkit-box;
-  -webkit-line-clamp: 3;         /* 3 Zeilen Clamp */
+  -webkit-line-clamp: 3;      /* 3 Zeilen, bei Bedarf 2 setzen */
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+  padding: 0;                 /* kein Box-Feeling */
+  background: transparent;
+  border: none;
 }
-
-/* Überschrift oberhalb */
 .doctor-view .notes::before{
   content: "Kommentar";
   display: block;
@@ -222,20 +217,9 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   opacity: .8;
   font-weight: 600;
   letter-spacing: .2px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
-
-/* „Textfeld“-Optik für vorhandenen Text */
-.doctor-view .notes:not(:empty){
-  background: #0f1116;
-  border: 1px solid #2b2f3a;
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-
-/* Leere Kommentare komplett ausblenden (inkl. Überschrift) */
-.doctor-view .notes:empty{ display:none; }
-.doctor-view .notes:empty::before{ display:none; }
+/* NICHT ausblenden, auch wenn leer – der Renderer liefert "–" */
 
 /* Mobile-Optimierung */
 @media (max-width: 599px){
@@ -1529,7 +1513,7 @@ const renderDoctorDay = (day) => `
 <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
 </div>
 
-<div class="notes">${nl2br(day.notes || "")}</div>
+<div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
 </div>
 </section>
 `;
@@ -2567,6 +2551,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
