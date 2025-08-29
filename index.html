@@ -138,17 +138,37 @@ text-align:right; justify-content:flex-end;
 }
 
 /* Spalte C – Spezialinfos */
+.doctor-view .weight-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;     /* kein dunkler Hintergrund mehr */
+  border: none;                /* kein Rand mehr */
+  padding: 0;                  /* kein Extra-Innenabstand */
+  font-weight: 600;
+}
+
 .doctor-view .weight-line{
-  display:flex; 
-  justify-content:flex-start;   /* statt space-between */
+  display: inline-flex; 
+  justify-content:flex-start; 
   align-items:center;
-  gap:12px;                     /* Abstand zwischen "Gewicht" und Zahl */
-  min-height:44px; 
+  gap:12px;                      /* Abstand zwischen Label und Zahl */
   padding:8px 10px;
   background:#0f1116; 
   border:1px solid #2b2f3a; 
   border-radius:10px;
   font-weight:600;
+  white-space:nowrap;
+  min-width:160px;               /* sorgt für Spalten-Optik */
+  flex:0 0 auto;                 /* verhindert „Strecken bis rechts“ */
+}
+
+.doctor-view .flags{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, max-content));
+  gap:12px 16px;
+  align-items:center;
+  flex:1;                        /* Flags dürfen Restbreite nutzen */
 }
 
 .doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
@@ -2495,3 +2515,4 @@ main();
 </div>
 </body>
 </html>
+
