@@ -105,17 +105,12 @@ letter-spacing:.2px;
 /* Kopf und Werte-Spalten: gleiche Breiten wie Zahlen, Label links fix */
 .doctor-view .measure-head,
 .doctor-view .measure-grid{
-  display:grid;
-  /* A = Label/Zeit | B = 4 Werte | C = Gewicht | D = Flags */
-  grid-template-columns:
-    minmax(70px, auto)         /* A */
-    repeat(4, minmax(56px, 1fr)) /* B: Sys, Dia, Puls, MAP */
-    minmax(90px, max-content)  /* C: Gewicht */
-    1fr;                       /* D: Flags */
-  gap:4px;
+display:grid;
+grid-template-columns: minmax(70px, auto) repeat(4, 1fr);
+gap:4px;
 }
-  
 .doctor-view .measure-head{ font-size:12px; opacity:.8; }
+
 
 /* Head-Zellen als Flex: rechtsbündig wie die Zahlen */
 .doctor-view .measure-head > div{ display:flex; align-items:center; }
@@ -142,32 +137,19 @@ white-space: nowrap;
 text-align:right; justify-content:flex-end;
 }
 
-/* Gewicht = Spalte C (6. Grid-Spalte) */
+/* Spalte C – Spezialinfos */
 .doctor-view .weight-line{
-  grid-column: 6;               /* neue Spalte C */
-  display:inline-flex;
+  display:flex; 
+  justify-content:flex-start;   /* statt space-between */
   align-items:center;
-  gap:6px;
-  background:transparent;
-  border:none;
-  padding:0;
+  gap:12px;                     /* Abstand zwischen "Gewicht" und Zahl */
+  min-height:44px; 
+  padding:8px 10px;
+  background:#0f1116; 
+  border:1px solid #2b2f3a; 
+  border-radius:10px;
   font-weight:600;
-  white-space:nowrap;
-  justify-content:flex-start;
 }
-
-/* Flags = Spalte D (7. Grid-Spalte) */
-.doctor-view .flags{
-  grid-column: 7;               /* neue Spalte D */
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, max-content));
-  gap:12px 16px;
-  align-items:center;
-  justify-content:start;
-}
-
-/* Zahlenbild bleibt wie gehabt */
-.doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
 
 .doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
 .doctor-view .flag span:last-child{ white-space:nowrap; }
@@ -190,11 +172,7 @@ word-break:break-word;
 @media (max-width: 599px){
 .doctor-view .measure-head,
 .doctor-view .measure-grid{
-  grid-template-columns:
-    minmax(72px, 1fr)
-    repeat(4, minmax(56px, 1fr))
-    minmax(84px, max-content)
-    1fr;
+grid-template-columns: minmax(66px, auto) repeat(4, 1fr);
 }
 .doctor-view .num{
 min-width: 4ch;
@@ -1464,16 +1442,17 @@ const renderDoctorDay = (day) => `
 </div>
 
 <!-- Spalte C: Spezial -->
+<div class="col-special">
 <div class="weight-line">
 <div>Gewicht</div>
 <div class="num">${dash(fmtNum(day.weight))}</div>
 </div>
 
 <div class="flags">
-<div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L</span></div>
 <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
 <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>krank</span></div>
 <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
 <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
 </div>
@@ -2516,5 +2495,3 @@ main();
 </div>
 </body>
 </html>
-
-
