@@ -140,27 +140,27 @@ text-align:right; justify-content:flex-end;
 /* Spalte C – Spezialinfos */
 /* Gewicht: Überschrift + Zahl darunter */
 .doctor-view .weight-line{
-  display: flex;
+  display:flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;   /* mittig statt links */
   gap: 4px;
   background: transparent;
   border: none;
   padding: 0;
   font-weight: 600;
 }
-.doctor-view .weight-line > :first-child{  /* Kopf "Gewicht" */
+
+.doctor-view .weight-line > :first-child{
   font-size: 12px;
-  opacity: .8;
-  font-weight: 600;
-  letter-spacing: .2px;
+  opacity:.8;
+  font-weight:600;
+  letter-spacing:.2px;
 }
 .doctor-view .weight-line .num{
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(16px,1.6vw,20px);
-  font-weight: 700;
-  line-height: 1.1;
-  text-align: left;
+  font-size:clamp(16px,1.6vw,20px);
+  font-weight:700;
+  line-height:1.1;
+  text-align:center;   /* mittig */
 }
 
 /* Spalten C/D/E: Gewicht | Flags | Kommentar */
@@ -179,10 +179,11 @@ text-align:right; justify-content:flex-end;
 
 /* D: Flags – Desktop: eine Spalte untereinander */
 .doctor-view .flags{
-  display: grid;
-  grid-auto-rows: min-content;
-  grid-template-columns: 1fr;   /* untereinander */
-  row-gap: 6px;
+  display:grid;
+  grid-template-columns: repeat(2, max-content); /* 2 Spalten */
+  justify-content:start;
+  align-items:start;
+  gap: 6px 16px; /* vertikal 6px, horizontal 16px */
 }
 
 .doctor-view .weight-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
@@ -2551,6 +2552,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
