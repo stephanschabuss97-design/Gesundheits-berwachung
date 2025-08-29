@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4)</title>
+<title>Gesundheits-Logger (V1.5)</title>
 <style>
 body.auth-locked main{ opacity:.6; }
 :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
@@ -284,7 +284,7 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <body>
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -456,10 +456,6 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
 <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
 <div class="spacer"></div>
-</div>
-
-<div id="daySummaryBadge" style="display:none; margin:6px 0; padding:6px 10px; background:#4f46e5; color:white; border-radius:8px; font-size:0.95em; text-align:center;">
-📊 Tageszusammenfassung aktiv – es werden Gewicht / Notiz / Tages-Flags gespeichert
 </div>
 
 <div class="row" style="align-items:center; gap:8px; margin-top:12px">
@@ -1871,22 +1867,6 @@ function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), t
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🚰 < 2 L – aktiv", "🚰 < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
 function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
-function updateDaySummaryBadge(){
-const badge = document.getElementById("daySummaryBadge");
-if (!badge) return;
-
-const weightVal = ($("#weightDay")?.value || "").trim();
-const notesVal = ($("#notesDay")?.value || "").trim();
-
-const hasAnyFlag = !!(
-trainingActive || lowIntakeActive || sickActive ||
-valsartanMissed || forxigaMissed || nsarTaken ||
-saltHigh || sugarHigh
-);
-
-const shouldShow = !!(weightVal || notesVal || hasAnyFlag);
-badge.style.display = shouldShow ? "block" : "none";
-}
 
 function setSick(on){
 sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
@@ -2350,19 +2330,12 @@ else if (sel.includes("weight"))softWarnRange(el, 30, 300);
 });
 });
 
-// Badge live aktualisieren, wenn Tagesfelder benutzt werden
-const weightEl = $("#weightDay");
-const notesEl = $("#notesDay");
-if (weightEl) weightEl.addEventListener("input", updateDaySummaryBadge);
-if (notesEl) notesEl.addEventListener("input", updateDaySummaryBadge);
-
 // Toggle-Handler
 const bindToggle = (id, setter, getVal)=>{
-const el=$(id);
-el.addEventListener("click", ()=>{
-setter(!getVal());
-updateDaySummaryBadge(); // <— HINZUGEFÜGT
-});
+  const el = $(id);
+  el.addEventListener("click", ()=>{
+    setter(!getVal());
+  });
 };
 bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
 bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
@@ -2494,8 +2467,6 @@ return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
 valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
 }
 
-// In main(), direkt nach updateDaySummaryBadge():
-updateDaySummaryBadge();
 const disableVitals = daySummaryActive();
 ["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
 const el = $(sel);
@@ -2523,7 +2494,7 @@ main();
 }
 
 /* === Debug-Notizen
-- V1.4: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+- V1.5: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
 - Auto-Sync: push pending ? reconcile (Entries + Reports) ohne Wipe.
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
@@ -2537,4 +2508,5 @@ main();
 </div>
 </body>
 </html>
+
 
