@@ -140,35 +140,32 @@ text-align:right; justify-content:flex-end;
 /* Spalte C – Spezialinfos */
 .doctor-view .col-special {
   display: flex;
-  flex-direction: row;     /* Gewicht links, Flags rechts */
-  align-items: flex-start;
-  gap: 16px;               /* Abstand zwischen Gewicht und Flags */
-  flex-wrap: wrap;         /* Falls nicht genug Platz → umbrechen */
+  flex-direction: row;
+  align-items: center;   /* statt flex-start → mittig */
+  gap: 16px;             /* Abstand zwischen Gewicht und Flags */
+  flex-wrap: wrap;       /* Falls wenig Platz: umbrechen */
 }
 
 .doctor-view .weight-line{
   display: inline-flex; 
-  justify-content:flex-start; 
-  align-items:center;
-  gap:12px;                      /* Abstand zwischen Label und Zahl */
-  padding:8px 10px;
-  background:#0f1116; 
-  border:1px solid #2b2f3a; 
-  border-radius:10px;
-  font-weight:600;
-  white-space:nowrap;
-  min-width:160px;               /* sorgt für Spalten-Optik */
-  flex:0 0 auto;                 /* verhindert „Strecken bis rechts“ */
+  align-items: center;
+  gap: 6px;               /* etwas schmaler → wirkt tabellarisch */
+  background: transparent;/* kein Hintergrund mehr */
+  border: none;           /* kein Rand mehr */
+  padding: 0;             /* kein extra Innenabstand */
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: auto;        /* nicht mehr auf 160px zwingen */
+  flex: 0 0 auto;
 }
 
 .doctor-view .flags{
-  display:grid;
+  display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, max-content));
-  gap:12px 16px;
-  align-items:center;
-  flex:1;                        /* Flags dürfen Restbreite nutzen */
+  gap: 12px 16px;
+  align-items: center;   /* mittig zur Zahl */
+  flex: 1;
 }
-
 
 .doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
 .doctor-view .flag span:last-child{ white-space:nowrap; }
@@ -2514,3 +2511,4 @@ main();
 </div>
 </body>
 </html>
+
