@@ -148,20 +148,26 @@ text-align:right; justify-content:flex-end;
   font-weight: 600;
 }
 
-  /* Rechter Bereich: Gewicht mittig auf Höhe der Zeile, Flags daneben */
+/* Spalten C/D/E: Gewicht | Flags | Kommentar */
 .doctor-view .col-special{
-  display:flex;
-  align-items:center;   /* mittig zu MAP & Co. */
-  gap:16px;             /* Abstand zwischen Gewicht und Flags */
-  flex-wrap:wrap;       /* falls eng: Umbrechen erlaubt */
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 220px 1fr; /* C | D | E */
+  column-gap: 16px;
+  row-gap: 6px;
+  align-items: center; /* Gewicht mittig zur Messzeile */
 }
 
+/* Elemente gezielt in Spalten setzen */
+.doctor-view .col-special > .weight-line { grid-column: 1; }
+.doctor-view .col-special > .flags       { grid-column: 2; }
+.doctor-view .col-special > .notes       { grid-column: 3; }
+
+/* D: Flags – Desktop: eine Spalte untereinander */
 .doctor-view .flags{
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, max-content));
-  gap:12px 16px;
-  align-items:center;
-  flex:1;                        /* Flags dürfen Restbreite nutzen */
+  display: grid;
+  grid-auto-rows: min-content;
+  grid-template-columns: 1fr;   /* untereinander */
+  row-gap: 6px;
 }
 
 .doctor-view .weight-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
@@ -177,7 +183,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 /* Notizen: im Screen 3 Zeilen, im Druck voll */
 .doctor-view .notes{
 min-height:34px; font-size:13px; line-height:1.35;
-overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
 word-break:break-word;
 }
 
@@ -191,12 +197,15 @@ grid-template-columns: minmax(66px, auto) repeat(4, 1fr);
 min-width: 4ch;
 white-space: nowrap;
 }
-/* Desktop: Reihe mit Wrap; Mobile bleibt unten (siehe @media) */
+/* Mobile: Flags in 2 Spalten, kompakter */
 .doctor-view .flags{
-display:grid;
-grid-template-columns: repeat(6, max-content);
-justify-content:start; align-items:center;
-column-gap:14px; row-gap:6px; margin-top:6px;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: start;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 6px;
+  margin-top: 6px;
 }
 
 /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
@@ -2508,6 +2517,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
