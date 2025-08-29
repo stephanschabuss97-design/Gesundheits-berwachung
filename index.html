@@ -148,19 +148,12 @@ text-align:right; justify-content:flex-end;
   font-weight: 600;
 }
 
-.doctor-view .weight-line{
-  display: inline-flex; 
-  justify-content:flex-start; 
-  align-items:center;
-  gap:12px;                      /* Abstand zwischen Label und Zahl */
-  padding:8px 10px;
-  background:#0f1116; 
-  border:1px solid #2b2f3a; 
-  border-radius:10px;
-  font-weight:600;
-  white-space:nowrap;
-  min-width:160px;               /* sorgt für Spalten-Optik */
-  flex:0 0 auto;                 /* verhindert „Strecken bis rechts“ */
+  /* Rechter Bereich: Gewicht mittig auf Höhe der Zeile, Flags daneben */
+.doctor-view .col-special{
+  display:flex;
+  align-items:center;   /* mittig zu MAP & Co. */
+  gap:16px;             /* Abstand zwischen Gewicht und Flags */
+  flex-wrap:wrap;       /* falls eng: Umbrechen erlaubt */
 }
 
 .doctor-view .flags{
@@ -171,7 +164,7 @@ text-align:right; justify-content:flex-end;
   flex:1;                        /* Flags dürfen Restbreite nutzen */
 }
 
-.doctor-view .weight-line .num{ font-size:clamp(16px,1.6vw,20px); }
+.doctor-view .weight-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
 .doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
@@ -2515,5 +2508,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
