@@ -31,6 +31,12 @@ textarea{min-height:64px;resize:vertical}
 .btn.ghost{background:#0f1116;border:1px solid #2b2f3a;color:var(--fg)}
 .btn.warn{background:var(--warn);color:#1a1200}
 .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
+/* Tabs: aktiver Zustand = wie Primary */
+nav.tabs .btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
 
 .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
 @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
@@ -2508,5 +2514,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
