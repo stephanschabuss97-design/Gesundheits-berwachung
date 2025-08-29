@@ -54,19 +54,6 @@ section.view.active{display:block}
 #doctorTable thead{position:sticky;top:0;background:#0f1116}
 #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
-@media print{
-body{background:white;color:black}
-header, nav.tabs, .toolbar, .card:not(#doctorCard), .fab-wrap, #chart, #chartReports, #diag { display:none !important; }
-body { color:#000; background:#fff; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th, td { border:1px solid #555; padding:4px 6px; }
-.doctor-view, .report-view { page-break-inside:avoid; }
-#doctorCard{border:none;box-shadow:none}
-#doctorTitle{font-size:18px;margin-bottom:10px}
-#doctorTable th, #doctorTable td{border:1px solid #999;padding:6px}
-#doctorTable{border:1px solid #999}
-}
-
 #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
 
 /* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
@@ -231,15 +218,6 @@ grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
 .doctor-view .flags{
 grid-template-columns: repeat(3, max-content);
 }
-}
-
-/* Print-Optimierung */
-@media print{
-.doctor-view .doctor-day{
-background:#fff; border:1px solid #000; box-shadow:none;
--webkit-print-color-adjust:exact; print-color-adjust:exact;
-}
-.doctor-view .notes{ -webkit-line-clamp:unset; overflow:visible; }
 }
 
 /* Panels */
@@ -606,7 +584,6 @@ background:#fff; border:1px solid #000; box-shadow:none;
 <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
 <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
 <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-<button class="btn ghost" id="printBtn" type="button">Drucken</button>
 </div>
 
 <div style="overflow:auto" id="doctorDailyWrap">
@@ -2354,7 +2331,6 @@ bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
 $("#saveAllBtn").addEventListener("click", saveAll);
 $("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
-$("#printBtn").addEventListener("click", ()=> window.print());
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
 const mode = activeDoctorMode();
@@ -2514,6 +2490,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
