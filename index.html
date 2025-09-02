@@ -6,7 +6,7 @@
 <title>Gesundheits-Logger (V1.5)</title>
 <style>
 body.auth-locked main{ opacity:.6; }
-:root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; }
+:root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; --danger:#ef4444; }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
@@ -131,6 +131,9 @@ display:flex; align-items:center; justify-content:flex-end;
 min-width: 4ch; /* Basisschutz gegen Abschneiden */
 white-space: nowrap;
 }
+  
+  /* Grenzwert-Highlight für Arzt-Ansicht */
+.doctor-view .num.alert{ color: var(--danger); }
 
 .doctor-view .measure-grid .num,
 .doctor-view .col-special .num{
@@ -1164,27 +1167,18 @@ function toCSV(entries){
 const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
 const rows = entries.map(e=>{
 const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const hasVitals = !!(e.sys || e.dia || e.pulse);
 const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = !isDaySummary && !isTrainingOnly;
+const isMeasurement = hasVitals && !isDaySummary;
 
-const art = isDaySummary
-? "Tageszusammenfassung"
-: (isTrainingOnly ? "Training" : "Messung");
-
-const notesText = isTrainingOnly
-? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
+const art = isDaySummary ? "Tageszusammenfassung" : "Messung";
+const notesText = e.notes || "";
 
 const zeitLabel =
 isDaySummary
 ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
 : (e.context === "Morgen" ? `${e.time} (Morgens)` :
 e.context === "Abend" ? `${e.time} (Abends)` : e.time);
-
-const notes = isTrainingOnly
-? ("🗓️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
 
 return [
 e.date, e.time, art,
@@ -1246,11 +1240,11 @@ const list = entries
 
 list.forEach(e=>{
 const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const hasVitals = !!(e.sys || e.dia || e.pulse);
 const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = !isDaySummary && !isTrainingOnly;
+const isMeasurement = hasVitals && !isDaySummary;
 
-const art = isDaySummary ? "Tageszusammenfassung" : (isTrainingOnly ? "Training" : "Messung");
+const art = isDaySummary ? "Tageszusammenfassung" : "Messung";
 
 const zeitLabel = isDaySummary
 ? (e.time ? `${e.time} (Tag)` : "– (Tag)")
@@ -1258,9 +1252,7 @@ const zeitLabel = isDaySummary
 e.context === "Abend" ? `${e.time} (Abends)` : e.time);
 
 const synced = e.remote_id ? "☁️" : "";
-const notesText = isTrainingOnly
-? ("🏋️ Training" + (e.notes ? " – " + e.notes : ""))
-: (e.notes || "");
+const notesText = e.notes || "";
 
 const tr = document.createElement("tr");
 tr.innerHTML = `
@@ -1430,9 +1422,9 @@ days.set(e.date, d);
 }
 
 const legacyWeightOnly = isWeightOnly(e);
-const isTrainingOnly = e.training && (!e.sys && !e.dia && !e.pulse && !e.weight);
+const hasVitals = !!(e.sys || e.dia || e.pulse);
 const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = !isDaySummary && !isTrainingOnly;
+const isMeasurement = hasVitals && !isDaySummary;
 
 // Messblöcke
 if (isMeasurement && e.context === "Morgen"){
@@ -1452,12 +1444,8 @@ if (isDaySummary){
 if (e.weight != null) d.weight = e.weight;
 if (e.notes) d.notes = e.notes;
 }
-// Trainings-only → als Hinweis in Notizen, falls keine vorhanden
-if (isTrainingOnly){
-d.flags.training = true;
-if (e.notes && !d.notes) d.notes = e.notes;
-}
-// Flags (Spezial): Wasser/Salz/Zucker/Krank/Medikamente
+  // Flags (Spezial): Training/Wasser/Salz/Zucker/Krank/Medikamente
+if (e.training) d.flags.training = true;
 if (e.low_intake) d.flags.water_lt2 = true;
 if (e.salt_high) d.flags.salt_gt5 = true;
 if (e.sugar_high) d.flags.sugar_gt10 = true;
@@ -1483,17 +1471,17 @@ const renderDoctorDay = (day) => `
 <div class="measure-grid">
 <div class="measure-row">
 <div class="label">morgens</div>
-<div class="num">${dash(day.morning.sys)}</div>
-<div class="num">${dash(day.morning.dia)}</div>
+<div class="num ${ (day.morning.sys!=null && day.morning.sys>130) ? 'alert' : '' }">${dash(day.morning.sys)}</div>
+<div class="num ${ (day.morning.dia!=null && day.morning.dia>90)  ? 'alert' : '' }">${dash(day.morning.dia)}</div>
 <div class="num">${dash(day.morning.pulse)}</div>
-<div class="num">${dash(fmtNum(day.morning.map))}</div>
+<div class="num ${ (day.morning.map!=null && day.morning.map>100) ? 'alert' : '' }">${dash(fmtNum(day.morning.map))}</div>
 </div>
 <div class="measure-row">
 <div class="label">abends</div>
-<div class="num">${dash(day.evening.sys)}</div>
-<div class="num">${dash(day.evening.dia)}</div>
+<div class="num ${ (day.evening.sys!=null && day.evening.sys>130) ? 'alert' : '' }">${dash(day.evening.sys)}</div>
+<div class="num ${ (day.evening.dia!=null && day.evening.dia>90)  ? 'alert' : '' }">${dash(day.evening.dia)}</div>
 <div class="num">${dash(day.evening.pulse)}</div>
-<div class="num">${dash(fmtNum(day.evening.map))}</div>
+<div class="num ${ (day.evening.map!=null && day.evening.map>100) ? 'alert' : '' }">${dash(fmtNum(day.evening.map))}</div>
 </div>
 </div>
 </div>
@@ -2552,6 +2540,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
