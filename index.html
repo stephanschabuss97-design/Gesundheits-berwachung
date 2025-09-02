@@ -72,6 +72,12 @@ page-break-inside:avoid;
 break-inside:avoid;
 }
 
+  /* --- Arzt-Toolbar Badges (Daily KPIs) --- */
+.badge{display:inline-block;padding:4px 8px;border:1px solid #2b2f3a;border-radius:10px;font-size:12px;margin-left:8px}
+.badge.good{border-color:var(--ok); color:var(--ok)}
+.badge.bad{ border-color:var(--danger); color:var(--danger)}
+.badge.hidden{ display:none !important; }
+
 /* Tablet/Desktop: nebeneinander */
 @media (min-width: 900px){
 .doctor-view .doctor-day{
@@ -638,6 +644,8 @@ grid-template-columns: repeat(3, max-content);
 <section class="card" id="doctorCard">
 <div class="toolbar">
 <strong id="doctorTitle">Arzt-Ansicht</strong>
+<span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
+<span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">⚠️ Tage mit Bad-Flag: <span class="val">0</span></span>
 <div class="spacer"></div>
 
 <div class="seg" id="seg-doctor" style="margin:0">
@@ -1379,6 +1387,16 @@ btn.disabled = false; btn.textContent = old;
 }
 
 /* ===== Doctor view ===== */
+  function setDocBadges({ training = 0, bad = 0, visible = true } = {}) {
+  const t = document.getElementById('docTrainCnt');
+  const b = document.getElementById('docBadCnt');
+  if (!t || !b) return;
+  t.querySelector('.val').textContent = String(training);
+  b.querySelector('.val').textContent = String(bad);
+  t.classList.toggle('hidden', !visible);
+  b.classList.toggle('hidden', !visible);
+}
+
 const __t0 = performance.now();
 async function renderDoctor(){
 const host = $("#doctorView");
@@ -1450,11 +1468,21 @@ if (e.low_intake) d.flags.water_lt2 = true;
 if (e.salt_high) d.flags.salt_gt5 = true;
 if (e.sugar_high) d.flags.sugar_gt10 = true;
 if (e.sick) d.flags.sick = true;
-if (e.training) d.flags.training = true;
 if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
 }
 
 const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+ 
+  // --- KPI: Anzahl Trainingstage und Tage mit mind. einem Bad-Flag
+const trainingDays = daysArr.filter(d => !!d.flags.training).length;
+const badDays = daysArr.filter(d => {
+  const f = d.flags;
+  return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
+}).length;
+
+// Badges setzen (nur Daily)
+setDocBadges({ training: trainingDays, bad: badDays, visible: true });
+
 
 // 3) Renderer pro Tag (-> 3 Spalten)
 const renderDoctorDay = (day) => `
@@ -1873,8 +1901,13 @@ seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b))
 $("#doctorDailyWrap").classList.toggle("hidden", mode!=="daily");
 $("#doctorReportWrap").classList.toggle("hidden", mode!=="befund");
 $("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
-if(mode==="daily") await renderDoctor();
-else await renderDoctorReports();
+if(mode==="daily") {
+  await renderDoctor();                // setzt die Werte bereits
+  setDocBadges({ visible: true });
+} else {
+  await renderDoctorReports();
+  setDocBadges({ training: 0, bad: 0, visible: false });
+}
 });
 });
 }
@@ -2380,10 +2413,17 @@ bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
 bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
 $("#saveAllBtn").addEventListener("click", saveAll);
-$("#applyRange").addEventListener("click", async ()=>{ await renderDoctorViewForMode(); if(chartPanel.open) chartPanel.draw(); if(chartReportsPanel.open) chartReportsPanel.draw(); });
+$("#applyRange").addEventListener("click", async ()=>{
+  await renderDoctorViewForMode();
+  const mode = activeDoctorMode();
+  setDocBadges({ visible: mode === "daily" });
+  if(chartPanel.open) chartPanel.draw();
+  if(chartReportsPanel.open) chartReportsPanel.draw();
+});
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
 const mode = activeDoctorMode();
+setDocBadges({ visible: mode === "daily" });
 if(mode==="daily"){ chartPanel.toggle(); if(chartPanel.open) await chartPanel.draw(); }
 else { chartReportsPanel.toggle(); if(chartReportsPanel.open) await chartReportsPanel.draw(); }
 });
@@ -2491,6 +2531,7 @@ $("#saveReportBtn").addEventListener("click", saveReport);
 
 // Initial Render
 await loadAndRender(); await renderDoctor();
+setDocBadges({ visible: true });
 
 function daySummaryActive(){
 const w = ($("#weightDay")?.value || "").trim();
@@ -2540,11 +2581,3 @@ main();
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
-
