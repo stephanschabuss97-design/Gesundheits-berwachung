@@ -46,7 +46,22 @@ nav.tabs .btn.primary {
 100% { transform: scale(1) }
 }
 
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center; /* zentriert den Hauptblock */
+}
+.toolbar .center-group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  flex:1; /* nimmt Platz ein und sorgt dafür, dass Badges rechts außen kleben */
+}
+
 .spacer{flex:1}
 section.view{display:none}
 section.view.active{display:block}
@@ -641,53 +656,54 @@ grid-template-columns: repeat(3, max-content);
 
 <!-- Doctor -->
 <section class="view" id="doctor">
-<section class="card" id="doctorCard">
-<div class="toolbar">
-<strong id="doctorTitle">Arzt-Ansicht</strong>
-<span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
-<span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">⚠️ Tage mit Bad-Flag: <span class="val">0</span></span>
-<div class="spacer"></div>
+  <section class="card" id="doctorCard">
+    <div class="toolbar">
+      <strong id="doctorTitle">Arzt-Ansicht</strong>
 
-<div class="seg" id="seg-doctor" style="margin:0">
-<button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
-<button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
-</div>
+      <div class="center-group">
+        <div class="seg" id="seg-doctor" style="margin:0">
+          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
+          <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
+        </div>
+        <label class="small">Von <input type="date" id="from" style="width:auto"></label>
+        <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
+        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+      </div>
 
-<label class="small">Von <input type="date" id="from" style="width:auto"></label>
-<label class="small">Bis <input type="date" id="to" style="width:auto"></label>
-<button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-<button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-</div>
+      <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
+      <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">⚠️ Tage mit Bad-Flag: <span class="val">0</span></span>
+    </div> <!-- 👈 Toolbar sauber schließen -->
 
-<div style="overflow:auto" id="doctorDailyWrap">
-<div class="doctor-view" id="doctorView"></div>
-</div>
+    <div style="overflow:auto" id="doctorDailyWrap">
+      <div class="doctor-view" id="doctorView"></div>
+    </div>
 
-<div style="overflow:auto" id="doctorReportWrap" class="hidden">
-<table id="doctorReportsTable">
-<thead>
-<tr>
-<th>Datum</th>
-<th class="center">Kreatinin</th>
-<th class="center">eGFR</th>
-<th class="center">uACR</th>
-<th class="center">Kalium</th>
-<th class="center">Cystatin&nbsp;C</th>
-<th class="center">Hämaturie</th>
-<th class="center">LDL</th>
-<th class="center">HbA1c</th>
-<th>Kommentar</th>
-</tr>
-</thead>
+    <div style="overflow:auto" id="doctorReportWrap" class="hidden">
+      <table id="doctorReportsTable">
+        <thead>
+          <tr>
+            <th>Datum</th>
+            <th class="center">Kreatinin</th>
+            <th class="center">eGFR</th>
+            <th class="center">uACR</th>
+            <th class="center">Kalium</th>
+            <th class="center">Cystatin&nbsp;C</th>
+            <th class="center">Hämaturie</th>
+            <th class="center">LDL</th>
+            <th class="center">HbA1c</th>
+            <th>Kommentar</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-<tbody></tbody>
-</table>
-</div>
-
-<div class="small" style="margin-top:6px">Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).</div>
+    <div class="small" style="margin-top:6px">
+      Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily oder Befunde).
+    </div>
+  </section>
 </section>
-</section>
-</main>
 
 <!-- Supabase (UMD, v2) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -2581,3 +2597,4 @@ main();
 </div>
 </body>
 </html>
+
