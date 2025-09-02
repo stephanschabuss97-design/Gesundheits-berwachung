@@ -46,20 +46,26 @@ nav.tabs .btn.primary {
 100% { transform: scale(1) }
 }
 
-.toolbar{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:center; /* zentriert den Hauptblock */
+/* Toolbar mit zentrierter Mitte + Badges rechts */
+#doctorCard .toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between; /* Titel links + Mitte + Badges rechts */
 }
-.toolbar .center-group{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:center;
-  flex:1; /* nimmt Platz ein und sorgt dafür, dass Badges rechts außen kleben */
+
+#doctorCard .toolbar .center-group {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center; /* Buttons + Datum + Anwenden mittig */
+}
+
+#doctorCard .toolbar .badge {
+  margin-left: 8px;
 }
 
 .spacer{flex:1}
@@ -88,7 +94,15 @@ break-inside:avoid;
 }
 
   /* --- Arzt-Toolbar Badges (Daily KPIs) --- */
-.badge{display:inline-block;padding:4px 8px;border:1px solid #2b2f3a;border-radius:10px;font-size:12px;margin-left:8px}
+.badge {
+  display: inline-block;
+  padding: 6px 12px;         /* etwas mehr Platz */
+  border: 1.5px solid #2b2f3a;
+  border-radius: 12px;       /* runder = moderner */
+  font-size: 13px;           /* +1pt größer */
+  font-weight: 600;          /* kräftiger */
+  margin-left: 10px;
+}
 .badge.good{border-color:var(--ok); color:var(--ok)}
 .badge.bad{ border-color:var(--danger); color:var(--danger)}
 .badge.hidden{ display:none !important; }
@@ -2597,4 +2611,5 @@ main();
 </div>
 </body>
 </html>
+
 
