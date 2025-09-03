@@ -414,16 +414,11 @@ grid-template-columns: repeat(3, max-content);
 </header>
 <div class="content">
 <div class="controls">
-<select id="metricSel" class="half">
-<option value="bp">Blutdruck (Sys/Dia)</option>
-<option value="pulse">Puls</option>
-<option value="weight">Gewicht</option>
-</select>
-<label class="half" style="display:flex;align-items:center;gap:8px">
-<input type="checkbox" id="smoothChk"> Glätten
-</label>
-<button class="btn ghost half" id="refreshChart" type="button">Neu zeichnen</button>
-<button class="btn ghost half" id="savePng" type="button">PNG speichern</button>
+  <select id="metricSel" class="half">
+    <option value="bp">Blutdruck (Sys/Dia)</option>
+    <option value="pulse">Puls</option>
+    <option value="weight">Gewicht</option>
+  </select>
 </div>
 <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
 <div class="legend" id="chartLegend"></div>
@@ -439,21 +434,16 @@ grid-template-columns: repeat(3, max-content);
 </header>
 <div class="content">
 <div class="controls">
-<select id="reportMetricSel" class="half">
-<option value="kreatinin">Kreatinin (mg/dL)</option>
-<option value="egfr">eGFR (ml/min/1.73m²)</option>
-<option value="uacr">uACR (mg/g)</option>
-<option value="kalium">Kalium (mmol/L)</option>
-<option value="cystatin_c">Cystatin C (mg/L)</option>
-<option value="haematurie">Hämaturie (Ery/µL)</option>
-<option value="ldl">LDL (mg/dL)</option>
-<option value="hba1c">HbA1c (%)</option>
-</select>
-<label class="half" style="display:flex;align-items:center;gap:8px">
-<input type="checkbox" id="reportSmoothChk"> Glätten
-</label>
-<button class="btn ghost half" id="refreshReportChart" type="button">Neu zeichnen</button>
-<button class="btn ghost half" id="saveReportPng" type="button">PNG speichern</button>
+  <select id="reportMetricSel" class="half">
+    <option value="kreatinin">Kreatinin (mg/dL)</option>
+    <option value="egfr">eGFR (ml/min/1.73m²)</option>
+    <option value="uacr">uACR (mg/g)</option>
+    <option value="kalium">Kalium (mmol/L)</option>
+    <option value="cystatin_c">Cystatin C (mg/L)</option>
+    <option value="haematurie">Hämaturie (Ery/µL)</option>
+    <option value="ldl">LDL (mg/dL)</option>
+    <option value="hba1c">HbA1c (%)</option>
+  </select>
 </div>
 <svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Befund-Verlauf"></svg>
 <div class="legend" id="chartReportsLegend"></div>
@@ -1617,10 +1607,7 @@ init(){
 this.el = $("#chart"); this.svg = $("#chartSvg"); this.legend = $("#chartLegend");
 $("#chartClose").addEventListener("click", ()=>this.hide());
 $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
-$("#refreshChart").addEventListener("click", ()=> this.draw());
-$("#savePng").addEventListener("click", ()=> this.savePNG());
 $("#metricSel").addEventListener("change", ()=> this.draw());
-$("#smoothChk").addEventListener("change", ()=> this.draw());
 },
 toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
 hide(){ this.open=false; this.el.style.display='none'; },
@@ -1629,15 +1616,6 @@ const entries = await getAllEntries();
 const from = $("#from").value; const to = $("#to").value;
 return entries.filter(e=>{ if (from && e.date < from) return false; if (to && e.date > to) return false; return true; })
 .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
-},
-ma(arr, k=3){
-if(!$("#smoothChk").checked || k<=1) return arr;
-const out=[]; for(let i=0;i<arr.length;i++){
-const s = Math.max(0,i-Math.floor(k/2));
-const e = Math.min(arr.length-1,i+Math.floor(k/2));
-let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
-out.push(c?sum/c:null);
-} return out;
 },
 async draw(){
 const __t0 = performance.now();
@@ -1649,15 +1627,15 @@ if(metric==="bp"){
 const y1 = data.map(e => (e.sys!=null? Number(e.sys) : null));
 const y2 = data.map(e => (e.dia!=null? Number(e.dia) : null));
 series = [
-{name:"Systolisch", values:this.ma(y1), color:"#60a5fa"},
-{name:"Diastolisch", values:this.ma(y2), color:"#f472b6"}
+  {name:"Systolisch", values:y1, color:"#60a5fa"},
+  {name:"Diastolisch", values:y2, color:"#f472b6"}
 ];
 }else if(metric==="pulse"){
 const y = data.map(e => (e.pulse!=null? Number(e.pulse) : null));
-series = [{name:"Puls", values:this.ma(y), color:"#34d399"}];
+series = [{name:"Puls", values:y, color:"#34d399"}];
 }else if(metric==="weight"){
 const y = data.map(e => (e.weight!=null? Number(e.weight) : null));
-series = [{name:"Gewicht (kg)", values:this.ma(y), color:"#f59e0b"}];
+series = [{name:"Gewicht (kg)", values:y, color:"#f59e0b"}]
 }
 const hasAny = series.some(s => s.values.some(v=>v!=null));
 this.svg.innerHTML=""; this.legend.innerHTML="";
@@ -1680,7 +1658,7 @@ const ticks = 4;
 for(let i=0;i<=ticks;i++){
 const vv = y0 + (i*(y1max-y0)/ticks);
 const yy = y(vv);
-grid += line(PL,yy,W-PR,yy,"#22262f");
+grid += line(PL,yy,W-PR,yy,"#2a3140");
 grid += text(PL-6,yy+4, Math.round(vv).toString());
 }
 const week = 7*24*3600*1000;
@@ -1715,31 +1693,6 @@ const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.sna
 diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
 });
 },
-
-async savePNG(){
-const svgEl = this.svg;
-const xml = new XMLSerializer().serializeToString(svgEl);
-const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
-const url = URL.createObjectURL(svgBlob);
-const img = new Image();
-img.onload = ()=>{
-const canvas = document.createElement("canvas");
-canvas.width = svgEl.viewBox.baseVal.width || 640;
-canvas.height = svgEl.viewBox.baseVal.height || 280;
-const ctx = canvas.getContext("2d");
-ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
-ctx.drawImage(img,0,0);
-canvas.toBlob(blob=>{
-const a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = `diagramm_daily_${new Date().toISOString().slice(0,10)}.png`;
-a.click();
-URL.revokeObjectURL(a.href);
-},"image/png");
-URL.revokeObjectURL(url);
-};
-img.src = url;
-}
 };
 
 /* ===== Simple SVG Chart (Befunde) ===== */
@@ -1748,10 +1701,7 @@ el:null, svg:null, legend:null, open:false,
 init(){
 this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
 $("#chartReportsClose").addEventListener("click", ()=>this.hide());
-$("#refreshReportChart").addEventListener("click", ()=> this.draw());
-$("#saveReportPng").addEventListener("click", ()=> this.savePNG());
 $("#reportMetricSel").addEventListener("change", ()=> this.draw());
-$("#reportSmoothChk").addEventListener("change", ()=> this.draw());
 },
 toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
 hide(){ this.open=false; this.el.style.display='none'; },
@@ -1760,15 +1710,6 @@ const reps = await getAllReports();
 const from = $("#from").value; const to = $("#to").value;
 return reps.filter(r=>{ if(!r.datum) return false; if (from && r.datum < from) return false; if (to && r.datum > to) return false; return true; })
 .sort((a,b)=> (a.ts ?? new Date(a.datum).getTime()) - (b.ts ?? new Date(b.datum).getTime()));
-},
-ma(arr, k=3){
-if(!$("#reportSmoothChk").checked || k<=1) return arr;
-const out=[]; for(let i=0;i<arr.length;i++){
-const s = Math.max(0,i-Math.floor(k/2));
-const e = Math.min(arr.length-1,i+Math.floor(k/2));
-let sum=0, c=0; for(let j=s;j<=e;j++){ if(arr[j]!=null){ sum+=arr[j]; c++; } }
-out.push(c?sum/c:null);
-} return out;
 },
 async draw(){
 const metric = $("#reportMetricSel").value;
@@ -1780,7 +1721,7 @@ return;
 }
 const xs = data.map(r => (r.ts ?? new Date(r.datum).getTime()));
 const vals = data.map(r => (r[metric] != null ? Number(r[metric]) : null));
-const series = [{name: metricLabel(metric), values: this.ma(vals), color: "#60a5fa"}];
+const series = [{name: metricLabel(metric), values: vals, color: "#60a5fa"}];
 const hasAny = series.some(s => s.values.some(v=>v!=null));
 this.svg.innerHTML=""; this.legend.innerHTML="";
 if(!hasAny){ this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`; return; }
@@ -1801,7 +1742,7 @@ const ticks = 4;
 for(let i=0;i<=ticks;i++){
 const vv = y0 + (i*(y1max-y0)/ticks);
 const yy = y(vv);
-grid += line(PL,yy,W-PR,yy,"#22262f");
+grid += line(PL,yy,W-PR,yy,"#2a3140");
 grid += text(PL-6,yy+4, roundSmart(vv).toString());
 }
 const month = 30*24*3600*1000;
@@ -1853,30 +1794,6 @@ default: return m;
 }
 }
 },
-async savePNG(){
-const svgEl = this.svg;
-const xml = new XMLSerializer().serializeToString(svgEl);
-const svgBlob = new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
-const url = URL.createObjectURL(svgBlob);
-const img = new Image();
-img.onload = ()=>{
-const canvas = document.createElement("canvas");
-canvas.width = svgEl.viewBox.baseVal.width || 640;
-canvas.height = svgEl.viewBox.baseVal.height || 280;
-const ctx = canvas.getContext("2d");
-ctx.fillStyle = "#0f1116"; ctx.fillRect(0,0,canvas.width,canvas.height);
-ctx.drawImage(img,0,0);
-canvas.toBlob(blob=>{
-const a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = `diagramm_befunde_${new Date().toISOString().slice(0,10)}.png`;
-a.click();
-URL.revokeObjectURL(a.href);
-},"image/png");
-URL.revokeObjectURL(url);
-};
-img.src = url;
-}
 };
 
 /* --- Button-Flash --- */
@@ -2611,5 +2528,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
