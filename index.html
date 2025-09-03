@@ -1435,14 +1435,18 @@ btn.disabled = false; btn.textContent = old;
 }
 
 /* ===== Doctor view ===== */
-  function setDocBadges({ training = 0, bad = 0, visible = true } = {}) {
+function setDocBadges({ training, bad, visible } = {}) {
   const t = document.getElementById('docTrainCnt');
   const b = document.getElementById('docBadCnt');
   if (!t || !b) return;
-  t.querySelector('.val').textContent = String(training);
-  b.querySelector('.val').textContent = String(bad);
-  t.classList.toggle('hidden', !visible);
-  b.classList.toggle('hidden', !visible);
+
+  if (training !== undefined) t.querySelector('.val').textContent = String(training);
+  if (bad !== undefined)      b.querySelector('.val').textContent = String(bad);
+
+  if (visible !== undefined) {
+    t.classList.toggle('hidden', !visible);
+    b.classList.toggle('hidden', !visible);
+  }
 }
 
 const __t0 = performance.now();
@@ -2630,6 +2634,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
