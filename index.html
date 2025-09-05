@@ -928,54 +928,6 @@ tx.onerror = (e)=>rej(e);
 });
 }
 
-/* ===== Reports (Befunde) ===== */
-function addReport(obj){
-return new Promise((res,rej)=>{
-const tx = db.transaction("reports","readwrite");
-const req = tx.objectStore("reports").add(obj);
-req.onsuccess = ()=> res(req.result);
-req.onerror = (e)=> rej(e);
-});
-}
-function updateReport(id, patch){
-return new Promise((res,rej)=>{
-const tx = db.transaction("reports","readwrite");
-const store = tx.objectStore("reports");
-const getReq = store.get(id);
-getReq.onsuccess = ()=>{
-const cur = getReq.result; if(!cur){ res(false); return; }
-store.put(Object.assign({}, cur, patch));
-};
-tx.oncomplete = ()=>res(true);
-tx.onerror = (e)=>rej(e);
-});
-}
-function getAllReports(){
-return new Promise((res,rej)=>{
-const tx = db.transaction("reports","readonly");
-const req = tx.objectStore("reports").getAll();
-req.onsuccess = ()=> res(req.result || []);
-req.onerror = (e)=> rej(e);
-});
-}
-function getReportByRemoteId(remoteId){
-return new Promise((res,rej)=>{
-const tx = db.transaction("reports","readonly");
-const idx = tx.objectStore("reports").index("byRemote");
-const req = idx.getAll(remoteId);
-req.onsuccess = ()=> res(req.result?.[0] ?? null);
-req.onerror = (e)=> rej(e);
-});
-}
-function deleteReportLocal(id){
-return new Promise((res,rej)=>{
-const tx = db.transaction("reports","readwrite");
-tx.objectStore("reports").delete(id);
-tx.oncomplete = ()=>res();
-tx.onerror = (e)=>rej(e);
-});
-}
-
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
 const key = await getConf("webhookKey");
@@ -2019,7 +1971,7 @@ const existing = await getEntryByRemoteId(row.id);
 if(existing){ await updateEntry(existing.id, mapped); }
 else{ await addEntry(mapped); }
 await loadAndRender();
-if(activeDoctorMode()==="daily") await renderDoctor();
+await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add(`Realtime health_entries: ${et}`);
 }
@@ -2029,7 +1981,7 @@ if(rid!=null){
 const existing = await getEntryByRemoteId(rid);
 if(existing){ await deleteEntryLocal(existing.id); }
 await loadAndRender();
-if(activeDoctorMode()==="daily") await renderDoctor();
+await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add("Realtime health_entries: DELETE");
 }
@@ -2039,15 +1991,6 @@ diag.add("Realtime health_entries: DELETE");
 );
 }
 async function reconcileFromRemote(){
-  function activeDoctorMode(){
-  // Aktuell nur Daily-Ansicht vorhanden
-  return "daily";
-}
-
-  async function reconcileReportsFromRemote(){
-  // Noch kein echter Reports-Sync implementiert – bewusst als No-Op.
-  return;
-}
 
 // Daily
 const remoteRows = await pullAllFromRemote();
@@ -2085,7 +2028,6 @@ try{
 const push = await pushPendingToRemote();
 if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
 await reconcileFromRemote();
-await reconcileReportsFromRemote();
 diag.add("Auto-Sync: Abgleich fertig (ohne Wipe)");
 }catch(e){
 diag.add("Auto-Sync: Fehler – " + (e.message||e));
@@ -2290,7 +2232,6 @@ const resPush = await pushPendingToRemote();
 if(resPush.pushed || resPush.failed){
 diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
 await reconcileFromRemote();
-await reconcileReportsFromRemote();
 }
 });
 }
@@ -2317,6 +2258,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
