@@ -302,62 +302,60 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 /* Mobile-Optimierung */
 @media (max-width: 599px){
-.doctor-view .measure-head,
-.doctor-view .measure-grid{
-grid-template-columns: minmax(66px, auto) repeat(4, 1fr);
-}
-.doctor-view .num{
-min-width: 4ch;
-white-space: nowrap;
-}
-/* Mobile: Flags in 2 Spalten, kompakter */
-.doctor-view .flags{
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  justify-content: start;
-  align-items: center;
-  column-gap: 14px;
-  row-gap: 6px;
-  margin-top: 6px;
+
+  /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
+  }
+  .doctor-view .measure-head{ font-size: 11px; }
+
+  /* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
+  .doctor-view .num{
+    min-width: 4.5ch; /* ~ „96.7“ passt sicher */
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .doctor-view .col-special .weight-line .num{
+    min-width: 5ch; /* „84.5“ o. Ä. */
+  }
+
+  /* Spalten: Gewicht | Flags nebeneinander, Kommentar darunter über volle Breite */
+  .doctor-view .col-special{
+    grid-template-columns: minmax(110px, max-content) 1fr; /* Flags bekommen flex Breite */
+    column-gap: 12px;
+  }
+  .doctor-view .col-special > .notes{
+    grid-column: 1 / -1; /* Kommentar über beide Spalten */
+  }
+
+  /* Kommentar: mobil 4 Zeilen anzeigen */
+  .doctor-view .notes{
+    -webkit-line-clamp: 4; /* bei Bedarf auf 5 erhöhen */
+  }
+
+  /* Flags: kompakt in 2 Spalten, keine abgeschnittenen Labels */
+  .doctor-view .flags{
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 6px;
+    margin-top: 6px;
+  }
+  .doctor-view .flag span:last-child{ white-space: nowrap; }
 }
 
-/* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
-.doctor-view .measure-head,
-.doctor-view .measure-grid{
-grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
-}
-.doctor-view .measure-head{ font-size: 11px; }
-
-/* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
-.doctor-view .num{
-min-width: 4.5ch; /* ~ „96.7“ passt sicher */
-flex: 0 0 auto;
-}
-.doctor-view .col-special .weight-line .num{
-min-width: 5ch; /* „84.5“ o. Ä. */
-}
-
-/* Flags: in 2–3 Spalten umbrechen statt zu strecken */
-.doctor-view .flags{
-display:grid;
-grid-template-columns: repeat(5, max-content);
-justify-content: start;
-align-items:center;
-column-gap: 14px;
-row-gap: 6px;
-}
-.doctor-view .flag span:last-child{ white-space: nowrap; } /* kein „Medikamer…“ Abbruch */
-}
-
-/* Extra-eng (≤ 390px Breite) – falls nötig noch schmaler */
+/* Extra-eng (≤ 390px Breite) */
 @media (max-width: 390px){
-.doctor-view .measure-head,
-.doctor-view .measure-grid{
-grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
-}
-.doctor-view .flags{
-grid-template-columns: repeat(3, max-content);
-}
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
+  }
+  .doctor-view .flags{
+    grid-template-columns: repeat(3, max-content);
+  }
 }
 
 /* Panels */
@@ -2761,12 +2759,3 @@ main();
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
