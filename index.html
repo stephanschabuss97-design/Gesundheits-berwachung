@@ -151,6 +151,29 @@ font-weight:800;
 font-size:clamp(16px,1.6vw,20px);
 letter-spacing:.2px;
 }
+  /* Datumsspalte mit Cloud + Delete untereinander */
+.doctor-view .col-date{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.doctor-view .col-date .date-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.doctor-view .col-date .date-label{
+  font-weight:800;
+  font-size:clamp(16px,1.6vw,20px);
+  letter-spacing:.2px;
+}
+.doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
+.doctor-view .col-date .date-actions{
+  display:flex;
+  justify-content:flex-start; /* oder center, wenn du’s mittig magst */
+}
+.btn-xs{ padding:6px 10px; font-size:12px; border-radius:8px; }
 
 /* Spalte B – Messungen */
 .doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
@@ -1478,15 +1501,22 @@ return true;
 // 2) Tagesobjekte aufbauen (nur Darstellung)
 const days = new Map();
 for (const e of list){
+// IDs & Cloud-Status sammeln (für Datumsspalte)
+if (e?.id != null) d.localIds.push(e.id);
+if (e?.remote_id != null) d.remoteIds.push(e.remote_id);
+if (e?.remote_id) d.hasCloud = true;
 let d = days.get(e.date);
 if (!d){
 d = {
-date: e.date,
-morning: { sys:null, dia:null, pulse:null, map:null },
-evening: { sys:null, dia:null, pulse:null, map:null },
-weight: null,
-notes: "",
-flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false }
+  date: e.date,
+  morning: { sys:null, dia:null, pulse:null, map:null },
+  evening: { sys:null, dia:null, pulse:null, map:null },
+  weight: null,
+  notes: "",
+  flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+  localIds: [],          // 🔹 lokale IDs aller Einträge des Tages
+  remoteIds: [],         // 🔹 dazugehörige Remote-IDs (falls vorhanden)
+  hasCloud: false        // 🔹 mindestens ein Eintrag ist mit Cloud verknüpft
 };
 days.set(e.date, d);
 }
@@ -1540,7 +1570,16 @@ setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 const renderDoctorDay = (day) => `
 <section class="doctor-day" data-date="${day.date}">
 <!-- Spalte A: Datum -->
-<div class="col-date">${fmtDateDE(day.date)}</div>
+<!-- Spalte A: Datum (+ Cloud + Löschen) -->
+<div class="col-date">
+  <div class="date-top">
+    <span class="date-label">${fmtDateDE(day.date)}</span>
+    <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
+  </div>
+  <div class="date-actions">
+    <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
+  </div>
+</div>
 
 <!-- Spalte B: Messungen -->
 <div class="col-measure">
@@ -1589,9 +1628,50 @@ const renderDoctorDay = (day) => `
 
 // 4) Rendern oder Leerzustand
 if (!daysArr.length){
-host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
 } else {
-host.innerHTML = daysArr.map(renderDoctorDay).join("");
+  host.innerHTML = daysArr.map(renderDoctorDay).join("");
+
+  // 🔹 Tages-Löschbuttons (löscht ALLE Einträge dieses Datums – lokal + remote)
+  host.querySelectorAll('[data-del-day]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const date = btn.getAttribute('data-del-day');
+      if (!date) return;
+      if (!confirm(`Alle Einträge für ${date} löschen? (Cloud-Einträge werden – falls möglich – mitgelöscht)`)) return;
+
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = 'Lösche…';
+
+      try{
+        const all = await getAllEntries();
+        const ofDay = all.filter(e => e.date === date);
+        // 1) Remote löschen (falls remote_id vorhanden)
+        for (const e of ofDay){
+          if (e.remote_id){
+            const r = await deleteRemote(e.remote_id);
+            if (!r.ok){
+              alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}) für einen Eintrag am ${date}. Vorgang abgebrochen.`);
+              btn.disabled = false; btn.textContent = old;
+              return;
+            }
+          }
+        }
+        // 2) Lokal löschen
+        for (const e of ofDay){
+          await deleteEntryLocal(e.id);
+        }
+        // 3) UI aktualisieren
+        await loadAndRender();
+        await renderDoctor();
+        if (chartPanel.open) chartPanel.draw();
+        if (chartReportsPanel.open) chartReportsPanel.draw();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    });
+  });
 }
 }
 
@@ -2634,6 +2714,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
