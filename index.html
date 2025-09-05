@@ -1501,56 +1501,58 @@ return true;
 // 2) Tagesobjekte aufbauen (nur Darstellung)
 const days = new Map();
 for (const e of list){
-// IDs & Cloud-Status sammeln (für Datumsspalte)
-if (e?.id != null) d.localIds.push(e.id);
-if (e?.remote_id != null) d.remoteIds.push(e.remote_id);
-if (e?.remote_id) d.hasCloud = true;
-let d = days.get(e.date);
-if (!d){
-d = {
-  date: e.date,
-  morning: { sys:null, dia:null, pulse:null, map:null },
-  evening: { sys:null, dia:null, pulse:null, map:null },
-  weight: null,
-  notes: "",
-  flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
-  localIds: [],          // 🔹 lokale IDs aller Einträge des Tages
-  remoteIds: [],         // 🔹 dazugehörige Remote-IDs (falls vorhanden)
-  hasCloud: false        // 🔹 mindestens ein Eintrag ist mit Cloud verknüpft
-};
-days.set(e.date, d);
-}
+  // Day-Objekt holen/erzeugen
+  let d = days.get(e.date);
+  if (!d){
+    d = {
+      date: e.date,
+      morning: { sys:null, dia:null, pulse:null, map:null },
+      evening: { sys:null, dia:null, pulse:null, map:null },
+      weight: null,
+      notes: "",
+      flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+      localIds: [],
+      remoteIds: [],
+      hasCloud: false
+    };
+    days.set(e.date, d);
+  }
 
-const legacyWeightOnly = isWeightOnly(e);
-const hasVitals = !!(e.sys || e.dia || e.pulse);
-const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = hasVitals && !isDaySummary;
+  // IDs & Cloud-Status sammeln
+  if (e?.id != null) d.localIds.push(e.id);
+  if (e?.remote_id != null) { d.remoteIds.push(e.remote_id); d.hasCloud = true; }
 
-// Messblöcke
-if (isMeasurement && e.context === "Morgen"){
-d.morning.sys = e.sys ?? null;
-d.morning.dia = e.dia ?? null;
-d.morning.pulse = e.pulse ?? null;
-d.morning.map = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
-} else if (isMeasurement && e.context === "Abend"){
-d.evening.sys = e.sys ?? null;
-d.evening.dia = e.dia ?? null;
-d.evening.pulse = e.pulse ?? null;
-d.evening.map = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
-}
+  const legacyWeightOnly = isWeightOnly(e);
+  const hasVitals = !!(e.sys || e.dia || e.pulse);
+  const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
+  const isMeasurement = hasVitals && !isDaySummary;
 
-// Tageszusammenfassung / Gewicht / Notizen
-if (isDaySummary){
-if (e.weight != null) d.weight = e.weight;
-if (e.notes) d.notes = e.notes;
-}
-  // Flags (Spezial): Training/Wasser/Salz/Zucker/Krank/Medikamente
-if (e.training) d.flags.training = true;
-if (e.low_intake) d.flags.water_lt2 = true;
-if (e.salt_high) d.flags.salt_gt5 = true;
-if (e.sugar_high) d.flags.sugar_gt10 = true;
-if (e.sick) d.flags.sick = true;
-if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
+  // Messblöcke
+  if (isMeasurement && e.context === "Morgen"){
+    d.morning.sys   = e.sys ?? null;
+    d.morning.dia   = e.dia ?? null;
+    d.morning.pulse = e.pulse ?? null;
+    d.morning.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+  } else if (isMeasurement && e.context === "Abend"){
+    d.evening.sys   = e.sys ?? null;
+    d.evening.dia   = e.dia ?? null;
+    d.evening.pulse = e.pulse ?? null;
+    d.evening.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+  }
+
+  // Tageszusammenfassung / Gewicht / Notizen
+  if (isDaySummary){
+    if (e.weight != null) d.weight = e.weight;
+    if (e.notes)          d.notes  = e.notes;
+  }
+
+  // Flags
+  if (e.training)                         d.flags.training   = true;
+  if (e.low_intake)                       d.flags.water_lt2  = true;
+  if (e.salt_high)                        d.flags.salt_gt5   = true;
+  if (e.sugar_high)                       d.flags.sugar_gt10 = true;
+  if (e.sick)                             d.flags.sick       = true;
+  if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
 }
 
 const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
@@ -2714,6 +2716,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
