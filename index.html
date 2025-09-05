@@ -372,8 +372,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 /* Flex-Layout: Header fix oben, Inhalt füllt Rest */
 .panel.chart{
-  /* JS setzt display:block; das ist okay – wir überschreiben nicht */
-  display: block;
+  /* Sichtbarkeit steuert JS; NICHT auf block setzen */
 }
 .panel.chart header{ 
   /* bleibt oben, keine Änderung nötig – aber fixere Höhe ist hilfreich */
@@ -1760,9 +1759,14 @@ const chartPanel = {
   init(){
     this.el = $("#chart");
     this.svg = $("#chartSvg");
+this.el.style.display = 'none';
     this.legend = $("#chartLegend");
     $("#chartClose").addEventListener("click", ()=>this.hide());
-    $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
+    $("#chartBtn").addEventListener("click", async ()=>{
+  this.open = true;
+  this.el.style.display = 'block';
+  await this.draw();
+});
     $("#metricSel").addEventListener("change", ()=> this.draw());
     // ANKER: chart-resize-observer
 const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
@@ -1776,14 +1780,11 @@ window.addEventListener('orientationchange', () => {
   toggle(){
   this.open = !this.open;
   this.el.style.display = this.open ? 'block' : 'none';
-  this.el.classList.toggle('fullscreen', this.open); // ANKER: fullscreen
 },
 hide(){
   this.open = false;
   this.el.style.display = 'none';
-  this.el.classList.remove('fullscreen');
 },
-  hide(){ this.open=false; this.el.style.display='none'; },
 
   async getFiltered(){
     const entries = await getAllEntries();
@@ -1996,6 +1997,7 @@ const chartReportsPanel = {
 el:null, svg:null, legend:null, open:false,
 init(){
 this.el = $("#chartReports"); this.svg = $("#chartReportsSvg"); this.legend = $("#chartReportsLegend");
+this.el.style.display = 'none';
 $("#chartReportsClose").addEventListener("click", ()=>this.hide());
 $("#reportMetricSel").addEventListener("change", ()=> this.draw());
 },
@@ -2667,8 +2669,15 @@ $("#applyRange").addEventListener("click", async ()=>{
 $("#doctorChartBtn").addEventListener("click", async ()=>{
 const mode = activeDoctorMode();
 setDocBadges({ visible: mode === "daily" });
-if(mode==="daily"){ chartPanel.toggle(); if(chartPanel.open) await chartPanel.draw(); }
-else { chartReportsPanel.toggle(); if(chartReportsPanel.open) await chartReportsPanel.draw(); }
+if (mode === "daily") {
+  chartPanel.open = true;
+  chartPanel.el.style.display = 'block';
+  await chartPanel.draw();
+} else {
+  chartReportsPanel.open = true;
+  chartReportsPanel.el.style.display = 'block';
+  await chartReportsPanel.draw();
+}
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -2824,4 +2833,5 @@ main();
 </div>
 </body>
 </html>
+
 
