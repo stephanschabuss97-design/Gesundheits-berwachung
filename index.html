@@ -360,10 +360,40 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 /* Panels */
 .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
-.panel.chart{ width:min(92vw, 820px); }
+/* Panel (Charts) — Fullscreen */
+.panel.chart{
+  inset: 0;                 /* volle Fläche (top/right/bottom/left = 0) */
+  width: 100vw;
+  height: 100dvh;           /* korrekt auf Mobile (sichtbare Höhe) */
+  max-width: 100vw;
+  max-height: 100dvh;
+  border-radius: 0;         /* keine abgerundeten Ecken im Vollbild */
+}
+
+/* Flex-Layout: Header fix oben, Inhalt füllt Rest */
+.panel.chart{
+  /* JS setzt display:block; das ist okay – wir überschreiben nicht */
+  display: block;
+}
+.panel.chart header{ 
+  /* bleibt oben, keine Änderung nötig – aber fixere Höhe ist hilfreich */
+  min-height: 44px;
+}
+.panel.chart .content{
+  /* Inhalt füllt den verfügbaren Raum */
+  height: calc(100dvh - 44px - 2px); /* 44px Header + 1px border oben/unten */
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
 .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
 .panel h4{margin:0;font-size:14px}
-.panel .content{padding:10px;font-size:13px;line-height:1.45}
+.panel .content{
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 
+           max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  font-size: 13px;
+  line-height: 1.45;
+}
 #diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
 
 /* FABs */
@@ -385,10 +415,22 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .blockTitle{font-weight:800;margin:0 0 8px 0}
 
 /* Chart panel */
-#chart .controls, #chartReports .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+#chart .controls, #chartReports .controls{
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  margin-bottom:6px;
+}
 #chart .controls > *, #chartReports .controls > * {flex:1}
 #chart .controls .half, #chartReports .controls .half{flex:0 0 calc(50% - 4px)}
-#chart svg, #chartReports svg{width:100%;height:340px;display:block;background:#0f1116;border:1px solid #2b2f3a;border-radius:10px}
+/* SVG füllt verbleibende Höhe vollständig */
+#chart svg, #chartReports svg{
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #0f1116;
+  border: 1px solid #2b2f3a;
+  border-radius: 10px;
+  min-height: 0; /* wichtig für Flex-Container */
+}
 #chart .legend, #chartReports .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
@@ -469,7 +511,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   </div>
 </div>
 
-<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Werteverlauf"></svg>
+<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
 <div class="legend" id="chartLegend"></div>
 <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
 </div>
@@ -494,7 +536,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     <option value="hba1c">HbA1c (%)</option>
   </select>
 </div>
-<svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Befund-Verlauf"></svg>
+<svg id="chartReportsSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Befund-Verlauf"></svg>
 <div class="legend" id="chartReportsLegend"></div>
 <div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
 </div>
@@ -1722,8 +1764,25 @@ const chartPanel = {
     $("#chartClose").addEventListener("click", ()=>this.hide());
     $("#chartBtn").addEventListener("click", async ()=>{ this.toggle(); await this.draw(); });
     $("#metricSel").addEventListener("change", ()=> this.draw());
+    // ANKER: chart-resize-observer
+const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
+ro.observe(this.el);
+this._ro = ro;
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => { if (this.open) this.draw(); }, 150);
+});
   },
-  toggle(){ this.open=!this.open; this.el.style.display=this.open?'block':'none'; },
+  toggle(){
+  this.open = !this.open;
+  this.el.style.display = this.open ? 'block' : 'none';
+  this.el.classList.toggle('fullscreen', this.open); // ANKER: fullscreen
+},
+hide(){
+  this.open = false;
+  this.el.style.display = 'none';
+  this.el.classList.remove('fullscreen');
+},
   hide(){ this.open=false; this.el.style.display='none'; },
 
   async getFiltered(){
@@ -1804,8 +1863,14 @@ __sysVals = y1; __diaVals = y2; // ANKER: merken für dotsSysDia
       return;
     }
 
-    const W=640, H=280, PL=48, PR=16, PT=12, PB=28;
-    const innerW=W-PL-PR, innerH=H-PT-PB;
+// ANKER: chart-dims-dynamic
+const bbox = this.svg.getBoundingClientRect();
+const W = Math.max(300, Math.floor(bbox.width  || 640));
+const H = Math.max(200, Math.floor(bbox.height || 280));
+this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+const PL=48, PR=16, PT=12, PB=28;
+const innerW = W - PL - PR, innerH = H - PT - PB;
 
     const xVals = xs.filter(Boolean);
     const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
@@ -2759,3 +2824,4 @@ main();
 </div>
 </body>
 </html>
+
