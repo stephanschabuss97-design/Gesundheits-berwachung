@@ -547,10 +547,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <main>
 <!-- Capture -->
 <section class="view active" id="capture">
-<div class="seg" id="seg-capture">
-<button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
-<button class="btn ghost seg-btn" data-mode="befund">Erfassen • Befund</button>
-</div>
 
 <!-- Daily-Capture -->
 <section class="card" id="entry">
@@ -628,28 +624,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 </div>
 </section>
 
-<!-- Befund-Capture -->
-<section class="card hidden" id="entry_befund">
-<h3 class="blockTitle">Neuer Befund</h3>
-<div class="grid">
-<div><label>Datum</label><input type="date" id="repDate"></div>
-<div><label>Kreatinin (mg/dL)</label><input type="number" step="0.01" id="repKrea"></div>
-<div><label>eGFR (ml/min/1.73m²)</label><input type="number" step="1" id="repEgfr"></div>
-<div><label>uACR (mg/g)</label><input type="number" step="1" id="repUacr"></div>
-<div><label>Kalium (mmol/L)</label><input type="number" step="0.1" id="repK"></div>
-<div><label>Cystatin C (mg/L)</label><input type="number" step="0.01" id="repCys"></div>
-<div><label>Hämaturie (Ery/µL)</label><input type="number" step="1" id="repHaem"></div>
-<div><label>LDL (mg/dL)</label><input type="number" step="1" id="repLDL"></div>
-<div><label>HbA1c (%)</label><input type="number" step="0.1" id="repHbA1c"></div>
-<div><label>Kommentar</label><input type="text" id="repNote" placeholder="Labor / Kontext"></div>
-</div>
-<div class="row" style="align-items:center; gap:8px; margin-top:12px">
-<button class="btn primary" id="saveReportBtn" type="button">💾 Befund speichern</button>
-<div class="spacer"></div>
-</div>
-</section>
-</section>
-
 <!-- List -->
 <section class="view" id="list">
 <section class="card">
@@ -667,11 +641,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
 <button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
 <button class="btn warn" id="hardResetBtn" type="button" title="Cookies + Cache löschen, Seite neu laden">Seite frisch laden</button>
-</div>
-
-<div class="seg" id="seg-list">
-<button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
-<button class="btn ghost seg-btn" data-mode="befund">Liste • Befunde</button>
 </div>
 
 <!-- Wrapper Daily -->
@@ -705,29 +674,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 </table>
 </div>
 
-<!-- Wrapper Befunde -->
-<div style="overflow:auto" id="listReportWrap" class="hidden">
-<table id="tblReports">
-<thead>
-<tr>
-<th class="nowrap">Datum</th>
-<th class="center">Kreatinin</th>
-<th class="center">eGFR</th>
-<th class="center">uACR</th>
-<th class="center">Kalium</th>
-<th class="center">Cystatin&nbsp;C</th>
-<th class="center">Hämaturie</th>
-<th class="center">LDL</th>
-<th class="center">HbA1c</th>
-<th>Kommentar</th>
-<th class="center">Cloud</th>
-<th class="nowrap">Aktion</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
 <div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
 </section>
 
@@ -755,10 +701,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
       <strong id="doctorTitle">Arzt-Ansicht</strong>
 
       <div class="center-group">
-        <div class="seg" id="seg-doctor" style="margin:0">
-          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
-          <button class="btn ghost seg-btn" data-mode="befund">Befunde</button>
-        </div>
         <label class="small">Von <input type="date" id="from" style="width:auto"></label>
         <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
         <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
@@ -771,26 +713,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
     <div style="overflow:auto" id="doctorDailyWrap">
       <div class="doctor-view" id="doctorView"></div>
-    </div>
-
-    <div style="overflow:auto" id="doctorReportWrap" class="hidden">
-      <table id="doctorReportsTable">
-        <thead>
-          <tr>
-            <th>Datum</th>
-            <th class="center">Kreatinin</th>
-            <th class="center">eGFR</th>
-            <th class="center">uACR</th>
-            <th class="center">Kalium</th>
-            <th class="center">Cystatin&nbsp;C</th>
-            <th class="center">Hämaturie</th>
-            <th class="center">LDL</th>
-            <th class="center">HbA1c</th>
-            <th>Kommentar</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </div>
 
     <div class="small" style="margin-top:6px">
@@ -1706,7 +1628,6 @@ if (!daysArr.length){
         await loadAndRender();
         await renderDoctor();
         if (chartPanel.open) chartPanel.draw();
-        if (chartReportsPanel.open) chartReportsPanel.draw();
       } finally {
         btn.disabled = false;
         btn.textContent = old;
@@ -2109,62 +2030,10 @@ function setTab(name){
 $$(".view").forEach(v=>v.classList.remove("active"));
 $("#"+name).classList.add("active");
 $$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
-if(name==="doctor"){ renderDoctorViewForMode(); }
+if(name==="doctor"){ renderDoctor(); }
 if(name==="list"){ loadAndRender(); }
 }
 function bindTabs(){ $$(".tabs .btn").forEach(b=> b.addEventListener("click", e=> setTab(e.currentTarget.dataset.tab))); }
-function bindCaptureSegment(){
-const seg = $("#seg-capture"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#entry").classList.toggle("hidden", mode !== "daily");
-$("#entry_befund").classList.toggle("hidden", mode !== "befund");
-});
-});
-}
-function bindListSegment(){
-const seg = $("#seg-list"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", async ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#listDailyWrap").classList.toggle("hidden", mode!=="daily");
-$("#listReportWrap").classList.toggle("hidden", mode!=="befund");
-if(mode==="befund"){ await loadAndRenderReports(); }
-else { await loadAndRender(); }
-});
-});
-}
-function bindDoctorSegment(){
-const seg = $("#seg-doctor"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", async ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#doctorDailyWrap").classList.toggle("hidden", mode!=="daily");
-$("#doctorReportWrap").classList.toggle("hidden", mode!=="befund");
-$("#doctorTitle").textContent = `Arzt-Ansicht • ${mode==="daily"?"Daily":"Befunde"}`;
-if(mode==="daily") {
-  await renderDoctor();                // setzt die Werte bereits
-  setDocBadges({ visible: true });
-} else {
-  await renderDoctorReports();
-  setDocBadges({ training: 0, bad: 0, visible: false });
-}
-});
-});
-}
-function activeDoctorMode(){
-const btn = $("#seg-doctor .seg-btn.active");
-return btn ? btn.dataset.mode : "daily";
-}
-async function renderDoctorViewForMode(){
-const mode = activeDoctorMode();
-if(mode==="daily") await renderDoctor();
-else await renderDoctorReports();
-}
 
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
@@ -2219,9 +2088,8 @@ if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; 
 
 // 3) UI aktualisieren
 await loadAndRender();
-await renderDoctorViewForMode();
+await renderDoctor();
 if(chartPanel.open) await chartPanel.draw();
-if(chartReportsPanel.open) await chartReportsPanel.draw();
 
 { const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
 diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
@@ -2307,31 +2175,6 @@ await syncWebhook(entry, localId);
 return true;
 }
 
-async function saveReport(){
-if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
-const datum = $("#repDate").value || todayStr();
-const report = {
-datum,
-kreatinin: $("#repKrea").value ? Number($("#repKrea").value) : null,
-egfr: $("#repEgfr").value ? Number($("#repEgfr").value) : null,
-uacr: $("#repUacr").value ? Number($("#repUacr").value) : null,
-kalium: $("#repK").value ? Number($("#repK").value) : null,
-cystatin_c: $("#repCys").value ? Number($("#repCys").value) : null,
-haematurie: $("#repHaem").value ? Number($("#repHaem").value) : null,
-ldl: $("#repLDL").value ? Number($("#repLDL").value) : null,
-hba1c: $("#repHbA1c").value ? Number($("#repHbA1c").value) : null,
-kommentar: $("#repNote").value?.trim() || "",
-source: "manuell",
-ts: new Date(datum+"T00:00:00").getTime()
-};
-const localId = await addReport(report);
-await syncReportWebhook(report, localId);
-const btn = $("#saveReportBtn");
-const old = btn.innerHTML; btn.disabled=true; btn.classList.add("flash"); btn.innerHTML="✔️ Befund gespeichert";
-setTimeout(()=>{ btn.classList.remove("flash"); btn.innerHTML=old; btn.disabled=false; },800);
-["#repKrea","#repEgfr","#repUacr","#repK","#repCys","#repHaem","#repLDL","#repHbA1c","#repNote"]
-.forEach(sel=>{ const el=$(sel); if(el) el.value=""; });
-}
 async function withRetry(fn, {tries=3, base=300}={}) {
 let lastErr;
 for (let i=0;i<tries;i++){
@@ -2659,25 +2502,16 @@ bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
 $("#saveAllBtn").addEventListener("click", saveAll);
 $("#applyRange").addEventListener("click", async ()=>{
-  await renderDoctorViewForMode();
-  const mode = activeDoctorMode();
-  setDocBadges({ visible: mode === "daily" });
-  if(chartPanel.open) chartPanel.draw();
-  if(chartReportsPanel.open) chartReportsPanel.draw();
+  await renderDoctor();
+  setDocBadges({ visible: true });
+  if (chartPanel.open) chartPanel.draw();
 });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-const mode = activeDoctorMode();
-setDocBadges({ visible: mode === "daily" });
-if (mode === "daily") {
+  setDocBadges({ visible: true });
   chartPanel.open = true;
   chartPanel.el.style.display = 'block';
   await chartPanel.draw();
-} else {
-  chartReportsPanel.open = true;
-  chartReportsPanel.el.style.display = 'block';
-  await chartReportsPanel.draw();
-}
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -2775,12 +2609,6 @@ setBusy(false);
 }
 });
 
-// Bind Segmented Controls
-bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
-
-// Befund speichern
-$("#saveReportBtn").addEventListener("click", saveReport);
-
 // Initial Render
 await loadAndRender(); await renderDoctor();
 setDocBadges({ visible: true });
@@ -2833,5 +2661,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
