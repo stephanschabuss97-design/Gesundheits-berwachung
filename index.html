@@ -1242,29 +1242,32 @@ const chartPanel = {
     this.tip = tip;
 
     // Interaktivität auf dem SVG
-    this.svg.addEventListener("pointermove", (e)=>{
-      if (this.tipSticky) return; // bei Sticky nicht folgen
-      const tgt = e.target;
-      if (!tgt || !tgt.classList.contains("pt")) { this.hideTip(); return; }
-      this.positionTip(e);
-    });
+this.svg.addEventListener("pointermove", (e)=>{
+  if (this.tipSticky) return; // bei Sticky nicht folgen
+  const tgt = e.target;
+  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+  if (!hasNote) { this.hideTip(); return; }
+  this.fillTipFromTarget(tgt);
+  this.positionTip(e);
+});
+
     this.svg.addEventListener("pointerleave", ()=>{
       if (this.tipSticky) return;
       this.hideTip();
     });
     // Click/Tap: Tooltip toggeln (mobil-freundlich)
-    this.svg.addEventListener("click", (e)=>{
-      const tgt = e.target;
-      if (!tgt || !tgt.classList.contains("pt")) {
-        // Klick ins Leere -> Sticky aus
-        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-        return;
-      }
-      // Inhalte neu setzen + Sticky umschalten
-      this.fillTipFromTarget(tgt);
-      this.tipSticky = !this.tipSticky;
-      this.positionTip(e);
-    });
+this.svg.addEventListener("click", (e)=>{
+  const tgt = e.target;
+  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+  if (!hasNote) {
+    // Klick ins Leere oder auf Punkt ohne Notiz -> Sticky aus
+    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+    return;
+  }
+  this.fillTipFromTarget(tgt);
+  this.tipSticky = !this.tipSticky;
+  this.positionTip(e);
+});
 
     // Resize/Orientation -> neu zeichnen, wenn offen
     const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
@@ -1301,21 +1304,13 @@ const chartPanel = {
     this.tip.style.top  = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
-  fillTipFromTarget(tgt){
-    if (!this.tip) return;
-    const date = tgt.getAttribute("data-date") || "";
-    const ctx  = tgt.getAttribute("data-ctx") || "";
-    const kind = tgt.getAttribute("data-kind") || ""; // sys|dia|pulse|weight
-    const v    = tgt.getAttribute("data-val") || "";
-    const note = tgt.getAttribute("data-note") || "";
-    const valLabel = (kind==="sys"||kind==="dia") ? `${kind.toUpperCase()}: ${v}` : `${v}`;
-    const header = date ? `${date} • ${ctx || "—"}` : "Wert";
-    this.tip.innerHTML = `
-      <div style="font-weight:700; margin-bottom:4px">${esc(header)}</div>
-      <div>${esc(valLabel)}</div>
-      ${note ? `<div style="opacity:.85; margin-top:6px"><strong>Kommentar:</strong> ${esc(note)}</div>` : ``}
-    `;
-  },
+fillTipFromTarget(tgt){
+  if (!this.tip) return;
+  const note = tgt.getAttribute("data-note") || "";
+  if (!note) { this.hideTip(); return; }
+  // Nur den Kommentar anzeigen – keine Werte, kein Header
+  this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
+},
 
   async draw(){
     const t0 = performance.now();
@@ -1979,22 +1974,30 @@ if (!savedUrl || !savedKey) {
 }
 
 // Sanfte Warnung
-["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA","#weightDay"].forEach(sel=>{
-const el = $(sel); if(!el) return;
-el.addEventListener("input", ()=>{
-if (sel.includes("sys")) softWarnRange(el, 70, 220);
-else if (sel.includes("dia")) softWarnRange(el, 40, 140);
-else if (sel.includes("pulse")) softWarnRange(el, 30, 180);
-else if (sel.includes("weight"))softWarnRange(el, 30, 300);
+// === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertüberschreitung ===
+function needsCommentNow(){
+  const sysM = Number($("#sysM").value);
+  const diaM = Number($("#diaM").value);
+  const sysA = Number($("#sysA").value);
+  const diaA = Number($("#diaA").value);
+  return (sysM > 130) || (diaM > 90) || (sysA > 130) || (diaA > 90);
+}
+function updateNotesRequirementUI(){
+  const notesEl = $("#notesDay");
+  if (!notesEl) return;
+  const notes = (notesEl.value || "").trim();
+  const need = needsCommentNow();
+  const invalid = need && !notes;
+  notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
+  if (invalid) notesEl.setAttribute("aria-invalid","true"); else notesEl.removeAttribute("aria-invalid");
+}
+// bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
+["#sysM","#diaM","#sysA","#diaA","#notesDay"].forEach(sel=>{
+  const el = $(sel); if(!el) return;
+  el.addEventListener("input", updateNotesRequirementUI);
 });
-});
-
-  // Kommentar-Feld: roten Rand zurücksetzen, sobald Text drin
-$("#notesDay").addEventListener("input", (e)=>{
-  if (e.target.value.trim()) {
-    e.target.style.outline = "";
-  }
-});
+// einmal initial prüfen (falls Werte schon stehen)
+updateNotesRequirementUI();
 
 // Toggle-Handler
 const bindToggle = (id, setter, getVal)=>{
@@ -2087,6 +2090,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
