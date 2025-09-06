@@ -690,31 +690,11 @@ return !!session;
 }catch{ return false; }
 }
 
-/** Schaltet die komplette App frei/zu (außer Hilfe/Log/Google-Login) */
+/** Schaltet optisch auf „gesperrt“ – ohne Controls hart zu deaktivieren */
 function setAuthGuard(logged){
-const disabled = !logged;
-const allowIds = new Set([
-  'googleLoginBtn','helpToggle','diagToggle'
-]);
-// alles im <main> sperren/freigeben
-document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
-if(allowIds.has(el.id)) return; // Hilfe/Log & Login immer bedienbar
-if(el.id === 'logoutBtn') return; // Abmelden bleibt klickbar, sobald sichtbar
-el.disabled = disabled;
-});
-// Tabs sperren
-document.querySelectorAll('nav.tabs button').forEach(b=>{
-if(allowIds.has(b.id)) return;
-b.disabled = disabled;
-});
-// optisches Feedback
-document.body.classList.toggle('auth-locked', disabled);
-
-// ANKER: auth-boot-failsafe
-if (logged) {
-  // Nur einmal (siehe __booted in afterLoginBoot)
-  Promise.resolve().then(() => afterLoginBoot?.());
-}
+  // Nur visuelles Dimmen; die Save-Logik prüft isLoggedIn() ohnehin.
+  document.body.classList.toggle('auth-locked', !logged);
+  // Kein auto-boot mehr hier – Start erfolgt in main()/watchAuthState.
 }
 
 const $ = sel => document.querySelector(sel);
@@ -2049,6 +2029,12 @@ if(isSave){ e.preventDefault(); saveAll(); }
 await renderDoctor();
 setDocBadges({ visible: true });
 
+// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" hängen blieb)
+$$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
+  if (el.id !== 'logoutBtn') el.disabled = false;
+});
+document.body.classList.remove('auth-locked');
+
 function daySummaryActive(){
 const w = ($("#weightDay")?.value || "").trim();
 const n = ($("#notesDay")?.value || "").trim();
@@ -2096,12 +2082,3 @@ main();
 </div>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
