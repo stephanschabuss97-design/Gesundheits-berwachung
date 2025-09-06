@@ -680,6 +680,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
         <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
         <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
         <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+        <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
       </div>
 
       <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
@@ -2153,6 +2154,10 @@ if(isSave){ e.preventDefault(); saveAll(); }
 $("#rangeSel").addEventListener("change", loadAndRender);
 $("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
 $("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
+  $("#doctorExportJson").addEventListener("click", async ()=>{
+  const all = await getAllEntries();
+  dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
+});
 $("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
   $("#hardResetBtn").addEventListener("click", async () => {
   if (!confirm("App-Daten (Cache + Cookies) für diese Seite löschen und frisch laden?")) return;
@@ -2289,6 +2294,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
