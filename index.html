@@ -1812,10 +1812,47 @@ const BP_DIA_LIMIT = 90;
     // KPI-Box nur einmal holen
     const avgBox = $("#chartAverages");
 
-    if (metric === "bp") {
-const y1 = data.map(e => e.sys!=null ? Number(e.sys) : null);
-const y2 = data.map(e => e.dia!=null ? Number(e.dia) : null);
-__sysVals = y1; __diaVals = y2; // ANKER: merken für dotsSysDia
+if (metric === "bp") {
+  // Werte trennen nach Kontext
+  const sysM = data.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
+  const sysA = data.map(e => (e.context==="Abend"  && e.sys!=null) ? Number(e.sys) : null);
+  const diaM = data.map(e => (e.context==="Morgen" && e.dia!=null) ? Number(e.dia) : null);
+  const diaA = data.map(e => (e.context==="Abend"  && e.dia!=null) ? Number(e.dia) : null);
+
+  __sysVals = sysM.map((v,i)=> sysM[i] ?? sysA[i]); // bleibt kompatibel für dotsSysDia
+  __diaVals = diaM.map((v,i)=> diaM[i] ?? diaA[i]);
+
+  const avg = arr => {
+    const vals = arr.filter(v => v != null);
+    return vals.length ? (vals.reduce((a,b)=>a+b,0) / vals.length) : null;
+  };
+  const calcMAPlocal = (sys, dia) => (sys!=null && dia!=null) ? (dia + (sys - dia)/3) : null;
+
+  const mapArr = data.map(e => calcMAPlocal(e.sys, e.dia));
+
+  // KPIs ein-/ausblenden
+  if (avgBox){
+    const avgSys = avg(data.map(e=>e.sys!=null?Number(e.sys):null));
+    const avgDia = avg(data.map(e=>e.dia!=null?Number(e.dia):null));
+    const avgMap = avg(mapArr);
+    if (avgSys!=null || avgDia!=null || avgMap!=null){
+      avgBox.style.display = "inline-flex";
+      const f0 = v => (v==null ? "–" : Math.round(v).toString());
+      avgBox.querySelector('[data-k="sys"]').textContent = `Durchschnitt Sys: ${f0(avgSys)}`;
+      avgBox.querySelector('[data-k="dia"]').textContent = `Durchschnitt Dia: ${f0(avgDia)}`;
+      avgBox.querySelector('[data-k="map"]').textContent = `Durchschnitt MAP: ${f0(avgMap)}`;
+    } else {
+      avgBox.style.display = "none";
+    }
+  }
+
+  // Vier Serien: Sys/Dia morgens & abends
+  series = [
+    {name:"Sys Morgens", values: sysM, color:"#93c5fd"}, // Hellblau
+    {name:"Sys Abends",  values: sysA, color:"#2563eb"}, // Dunkelblau
+    {name:"Dia Morgens", values: diaM, color:"#f9a8d4"}, // Hellrosa
+    {name:"Dia Abends",  values: diaA, color:"#db2777"}  // Dunkelrosa
+  ];
 
       const avg = arr => {
         const vals = arr.filter(v => v != null);
@@ -1980,7 +2017,10 @@ series.forEach(s=>{
 // Punkte zeichnen
 // Punkte zeichnen (BP nutzt gemeinsame Logik mit xs)
 if (metric === "bp") {
-  this.svg.insertAdjacentHTML("beforeend", dotsSysDia(__sysVals, __diaVals, xs));
+  // Punkte einzeln nach Serie zeichnen (kein Misch-Algorithmus mehr)
+series.forEach(s=>{
+  this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+});
 } else {
   series.forEach(s=>{
     this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
@@ -2833,3 +2873,4 @@ main();
 </div>
 </body>
 </html>
+
