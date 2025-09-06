@@ -1217,7 +1217,7 @@ if (!daysArr.length){
 
 /* ===== Simple SVG Chart (Daily) ===== */
 const chartPanel = {
-  el:null, svg:null, legend:null, open:false,
+  el:null, svg:null, legend:null, open:false, tip:null, tipSticky:false,
   init(){
     this.el = $("#chart");
     this.svg = $("#chartSvg");
@@ -1225,6 +1225,46 @@ const chartPanel = {
     this.legend = $("#chartLegend");
     $("#chartClose").addEventListener("click", ()=>this.hide());
     $("#metricSel").addEventListener("change", ()=> this.draw());
+
+    // Tooltip (hover/click)
+    const contentHost = this.el.querySelector(".content") || this.el;
+    const tip = document.createElement("div");
+    Object.assign(tip.style, {
+      position:"absolute", inset:"auto auto auto auto", transform:"translate(8px,8px)",
+      display:"none", pointerEvents:"none", zIndex:2,
+      background:"#10131a", border:"1px solid #2b2f3a", borderRadius:"8px",
+      padding:"8px 10px", fontSize:"12px", lineHeight:"1.35", maxWidth:"280px",
+      boxShadow:"0 6px 18px rgba(0,0,0,.35)", color:"var(--fg)"
+    });
+    tip.id = "chartTip";
+    contentHost.style.position = "relative";
+    contentHost.appendChild(tip);
+    this.tip = tip;
+
+    // Interaktivität auf dem SVG
+    this.svg.addEventListener("pointermove", (e)=>{
+      if (this.tipSticky) return; // bei Sticky nicht folgen
+      const tgt = e.target;
+      if (!tgt || !tgt.classList.contains("pt")) { this.hideTip(); return; }
+      this.positionTip(e);
+    });
+    this.svg.addEventListener("pointerleave", ()=>{
+      if (this.tipSticky) return;
+      this.hideTip();
+    });
+    // Click/Tap: Tooltip toggeln (mobil-freundlich)
+    this.svg.addEventListener("click", (e)=>{
+      const tgt = e.target;
+      if (!tgt || !tgt.classList.contains("pt")) {
+        // Klick ins Leere -> Sticky aus
+        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+        return;
+      }
+      // Inhalte neu setzen + Sticky umschalten
+      this.fillTipFromTarget(tgt);
+      this.tipSticky = !this.tipSticky;
+      this.positionTip(e);
+    });
 
     // Resize/Orientation -> neu zeichnen, wenn offen
     const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
@@ -1235,7 +1275,7 @@ const chartPanel = {
     });
   },
   toggle(){ this.open = !this.open; this.el.style.display = this.open ? 'block' : 'none'; },
-  hide(){ this.open = false; this.el.style.display = 'none'; },
+  hide(){ this.open = false; this.el.style.display = 'none'; this.tipSticky = false; this.hideTip(); },
 
   async getFiltered(){
     const entries = await getAllEntries();
@@ -1248,6 +1288,33 @@ const chartPanel = {
         return true;
       })
       .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+  },
+
+  // Tooltip-Helfer
+  hideTip(){ if (this.tip){ this.tip.style.display = "none"; this.tip.textContent = ""; } },
+  positionTip(e){
+    if (!this.tip) return;
+    const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
+    const x = e.clientX - hostRect.left;
+    const y = e.clientY - hostRect.top;
+    this.tip.style.left = `${x + 10}px`;
+    this.tip.style.top  = `${y + 10}px`;
+    if (this.tip.style.display !== "block") this.tip.style.display = "block";
+  },
+  fillTipFromTarget(tgt){
+    if (!this.tip) return;
+    const date = tgt.getAttribute("data-date") || "";
+    const ctx  = tgt.getAttribute("data-ctx") || "";
+    const kind = tgt.getAttribute("data-kind") || ""; // sys|dia|pulse|weight
+    const v    = tgt.getAttribute("data-val") || "";
+    const note = tgt.getAttribute("data-note") || "";
+    const valLabel = (kind==="sys"||kind==="dia") ? `${kind.toUpperCase()}: ${v}` : `${v}`;
+    const header = date ? `${date} • ${ctx || "—"}` : "Wert";
+    this.tip.innerHTML = `
+      <div style="font-weight:700; margin-bottom:4px">${esc(header)}</div>
+      <div>${esc(valLabel)}</div>
+      ${note ? `<div style="opacity:.85; margin-top:6px"><strong>Kommentar:</strong> ${esc(note)}</div>` : ``}
+    `;
   },
 
   async draw(){
@@ -1267,6 +1334,20 @@ const chartPanel = {
     const TH_SYS = 130;
     const TH_DIA = 90;
 
+    // Map der Tages-Kommentare (erste Zeile)
+    const notesByDate = new Map();
+    for (const e of data){
+      const hasDayLike = (e.context === "Tag") || isWeightOnly(e);
+      const txt = (e.notes || "").trim();
+      if (hasDayLike && txt){
+        const firstLine = txt.split(/\r?\n/)[0].trim();
+        if (firstLine) notesByDate.set(e.date, firstLine);
+      }
+    }
+
+    // Für BP brauchen wir die Messungs-Meta je Index
+    let meta = null;
+
     if (metric === "bp") {
       // Nur echte Messungen (kein „Tag“/Gewicht-only)
       const mData = data.filter(e =>
@@ -1274,10 +1355,19 @@ const chartPanel = {
         (e.sys != null || e.dia != null)
       );
 
-      // X auf Tagesebene (00:00) -> alle 4 Punkte pro Tag exakt bündig
+      // Meta-Infos je Punktindex (für Tooltip)
+      meta = mData.map(e=>({
+        date: e.date,
+        ctx:  e.context,                  // "Morgen" | "Abend"
+        sys:  (e.sys!=null?Number(e.sys):null),
+        dia:  (e.dia!=null?Number(e.dia):null),
+        note: (notesByDate.get(e.date) || "")
+      }));
+
+      // X auf Tagesebene (00:00) -> alle Punkte je Tag bündig
       const xsBP = mData.map(e => new Date(e.date + "T00:00:00").getTime());
 
-      // Vier Reihen
+      // Vier Reihen (Werte-Arrays, aber Index passt zu meta)
       const sysM = mData.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
       const sysA = mData.map(e => (e.context==="Abend"  && e.sys!=null) ? Number(e.sys) : null);
       const diaM = mData.map(e => (e.context==="Morgen" && e.dia!=null) ? Number(e.dia) : null);
@@ -1317,6 +1407,7 @@ const chartPanel = {
 
     // --- Render-Prep ---
     this.svg.innerHTML = ""; this.legend.innerHTML = "";
+    if (!this.tipSticky) this.hideTip();
     const hasAny = series.some(s => s.values.some(v=>v!=null));
     if (!hasAny){
       this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
@@ -1384,39 +1475,63 @@ const chartPanel = {
     this.svg.insertAdjacentHTML("beforeend", grid);
 
     // Linien + Punkte
-    function pathFor(values, color){
+    const mkPath = (values, color)=>{
       let d=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
         d += (d===""?"M":"L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
       });
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-    }
-    function dots(values, color){
-      let out=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
-        out += `<circle cx="${x(X[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${color}" />`;
+    };
+
+    const mkDots = (values, color, kind)=>{
+      // kind: "sys" | "dia" | "misc"
+      let out="";
+      values.forEach((v,i)=>{
+        if(v==null || !X[i]) return;
+        const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+        let date="", ctx="", note="";
+        if (metric==="bp" && meta){
+          // meta[i] existiert immer für BP
+          const m = meta[i];
+          date = m?.date || "";
+          ctx  = m?.ctx  || "";
+          // An dieser Stelle Note nur setzen, wenn Schwelle gerissen ODER Note existiert
+          note = m?.note || "";
+        }
+        out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
+                    data-kind="${kind}" data-val="${v}" data-date="${esc(date)}" data-ctx="${esc(ctx)}"
+                    data-note="${esc(note)}" />`;
       });
       return out;
-    }
+    };
+
     // Hervorhebungs-Punkte (größer + rot) für Grenzüberschreitungen
-    function alertDots(seriesItem){
+    const mkAlertDots = (seriesItem)=>{
       if (metric !== "bp") return "";
       const isSys = seriesItem.type === "sys";
       const thr = isSys ? TH_SYS : TH_DIA;
+      const kind = isSys ? "sys" : "dia";
       let out="";
       seriesItem.values.forEach((v,i)=>{
         if(v==null || !X[i]) return;
         if (v > thr){
-          out += `<circle cx="${x(X[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8" />`;
+          const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+          // Tooltip-Daten mitgeben (inkl. Notiz)
+          const m = meta?.[i] || {};
+          out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
+                     data-kind="${kind}" data-val="${v}"
+                     data-date="${esc(m.date||"")}" data-ctx="${esc(m.ctx||"")}"
+                     data-note="${esc(m.note||"")}" />`;
         }
       });
       return out;
-    }
+    };
 
     // Zeichnen
     series.forEach(s=>{
-      this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
-      this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+      this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
+      this.svg.insertAdjacentHTML("beforeend", mkDots(s.values, s.color, (s.type==="sys"||s.type==="dia")?s.type:"misc"));
       if (metric === "bp") {
-        this.svg.insertAdjacentHTML("beforeend", alertDots(s));
+        this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
       }
       // Legende
       const wrap = document.createElement("span");
@@ -1426,6 +1541,9 @@ const chartPanel = {
       const label = document.createElement("span"); label.textContent = s.name;
       wrap.append(dot, label); this.legend.appendChild(wrap);
     });
+
+    // Wenn wir im Sticky-Modus sind und gerade neu gezeichnet haben, Tooltip ausblenden (der Punkt ist evtl. weg)
+    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
     const sPerf = (perfStats.add('drawChart', performance.now()-t0), perfStats.snap('drawChart'));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
@@ -1492,14 +1610,34 @@ const __t0 = performance.now();
 if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 
 // 1) Erkennen, was heute eingegeben wurde
-const hasM = blockHasData("M"); // Morgens: irgendein Wert/Time im Block
-const hasA = blockHasData("A"); // Abends: irgendein Wert/Time im Block
+const hasM = blockHasData("M"); 
+const hasA = blockHasData("A"); 
 const weightVal = $("#weightDay")?.value?.trim();
 const notes = ($("#notesDay").value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
 valsartanMissed || forxigaMissed || nsarTaken ||
 saltHigh || sugarHigh);
 const hasDaySummary = !!(weightVal || hasAnyFlag || notes);
+
+// 🔴 NEU: Kommentarpflicht bei Grenzwertüberschreitung
+const sysM = Number($("#sysM").value);
+const diaM = Number($("#diaM").value);
+const sysA = Number($("#sysA").value);
+const diaA = Number($("#diaA").value);
+
+const needsComment = 
+  (sysM > 130) || (diaM > 90) ||
+  (sysA > 130) || (diaA > 90);
+
+const notesEl = $("#notesDay");
+notesEl.style.outline = ""; // Reset
+
+if (needsComment && !notes) {
+  alert("Bitte Kommentar eingeben bei Grenzwertüberschreitung (Sys>130 oder Dia>90).");
+  notesEl.focus();
+  notesEl.style.outline = "2px solid var(--danger)";
+  return;
+}
 
 // 2) Speichern in drei klaren Pfaden
 let saved = false;
@@ -1851,6 +1989,13 @@ else if (sel.includes("weight"))softWarnRange(el, 30, 300);
 });
 });
 
+  // Kommentar-Feld: roten Rand zurücksetzen, sobald Text drin
+$("#notesDay").addEventListener("input", (e)=>{
+  if (e.target.value.trim()) {
+    e.target.style.outline = "";
+  }
+});
+
 // Toggle-Handler
 const bindToggle = (id, setter, getVal)=>{
   const el = $(id);
@@ -1942,6 +2087,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
