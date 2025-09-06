@@ -1769,7 +1769,7 @@ const chartPanel = {
     });
     $("#metricSel").addEventListener("change", ()=> this.draw());
 
-    // Redraw bei Größenänderung/Orientation
+    // Resize/Orientation -> neu zeichnen, wenn offen
     const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
     ro.observe(this.el);
     this._ro = ro;
@@ -1777,14 +1777,8 @@ const chartPanel = {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
   },
-  toggle(){
-    this.open = !this.open;
-    this.el.style.display = this.open ? 'block' : 'none';
-  },
-  hide(){
-    this.open = false;
-    this.el.style.display = 'none';
-  },
+  toggle(){ this.open = !this.open; this.el.style.display = this.open ? 'block' : 'none'; },
+  hide(){ this.open = false; this.el.style.display = 'none'; },
 
   async getFiltered(){
     const entries = await getAllEntries();
@@ -1800,62 +1794,40 @@ const chartPanel = {
   },
 
   async draw(){
-    const __t0 = performance.now();
+    const t0 = performance.now();
     const metric = $("#metricSel").value;
     const data   = await this.getFiltered();
 
-    // Standard-X (falls nicht BP)
+    // Basis-X: alle (fallback)
     const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
-
     let series = [];
-    let X = xsAll; // <- der X-Vektor, der tatsächlich gezeichnet wird
+    let X = xsAll;
 
-    // KPI-Box-Handle
+    // KPI-Box
     const avgBox = $("#chartAverages");
 
+    // Schwellen (nur BP)
+    const TH_SYS = 130;
+    const TH_DIA = 90;
+
     if (metric === "bp") {
-      // Nur echte Messungen (kein Tages-„Tag“/Gewicht-only)
+      // Nur echte Messungen (kein „Tag“/Gewicht-only)
       const mData = data.filter(e =>
         (e.context === "Morgen" || e.context === "Abend") &&
         (e.sys != null || e.dia != null)
       );
 
-      // --- NEU: nach Datum bündeln, damit alle vier Punkte pro Messtag auf demselben X liegen
-      // Pro Tag jeweils der "letzte" Eintrag je Kontext (Morgen/Abend)
-      const byDay = new Map(); // date -> { M: entry|null, A: entry|null }
-      for (const e of mData) {
-        const d = e.date;
-        const ts = (e.ts ?? Date.parse(e.dateTime) ?? 0);
-        if (!byDay.has(d)) byDay.set(d, { M:null, A:null });
-        const bucket = byDay.get(d);
-        if (e.context === "Morgen") {
-          if (!bucket.M || ts > (bucket.M.ts ?? Date.parse(bucket.M?.dateTime) ?? -1)) bucket.M = e;
-        } else if (e.context === "Abend") {
-          if (!bucket.A || ts > (bucket.A.ts ?? Date.parse(bucket.A?.dateTime) ?? -1)) bucket.A = e;
-        }
-      }
+      // X auf Tagesebene (00:00) -> alle 4 Punkte pro Tag exakt bündig
+      const xsBP = mData.map(e => new Date(e.date + "T00:00:00").getTime());
 
-      // Sortierte Liste der vorhandenen Tage
-      const days = Array.from(byDay.keys()).sort((a,b)=> a.localeCompare(b));
-      // Ein gemeinsamer X-Wert pro Tag (Mittag = 12:00, damit sauber skaliert)
-      X = days.map(d => new Date(d + "T12:00:00").getTime());
+      // Vier Reihen
+      const sysM = mData.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
+      const sysA = mData.map(e => (e.context==="Abend"  && e.sys!=null) ? Number(e.sys) : null);
+      const diaM = mData.map(e => (e.context==="Morgen" && e.dia!=null) ? Number(e.dia) : null);
+      const diaA = mData.map(e => (e.context==="Abend"  && e.dia!=null) ? Number(e.dia) : null);
 
-      // Vier Reihen (null, wenn am Tag/Kontext kein Wert)
-      const sysM = days.map(d => {
-        const e = byDay.get(d).M; return (e && e.sys != null) ? Number(e.sys) : null;
-      });
-      const sysA = days.map(d => {
-        const e = byDay.get(d).A; return (e && e.sys != null) ? Number(e.sys) : null;
-      });
-      const diaM = days.map(d => {
-        const e = byDay.get(d).M; return (e && e.dia != null) ? Number(e.dia) : null;
-      });
-      const diaA = days.map(d => {
-        const e = byDay.get(d).A; return (e && e.dia != null) ? Number(e.dia) : null;
-      });
-
-      // KPIs (ø) unabhängig von M/A-Bündelung
-      const mapArr = mData.map(e => (e.sys!=null && e.dia!=null) ? (Number(e.dia) + (Number(e.sys)-Number(e.dia))/3) : null);
+      // KPIs (ø über alle Messungen, unabhängig M/A)
+      const mapArr = mData.map(e => (e.sys!=null && e.dia!=null) ? (Number(e.dia)+(Number(e.sys)-Number(e.dia))/3) : null);
       const avg = a => { const v=a.filter(x=>x!=null); return v.length ? v.reduce((p,c)=>p+c,0)/v.length : null; };
       if (avgBox){
         const avgSys = avg(mData.map(e=>e.sys!=null?Number(e.sys):null));
@@ -1870,29 +1842,26 @@ const chartPanel = {
         } else { avgBox.style.display="none"; }
       }
 
-      // Vier Serien (Farben wie gehabt)
       series = [
-        { name:"Sys Morgens", values: sysM, color:"#93c5fd" },
-        { name:"Sys Abends",  values: sysA, color:"#2563eb" },
-        { name:"Dia Morgens", values: diaM, color:"#f9a8d4" },
-        { name:"Dia Abends",  values: diaA, color:"#db2777" },
+        { name:"Sys Morgens", values: sysM, color:"#93c5fd", type:"sys" },
+        { name:"Sys Abends",  values: sysA, color:"#2563eb", type:"sys" },
+        { name:"Dia Morgens", values: diaM, color:"#f9a8d4", type:"dia" },
+        { name:"Dia Abends",  values: diaA, color:"#db2777", type:"dia" },
       ];
 
+      X = xsBP; // wichtig: ab hier überall dieses X verwenden
     } else if (metric === "pulse") {
       if (avgBox) avgBox.style.display="none";
-      series = [{ name:"Puls", values: data.map(e=>e.pulse!=null?Number(e.pulse):null), color:"#34d399" }];
-      X = xsAll;
+      series = [{ name:"Puls", values: data.map(e=>e.pulse!=null?Number(e.pulse):null), color:"#34d399", type:"misc" }];
     } else if (metric === "weight") {
       if (avgBox) avgBox.style.display="none";
-      series = [{ name:"Gewicht (kg)", values: data.map(e=>e.weight!=null?Number(e.weight):null), color:"#f59e0b"}];
-      X = xsAll;
+      series = [{ name:"Gewicht (kg)", values: data.map(e=>e.weight!=null?Number(e.weight):null), color:"#f59e0b", type:"misc" }];
     }
 
     // --- Render-Prep ---
-    this.svg.innerHTML = "";
-    this.legend.innerHTML = "";
+    this.svg.innerHTML = ""; this.legend.innerHTML = "";
     const hasAny = series.some(s => s.values.some(v=>v!=null));
-    if(!hasAny){
+    if (!hasAny){
       this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
       return;
     }
@@ -1904,24 +1873,22 @@ const chartPanel = {
     this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
     const PL=48, PR=16, PT=12, PB=28;
-    const innerW = W - PL - PR, innerH = H - PT - PB;
+    const innerW = W-PL-PR, innerH = H-PT-PB;
 
     const xVals = X.filter(Boolean);
     const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
     const allY = series.flatMap(s => s.values.filter(v=>v!=null));
     const ymin = Math.min(...allY), ymax = Math.max(...allY);
     const ypad = Math.max((ymax-ymin)*0.08, 1);
-    const y0   = ymin - ypad, y1 = ymax + ypad;
+    const y0 = ymin-ypad, y1 = ymax+ypad;
 
-    const x = t => PL + ((t - xmin) / Math.max(1,(xmax - xmin))) * innerW;
-    const y = v => PT + (1 - ((v - y0) / Math.max(1,(y1 - y0)))) * innerH;
+    const x = t => PL + ((t - xmin)/Math.max(1,(xmax-xmin))) * innerW;
+    const y = v => PT + (1 - ((v - y0)/Math.max(1,(y1 - y0)))) * innerH;
 
-    function line(x1,y1,x2,y2, stroke, dash=""){
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`;
-    }
-    function text(tx,ty,str,anchor="end"){
-      return `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
-    }
+    const line = (x1,y1,x2,y2, stroke, dash="") =>
+      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`;
+    const text = (tx,ty,str,anchor="end") =>
+      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
 
     // Grid + Labels
     let grid = "";
@@ -1932,8 +1899,7 @@ const chartPanel = {
       grid += line(PL,yy,W-PR,yy,"#2a3140");
       grid += text(PL-6,yy+4, Math.round(vv).toString());
     }
-
-    // Vertikale Linien (wöchentlich)
+    // vertikale Wochenlinien + Datum unten
     const week = 7*24*3600*1000;
     let start = xmin - (xmin % week) + week;
     for(let t=start; t<xmax; t+=week){
@@ -1943,34 +1909,59 @@ const chartPanel = {
       const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
       grid += text(xx, H-8, lbl, "middle");
     }
-
     // Achsen
     grid += line(PL,PT,PL,H-PB,"#2b2f3a");
     grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+
+    // Schwellenlinien (nur bei BP)
+    if (metric === "bp") {
+      const ySys = y(TH_SYS);
+      const yDia = y(TH_DIA);
+      grid += line(PL,ySys,W-PR,ySys,"#ef4444","6 4"); // dezent gestrichelt
+      grid += line(PL,yDia,W-PR,yDia,"#ef4444","6 4");
+      // kleine Labels rechts
+      grid += text(W-PR+2, ySys+4, "Sys 130", "start");
+      grid += text(W-PR+2, yDia+4, "Dia 90", "start");
+    }
+
     this.svg.insertAdjacentHTML("beforeend", grid);
 
-    // Linien + Punkte (nutzt X)
+    // Linien + Punkte
     function pathFor(values, color){
-      let d = "";
-      values.forEach((v,i)=>{
-        if(v==null || !X[i]) return;
+      let d=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
         d += (d===""?"M":"L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
       });
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
     }
     function dots(values, color){
-      let out = "";
-      values.forEach((v,i)=>{
-        if(v==null || !X[i]) return;
+      let out=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
         out += `<circle cx="${x(X[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.6" fill="${color}" />`;
       });
       return out;
     }
+    // Hervorhebungs-Punkte (größer + rot) für Grenzüberschreitungen
+    function alertDots(seriesItem){
+      if (metric !== "bp") return "";
+      const isSys = seriesItem.type === "sys";
+      const thr = isSys ? TH_SYS : TH_DIA;
+      let out="";
+      seriesItem.values.forEach((v,i)=>{
+        if(v==null || !X[i]) return;
+        if (v > thr){
+          out += `<circle cx="${x(X[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8" />`;
+        }
+      });
+      return out;
+    }
 
-    // Pfade + Legende
+    // Zeichnen
     series.forEach(s=>{
       this.svg.insertAdjacentHTML("beforeend", pathFor(s.values, s.color));
       this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
+      if (metric === "bp") {
+        this.svg.insertAdjacentHTML("beforeend", alertDots(s));
+      }
+      // Legende
       const wrap = document.createElement("span");
       wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
       const dot = Object.assign(document.createElement("span"), { className:"dot" });
@@ -1979,12 +1970,12 @@ const chartPanel = {
       wrap.append(dot, label); this.legend.appendChild(wrap);
     });
 
-    const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.snap('drawChart'));
+    const sPerf = (perfStats.add('drawChart', performance.now()-t0), perfStats.snap('drawChart'));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   }
 };
-
-  /* ===== Simple SVG Chart (Befunde) ===== */
+  
+/* ===== Simple SVG Chart (Befunde) ===== */
 const chartReportsPanel = {
 el:null, svg:null, legend:null, open:false,
 init(){
@@ -2835,6 +2826,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
