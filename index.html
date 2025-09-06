@@ -522,85 +522,86 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <main>
 <!-- Capture -->
 <section class="view active" id="capture">
-<div class="seg" id="seg-capture">
-<button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
-</div>
+  <div class="seg" id="seg-capture">
+    <button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
+  </div>
 
-<!-- Daily-Capture -->
-<section class="card" id="entry">
-<div class="row">
-<div style="flex:1">
-<label>Datum</label>
-<input type="date" id="date">
-</div>
-</div>
+  <!-- Daily-Capture -->
+  <section class="card" id="entry">
+    <div class="row">
+      <div style="flex:1">
+        <label>Datum</label>
+        <input type="date" id="date">
+      </div>
+    </div>
 
-<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-<h3 class="blockTitle">Morgens</h3>
-<div class="row">
-<div style="width:130px">
-<label>Uhrzeit</label>
-<input type="time" id="timeM" step="60">
-</div>
-</div>
-<div class="grid">
-<div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
-<div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-<div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-</div>
-</div>
+    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      <h3 class="blockTitle">Morgens</h3>
+      <div class="row">
+        <div style="width:130px">
+          <label>Uhrzeit</label>
+          <input type="time" id="timeM" step="60">
+        </div>
+      </div>
+      <div class="grid">
+        <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
+        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+        <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+      </div>
+    </div>
 
-<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-<h3 class="blockTitle">Abends</h3>
-<div class="row">
-<div style="width:130px">
-<label>Uhrzeit</label>
-<input type="time" id="timeA" step="60">
-</div>
-</div>
-<div class="grid">
-<div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-<div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-<div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-</div>
-</div>
+    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      <h3 class="blockTitle">Abends</h3>
+      <div class="row">
+        <div style="width:130px">
+          <label>Uhrzeit</label>
+          <input type="time" id="timeA" step="60">
+        </div>
+      </div>
+      <div class="grid">
+        <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+        <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+      </div>
+    </div>
 
-<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-<h3 class="blockTitle">Gewicht</h3>
-<div class="row">
-<div style="flex:1">
-<label>Gewicht (kg)</label>
-<input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-</div>
-</div>
-</div>
+    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      <h3 class="blockTitle">Gewicht</h3>
+      <div class="row">
+        <div style="flex:1">
+          <label>Gewicht (kg)</label>
+          <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+        </div>
+      </div>
+    </div>
 
-<div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-<h3 class="blockTitle">Kommentar</h3>
-<div class="row">
-<div style="flex:1">
-<textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
-</div>
-</div>
-</div>
+    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      <h3 class="blockTitle">Kommentar</h3>
+      <div class="row">
+        <div style="flex:1">
+          <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
+        </div>
+      </div>
+    </div>
 
-<div class="row" style="align-items:center; gap:8px; margin-top:4px">
-<button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
-<button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
-<button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
-<button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
-<button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
-<button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
-<button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
-<button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
-<div class="spacer"></div>
-</div>
+    <div class="row" style="align-items:center; gap:8px; margin-top:4px">
+      <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
+      <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
+      <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
+      <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
+      <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
+      <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
+      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
+      <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
+      <div class="spacer"></div>
+    </div>
 
-<div class="row" style="align-items:center; gap:8px; margin-top:12px">
-<button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-<div class="spacer"></div>
-</div>
-</section>
+    <div class="row" style="align-items:center; gap:8px; margin-top:12px">
+      <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
+      <div class="spacer"></div>
+    </div>
+  </section><!-- /#entry -->
+</section><!-- /#capture -->
 
 <!-- List -->
 <section class="view" id="list">
@@ -1085,7 +1086,7 @@ if (__booted) return; // <- Guard gegen Doppelstart
 __booted = true;
 await initialAutoSync();
 await teardownRealtime();
-await setupRealtime();;
+await setupRealtime();
 await loadAndRender();
 await renderDoctor();
 }
@@ -2008,8 +2009,9 @@ return sbClient;
 
 async function setupRealtime(){
 const supa = await ensureSupabaseClient();
-  const uid = await getUserId();
+const uid = await getUserId();
 if(!supa) return;
+if(!uid) return;
 
 // health_entries
 trackChannel(
@@ -2321,3 +2323,4 @@ main();
 </div>
 </body>
 </html>
+
