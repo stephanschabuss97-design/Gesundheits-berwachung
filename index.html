@@ -89,7 +89,6 @@ nav.tabs .btn.primary {
 section.view{display:none}
 section.view.active{display:block}
 
-#doctorTable thead{position:sticky;top:0;background:#0f1116}
 #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
 #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
@@ -400,19 +399,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
 .fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
 
-/* Tabellen */
-#tbl, #doctorTable {width:100%; border-collapse:separate; border-spacing:0 8px;}
-#tbl thead th {position:sticky; top:0; background:#0f1116; z-index:1;}
-#tbl th, #tbl td, #doctorTable th, #doctorTable td{padding:14px 12px; font-size:14px; vertical-align:top;}
-#tbl tbody tr td, #doctorTable tbody tr td{background:#0f1116; border-top:1px solid #2b2f3a; border-bottom:1px solid #2b2f3a;}
-#tbl tbody tr td:first-child, #doctorTable tbody tr td:first-child{border-left:1px solid #2b2f3a; border-top-left-radius:12px; border-bottom-left-radius:12px;}
-#tbl tbody tr td:last-child, #doctorTable tbody tr td:last-child{border-right:1px solid #2b2f3a; border-top-right-radius:12px; border-bottom-right-radius:12px;}
-#tbl td.center, #tbl th.center, #doctorTable td.center, #doctorTable th.center{ text-align:center; white-space:nowrap; }
-#tbl td.nowrap, #tbl th.nowrap{ white-space:nowrap; }
-#tbl td.notes{ max-width: 680px; white-space: normal; word-break: break-word; overflow-wrap:anywhere; line-height:1.4; }
-
-.blockTitle{font-weight:800;margin:0 0 8px 0}
-
 /* Chart panel */
 #chart .controls{
   display:flex; gap:8px; flex-wrap:wrap; align-items:center;
@@ -452,7 +438,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
-<button class="btn ghost" id="listHeaderBtn" type="button">Liste</button>
 </div>
 </header>
 
@@ -597,76 +582,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
       <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
       <div class="spacer"></div>
     </div>
-  </section><!-- /#entry -->
-</section><!-- /#capture -->
-
-<!-- List -->
-<section class="view" id="list">
-<section class="card">
-<div class="toolbar">
-<strong>Deine Einträge (Bearbeiten/Export)</strong>
-<div class="spacer"></div>
-<select id="rangeSel">
-<option value="all">alle</option>
-<option value="7">letzte 7 Tage</option>
-<option value="30">letzte 30 Tage</option>
-<option value="90">letzte 90 Tage</option>
-</select>
-<button class="btn ghost" id="exportCsv" type="button">Export CSV</button>
-<button class="btn ghost" id="exportJson" type="button">Export JSON</button>
-<button class="btn ghost" id="syncBtn" type="button" title="Sicherung + Neu laden von Supabase">🔄 Sync (Daily)</button>
-<button class="btn warn" id="wipeBtn" type="button" title="Nur auf diesem Gerät">Alle lokal löschen (Daily)</button>
-<button class="btn warn" id="hardResetBtn" type="button" title="Cookies + Cache löschen, Seite neu laden">Seite frisch laden</button>
-</div>
-
-<!-- Wrapper Daily -->
-<div style="overflow:auto" id="listDailyWrap">
-<table id="tbl">
-<thead>
-<tr>
-<th class="nowrap">Datum</th>
-<th class="nowrap">Zeit</th>
-<th>Art</th>
-<th class="center nowrap">Syst</th>
-<th class="center nowrap">Diast</th>
-<th class="center nowrap">Puls</th>
-<th class="center nowrap">Gewicht</th>
-<th class="center nowrap">MAP</th>
-<th>Notizen</th>
-<th class="center nowrap">Training</th>
-<th class="center nowrap">&lt; 2 L</th>
-<th class="center nowrap">Krank</th>
-<th class="center nowrap">Valsartan ?</th>
-<th class="center nowrap">Forxiga ?</th>
-<th class="center nowrap">NSAR</th>
-<th class="center nowrap">Salz &gt; 5 g</th>
-<th class="center nowrap">Zucker &gt; 10 g</th>
-<th class="center nowrap" title="Mit Server synchronisiert?">Cloud</th>
-
-<th>Aktion</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-<div class="small" style="margin-top:6px">Dies ist deine Arbeitsliste. Die Arzt-Ansicht ist separat und druckfertig.</div>
-</section>
-
-<!-- Webhook-Konfiguration -->
-<section class="card" id="webhookCard">
-<h3 class="blockTitle">Webhook / Supabase (Konfiguration)</h3>
-<div class="grid">
-<div><label>Webhook URL (health_entries)</label><input type="url" id="whUrl" placeholder="https://XYZ.supabase.co/rest/v1/health_entries"></div>
-<div><label>API Key (Bearer)</label><input type="text" id="whKey" placeholder="Bearer ey..."></div>
-</div>
-<div class="row" style="margin-top:8px;align-items:center">
-<button class="btn primary" id="saveWebhook" type="button">Speichern</button>
-<span id="whSaved" class="small" style="margin-left:8px"></span>
-<div class="spacer"></div>
-<button class="btn ghost" id="chartBtn" type="button">Diagramm öffnen</button>
-</div>
-</section>
+  </section>
 </section>
 
 <!-- Doctor -->
@@ -778,8 +694,7 @@ return !!session;
 function setAuthGuard(logged){
 const disabled = !logged;
 const allowIds = new Set([
-'googleLoginBtn','helpToggle','diagToggle','listHeaderBtn',
-'saveWebhook','whUrl','whKey'
+  'googleLoginBtn','helpToggle','diagToggle'
 ]);
 // alles im <main> sperren/freigeben
 document.querySelectorAll('main input, main select, main textarea, main button').forEach(el=>{
@@ -927,14 +842,6 @@ function deleteEntryLocal(id){
     tx.onerror    = (e)=> rej(e);
   });
 }
-function wipeAll(){
-  return new Promise((res,rej)=>{
-    const tx = db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).clear();
-    tx.oncomplete = ()=> res();
-    tx.onerror    = (e)=> rej(e);
-  });
-}
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
@@ -1019,7 +926,7 @@ const lout = document.getElementById('logoutBtn');
 if (gbtn) gbtn.addEventListener('click', async ()=>{
 const supa = await ensureSupabaseClient();
 if (!supa) { 
-alert('Bitte zuerst unter "Webhook / Supabase" die REST-URLs und den API-Key speichern.');
+alert('Konfiguration fehlt (REST-URL und ANON-Key). Standardwerte sind gesetzt – falls entfernt, bitte App neu laden oder Konfiguration in IndexedDB hinterlegen.');
 return;
 }
 const { error } = await supa.auth.signInWithOAuth({
@@ -1078,167 +985,16 @@ __booted = true;
 await initialAutoSync();
 await teardownRealtime();
 await setupRealtime();
-await loadAndRender();
 await renderDoctor();
 }
 
 /* ===== CSV/JSON export (Daily) ===== */
-function toCSV(entries){
-const header = ["Datum","Uhrzeit","Art","Systolisch","Diastolisch","Puls","Gewicht_kg","MAP","Notizen","Training","Unter_2L","Krank","Valsartan_vergessen","Forxiga_vergessen","NSAR_genommen","Salz_ueber_5g","Zucker_ueber_10g","ISODateTime","ID","REMOTE_ID"];
-const rows = entries.map(e=>{
-const legacyWeightOnly = isWeightOnly(e);
-const hasVitals = !!(e.sys || e.dia || e.pulse);
-const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = hasVitals && !isDaySummary;
-
-const art = isDaySummary ? "Tageszusammenfassung" : "Messung";
-const notesText = e.notes || "";
-
-const zeitLabel =
-isDaySummary
-? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-: (e.context === "Morgen" ? `${e.time} (Morgens)` :
-e.context === "Abend" ? `${e.time} (Abends)` : e.time);
-
-return [
-e.date, e.time, art,
-isMeasurement ? (e.sys ?? "") : "",
-isMeasurement ? (e.dia ?? "") : "",
-isMeasurement ? (e.pulse ?? "") : "",
-isDaySummary ? (e.weight ?? "") : "",
-isMeasurement ? (e.map ?? "") : "",
-notesText,
-e.training ? "Ja" : "",
-e.low_intake ? "Ja" : "",
-e.sick ? "Ja":"", 
-e.valsartan_missed ? "Ja" : "", 
-e.forxiga_missed ? "Ja" : "",
-e.nsar_taken ? "Ja" : "",
-e.salt_high ? "Ja" : "",
-e.sugar_high ? "Ja" : "",
-e.dateTime, 
-e.id,
-e.remote_id ?? ""
-
-];
-});
-const csv = [
-header.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","),
-...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(","))
-].join("\n");
-return csv;
-}
 function dl(filename, content, mime){
 const a = document.createElement("a");
 a.href = URL.createObjectURL(new Blob([content], {type:mime}));
 a.download = filename;
 a.click();
 URL.revokeObjectURL(a.href);
-}
-
-/* ===== List rendering (Daily) ===== */
-function withinDays(dateISO, days){
-if (days==="all") return true;
-const d = new Date(dateISO+"T00:00:00");
-const now = new Date(); const diff = (now - d)/(1000*60*60*24);
-return diff <= Number(days);
-}
-function compareForList(a, b){
-if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-if (a.time < b.time) return -1;
-if (a.time > b.time) return 1;
-return 0;
-}
-function renderTable(entries){
-const days = $("#rangeSel").value;
-const tbody = $("#tbl tbody");
-tbody.innerHTML = "";
-
-const list = entries
-.filter(e => withinDays(e.date, days))
-.sort(compareForList);
-
-list.forEach(e=>{
-const legacyWeightOnly = isWeightOnly(e);
-const hasVitals = !!(e.sys || e.dia || e.pulse);
-const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-const isMeasurement = hasVitals && !isDaySummary;
-
-const art = isDaySummary ? "Tageszusammenfassung" : "Messung";
-
-const zeitLabel = isDaySummary
-? (e.time ? `${e.time} (Tag)` : "– (Tag)")
-: (e.context === "Morgen" ? `${e.time} (Morgens)` :
-e.context === "Abend" ? `${e.time} (Abends)` : e.time);
-
-const synced = e.remote_id ? "☁️" : "";
-const notesText = e.notes || "";
-
-const tr = document.createElement("tr");
-tr.innerHTML = `
-<td class="nowrap">${e.date}</td>
-<td class="nowrap">${zeitLabel}</td>
-<td>${art}</td>
-<td class="center">${isMeasurement ? (e.sys ?? "") : ""}</td>
-<td class="center">${isMeasurement ? (e.dia ?? "") : ""}</td>
-<td class="center">${isMeasurement ? (e.pulse ?? "") : ""}</td>
-<td class="center">${isDaySummary ? fmtNum(e.weight) : ""}</td>
-<td class="center">${isMeasurement ? fmtNum(e.map) : ""}</td>
-<td class="notes">${nl2br(notesText)}</td>
-<td class="center">${e.training ? "Ja" : ""}</td>
-<td class="center">${e.low_intake ? "Ja" : ""}</td>
-<td class="center">${e.sick ? "Ja" : ""}</td>
-<td class="center">${e.valsartan_missed ? "Ja" : ""}</td>
-<td class="center">${e.forxiga_missed ? "Ja" : ""}</td>
-<td class="center">${e.nsar_taken ? "Ja" : ""}</td>
-<td class="center">${e.salt_high ? "Ja" : ""}</td>
-<td class="center">${e.sugar_high ? "Ja" : ""}</td>
-<td class="center">${synced}</td>
-<td><button class="btn ghost" data-del="${e.id}" data-remote="${e.remote_id ?? ''}">Löschen</button></td>
-`;
-tbody.appendChild(tr);
-});
-
-if (!tbody.children.length) {
-const tr = document.createElement("tr");
-tr.innerHTML = `<td colspan="19" class="small" style="text-align:center;opacity:.7">Keine Einträge im ausgewählten Zeitraum</td>`;
-tbody.appendChild(tr);
-}
-
-$$("#tbl [data-del]").forEach(btn=>{
-btn.addEventListener("click", async ()=>{
-const localId = Number(btn.dataset.del);
-const remoteId = btn.dataset.remote || "";
-if(!confirm("Eintrag wirklich löschen? (falls vorhanden, auch in Supabase)")) return;
-btn.disabled = true;
-const oldText = btn.textContent;
-btn.textContent = "Lösche…";
-try{
-if(remoteId){
-const r = await deleteRemote(remoteId);
-if(!r.ok){
-alert("Server-Löschung fehlgeschlagen ("+(r.status||"?")+") – lokaler Eintrag wird NICHT gelöscht.");
-return;
-}
-}
-await deleteEntryLocal(localId);
-await loadAndRender();
-await renderDoctor();
-if(chartPanel.open) await chartPanel.draw();
-} finally {
-btn.textContent = oldText;
-btn.disabled = false;
-}
-});
-});
-}
-
-async function loadAndRender(){
-const t0 = performance.now();
-const entries = await getAllEntries();
-renderTable(entries);
-{ const s = (perfStats.add('renderList', performance.now()-t0), perfStats.snap('renderList'));
-diag.add(`[perf] renderList p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
 }
 
 /* ===== Doctor view ===== */
@@ -1448,7 +1204,6 @@ if (!daysArr.length){
           await deleteEntryLocal(e.id);
         }
         // 3) UI aktualisieren
-        await loadAndRender();
         await renderDoctor();
         if (chartPanel.open) chartPanel.draw();
       } finally {
@@ -1469,11 +1224,6 @@ const chartPanel = {
     this.el.style.display = 'none';
     this.legend = $("#chartLegend");
     $("#chartClose").addEventListener("click", ()=>this.hide());
-    $("#chartBtn").addEventListener("click", async ()=>{
-      this.open = true;
-      this.el.style.display = 'block';
-      await this.draw();
-    });
     $("#metricSel").addEventListener("change", ()=> this.draw());
 
     // Resize/Orientation -> neu zeichnen, wenn offen
@@ -1700,7 +1450,6 @@ function setTab(name){
     b.classList.toggle("primary", b.dataset.tab === name)
   );
   if (name === "doctor") { renderDoctor(); }
-  if (name === "list")   { loadAndRender(); }
 }
 
 function bindTabs(){
@@ -1708,12 +1457,7 @@ function bindTabs(){
     b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
   );
 }
-
-/* Segmented-Controls entfernt → No-Op-Funktionen lassen die Aufrufe in main() bestehen */
-function bindCaptureSegment() {}
-function bindListSegment() {}
-function bindDoctorSegment() {}
-
+  
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
 saltHigh=false, sugarHigh=false;
@@ -1766,7 +1510,6 @@ if (hasDaySummary) saved = (await saveDaySummary()) || saved;
 if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; }
 
 // 3) UI aktualisieren
-await loadAndRender();
 await renderDoctor();
 if(chartPanel.open) await chartPanel.draw();
 
@@ -1918,7 +1661,6 @@ diag.add("Webhook: Netzwerkfehler");
     if (e.remote_id && !seen.has(e.remote_id)) await deleteEntryLocal(e.id);
   }
 
-  await loadAndRender();
   await renderDoctor();
   if (chartPanel.open) await chartPanel.draw();
 }
@@ -2005,7 +1747,6 @@ remote_id: row.id
 const existing = await getEntryByRemoteId(row.id);
 if(existing){ await updateEntry(existing.id, mapped); }
 else{ await addEntry(mapped); }
-await loadAndRender();
 await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add(`Realtime health_entries: ${et}`);
@@ -2015,7 +1756,6 @@ const rid = o?.id;
 if(rid!=null){
 const existing = await getEntryByRemoteId(rid);
 if(existing){ await deleteEntryLocal(existing.id); }
-await loadAndRender();
 await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 diag.add("Realtime health_entries: DELETE");
@@ -2048,7 +1788,6 @@ const allLocal = await getAllEntries();
 for(const e of allLocal){
 if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
 }
-await loadAndRender();
 await renderDoctor();
 if(chartPanel.open) chartPanel.draw();
 }
@@ -2079,8 +1818,6 @@ if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOO
 if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
 } catch (_) {}
 chartPanel.init(); bindTabs();
-const listHeaderBtn = document.getElementById('listHeaderBtn');
-if (listHeaderBtn) listHeaderBtn.addEventListener('click', ()=> setTab('list'));
 $("#date").value = todayStr();
 $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
@@ -2099,10 +1836,8 @@ await afterLoginBoot();
 // Konfiguration laden
 const savedUrl = await getConf("webhookUrl");
 const savedKey = await getConf("webhookKey");
-if (savedUrl) $("#whUrl").value = savedUrl;
-if (savedKey) $("#whKey").value = savedKey;
 if (!savedUrl || !savedKey) {
-setTab("list"); // Nutzer sieht sofort die Konfig-Sektion
+  setTab("capture"); // In Erfassung bleiben
 }
 
 // Sanfte Warnung
@@ -2151,100 +1886,13 @@ const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
 if(isSave){ e.preventDefault(); saveAll(); }
 });
 
-$("#rangeSel").addEventListener("change", loadAndRender);
-$("#exportCsv").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.csv", toCSV(all), "text/csv"); });
-$("#exportJson").addEventListener("click", async ()=>{ const all = await getAllEntries(); dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json"); });
   $("#doctorExportJson").addEventListener("click", async ()=>{
   const all = await getAllEntries();
   dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
 });
-$("#wipeBtn").addEventListener("click", async ()=>{ if(confirm("Alle lokalen Daily-Einträge löschen?")){ await wipeAll(); loadAndRender(); renderDoctor(); if(chartPanel.open) chartPanel.draw(); } });
-  $("#hardResetBtn").addEventListener("click", async () => {
-  if (!confirm("App-Daten (Cache + Cookies) für diese Seite löschen und frisch laden?")) return;
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister().catch(()=>{})));
-    }
-    if (window.caches?.keys) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k).catch(()=>{})));
-    }
-    try { localStorage.clear(); } catch {}
-    try { sessionStorage.clear(); } catch {}
-    document.cookie.split(';').forEach(c => {
-      const name = c.split('=')[0].trim();
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    });
-  } finally {
-    const url = new URL(location.href);
-    url.searchParams.set('fresh', Date.now());
-    location.replace(url.toString());
-  }
-});
-
-// --- Save Webhook / Supabase (mit service_role-Guard) ---
-$("#saveWebhook").addEventListener("click", async ()=>{
-const rawKey = $("#whKey").value.trim();
-if (isServiceRoleKey(rawKey)) {
-alert("Der eingetragene API-Key sieht nach einem service_role Key aus – dieser darf NIEMALS im Browser verwendet werden.\n\nBitte einen ANON Public Key verwenden.");
-return;
-}
-
-await putConf("webhookUrl", $("#whUrl").value.trim());
-await putConf("webhookKey", rawKey);
-
-$("#whSaved").textContent = "Gespeichert ✓";
-setTimeout(()=>$("#whSaved").textContent="", 2000);
-
-// Supabase-Client nach neuer Konfig sofort initialisieren
-await ensureSupabaseClient();
-const hasSessionNow = await requireSession();
-if (hasSessionNow) {
-await afterLoginBoot();
-}
-});
-
-
-// MANUELLER SYNC (Daily) – bleibt als „Last Resort“
-$("#syncBtn").addEventListener("click", async ()=>{
-if(!confirm("SYNC (Daily) startet:\\n1) Backup CSV herunterladen\\n2) Ausstehende lokale Einträge an Supabase senden\\n3) Lokale Liste leeren\\n4) Frische Daten von Supabase laden\\nFortfahren?")) return;
-setBusy(true);
-$("#syncBtn").disabled = true;
-try{
-const current = await getAllEntries();
-dl("backup_vor_sync.csv", toCSV(current), "text/csv");
-const resPush = await pushPendingToRemote();
-diag.add(`SYNC: Pending gepusht ? OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-await wipeAll();
-const remoteRows = await pullAllFromRemote();
-for(const r of remoteRows){
-const entry = {
-date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, map: r.map, notes: r.notes,
-training: r.training, low_intake: r.low_intake, sick: r.sick,
-valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
-remote_id: r.id
-};
-
-await addEntry(entry);
-}
-await loadAndRender(); await renderDoctor();
-if(chartPanel.open) await chartPanel.draw();
-diag.add(`SYNC: ${remoteRows.length} Einträge vom Server geladen`);
-alert("Sync abgeschlossen.");
-}catch(e){
-console.error(e); alert("Sync fehlgeschlagen: "+(e.message||e));
-} finally {
-$("#syncBtn").disabled = false;
-setBusy(false);
-}
-});
-
+  
 // Initial Render
-await loadAndRender(); await renderDoctor();
+await renderDoctor();
 setDocBadges({ visible: true });
 
 function daySummaryActive(){
@@ -2283,7 +1931,7 @@ main();
 - V1.5: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
 - Auto-Sync: push pending ? reconcile (Entries) ohne Wipe.
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
-- UI-Refresh: Listen sofort; Charts nur, wenn Panels offen.
+- UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
 </script>
 <!-- Google-Login (einfach) -->
@@ -2294,6 +1942,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
