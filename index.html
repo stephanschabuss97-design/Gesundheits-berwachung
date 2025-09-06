@@ -1854,33 +1854,6 @@ if (metric === "bp") {
     {name:"Dia Abends",  values: diaA, color:"#db2777"}  // Dunkelrosa
   ];
 
-      const avg = arr => {
-        const vals = arr.filter(v => v != null);
-        return vals.length ? (vals.reduce((a,b)=>a+b,0) / vals.length) : null;
-      };
-      const calcMAPlocal = (sys, dia) => (sys!=null && dia!=null) ? (dia + (sys - dia)/3) : null;
-
-      const mapArr = data.map(e => calcMAPlocal(e.sys, e.dia));
-
-      // KPIs ein-/ausblenden
-      if (avgBox){
-        const avgSys = avg(y1), avgDia = avg(y2), avgMap = avg(mapArr);
-        if (avgSys!=null || avgDia!=null || avgMap!=null){
-          avgBox.style.display = "inline-flex";
-          const f0 = v => (v==null ? "–" : Math.round(v).toString());
-          avgBox.querySelector('[data-k="sys"]').textContent = `Durchschnitt Sys: ${f0(avgSys)}`;
-          avgBox.querySelector('[data-k="dia"]').textContent = `Durchschnitt Dia: ${f0(avgDia)}`;
-          avgBox.querySelector('[data-k="map"]').textContent = `Durchschnitt MAP: ${f0(avgMap)}`;
-        } else {
-          avgBox.style.display = "none";
-        }
-      }
-
-      series = [
-        {name:"Systolisch",  values:y1, color:"#60a5fa"},
-        {name:"Diastolisch", values:y2, color:"#f472b6"}
-      ];
-
     } else if (metric === "pulse") {
       if (avgBox) avgBox.style.display = "none";
       const y = data.map(e => (e.pulse!=null? Number(e.pulse) : null));
@@ -1971,37 +1944,6 @@ const innerW = W - PL - PR, innerH = H - PT - PB;
   });
   return out;
 }
-function dotsSysDia(sysVals, diaVals, xs){
-  let out="";
-  sysVals.forEach((sys,i)=>{
-    const dia = diaVals[i];
-    if((sys==null && dia==null) || !xs[i]) return;
-
-    const cx = x(xs[i]).toFixed(1);
-    // Sys-Koordinate
-    if(sys!=null){
-      const cy = y(sys).toFixed(1);
-      const alert = (sys>BP_SYS_LIMIT || (dia!=null && dia>BP_DIA_LIMIT));
-      const col = alert ? "red" : "#60a5fa"; // rot oder blau
-      const reason = (sys>BP_SYS_LIMIT) ? `Sys>${BP_SYS_LIMIT}` : (dia!=null && dia>BP_DIA_LIMIT) ? `Dia>${BP_DIA_LIMIT}` : "";
-out += alert
-  ? `<circle cx="${cx}" cy="${cy}" r="2.6" fill="red"><title>Grenzwert (${reason}) – ${new Date(xs[i]).toLocaleDateString('de-AT')}</title></circle>`
-  : `<circle cx="${cx}" cy="${cy}" r="2.6" fill="${col}" />`;
-
-    }
-    // Dia-Koordinate
-    if(dia!=null){
-      const cy = y(dia).toFixed(1);
-      const alert = (dia>BP_DIA_LIMIT || (sys!=null && sys>BP_SYS_LIMIT));
-      const col = alert ? "red" : "#f472b6"; // rot oder rosa
-      const reason = (sys>BP_SYS_LIMIT) ? `Sys>${BP_SYS_LIMIT}` : (dia!=null && dia>BP_DIA_LIMIT) ? `Dia>${BP_DIA_LIMIT}` : "";
-out += alert
-  ? `<circle cx="${cx}" cy="${cy}" r="2.6" fill="red"><title>Grenzwert (${reason}) – ${new Date(xs[i]).toLocaleDateString('de-AT')}</title></circle>`
-  : `<circle cx="${cx}" cy="${cy}" r="2.6" fill="${col}" />`;
-    }
-  });
-  return out;
-}
 
 // Pfade + Legende
 series.forEach(s=>{
@@ -2015,17 +1957,9 @@ series.forEach(s=>{
 });
 
 // Punkte zeichnen
-// Punkte zeichnen (BP nutzt gemeinsame Logik mit xs)
-if (metric === "bp") {
-  // Punkte einzeln nach Serie zeichnen (kein Misch-Algorithmus mehr)
 series.forEach(s=>{
   this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
 });
-} else {
-  series.forEach(s=>{
-    this.svg.insertAdjacentHTML("beforeend", dots(s.values, s.color));
-  });
-}
 
     const sPerf = (perfStats.add('drawChart', performance.now()-__t0), perfStats.snap('drawChart'));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
@@ -2873,4 +2807,5 @@ main();
 </div>
 </body>
 </html>
+
 
