@@ -522,10 +522,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <main>
 <!-- Capture -->
 <section class="view active" id="capture">
-  <div class="seg" id="seg-capture">
-    <button class="btn ghost seg-btn active" data-mode="daily">Erfassen • Daily</button>
-  </div>
-
+ 
   <!-- Daily-Capture -->
   <section class="card" id="entry">
     <div class="row">
@@ -622,10 +619,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <button class="btn warn" id="hardResetBtn" type="button" title="Cookies + Cache löschen, Seite neu laden">Seite frisch laden</button>
 </div>
 
-<div class="seg" id="seg-list">
-<button class="btn ghost seg-btn active" data-mode="daily">Liste • Daily</button>
-</div>
-
 <!-- Wrapper Daily -->
 <div style="overflow:auto" id="listDailyWrap">
 <table id="tbl">
@@ -683,9 +676,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
       <strong id="doctorTitle">Arzt-Ansicht</strong>
 
       <div class="center-group">
-        <div class="seg" id="seg-doctor" style="margin:0">
-          <button class="btn ghost seg-btn active" data-mode="daily">Daily</button>
-        </div>
         <label class="small">Von <input type="date" id="from" style="width:auto"></label>
         <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
         <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
@@ -1703,46 +1693,25 @@ saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML =
 
 /* ===== Tabs / Segments ===== */
 function setTab(name){
-  $$(".view").forEach(v=>v.classList.remove("active"));
+  $$(".view").forEach(v => v.classList.remove("active"));
   $("#"+name).classList.add("active");
-  $$(".tabs .btn").forEach(b=> b.classList.toggle("primary", b.dataset.tab===name));
-  if(name==="doctor"){ renderDoctor(); }
-  if(name==="list"){ loadAndRender(); }
+  $$(".tabs .btn").forEach(b =>
+    b.classList.toggle("primary", b.dataset.tab === name)
+  );
+  if (name === "doctor") { renderDoctor(); }
+  if (name === "list")   { loadAndRender(); }
 }
-function bindTabs(){ $$(".tabs .btn").forEach(b=> b.addEventListener("click", e=> setTab(e.currentTarget.dataset.tab))); }
-function bindCaptureSegment(){
-const seg = $("#seg-capture"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#entry").classList.remove("hidden");
-});
-});
+
+function bindTabs(){
+  $$(".tabs .btn").forEach(b =>
+    b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
+  );
 }
-function bindListSegment(){
-const seg = $("#seg-list"); if(!seg) return;
-seg.querySelectorAll(".seg-btn").forEach(b=>{
-b.addEventListener("click", async ()=>{
-const mode = b.dataset.mode;
-seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-$("#listDailyWrap").classList.remove("hidden");
-await loadAndRender();
-});
-});
-}
-function bindDoctorSegment(){
-  const seg = $("#seg-doctor"); if(!seg) return;
-  seg.querySelectorAll(".seg-btn").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      seg.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active", x===b));
-      $("#doctorDailyWrap").classList.remove("hidden");
-      $("#doctorTitle").textContent = "Arzt-Ansicht";
-      await renderDoctor();
-      setDocBadges({ visible: true });
-    });
-  });
-}
+
+/* Segmented-Controls entfernt → No-Op-Funktionen lassen die Aufrufe in main() bestehen */
+function bindCaptureSegment() {}
+function bindListSegment() {}
+function bindDoctorSegment() {}
 
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
@@ -2269,9 +2238,6 @@ setBusy(false);
 }
 });
 
-// Bind Segmented Controls
-bindCaptureSegment(); bindListSegment(); bindDoctorSegment();
-
 // Initial Render
 await loadAndRender(); await renderDoctor();
 setDocBadges({ visible: true });
@@ -2323,4 +2289,5 @@ main();
 </div>
 </body>
 </html>
+
 
