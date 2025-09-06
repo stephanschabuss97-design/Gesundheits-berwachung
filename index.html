@@ -707,8 +707,14 @@ document.querySelectorAll('nav.tabs button').forEach(b=>{
 if(allowIds.has(b.id)) return;
 b.disabled = disabled;
 });
-// optisches Feedback (optional)
+// optisches Feedback
 document.body.classList.toggle('auth-locked', disabled);
+
+// ANKER: auth-boot-failsafe
+if (logged) {
+  // Nur einmal (siehe __booted in afterLoginBoot)
+  Promise.resolve().then(() => afterLoginBoot?.());
+}
 }
 
 const $ = sel => document.querySelector(sel);
@@ -971,7 +977,7 @@ setUserUi(email);
 showLoginBar(!session);
 setAuthGuard(!!session); // <— NEU: UI sperren/freigeben
 if (session) {
-await afterLoginBoot(); // dank Guard nur einmal
+  await afterLoginBoot(); // Start nach frischem Login
 }
 });
 }
@@ -1963,7 +1969,7 @@ if (sbClient) watchAuthState()
 // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
 if (hasSession) {
-await afterLoginBoot();
+  await afterLoginBoot(); // wichtig für Reload mit persistierter Session
 }
 
 // Konfiguration laden
@@ -2090,6 +2096,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
