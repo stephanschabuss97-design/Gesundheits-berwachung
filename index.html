@@ -1598,7 +1598,7 @@ const chartPanel = {
 
     // Grid + Labels
     let grid = "";
-    const ticks = 4;
+    const ticks = 9;
     for(let i=0;i<=ticks;i++){
       const vv = y0 + (i*(y1-y0)/ticks);
       const yy = y(vv);
@@ -2082,7 +2082,7 @@ const listHeaderBtn = document.getElementById('listHeaderBtn');
 if (listHeaderBtn) listHeaderBtn.addEventListener('click', ()=> setTab('list'));
 $("#date").value = todayStr();
 $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
-$("#from").value = new Date(Date.now()-30*24*3600*1000).toISOString().slice(0,10);
+$("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
@@ -2289,5 +2289,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
