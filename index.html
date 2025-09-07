@@ -712,6 +712,61 @@ const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
 return !hasVitals && (e?.weight != null);
 }
 
+  /* ANKER: bindUIHandlers (zentralisiert alle Button-Bindings) */
+function bindUIHandlers() {
+  // Tabs
+  $$(".tabs .btn").forEach(b =>
+    b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
+  );
+
+  // Save-Button
+  $("#saveAllBtn").addEventListener("click", saveAll);
+
+  // Toggle-Handler (alle Flag-Buttons)
+  const bindToggle = (id, setter, getVal)=>{
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("click", ()=>{
+      setter(!getVal());
+    });
+  };
+  bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
+  bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
+  bindToggle("#sickToggle", setSick, ()=>sickActive);
+  bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
+  bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
+  bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
+  bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
+  bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
+
+  // Apply-Button für Zeitraum
+  $("#applyRange").addEventListener("click", async ()=>{
+    await renderDoctor();
+    setDocBadges({ visible: true });
+    if(chartPanel.open) chartPanel.draw();
+  });
+
+  // Chart-Button in Arzt-Ansicht
+  $("#doctorChartBtn").addEventListener("click", async ()=>{
+    setDocBadges({ visible: true });
+    chartPanel.open = true;
+    chartPanel.el.style.display = 'block';
+    await chartPanel.draw();
+  });
+
+  // Export JSON
+  $("#doctorExportJson").addEventListener("click", async ()=>{
+    const all = await getAllEntries();
+    dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
+  });
+
+  // STRG+S (QuickSave)
+  document.addEventListener('keydown', (e)=>{
+    const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
+    if(isSave){ e.preventDefault(); saveAll(); }
+  });
+}
+
 function setBusy(on){
 document.body.classList.toggle('is-busy', !!on);
 const b = document.getElementById('busy');
@@ -1928,143 +1983,110 @@ setBusy(false);
 }
 
 /* ===== Main ===== */
-async function main(){
-diag.init(); helpPanel.init(); await initDB();
-try {
-const haveUrl = await getConf("webhookUrl");
-const haveKey = await getConf("webhookKey");
-if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
-if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
-} catch (_) {}
-chartPanel.init(); bindTabs();
-$("#date").value = todayStr();
-$("#timeM").value = "07:00"; $("#timeA").value = "19:00";
-$("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
-$("#to").value = todayStr();
-setTab("capture");
-await ensureSupabaseClient();
-bindAuthButtons();
-if (sbClient) watchAuthState()
+async function main() {
+  diag.init();
+  helpPanel.init();
+  await initDB();
 
-// Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
-const hasSession = await requireSession();
-if (hasSession) {
-  await afterLoginBoot(); // wichtig für Reload mit persistierter Session
-}
+  // ANKER: Zentrale UI-Bindings für alle Buttons/Tabs
+  bindUIHandlers();
 
-// Konfiguration laden
-const savedUrl = await getConf("webhookUrl");
-const savedKey = await getConf("webhookKey");
-if (!savedUrl || !savedKey) {
-  setTab("capture"); // In Erfassung bleiben
-}
+  try {
+    const haveUrl = await getConf("webhookUrl");
+    const haveKey = await getConf("webhookKey");
+    if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+    if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
+  } catch (_) {}
 
-// Sanfte Warnung
-// === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertüberschreitung ===
-function needsCommentNow(){
-  const sysM = Number($("#sysM").value);
-  const diaM = Number($("#diaM").value);
-  const sysA = Number($("#sysA").value);
-  const diaA = Number($("#diaA").value);
-  return (sysM > 130) || (diaM > 90) || (sysA > 130) || (diaA > 90);
-}
-function updateNotesRequirementUI(){
-  const notesEl = $("#notesDay");
-  if (!notesEl) return;
-  const notes = (notesEl.value || "").trim();
-  const need = needsCommentNow();
-  const invalid = need && !notes;
-  notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
-  if (invalid) notesEl.setAttribute("aria-invalid","true"); else notesEl.removeAttribute("aria-invalid");
-}
-// bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
-["#sysM","#diaM","#sysA","#diaA","#notesDay"].forEach(sel=>{
-  const el = $(sel); if(!el) return;
-  el.addEventListener("input", updateNotesRequirementUI);
-});
-// einmal initial prüfen (falls Werte schon stehen)
-updateNotesRequirementUI();
+  $("#date").value = todayStr();
+  $("#timeM").value = "07:00";
+  $("#timeA").value = "19:00";
+  $("#from").value = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  $("#to").value = todayStr();
+  setTab("capture");
+  await ensureSupabaseClient();
+  bindAuthButtons();
+  if (sbClient) watchAuthState();
 
-// Toggle-Handler
-const bindToggle = (id, setter, getVal)=>{
-  const el = $(id);
-  el.addEventListener("click", ()=>{
-    setter(!getVal());
+  // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
+  const hasSession = await requireSession();
+  if (hasSession) {
+    await afterLoginBoot(); // wichtig für Reload mit persistierter Session
+  }
+
+  // Konfiguration laden
+  const savedUrl = await getConf("webhookUrl");
+  const savedKey = await getConf("webhookKey");
+  if (!savedUrl || !savedKey) {
+    setTab("capture"); // In Erfassung bleiben
+  }
+
+  // Sanfte Warnung – Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertüberschreitung
+  function needsCommentNow() {
+    const sysM = Number($("#sysM").value);
+    const diaM = Number($("#diaM").value);
+    const sysA = Number($("#sysA").value);
+    const diaA = Number($("#diaA").value);
+    return (sysM > 130) || (diaM > 90) || (sysA > 130) || (diaA > 90);
+  }
+  function updateNotesRequirementUI() {
+    const notesEl = $("#notesDay");
+    if (!notesEl) return;
+    const notes = (notesEl.value || "").trim();
+    const need = needsCommentNow();
+    const invalid = need && !notes;
+    notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
+    if (invalid) notesEl.setAttribute("aria-invalid", "true");
+    else notesEl.removeAttribute("aria-invalid");
+  }
+  // bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
+  ["#sysM", "#diaM", "#sysA", "#diaA", "#notesDay"].forEach(sel => {
+    const el = $(sel); if (!el) return;
+    el.addEventListener("input", updateNotesRequirementUI);
   });
-};
-bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
-bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
-bindToggle("#sickToggle", setSick, ()=>sickActive);
-bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
-bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
-bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
-bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
-bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
+  // einmal initial prüfen (falls Werte schon stehen)
+  updateNotesRequirementUI();
 
-$("#saveAllBtn").addEventListener("click", saveAll);
-$("#applyRange").addEventListener("click", async ()=>{
+  // Initial Render
   await renderDoctor();
-setDocBadges({ visible: true });
-  if(chartPanel.open) chartPanel.draw();
-});
+  setDocBadges({ visible: true });
 
-$("#doctorChartBtn").addEventListener("click", async ()=>{
-setDocBadges({ visible: true });
-chartPanel.open = true;
-chartPanel.el.style.display = 'block';
-await chartPanel.draw();
-});
+  // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" hängen blieb)
+  $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el => {
+    if (el.id !== 'logoutBtn') el.disabled = false;
+  });
+  document.body.classList.remove('auth-locked');
 
-document.addEventListener('keydown', (e)=>{
-const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-if(isSave){ e.preventDefault(); saveAll(); }
-});
+  function daySummaryActive() {
+    const w = ($("#weightDay")?.value || "").trim();
+    const n = ($("#notesDay")?.value || "").trim();
+    return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
+      valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
+  }
 
-  $("#doctorExportJson").addEventListener("click", async ()=>{
-  const all = await getAllEntries();
-  dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
-});
-  
-// Initial Render
-await renderDoctor();
-setDocBadges({ visible: true });
+  const disableVitals = daySummaryActive();
+  ["#sysM", "#diaM", "#pulseM", "#sysA", "#diaA", "#pulseA"].forEach(sel => {
+    const el = $(sel);
+    if (!el) return;
+    el.disabled = disableVitals;
+    el.style.opacity = disableVitals ? 0.6 : 1;
+  });
 
-// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" hängen blieb)
-$$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
-  if (el.id !== 'logoutBtn') el.disabled = false;
-});
-document.body.classList.remove('auth-locked');
-
-function daySummaryActive(){
-const w = ($("#weightDay")?.value || "").trim();
-const n = ($("#notesDay")?.value || "").trim();
-return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
-valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
-}
-
-const disableVitals = daySummaryActive();
-["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
-const el = $(sel);
-if (!el) return;
-el.disabled = disableVitals;
-el.style.opacity = disableVitals ? 0.6 : 1;
-});
-
-// Auto-Push Pending sobald online
-window.addEventListener('online', async ()=>{
-const resPush = await pushPendingToRemote();
-if(resPush.pushed || resPush.failed){
-diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
-await reconcileFromRemote();
-}
-});
+  // Auto-Push Pending sobald online
+  window.addEventListener('online', async () => {
+    const resPush = await pushPendingToRemote();
+    if (resPush.pushed || resPush.failed) {
+      diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+      await reconcileFromRemote();
+    }
+  });
 }
 
 /* boot */
 if (document.readyState === "loading") {
-window.addEventListener("DOMContentLoaded", main);
+  window.addEventListener("DOMContentLoaded", main);
 } else {
-main();
+  main();
 }
 
 /* === Debug-Notizen
@@ -2082,3 +2104,4 @@ main();
 </div>
 </body>
 </html>
+
