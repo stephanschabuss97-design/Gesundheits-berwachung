@@ -437,6 +437,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <h1>Gesundheits-Logger</h1><span class="small">V1.0.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
+<button class="btn warn"  id="forceReauthBtn" type="button" title="Abmelden und neu einloggen">Neu anmelden</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
 </div>
 </header>
@@ -905,6 +906,52 @@ document.getElementById('logoutBtn').style.display = email ? '' : 'none';
 }
 
 // Buttons binden (einmalig, z. B. in main())
+// --- Hard/Forced Reauth: alles schließen, global abmelden, sofort Google-Login starten
+async function forceReauth(){
+  try { await teardownRealtime(); } catch(_) {}
+  __booted = false;
+  try{
+    const supa = await ensureSupabaseClient();
+    if (supa) {
+      // Supabase v2: scope 'global' -> löscht auch serverseitige Refresh Sessions
+      await supa.auth.signOut({ scope: 'global' }).catch(()=>{});
+      // Fallback: alte/local Keys weg (defensiv, falls Browser was cached)
+      try{
+        Object.keys(localStorage).forEach(k=>{
+          if (k.includes('auth-token') || k.includes('supabase.auth.token')) localStorage.removeItem(k);
+        });
+        Object.keys(sessionStorage).forEach(k=>{
+          if (k.includes('auth-token') || k.includes('supabase.auth.token')) sessionStorage.removeItem(k);
+        });
+      }catch(_){}
+    }
+  } finally {
+    // UI sperren und Login-Bar zeigen
+    setUserUi('');
+    showLoginBar(true);
+    setAuthGuard(false);
+    // Direkt wieder Google-Login starten (mit Kontoauswahl)
+    try{
+      const supa = await ensureSupabaseClient();
+      if (supa) {
+        const { error } = await supa.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}${window.location.pathname}`,
+            queryParams: { prompt: 'select_account' } // zwingt Account-Auswahl
+          }
+        });
+        if (error) alert('Neuanmeldung fehlgeschlagen: ' + error.message);
+      } else {
+        alert('Konfiguration fehlt – bitte Seite neu laden.');
+      }
+    }catch(e){
+      alert('Neuanmeldung nicht möglich: ' + (e?.message || e));
+    }
+  }
+}
+
+// Buttons binden (einmalig, z. B. in main())
 function bindAuthButtons(){
 const gbtn = document.getElementById('googleLoginBtn');
 const lout = document.getElementById('logoutBtn');
@@ -934,28 +981,19 @@ setAuthGuard(false);
 }
 
 // Beim Start Session prüfen
-// ANKER: require-session-grace (Final)
 async function requireSession(){
-  if(!sbClient){
-    setUserUi('');
-    showLoginBar(true);
-    setAuthGuard(false);
-    return false;
-  }
-
-  // Etwas großzügiger warten: bis zu ~2.4s
-  let session = null;
-  for (let i = 0; i < 8; i++) {            // 8 Versuche
-    const { data:{ session: s } } = await sbClient.auth.getSession();
-    if (s) { session = s; break; }
-    await new Promise(r => setTimeout(r, 300));  // 300 ms
-  }
-
-  const email = session?.user?.email || '';
-  setUserUi(email);
-  showLoginBar(!session);
-  setAuthGuard(!!session);
-  return !!session;
+if(!sbClient){
+setUserUi('');
+showLoginBar(true);
+setAuthGuard(false);
+return false;
+}
+const { data: { session } } = await sbClient.auth.getSession();
+const email = session?.user?.email || '';
+setUserUi(email);
+showLoginBar(!session);
+setAuthGuard(!!session);
+return !!session;
 }
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
@@ -1011,12 +1049,6 @@ const __t0 = performance.now();
 async function renderDoctor(){
 const host = $("#doctorView");
 if (!host) return;
-  // ANKER: auth-gate-render-doctor (NEU)
-if (!(await isLoggedIn())) {
-  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte zuerst einloggen.</div>`;
-  setDocBadges({ visible: false });
-  return;
-}
 host.innerHTML = "";
 
 // Helpers (nur Anzeige)
@@ -1218,7 +1250,6 @@ if (!daysArr.length){
 
 /* ===== Simple SVG Chart (Daily) ===== */
 const chartPanel = {
- 
   el:null, svg:null, legend:null, open:false, tip:null, tipSticky:false,
   init(){
     this.el = $("#chart");
@@ -1314,20 +1345,11 @@ fillTipFromTarget(tgt){
   this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
 },
 
-async draw(){
-  // ANKER: auth-gate-chart (NEU)
-  if (!(await isLoggedIn())) {
-    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Bitte zuerst einloggen</text>`;
-    this.legend.innerHTML = "";
-    const avgBox = document.getElementById("chartAverages");
-    if (avgBox) avgBox.style.display = "none";
-    return;
-  }
+  async draw(){
+    const t0 = performance.now();
+    const metric = $("#metricSel").value;
+    const data   = await this.getFiltered();
 
-  const t0 = performance.now();
-  const metric = $("#metricSel").value;
-  const data   = await this.getFiltered();
-    
     // Basis-X: alle (fallback)
     const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
     let series = [];
@@ -1864,28 +1886,10 @@ return sbClient;
 }
 
 async function setupRealtime(){
-  const supa = await ensureSupabaseClient();
-  if (!supa) return;
-
-  // 1) IMMER zuerst ein Initial-Pull & Render (braucht keine uid; RLS wirkt über JWT)
-  try {
-    await reconcileFromRemote();
-  } catch (_) {
-    diag.add("Realtime: initial reconcile skipped (err)");
-  }
-
-  // 2) Kurz auf uid warten (Reload kann trödeln)
-  let uid = await getUserId();
-  for (let i = 0; i < 10 && !uid; i++) {   // bis ~2s warten
-    await new Promise(r => setTimeout(r, 200));
-    uid = await getUserId();
-  }
-  if (!uid) {
-    diag.add("Realtime: no uid yet – retry subscribe later");
-    // sanfter Retry – Abo nachreichen, sobald uid kommt
-    setTimeout(setupRealtime, 1000);
-    return;
-  }
+const supa = await ensureSupabaseClient();
+const uid = await getUserId();
+if(!supa) return;
+if(!uid) return;
 
 // health_entries
 trackChannel(
@@ -1987,6 +1991,12 @@ $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
 bindAuthButtons();
+bindAuthButtons();
+
+// Neu-anmelden-Button anbinden
+const frb = document.getElementById('forceReauthBtn');
+if (frb) frb.addEventListener('click', forceReauth);
+
 if (sbClient) watchAuthState()
 
 // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
@@ -2125,6 +2135,3 @@ main();
 </div>
 </body>
 </html>
-
-
-
