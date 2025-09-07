@@ -1832,7 +1832,7 @@ const anonKey = keyConf.replace(/^Bearer\s+/i,"");
 if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
 
 sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
-auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true } // Session nur im RAM
 });
 diag.add("Supabase: Client (Auth) initialisiert");
 return sbClient;
@@ -2082,3 +2082,4 @@ main();
 </div>
 </body>
 </html>
+
