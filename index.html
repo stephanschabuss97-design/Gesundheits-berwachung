@@ -437,7 +437,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <h1>Gesundheits-Logger</h1><span class="small">V1.0.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
-<button class="btn warn"  id="forceReauthBtn" type="button" title="Abmelden und neu einloggen">Neu anmelden</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
 </div>
 </header>
@@ -903,52 +902,6 @@ if (bar) bar.style.display = show ? 'flex' : 'none';
 function setUserUi(email){
 document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
 document.getElementById('logoutBtn').style.display = email ? '' : 'none';
-}
-
-// Buttons binden (einmalig, z. B. in main())
-// --- Hard/Forced Reauth: alles schließen, global abmelden, sofort Google-Login starten
-async function forceReauth(){
-  try { await teardownRealtime(); } catch(_) {}
-  __booted = false;
-  try{
-    const supa = await ensureSupabaseClient();
-    if (supa) {
-      // Supabase v2: scope 'global' -> löscht auch serverseitige Refresh Sessions
-      await supa.auth.signOut({ scope: 'global' }).catch(()=>{});
-      // Fallback: alte/local Keys weg (defensiv, falls Browser was cached)
-      try{
-        Object.keys(localStorage).forEach(k=>{
-          if (k.includes('auth-token') || k.includes('supabase.auth.token')) localStorage.removeItem(k);
-        });
-        Object.keys(sessionStorage).forEach(k=>{
-          if (k.includes('auth-token') || k.includes('supabase.auth.token')) sessionStorage.removeItem(k);
-        });
-      }catch(_){}
-    }
-  } finally {
-    // UI sperren und Login-Bar zeigen
-    setUserUi('');
-    showLoginBar(true);
-    setAuthGuard(false);
-    // Direkt wieder Google-Login starten (mit Kontoauswahl)
-    try{
-      const supa = await ensureSupabaseClient();
-      if (supa) {
-        const { error } = await supa.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}${window.location.pathname}`,
-            queryParams: { prompt: 'select_account' } // zwingt Account-Auswahl
-          }
-        });
-        if (error) alert('Neuanmeldung fehlgeschlagen: ' + error.message);
-      } else {
-        alert('Konfiguration fehlt – bitte Seite neu laden.');
-      }
-    }catch(e){
-      alert('Neuanmeldung nicht möglich: ' + (e?.message || e));
-    }
-  }
 }
 
 // Buttons binden (einmalig, z. B. in main())
@@ -1991,11 +1944,6 @@ $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
 bindAuthButtons();
-
-// Neu-anmelden-Button anbinden
-const frb = document.getElementById('forceReauthBtn');
-if (frb) frb.addEventListener('click', forceReauth);
-
 if (sbClient) watchAuthState()
 
 // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
@@ -2134,4 +2082,3 @@ main();
 </div>
 </body>
 </html>
-
