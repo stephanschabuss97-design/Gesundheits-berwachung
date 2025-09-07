@@ -934,19 +934,30 @@ setAuthGuard(false);
 }
 
 // Beim Start Session prüfen
+// ANKER: require-session-grace (NEU)
 async function requireSession(){
-if(!sbClient){
-setUserUi('');
-showLoginBar(true);
-setAuthGuard(false);
-return false;
-}
-const { data: { session } } = await sbClient.auth.getSession();
-const email = session?.user?.email || '';
-setUserUi(email);
-showLoginBar(!session);
-setAuthGuard(!!session);
-return !!session;
+  // Kein Supabase-Client? -> gesperrt
+  if(!sbClient){
+    setUserUi('');
+    showLoginBar(true);
+    setAuthGuard(false);
+    return false;
+  }
+
+  // Kleine Warte-Schleife (Grace-Period) für Session-Restore nach Reload
+  // 4 Versuche à 250 ms (insgesamt bis zu ~1 Sekunde)
+  let session = null;
+  for (let i = 0; i < 4; i++) {
+    const { data:{ session: s } } = await sbClient.auth.getSession();
+    if (s) { session = s; break; }
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  setAuthGuard(!!session);
+  return !!session;
 }
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
@@ -1002,6 +1013,12 @@ const __t0 = performance.now();
 async function renderDoctor(){
 const host = $("#doctorView");
 if (!host) return;
+  // ANKER: auth-gate-render-doctor (NEU)
+if (!(await isLoggedIn())) {
+  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte zuerst einloggen.</div>`;
+  setDocBadges({ visible: false });
+  return;
+}
 host.innerHTML = "";
 
 // Helpers (nur Anzeige)
@@ -1203,6 +1220,7 @@ if (!daysArr.length){
 
 /* ===== Simple SVG Chart (Daily) ===== */
 const chartPanel = {
+ 
   el:null, svg:null, legend:null, open:false, tip:null, tipSticky:false,
   init(){
     this.el = $("#chart");
@@ -1298,11 +1316,20 @@ fillTipFromTarget(tgt){
   this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
 },
 
-  async draw(){
-    const t0 = performance.now();
-    const metric = $("#metricSel").value;
-    const data   = await this.getFiltered();
+async draw(){
+  // ANKER: auth-gate-chart (NEU)
+  if (!(await isLoggedIn())) {
+    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Bitte zuerst einloggen</text>`;
+    this.legend.innerHTML = "";
+    const avgBox = document.getElementById("chartAverages");
+    if (avgBox) avgBox.style.display = "none";
+    return;
+  }
 
+  const t0 = performance.now();
+  const metric = $("#metricSel").value;
+  const data   = await this.getFiltered();
+    
     // Basis-X: alle (fallback)
     const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
     let series = [];
@@ -2082,3 +2109,4 @@ main();
 </div>
 </body>
 </html>
+
