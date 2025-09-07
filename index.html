@@ -934,7 +934,7 @@ setAuthGuard(false);
 }
 
 // Beim Start Session prüfen
-// ANKER: require-session-grace (UPDATE)
+// ANKER: require-session-grace (Final)
 async function requireSession(){
   if(!sbClient){
     setUserUi('');
@@ -949,22 +949,6 @@ async function requireSession(){
     const { data:{ session: s } } = await sbClient.auth.getSession();
     if (s) { session = s; break; }
     await new Promise(r => setTimeout(r, 300));  // 300 ms
-  }
-
-  const email = session?.user?.email || '';
-  setUserUi(email);
-  showLoginBar(!session);
-  setAuthGuard(!!session);
-  return !!session;
-}
-
-  // Kleine Warte-Schleife (Grace-Period) für Session-Restore nach Reload
-  // 4 Versuche à 250 ms (insgesamt bis zu ~1 Sekunde)
-  let session = null;
-  for (let i = 0; i < 4; i++) {
-    const { data:{ session: s } } = await sbClient.auth.getSession();
-    if (s) { session = s; break; }
-    await new Promise(r => setTimeout(r, 250));
   }
 
   const email = session?.user?.email || '';
@@ -2141,5 +2125,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
