@@ -934,15 +934,29 @@ setAuthGuard(false);
 }
 
 // Beim Start Session prüfen
-// ANKER: require-session-grace (NEU)
+// ANKER: require-session-grace (UPDATE)
 async function requireSession(){
-  // Kein Supabase-Client? -> gesperrt
   if(!sbClient){
     setUserUi('');
     showLoginBar(true);
     setAuthGuard(false);
     return false;
   }
+
+  // Etwas großzügiger warten: bis zu ~2.4s
+  let session = null;
+  for (let i = 0; i < 8; i++) {            // 8 Versuche
+    const { data:{ session: s } } = await sbClient.auth.getSession();
+    if (s) { session = s; break; }
+    await new Promise(r => setTimeout(r, 300));  // 300 ms
+  }
+
+  const email = session?.user?.email || '';
+  setUserUi(email);
+  showLoginBar(!session);
+  setAuthGuard(!!session);
+  return !!session;
+}
 
   // Kleine Warte-Schleife (Grace-Period) für Session-Restore nach Reload
   // 4 Versuche à 250 ms (insgesamt bis zu ~1 Sekunde)
@@ -1866,10 +1880,28 @@ return sbClient;
 }
 
 async function setupRealtime(){
-const supa = await ensureSupabaseClient();
-const uid = await getUserId();
-if(!supa) return;
-if(!uid) return;
+  const supa = await ensureSupabaseClient();
+  if (!supa) return;
+
+  // 1) IMMER zuerst ein Initial-Pull & Render (braucht keine uid; RLS wirkt über JWT)
+  try {
+    await reconcileFromRemote();
+  } catch (_) {
+    diag.add("Realtime: initial reconcile skipped (err)");
+  }
+
+  // 2) Kurz auf uid warten (Reload kann trödeln)
+  let uid = await getUserId();
+  for (let i = 0; i < 10 && !uid; i++) {   // bis ~2s warten
+    await new Promise(r => setTimeout(r, 200));
+    uid = await getUserId();
+  }
+  if (!uid) {
+    diag.add("Realtime: no uid yet – retry subscribe later");
+    // sanfter Retry – Abo nachreichen, sobald uid kommt
+    setTimeout(setupRealtime, 1000);
+    return;
+  }
 
 // health_entries
 trackChannel(
@@ -2109,4 +2141,5 @@ main();
 </div>
 </body>
 </html>
+
 
