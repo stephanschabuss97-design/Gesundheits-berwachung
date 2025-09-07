@@ -578,10 +578,11 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
       <div class="spacer"></div>
     </div>
 
-    <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-      <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-      <div class="spacer"></div>
-    </div>
+<div class="row" style="align-items:center; gap:8px; margin-top:12px">
+  <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
+  <button class="btn ghost" id="captureChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+  <div class="spacer"></div>
+</div>
   </section>
 </section>
 
@@ -1644,9 +1645,14 @@ function setTab(name){
   $$(".tabs .btn").forEach(b =>
     b.classList.toggle("primary", b.dataset.tab === name)
   );
+    // 👇 Zusatz: Panels schließen, wenn ich Tab wechsle
+  if (typeof chartPanel?.hide === "function") chartPanel.hide();
+  if (helpPanel?.el) { helpPanel.open = false; helpPanel.el.style.display = 'none'; }
+  if (diag?.el)     { diag.open = false;     diag.el.style.display = 'none'; }
+
   if (name === "doctor") { renderDoctor(); }
 }
-
+  
 function bindTabs(){
   $$(".tabs .btn").forEach(b =>
     b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
@@ -2134,6 +2140,17 @@ chartPanel.open = true;
 chartPanel.el.style.display = 'block';
 await chartPanel.draw();
 });
+  
+  // Diagramm aus der Erfassungs-Ansicht öffnen
+const capChartBtn = $("#captureChartBtn");
+if (capChartBtn) {
+  capChartBtn.addEventListener("click", async ()=>{
+    setDocBadges({ visible: true });     // Badges zeigen (optional)
+    chartPanel.open = true;
+    chartPanel.el.style.display = 'block';
+    await chartPanel.draw();
+  });
+}
 
 document.addEventListener('keydown', (e)=>{
 const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
@@ -2202,4 +2219,5 @@ main();
 </div>
 </body>
 </html>
+
 
