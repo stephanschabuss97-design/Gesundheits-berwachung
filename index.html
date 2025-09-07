@@ -1455,7 +1455,7 @@ fillTipFromTarget(tgt){
   const note = tgt.getAttribute("data-note") || "";
   if (!note) { this.hideTip(); return; }
   // Nur den Kommentar anzeigen – keine Werte, kein Header
-  this.tip.innerHTML = `<div style="white-space:pre-wrap">${note}</div>`;
+  this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
 },
 
   async draw(){
@@ -1740,6 +1740,7 @@ function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "⚠️ NSAR genommen – aktiv", "⚠️ NSAR genommen"); }
 function blockHasData(which){
   return !!(
+    $(`#time${which}`).value ||
     $(`#sys${which}`).value ||
     $(`#dia${which}`).value ||
     $(`#pulse${which}`).value
@@ -1747,8 +1748,8 @@ function blockHasData(which){
 }
 
 async function saveAll(){
-const __t0 = performance.now();
 if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+const __t0 = performance.now();
 
 // 1) Erkennen, was heute eingegeben wurde
 const hasM = blockHasData("M"); 
@@ -2293,4 +2294,5 @@ valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
 </div>
 </body>
 </html>
+
 
