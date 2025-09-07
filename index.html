@@ -670,6 +670,102 @@ close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='no
 };
 
 /* ===== Helpers ===== */
+// --- DRAFT (Soft Save) ------------------------------
+// Key-Format: "draft:YYYY-MM-DD" im CONF-Store
+const DRAFT_PREFIX = "draft:";
+const draftKeyFor = (dateStr) => `${DRAFT_PREFIX}${dateStr}`;
+
+async function loadDraft(dateStr){
+  return await getConf(draftKeyFor(dateStr));
+}
+async function saveDraft(dateStr, patch){
+  const cur = (await loadDraft(dateStr)) || {};
+  const next = Object.assign({}, cur, patch, { updatedAt: Date.now() });
+  await putConf(draftKeyFor(dateStr), next);
+  return next;
+}
+async function clearDraft(dateStr){
+  // Wir setzen den Wert auf null – getConf() liefert dann wieder null
+  await putConf(draftKeyFor(dateStr), null);
+}
+
+// Zahlen-Parser (DE/AT robust)
+const parseNum = (v) => {
+  if (v==null || v==="") return null;
+  const s = String(v).replace(",", ".");
+  const n = Number(s);
+  return isNaN(n) ? null : n;
+};
+
+// Snapshot ← UI lesen
+function readDraftFromUI(){
+  return {
+    timeM: $("#timeM")?.value || "",
+    sysM:  parseNum($("#sysM")?.value),
+    diaM:  parseNum($("#diaM")?.value),
+    pulseM:parseNum($("#pulseM")?.value),
+
+    timeA: $("#timeA")?.value || "",
+    sysA:  parseNum($("#sysA")?.value),
+    diaA:  parseNum($("#diaA")?.value),
+    pulseA:parseNum($("#pulseA")?.value),
+
+    weight: parseNum($("#weightDay")?.value),
+    notes:  ($("#notesDay")?.value || "").trim(),
+
+    // Flags aus State-Variablen
+    flags: {
+      training:       !!trainingActive,
+      lowIntake:      !!lowIntakeActive,
+      sick:           !!sickActive,
+      valsartanMiss:  !!valsartanMissed,
+      forxigaMiss:    !!forxigaMissed,
+      nsar:           !!nsarTaken,
+      saltHigh:       !!saltHigh,
+      sugarHigh:      !!sugarHigh
+    }
+  };
+}
+
+// Draft → UI anwenden
+function applyDraftToUI(d){
+  if(!d) return;
+  if (d.timeM)   $("#timeM").value = d.timeM;
+  if (d.sysM!=null)   $("#sysM").value = d.sysM;
+  if (d.diaM!=null)   $("#diaM").value = d.diaM;
+  if (d.pulseM!=null) $("#pulseM").value = d.pulseM;
+
+  if (d.timeA)   $("#timeA").value = d.timeA;
+  if (d.sysA!=null)   $("#sysA").value = d.sysA;
+  if (d.diaA!=null)   $("#diaA").value = d.diaA;
+  if (d.pulseA!=null) $("#pulseA").value = d.pulseA;
+
+  if (d.weight!=null) $("#weightDay").value = d.weight;
+  if (typeof d.notes === "string") $("#notesDay").value = d.notes;
+
+  // Flags über die vorhandenen Setter (UI + State + A11y)
+  if (d.flags){
+    if ("training"     in d.flags) setTraining(!!d.flags.training);
+    if ("lowIntake"    in d.flags) setLowIntake(!!d.flags.lowIntake);
+    if ("sick"         in d.flags) setSick(!!d.flags.sick);
+    if ("valsartanMiss"in d.flags) setValsartanMiss(!!d.flags.valsartanMiss);
+    if ("forxigaMiss"  in d.flags) setForxigaMiss(!!d.flags.forxigaMiss);
+    if ("nsar"         in d.flags) setNsar(!!d.flags.nsar);
+    if ("saltHigh"     in d.flags) setSaltHigh(!!d.flags.saltHigh);
+    if ("sugarHigh"    in d.flags) setSugarHigh(!!d.flags.sugarHigh);
+  }
+}
+
+// Debounce: Soft Save nach kurzer Tipp-Pause
+let __draftTimer = null;
+function scheduleDraftSave(){
+  if (__draftTimer) clearTimeout(__draftTimer);
+  __draftTimer = setTimeout(async ()=>{
+    const dateStr = $("#date").value || todayStr();
+    await saveDraft(dateStr, readDraftFromUI());
+  }, 250);
+}
+
 // --- Service-Role-Schutz (NIEMALS im Browser) ---
 function isServiceRoleKey(raw){
   const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
@@ -1590,6 +1686,12 @@ async function saveAll(){
 const __t0 = performance.now();
 if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 
+// ⤵️ Vor dem Speichern: Draft laden und auf die UI anwenden,
+// damit die bestehende Logik (needsComment, hasM/hasA ...) sauber greift.
+const todayDate = $("#date").value || todayStr();
+const draft = await loadDraft(todayDate);
+if (draft) applyDraftToUI(draft);
+
 // 1) Erkennen, was heute eingegeben wurde
 const hasM = blockHasData("M"); 
 const hasA = blockHasData("A"); 
@@ -1634,6 +1736,10 @@ if(chartPanel.open) await chartPanel.draw();
 
 { const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
 diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
+
+// ⤵️ Nach erfolgreichem Finalisieren: Tages-Draft löschen
+try { await clearDraft(todayDate); } catch(_){}
+
 flashSaveOk();
 }
 
@@ -1939,6 +2045,13 @@ if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUP
 chartPanel.init(); bindTabs();
 $("#date").value = todayStr();
 $("#timeM").value = "07:00"; $("#timeA").value = "19:00";
+
+// ⤵️ Soft-Save: Draft für HEUTE laden und anwenden
+try{
+  const d = await loadDraft($("#date").value);
+  applyDraftToUI(d);
+} catch(_){}
+
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
 setTab("capture");
@@ -1977,11 +2090,16 @@ function updateNotesRequirementUI(){
   notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
   if (invalid) notesEl.setAttribute("aria-invalid","true"); else notesEl.removeAttribute("aria-invalid");
 }
+  
 // bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
-["#sysM","#diaM","#sysA","#diaA","#notesDay"].forEach(sel=>{
+["#sysM","#diaM","#sysA","#diaA","#notesDay","#pulseM","#pulseA","#weightDay","#timeM","#timeA"].forEach(sel=>{
   const el = $(sel); if(!el) return;
-  el.addEventListener("input", updateNotesRequirementUI);
+  el.addEventListener("input", ()=>{
+    updateNotesRequirementUI();
+    scheduleDraftSave();   // ⤵️ jede Eingabe → Soft-Save
+  });
 });
+
 // einmal initial prüfen (falls Werte schon stehen)
 updateNotesRequirementUI();
 
@@ -1990,8 +2108,10 @@ const bindToggle = (id, setter, getVal)=>{
   const el = $(id);
   el.addEventListener("click", ()=>{
     setter(!getVal());
+    scheduleDraftSave(); // ⤵️ Flags ändern → Soft-Save
   });
 };
+
 bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
 bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
 bindToggle("#sickToggle", setSick, ()=>sickActive);
@@ -2082,3 +2202,4 @@ main();
 </div>
 </body>
 </html>
+
