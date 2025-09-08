@@ -1538,8 +1538,42 @@ if (metric === "flags") {
     const PL=48, PR=16, PT=12, PB=28;
     const innerW = W-PL-PR, innerH = H-PT-PB;
 
-    const xVals = X.filter(Boolean);
-    const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+    /* === ANKER: flags-x-union PREP START === */
+let flagTs = [];
+if (metric === "bp") {
+  // Flag-Tage aus ALLEN Einträgen im Zeitraum ableiten (pro Kategorie je Tag dedupliziert)
+  const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
+  for (const e of data) {
+    if (!e?.date) continue;
+    let rec = dayFlagsTmp.get(e.date);
+    if (!rec) {
+      rec = { training:false, bad:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
+      dayFlagsTmp.set(e.date, rec);
+    }
+    if (e.training) rec.training = true;
+    const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+    const flags = {
+      water: !!e.low_intake,
+      salt:  !!e.salt_high,
+      sugar: !!e.sugar_high,
+      sick:  !!e.sick,
+      meds
+    };
+    for (const k of Object.keys(flags)) {
+      if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
+    }
+  }
+  flagTs = [...dayFlagsTmp.keys()].map(d => new Date(d + "T00:00:00").getTime());
+}
+/* === ANKER: flags-x-union PREP END === */
+    
+const xVals = X.filter(Boolean);
+let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+// Union mit Flag-Tagen: auch Tage ohne BP-Messung sichtbar machen
+if (metric === "bp" && flagTs.length) {
+  xmin = Math.min(xmin, Math.min(...flagTs));
+  xmax = Math.max(xmax, Math.max(...flagTs));
+}
     const allY = series.flatMap(s => s.values.filter(v=>v!=null));
     const ymin = Math.min(...allY), ymax = Math.max(...allY);
     const ypad = Math.max((ymax-ymin)*0.08, 1);
@@ -2317,3 +2351,4 @@ main();
 </div>
 </body>
 </html>
+
