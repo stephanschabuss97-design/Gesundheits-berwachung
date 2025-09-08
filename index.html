@@ -404,6 +404,8 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   display:flex; gap:8px; flex-wrap:wrap; align-items:center;
   margin-bottom:6px;
 }
+/* ANKER: flags-overlay CSS */
+#chartSvg .flags { pointer-events: none; }
 #chart .controls > * {flex:1}
 #chart .controls .half{flex:0 0 calc(50% - 4px)}
 /* SVG füllt verbleibende Höhe vollständig */
@@ -479,11 +481,13 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 </header>
 <div class="content">
 <div class="controls">
-  <select id="metricSel" class="half compact" aria-label="Messgröße auswählen">
+<select id="metricSel" class="half compact" aria-label="Messgröße auswählen">
     <option value="bp">Blutdruck (Sys/Dia)</option>
     <option value="pulse">Puls</option>
     <option value="weight">Gewicht</option>
-  </select>
+    <option value="flags">Flags (Training/Bad-Flags)</option>
+    chartPanel.draw();
+</select>
 
   <!-- ANKER: chart-averages (Daily) -->
   <div id="chartAverages" class="kpis" aria-live="polite">
@@ -1228,32 +1232,32 @@ const chartPanel = {
     this.tip = tip;
 
     // Interaktivität auf dem SVG
-this.svg.addEventListener("pointermove", (e)=>{
-  if (this.tipSticky) return; // bei Sticky nicht folgen
-  const tgt = e.target;
-  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-  if (!hasNote) { this.hideTip(); return; }
-  this.fillTipFromTarget(tgt);
-  this.positionTip(e);
-});
+    this.svg.addEventListener("pointermove", (e)=>{
+      if (this.tipSticky) return; // bei Sticky nicht folgen
+      const tgt = e.target;
+      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      if (!hasNote) { this.hideTip(); return; }
+      this.fillTipFromTarget(tgt);
+      this.positionTip(e);
+    });
 
     this.svg.addEventListener("pointerleave", ()=>{
       if (this.tipSticky) return;
       this.hideTip();
     });
+
     // Click/Tap: Tooltip toggeln (mobil-freundlich)
-this.svg.addEventListener("click", (e)=>{
-  const tgt = e.target;
-  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-  if (!hasNote) {
-    // Klick ins Leere oder auf Punkt ohne Notiz -> Sticky aus
-    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-    return;
-  }
-  this.fillTipFromTarget(tgt);
-  this.tipSticky = !this.tipSticky;
-  this.positionTip(e);
-});
+    this.svg.addEventListener("click", (e)=>{
+      const tgt = e.target;
+      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      if (!hasNote) {
+        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+        return;
+      }
+      this.fillTipFromTarget(tgt);
+      this.tipSticky = !this.tipSticky;
+      this.positionTip(e);
+    });
 
     // Resize/Orientation -> neu zeichnen, wenn offen
     const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
@@ -1290,13 +1294,13 @@ this.svg.addEventListener("click", (e)=>{
     this.tip.style.top  = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
-fillTipFromTarget(tgt){
-  if (!this.tip) return;
-  const note = tgt.getAttribute("data-note") || "";
-  if (!note) { this.hideTip(); return; }
-  // Nur den Kommentar anzeigen – keine Werte, kein Header
-  this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
-},
+  fillTipFromTarget(tgt){
+    if (!this.tip) return;
+    const note = tgt.getAttribute("data-note") || "";
+    if (!note) { this.hideTip(); return; }
+    // Nur den Kommentar anzeigen – keine Werte, kein Header
+    this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
+  },
 
   async draw(){
     const t0 = performance.now();
@@ -1310,6 +1314,136 @@ fillTipFromTarget(tgt){
 
     // KPI-Box
     const avgBox = $("#chartAverages");
+
+    /* === Flags: eigener POC-Graph (Early-Return) === */
+if (metric === "flags") {
+  if (avgBox) avgBox.style.display = "none";
+  this.svg.innerHTML = ""; this.legend.innerHTML = "";
+
+  // 1) Tages-Flags aggregieren (ALLE Einträge eines Tages zählen, dedupliziert pro Kategorie)
+  const dayFlags = new Map(); // date -> { training:bool, bad:int, seen:{} }
+  for (const e of data) {
+    if (!e?.date) continue;
+    let d = dayFlags.get(e.date);
+    if (!d) { d = { training:false, bad:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } }; dayFlags.set(e.date, d); }
+    if (e.training) d.training = true;
+    const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+    const flags = {
+      water: !!e.low_intake,
+      salt:  !!e.salt_high,
+      sugar: !!e.sugar_high,
+      sick:  !!e.sick,
+      meds
+    };
+    for (const k of Object.keys(flags)) {
+      if (flags[k] && !d.seen[k]) { d.seen[k] = true; d.bad++; }
+    }
+  }
+  const days = [...dayFlags.keys()].sort();
+  if (!days.length){
+    this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+    return;
+  }
+
+  // 2) Größe & Skalen (Y = 0..6 Slots)
+  const bbox = this.svg.getBoundingClientRect();
+  const W = Math.max(300, Math.floor(bbox.width  || 640));
+  const H = Math.max(200, Math.floor(bbox.height || 280));
+  this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const PL=48, PR=16, PT=12, PB=28;
+  const innerW = W-PL-PR, innerH = H-PT-PB;
+
+  const Xd = days.map(d => new Date(d + "T00:00:00").getTime());
+  const xmin = Math.min(...Xd), xmax = Math.max(...Xd);
+  const x = t => PL + ((t - xmin)/Math.max(1,(xmax-xmin))) * innerW;
+  const y0 = 0, y1 = 6; // max 6 Slots (1x Training + 5 Bad-Flags)
+  const y = v => PT + (1 - ((v - y0)/Math.max(1,(y1 - y0)))) * innerH;
+
+  // 3) Grid (0..6) + Wochenlinien + Datumslabels
+  const line = (x1,y1,x2,y2, stroke, dash="") =>
+    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`;
+  const text = (tx,ty,str,anchor="end") =>
+    `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
+
+  let grid = "";
+  for (let v=0; v<=6; v++){
+    const yy = y(v);
+    grid += line(PL,yy,W-PR,yy,"#2a3140");
+    grid += text(PL-6,yy+4,String(v));
+  }
+  // Wochenlinien
+  const week = 7*24*3600*1000;
+  let start = xmin - (xmin % week) + week;
+  for (let t=start; t<xmax; t+=week){
+    const xx = x(t);
+    grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+    const d = new Date(t);
+    const lbl = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.`;
+    grid += text(xx, H-8, lbl, "middle");
+  }
+  // Achsen
+  grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+  grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+  this.svg.insertAdjacentHTML("beforeend", grid);
+
+  // 4) Balkenbreite robust aus tatsächlichem Abstand
+  const dayXs = Xd.map(t => x(t)).sort((a,b)=>a-b);
+  const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=> v - dayXs[i])) : innerW;
+  const bandW = Math.max(16, Math.floor(minStep * 0.55));
+  const yBottom = PT + innerH;
+  const slotH = innerH / 6;
+
+  // 5) Zeichnen (grün unten = Training, darüber N rote Slots = Bad)
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.setAttribute("class","flags"); g.setAttribute("pointer-events","none"); g.setAttribute("aria-hidden","true");
+
+  let rects = 0;
+  for (const d of days){
+    const rec = dayFlags.get(d);
+    const t = new Date(d + "T00:00:00").getTime();
+    const cx = x(t), xLeft = Math.round(cx - bandW/2);
+    let used = 0;
+
+    if (rec.training){
+      const yTop = Math.round(yBottom - (used + 1) * slotH);
+      const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
+      r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
+      r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity", "0.36");
+      r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
+      r.setAttribute("shape-rendering", "crispEdges");
+      g.appendChild(r); used++; rects++;
+    }
+    for (let i=0; i<rec.bad; i++){
+      const yTop = Math.round(yBottom - (used + 1) * slotH);
+      const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
+      r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
+      r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity", "0.30");
+      r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
+      r.setAttribute("shape-rendering", "crispEdges");
+      g.appendChild(r); used++; rects++;
+    }
+  }
+  this.svg.appendChild(g);
+
+  // 6) Legend (einfach: 2 Items)
+  const mkLegend = (label, color) => {
+    const wrap = document.createElement("span");
+    wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
+    const dot = Object.assign(document.createElement("span"), { className:"dot" });
+    dot.style.background = color;
+    const txt = document.createElement("span"); txt.textContent = label;
+    wrap.append(dot, txt); return wrap;
+  };
+  this.legend.appendChild(mkLegend("Training", "#10b981"));
+  this.legend.appendChild(mkLegend("Bad-Flags (Anzahl)", "#ef4444"));
+
+  diag.add(`[flags-POC] days=${days.length} rects=${rects} bandW=${bandW}`);
+  return; // <<— Early-Return: keine Linien zeichnen
+}
+/* === Ende Flags-POC === */
 
     // Schwellen (nur BP)
     const TH_SYS = 130;
@@ -1380,7 +1514,7 @@ fillTipFromTarget(tgt){
       X = xsBP; // wichtig: ab hier überall dieses X verwenden
     } else if (metric === "pulse") {
       if (avgBox) avgBox.style.display="none";
-      series = [{ name:"Puls", values: data.map(e=>e.pulse!=null?Number(e.pulse):null), color:"#34d399", type:"misc" }];
+      series = [{ name:"Puls", values: data.map(e=>e.pulse!=null?Number(e.pulse):null), color:"#34d399", type:"misc" }]
     } else if (metric === "weight") {
       if (avgBox) avgBox.style.display="none";
       series = [{ name:"Gewicht (kg)", values: data.map(e=>e.weight!=null?Number(e.weight):null), color:"#f59e0b", type:"misc" }];
@@ -1448,12 +1582,117 @@ fillTipFromTarget(tgt){
       const yDia = y(TH_DIA);
       grid += line(PL,ySys,W-PR,ySys,"#ef4444","6 4"); // dezent gestrichelt
       grid += line(PL,yDia,W-PR,yDia,"#ef4444","6 4");
-      // kleine Labels rechts
       grid += text(W-PR+2, ySys+4, "Sys 130", "start");
       grid += text(W-PR+2, yDia+4, "Dia 90", "start");
     }
 
     this.svg.insertAdjacentHTML("beforeend", grid);
+
+    /* === ANKER: flags-overlay (Variante A, voller Plotbereich) START === */
+diag.add(`[flags] filtered entries=${data.length}`);
+if (metric === "bp") {
+  // 1) NUR Tages-Zusammenfassungen (Tag/weight-only) betrachten – wie Arzt-Ansicht
+  const dayFlags = new Map(); // date -> { training:bool, badCount:int }
+  for (const e of data) {
+if (!e?.date) continue; // ALLE Einträge des Tages berücksichtigen (wie Arzt-Ansicht)
+
+    let rec = dayFlags.get(e.date);
+    if (!rec) {
+      rec = { training:false, badCount:0, _seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
+      dayFlags.set(e.date, rec);
+    }
+
+    if (e.training) rec.training = true;
+
+    const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+    const flags = {
+      water: !!e.low_intake,
+      salt:  !!e.salt_high,
+      sugar: !!e.sugar_high,
+      sick:  !!e.sick,
+      meds
+    };
+    for (const k of Object.keys(flags)) {
+      if (flags[k] && !rec._seen[k]) { rec._seen[k] = true; rec.badCount++; }
+    }
+  }
+
+// Nur Tage MIT MESSUNGEN (aus meta) betrachten – und dort Flags prüfen
+const mDays = [...new Set((meta||[]).map(m => m.date))].sort();
+const flaggedDays = mDays.filter(d => {
+  const r = dayFlags.get(d);
+  return r && (r.training || r.badCount > 0);
+});
+
+  diag.add(`[flags] days with any flag=${flaggedDays.length}`);
+  if (flaggedDays.length) {
+    // 2) Rendering: vertikale Stacks entlang der X-Achse
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","flags");
+    g.setAttribute("aria-hidden","true");
+    g.setAttribute("pointer-events","none");
+
+    // Breite je sichtbarem BP-Tag ableiten (nicht am Gesamtdatensatz)
+// Breite je Tag aus realem X-Abstand ableiten (sichtbar, auch bei großem Zeitraum)
+const uniqXDays = [...new Set(X.map(t => new Date(t).setHours(0,0,0,0)))];
+const dayXs = uniqXDays.map(t => x(t)).sort((a,b)=>a-b);
+const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=> v - dayXs[i])) : innerW;
+const bandW = Math.max(16, Math.floor(minStep * 0.55)); // deutlich sichtbar
+    const yBottom = PT + innerH;
+    const slotH = innerH / 6;
+    const halfDay = 12 * 3600 * 1000; // Toleranz gegen Off-by-one in Grenzen
+
+    let rectsDrawn = 0;
+    for (const d of flaggedDays) {
+      const rec = dayFlags.get(d);
+      const t = new Date(d + "T00:00:00").getTime();
+
+      // im sichtbaren X-Bereich bleiben (mit kleiner Toleranz)
+      if (t < (xmin - halfDay) || t > (xmax + halfDay)) continue;
+
+      const cx = x(t);
+      const xLeft = Math.round(cx - bandW/2);
+      let used = 0;
+
+      // Grün (Training) – 1 Slot
+      if (rec.training) {
+        const yTop = Math.round(yBottom - (used + 1) * slotH);
+        const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+        r.setAttribute("x", xLeft);
+        r.setAttribute("y", yTop);
+        r.setAttribute("width", bandW);
+        r.setAttribute("height", Math.ceil(slotH));
+        r.setAttribute("fill", "#10b981");
+        r.setAttribute("fill-opacity", "0.36");   // Training deutlicher
+        r.setAttribute("stroke", "#fff");
+        r.setAttribute("stroke-opacity", "0.06");
+        r.setAttribute("shape-rendering", "crispEdges");
+        g.appendChild(r);
+        rectsDrawn++; used++;
+      }
+
+      // Rot (Bad-Flags) – badCount Slots
+      for (let i=0; i<rec.badCount; i++) {
+        const yTop = Math.round(yBottom - (used + 1) * slotH);
+        const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+        r.setAttribute("x", xLeft);
+        r.setAttribute("y", yTop);
+        r.setAttribute("width", bandW);
+        r.setAttribute("height", Math.ceil(slotH));
+        r.setAttribute("fill", "#ef4444");
+        r.setAttribute("fill-opacity", "0.30");   // Bad deutlicher
+        r.setAttribute("stroke", "#fff");
+        r.setAttribute("stroke-opacity", "0.06");
+        r.setAttribute("shape-rendering", "crispEdges");
+        g.appendChild(r);
+        rectsDrawn++; used++;
+      }
+    }
+    this.svg.appendChild(g);
+    diag.add(`[flags] rects drawn=${rectsDrawn}`);
+  }
+}
+/* === ANKER: flags-overlay (Variante A, voller Plotbereich) ENDE === */
 
     // Linien + Punkte
     const mkPath = (values, color)=>{
@@ -1471,11 +1710,9 @@ fillTipFromTarget(tgt){
         const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
         let date="", ctx="", note="";
         if (metric==="bp" && meta){
-          // meta[i] existiert immer für BP
           const m = meta[i];
           date = m?.date || "";
           ctx  = m?.ctx  || "";
-          // An dieser Stelle Note nur setzen, wenn Schwelle gerissen ODER Note existiert
           note = m?.note || "";
         }
         out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
@@ -1496,7 +1733,6 @@ fillTipFromTarget(tgt){
         if(v==null || !X[i]) return;
         if (v > thr){
           const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
-          // Tooltip-Daten mitgeben (inkl. Notiz)
           const m = meta?.[i] || {};
           out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
                      data-kind="${kind}" data-val="${v}"
@@ -1523,22 +1759,21 @@ fillTipFromTarget(tgt){
       wrap.append(dot, label); this.legend.appendChild(wrap);
     });
 
-    // Wenn wir im Sticky-Modus sind und gerade neu gezeichnet haben, Tooltip ausblenden (der Punkt ist evtl. weg)
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
     const sPerf = (perfStats.add('drawChart', performance.now()-t0), perfStats.snap('drawChart'));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   }
 };
-  
+
 /* --- Button-Flash --- */
 let saveFlashTimer = null;
 function flashSaveOk(){
-const btn = document.getElementById('saveAllBtn');
-if(!btn) return;
-if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
-saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+  const btn = document.getElementById('saveAllBtn');
+  if(!btn) return;
+  if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
+  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
+  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
 /* ===== Tabs / Segments ===== */
@@ -1556,7 +1791,7 @@ function bindTabs(){
     b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
   );
 }
-  
+
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
 saltHigh=false, sugarHigh=false;
