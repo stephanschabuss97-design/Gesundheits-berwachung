@@ -1401,7 +1401,7 @@ if (metric === "flags") {
   let rects = 0;
   for (const d of days){
     const rec = dayFlags.get(d);
-    const t = new Date(d + "T00:00:00").getTime();
+    const t = toDayTs(d);
     const cx = x(t), xLeft = Math.round(cx - bandW/2);
     let used = 0;
 
@@ -1448,6 +1448,12 @@ if (metric === "flags") {
     // Schwellen (nur BP)
     const TH_SYS = 130;
     const TH_DIA = 90;
+    // ⛳ ANKER: day-ts helper (UTC, kein TZ-Drift)
+const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
+  if (!isoDate) return NaN;
+  const [y,m,d] = isoDate.split("-").map(Number);
+  return Date.UTC(y, (m||1)-1, (d||1));
+};
 
     // Map der Tages-Kommentare (erste Zeile)
     const notesByDate = new Map();
@@ -1480,7 +1486,7 @@ if (metric === "flags") {
       }));
 
       // X auf Tagesebene (00:00) -> alle Punkte je Tag bündig
-      const xsBP = mData.map(e => new Date(e.date + "T00:00:00").getTime());
+      const xsBP = mData.map(e => toDayTs(e.date));
 
       // Vier Reihen (Werte-Arrays, aber Index passt zu meta)
       const sysM = mData.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
@@ -1563,17 +1569,23 @@ if (metric === "bp") {
       if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
     }
   }
-  flagTs = [...dayFlagsTmp.keys()].map(d => new Date(d + "T00:00:00").getTime());
+  fflagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
 }
 /* === ANKER: flags-x-union PREP END === */
-    
 const xVals = X.filter(Boolean);
 let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+
 // Union mit Flag-Tagen: auch Tage ohne BP-Messung sichtbar machen
 if (metric === "bp" && flagTs.length) {
   xmin = Math.min(xmin, Math.min(...flagTs));
   xmax = Math.max(xmax, Math.max(...flagTs));
 }
+
+// Kleinen Rand geben, damit der erste/letzte Tagesbalken nicht abgeschnitten ist
+const pad = (xmax > xmin) ? (xmax - xmin) * 0.02 : 0;
+xmin -= pad;
+xmax += pad;
+
     const allY = series.flatMap(s => s.values.filter(v=>v!=null));
     const ymin = Math.min(...allY), ymax = Math.max(...allY);
     const ypad = Math.max((ymax-ymin)*0.08, 1);
@@ -1679,7 +1691,7 @@ const bandW = Math.max(16, Math.floor(minStep * 0.55)); // deutlich sichtbar
     let rectsDrawn = 0;
     for (const d of flaggedDays) {
       const rec = dayFlags.get(d);
-      const t = new Date(d + "T00:00:00").getTime();
+      const t = toDayTs(d);
 
       // im sichtbaren X-Bereich bleiben (mit kleiner Toleranz)
       if (t < (xmin - halfDay) || t > (xmax + halfDay)) continue;
@@ -2351,4 +2363,5 @@ main();
 </div>
 </body>
 </html>
+
 
