@@ -281,7 +281,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 3;      /* 3 Zeilen, bei Bedarf 2 setzen */
-  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
@@ -332,7 +331,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   /* Kommentar: mobil 4 Zeilen anzeigen */
   .doctor-view .notes{
     -webkit-line-clamp: 4; /* bei Bedarf auf 5 erhöhen */
-    line-clamp: 4;
   }
 
   /* Flags: kompakt in 2 Spalten, keine abgeschnittenen Labels */
@@ -372,7 +370,9 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 }
 
 /* Flex-Layout: Header fix oben, Inhalt füllt Rest */
-/* Sichtbarkeit steuert JS; NICHT auf block setzen */
+.panel.chart{
+  /* Sichtbarkeit steuert JS; NICHT auf block setzen */
+}
 .panel.chart header{ 
   /* bleibt oben, keine Änderung nötig – aber fixere Höhe ist hilfreich */
   min-height: 44px;
@@ -416,12 +416,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   border-radius: 10px;
   min-height: 0; /* wichtig für Flex-Container */
 }
-/* ANKER: context-ribbon styles */
-#chart #ctxBars { pointer-events: none; }
-.ctxbar { opacity: .5; } /* Sichtbarkeit erhöht */
-.ctxbar.green { fill: var(--ok); }
-.ctxbar.red   { fill: var(--danger); }
-
 #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
@@ -489,7 +483,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     <option value="bp">Blutdruck (Sys/Dia)</option>
     <option value="pulse">Puls</option>
     <option value="weight">Gewicht</option>
-    <option value="flags">Flags (Training/Bad-Flags)</option>
   </select>
 
   <!-- ANKER: chart-averages (Daily) -->
@@ -1211,21 +1204,19 @@ if (!daysArr.length){
 /* ===== Simple SVG Chart (Daily) ===== */
 const chartPanel = {
   el:null, svg:null, legend:null, open:false, tip:null, tipSticky:false,
-
   init(){
     this.el = $("#chart");
     this.svg = $("#chartSvg");
-    this.legend = $("#chartLegend");
     this.el.style.display = 'none';
-
+    this.legend = $("#chartLegend");
     $("#chartClose").addEventListener("click", ()=>this.hide());
     $("#metricSel").addEventListener("change", ()=> this.draw());
 
-    // Tooltip-Host
+    // Tooltip (hover/click)
     const contentHost = this.el.querySelector(".content") || this.el;
     const tip = document.createElement("div");
     Object.assign(tip.style, {
-      position:"absolute", transform:"translate(8px,8px)",
+      position:"absolute", inset:"auto auto auto auto", transform:"translate(8px,8px)",
       display:"none", pointerEvents:"none", zIndex:2,
       background:"#10131a", border:"1px solid #2b2f3a", borderRadius:"8px",
       padding:"8px 10px", fontSize:"12px", lineHeight:"1.35", maxWidth:"280px",
@@ -1236,39 +1227,42 @@ const chartPanel = {
     contentHost.appendChild(tip);
     this.tip = tip;
 
-    // Interaktivität
-    this.svg.addEventListener("pointermove", (e)=>{
-      if (this.tipSticky) return;
-      const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) { this.hideTip(); return; }
-      this.fillTipFromTarget(tgt);
-      this.positionTip(e);
-    });
+    // Interaktivität auf dem SVG
+this.svg.addEventListener("pointermove", (e)=>{
+  if (this.tipSticky) return; // bei Sticky nicht folgen
+  const tgt = e.target;
+  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+  if (!hasNote) { this.hideTip(); return; }
+  this.fillTipFromTarget(tgt);
+  this.positionTip(e);
+});
+
     this.svg.addEventListener("pointerleave", ()=>{
       if (this.tipSticky) return;
       this.hideTip();
     });
-    this.svg.addEventListener("click", (e)=>{
-      const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) {
-        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-        return;
-      }
-      this.fillTipFromTarget(tgt);
-      this.tipSticky = !this.tipSticky;
-      this.positionTip(e);
-    });
+    // Click/Tap: Tooltip toggeln (mobil-freundlich)
+this.svg.addEventListener("click", (e)=>{
+  const tgt = e.target;
+  const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+  if (!hasNote) {
+    // Klick ins Leere oder auf Punkt ohne Notiz -> Sticky aus
+    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+    return;
+  }
+  this.fillTipFromTarget(tgt);
+  this.tipSticky = !this.tipSticky;
+  this.positionTip(e);
+});
 
-    // Redraw bei Größe/Orientation
+    // Resize/Orientation -> neu zeichnen, wenn offen
     const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
-    ro.observe(this.el); this._ro = ro;
+    ro.observe(this.el);
+    this._ro = ro;
     window.addEventListener('orientationchange', () => {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
   },
-
   toggle(){ this.open = !this.open; this.el.style.display = this.open ? 'block' : 'none'; },
   hide(){ this.open = false; this.el.style.display = 'none'; this.tipSticky = false; this.hideTip(); },
 
@@ -1285,63 +1279,43 @@ const chartPanel = {
       .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
   },
 
-  // Tooltip
+  // Tooltip-Helfer
   hideTip(){ if (this.tip){ this.tip.style.display = "none"; this.tip.textContent = ""; } },
   positionTip(e){
     if (!this.tip) return;
     const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
-    const x = e.clientX - hostRect.left, y = e.clientY - hostRect.top;
+    const x = e.clientX - hostRect.left;
+    const y = e.clientY - hostRect.top;
     this.tip.style.left = `${x + 10}px`;
     this.tip.style.top  = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
-  fillTipFromTarget(tgt){
-    if (!this.tip) return;
-    const note = tgt.getAttribute("data-note") || "";
-    if (!note) { this.hideTip(); return; }
-    this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
-  },
+fillTipFromTarget(tgt){
+  if (!this.tip) return;
+  const note = tgt.getAttribute("data-note") || "";
+  if (!note) { this.hideTip(); return; }
+  // Nur den Kommentar anzeigen – keine Werte, kein Header
+  this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
+},
 
   async draw(){
     const t0 = performance.now();
     const metric = $("#metricSel").value;
     const data   = await this.getFiltered();
 
-    // --- Kontext-Stats pro Tag ---
-    const byDate = new Map();
-    for (const e of data) {
-      const d = e.date;
-      const arr = byDate.get(d) || [];
-      arr.push(e);
-      byDate.set(d, arr);
-    }
-    const hasTraining = d => (byDate.get(d) || []).some(x => x.training);
-    const badCount = d => {
-      const list = byDate.get(d) || [];
-      return list.reduce((n, x) => n +
-        (x.low_intake?1:0) + (x.salt_high?1:0) + (x.sugar_high?1:0) +
-        (x.sick?1:0) + (x.valsartan_missed?1:0) + (x.forxiga_missed?1:0) + (x.nsar_taken?1:0)
-      , 0);
-    };
-
-    // X-Domain aus dem gewählten Zeitraum (Von/Bis) — unabhängig von Messpunkten
-const fromIso = $("#from").value;
-const toIso   = $("#to").value;
-const startMs = fromIso ? new Date(fromIso + "T00:00:00").getTime() : (data[0]?.ts ?? Date.now()-90*24*3600*1000);
-const endMs   = toIso   ? new Date(toIso   + "T23:59:59").getTime() : (data.at(-1)?.ts ?? Date.now());
-
-// X-Fallback (für Nicht-BP-Pfade wie bisher nutzbar)
-const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
-let series = [];
-let X = xsAll; // wird bei bp weiterhin überschrieben, ABER die Domain für das Ribbon kommt ab jetzt von startMs/endMs
+    // Basis-X: alle (fallback)
+    const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
+    let series = [];
+    let X = xsAll;
 
     // KPI-Box
     const avgBox = $("#chartAverages");
 
     // Schwellen (nur BP)
-    const TH_SYS = 130, TH_DIA = 90;
+    const TH_SYS = 130;
+    const TH_DIA = 90;
 
-    // Map: Tages-Kommentar (erste Zeile)
+    // Map der Tages-Kommentare (erste Zeile)
     const notesByDate = new Map();
     for (const e of data){
       const hasDayLike = (e.context === "Tag") || isWeightOnly(e);
@@ -1352,29 +1326,35 @@ let X = xsAll; // wird bei bp weiterhin überschrieben, ABER die Domain für das
       }
     }
 
-    // BP: Messungs-Meta je Punkt
+    // Für BP brauchen wir die Messungs-Meta je Index
     let meta = null;
 
     if (metric === "bp") {
+      // Nur echte Messungen (kein „Tag“/Gewicht-only)
       const mData = data.filter(e =>
         (e.context === "Morgen" || e.context === "Abend") &&
         (e.sys != null || e.dia != null)
       );
+
+      // Meta-Infos je Punktindex (für Tooltip)
       meta = mData.map(e=>({
         date: e.date,
-        ctx:  e.context, // Morgen/Abend
+        ctx:  e.context,                  // "Morgen" | "Abend"
         sys:  (e.sys!=null?Number(e.sys):null),
         dia:  (e.dia!=null?Number(e.dia):null),
         note: (notesByDate.get(e.date) || "")
       }));
+
+      // X auf Tagesebene (00:00) -> alle Punkte je Tag bündig
       const xsBP = mData.map(e => new Date(e.date + "T00:00:00").getTime());
 
+      // Vier Reihen (Werte-Arrays, aber Index passt zu meta)
       const sysM = mData.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
       const sysA = mData.map(e => (e.context==="Abend"  && e.sys!=null) ? Number(e.sys) : null);
       const diaM = mData.map(e => (e.context==="Morgen" && e.dia!=null) ? Number(e.dia) : null);
       const diaA = mData.map(e => (e.context==="Abend"  && e.dia!=null) ? Number(e.dia) : null);
 
-      // KPIs (ø)
+      // KPIs (ø über alle Messungen, unabhängig M/A)
       const mapArr = mData.map(e => (e.sys!=null && e.dia!=null) ? (Number(e.dia)+(Number(e.sys)-Number(e.dia))/3) : null);
       const avg = a => { const v=a.filter(x=>x!=null); return v.length ? v.reduce((p,c)=>p+c,0)/v.length : null; };
       if (avgBox){
@@ -1396,131 +1376,186 @@ let X = xsAll; // wird bei bp weiterhin überschrieben, ABER die Domain für das
         { name:"Dia Morgens", values: diaM, color:"#f9a8d4", type:"dia" },
         { name:"Dia Abends",  values: diaA, color:"#db2777", type:"dia" },
       ];
-      X = xsBP;
+
+      X = xsBP; // wichtig: ab hier überall dieses X verwenden
     } else if (metric === "pulse") {
       if (avgBox) avgBox.style.display="none";
       series = [{ name:"Puls", values: data.map(e=>e.pulse!=null?Number(e.pulse):null), color:"#34d399", type:"misc" }];
     } else if (metric === "weight") {
       if (avgBox) avgBox.style.display="none";
       series = [{ name:"Gewicht (kg)", values: data.map(e=>e.weight!=null?Number(e.weight):null), color:"#f59e0b", type:"misc" }];
-    } else if (metric === "flags") {
-      // Flags Chart: gestapelte Balken pro Tag
-      this.svg.innerHTML = ""; this.legend.innerHTML = "";
-      if (!this.tipSticky) this.hideTip();
-      // X-Achse: alle Tage im Zeitraum
-      const fromIso = $("#from").value;
-      const toIso   = $("#to").value;
-      const startMs = fromIso ? new Date(fromIso + "T00:00:00").getTime() : (data[0]?.ts ?? Date.now()-90*24*3600*1000);
-      const endMs   = toIso   ? new Date(toIso   + "T23:59:59").getTime() : (data.at(-1)?.ts ?? Date.now());
-      const dayMs = 24*3600*1000;
-      const dayStart = (t) => { const d=new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
-      const t0 = dayStart(startMs);
-      const t1 = dayStart(endMs) + dayMs;
-      // SVG Größe
-      const bbox = this.svg.getBoundingClientRect();
-      const W = Math.max(300, Math.floor(bbox.width  || 640));
-      const H = Math.max(200, Math.floor(bbox.height || 280));
-      this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-      const PL=48, PR=16, PT=12, PB=28;
-      const innerW = W-PL-PR, innerH = H-PT-PB;
-      // Y: max. Stackhöhe
-      let maxStack = 1;
-      for (let t = t0; t < t1; t += dayMs) {
-        const dIso = new Date(t).toISOString().slice(0,10);
-        const stack = (hasTraining(dIso)?1:0) + badCount(dIso);
-        if (stack > maxStack) maxStack = stack;
-      }
-      // Y-Skala
-      const y = v => PT + (1 - (v / Math.max(1,maxStack))) * innerH;
-      // X-Skala
-      const xPos = (t) => PL + ((t - t0) / Math.max(1, (t1 - t0))) * innerW;
-      // Grid
-      let grid = "";
-      for(let i=0;i<=maxStack;i++){
-        const yy = y(i);
-        grid += `<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#2a3140" stroke-width="1" />`;
-        grid += `<text x="${PL-6}" y="${yy+4}" fill="#9aa3af" font-size="11" text-anchor="end">${i}</text>`;
-      }
-      this.svg.insertAdjacentHTML("beforeend", grid);
-      // Balken
-      let bars = '<g id="ctxBars" aria-hidden="true">';
-      const barW = Math.max(6, innerW / ((t1-t0)/dayMs+1) * 0.7);
-      for (let t = t0; t < t1; t += dayMs) {
-        const dIso = new Date(t).toISOString().slice(0,10);
-        const x0p = xPos(t) + 2;
-        const train = hasTraining(dIso);
-        const bads  = badCount(dIso);
-        let level = 0;
-        if (train) {
-          const yb = y(level+1);
-          bars += `<rect class="ctxbar green" x="${x0p.toFixed(1)}" y="${yb.toFixed(1)}" width="${barW.toFixed(1)}" height="${(y(level)-y(level+1)).toFixed(1)}" rx="1.5" />`;
-          level++;
-        }
-        for (let i = 0; i < bads; i++) {
-          const yb = y(level+1);
-          bars += `<rect class="ctxbar red" x="${x0p.toFixed(1)}" y="${yb.toFixed(1)}" width="${barW.toFixed(1)}" height="${(y(level)-y(level+1)).toFixed(1)}" rx="1.5" />`;
-          level++;
-        }
-      }
-      bars += '</g>';
-      this.svg.insertAdjacentHTML("beforeend", bars);
-      // Legende
-      const ctxWrap = document.createElement("span");
-      ctxWrap.style.display="inline-flex";
-      ctxWrap.style.alignItems="center";
-      ctxWrap.style.gap="10px";
-      ctxWrap.innerHTML = `
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span class="dot" style="background:var(--ok); opacity:.5"></span><span>Training</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span class="dot" style="background:var(--danger); opacity:.5"></span><span>Bad-Flags</span>
-        </span>
-      `;
-      this.legend.appendChild(ctxWrap);
+    }
+
+    // --- Render-Prep ---
+    this.svg.innerHTML = ""; this.legend.innerHTML = "";
+    if (!this.tipSticky) this.hideTip();
+    const hasAny = series.some(s => s.values.some(v=>v!=null));
+    if (!hasAny){
+      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
       return;
     }
 
+    // Dynamische Größe
+    const bbox = this.svg.getBoundingClientRect();
+    const W = Math.max(300, Math.floor(bbox.width  || 640));
+    const H = Math.max(200, Math.floor(bbox.height || 280));
+    this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+    const PL=48, PR=16, PT=12, PB=28;
+    const innerW = W-PL-PR, innerH = H-PT-PB;
+
+    const xVals = X.filter(Boolean);
+    const xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+    const allY = series.flatMap(s => s.values.filter(v=>v!=null));
+    const ymin = Math.min(...allY), ymax = Math.max(...allY);
+    const ypad = Math.max((ymax-ymin)*0.08, 1);
+    const y0 = ymin-ypad, y1 = ymax+ypad;
+
+    const x = t => PL + ((t - xmin)/Math.max(1,(xmax-xmin))) * innerW;
+    const y = v => PT + (1 - ((v - y0)/Math.max(1,(y1 - y0)))) * innerH;
+
+    const line = (x1,y1,x2,y2, stroke, dash="") =>
+      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`;
+    const text = (tx,ty,str,anchor="end") =>
+      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
+
+    // Grid + Labels
+    let grid = "";
+    const ticks = 9;
+    for(let i=0;i<=ticks;i++){
+      const vv = y0 + (i*(y1-y0)/ticks);
+      const yy = y(vv);
+      grid += line(PL,yy,W-PR,yy,"#2a3140");
+      grid += text(PL-6,yy+4, Math.round(vv).toString());
+    }
+    // vertikale Wochenlinien + Datum unten
+    const week = 7*24*3600*1000;
+    let start = xmin - (xmin % week) + week;
+    for(let t=start; t<xmax; t+=week){
+      const xx = x(t);
+      grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+      const d = new Date(t);
+      const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
+      grid += text(xx, H-8, lbl, "middle");
+    }
+    // Achsen
+    grid += line(PL,PT,PL,H-PB,"#2b2f3a");
+    grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+
+    // Schwellenlinien (nur bei BP)
+    if (metric === "bp") {
+      const ySys = y(TH_SYS);
+      const yDia = y(TH_DIA);
+      grid += line(PL,ySys,W-PR,ySys,"#ef4444","6 4"); // dezent gestrichelt
+      grid += line(PL,yDia,W-PR,yDia,"#ef4444","6 4");
+      // kleine Labels rechts
+      grid += text(W-PR+2, ySys+4, "Sys 130", "start");
+      grid += text(W-PR+2, yDia+4, "Dia 90", "start");
+    }
+
+    this.svg.insertAdjacentHTML("beforeend", grid);
+
     // Linien + Punkte
+    const mkPath = (values, color)=>{
+      let d=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
+        d += (d===""?"M":"L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+      });
+      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+    };
+
+    const mkDots = (values, color, kind)=>{
+      // kind: "sys" | "dia" | "misc"
+      let out="";
+      values.forEach((v,i)=>{
+        if(v==null || !X[i]) return;
+        const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+        let date="", ctx="", note="";
+        if (metric==="bp" && meta){
+          // meta[i] existiert immer für BP
+          const m = meta[i];
+          date = m?.date || "";
+          ctx  = m?.ctx  || "";
+          // An dieser Stelle Note nur setzen, wenn Schwelle gerissen ODER Note existiert
+          note = m?.note || "";
+        }
+        out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
+                    data-kind="${kind}" data-val="${v}" data-date="${esc(date)}" data-ctx="${esc(ctx)}"
+                    data-note="${esc(note)}" />`;
+      });
+      return out;
+    };
+
+    // Hervorhebungs-Punkte (größer + rot) für Grenzüberschreitungen
+    const mkAlertDots = (seriesItem)=>{
+      if (metric !== "bp") return "";
+      const isSys = seriesItem.type === "sys";
+      const thr = isSys ? TH_SYS : TH_DIA;
+      const kind = isSys ? "sys" : "dia";
+      let out="";
+      seriesItem.values.forEach((v,i)=>{
+        if(v==null || !X[i]) return;
+        if (v > thr){
+          const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+          // Tooltip-Daten mitgeben (inkl. Notiz)
+          const m = meta?.[i] || {};
+          out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
+                     data-kind="${kind}" data-val="${v}"
+                     data-date="${esc(m.date||"")}" data-ctx="${esc(m.ctx||"")}"
+                     data-note="${esc(m.note||"")}" />`;
+        }
+      });
+      return out;
+    };
+
+    // Zeichnen
     series.forEach(s=>{
       this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
       this.svg.insertAdjacentHTML("beforeend", mkDots(s.values, s.color, (s.type==="sys"||s.type==="dia")?s.type:"misc"));
-      if (metric === "bp") this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
-
+      if (metric === "bp") {
+        this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
+      }
+      // Legende
       const wrap = document.createElement("span");
       wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
       const dot = Object.assign(document.createElement("span"), { className:"dot" });
       dot.style.background = s.color;
       const label = document.createElement("span"); label.textContent = s.name;
-      wrap.append(dot, label);
-      this.legend.appendChild(wrap);
+      wrap.append(dot, label); this.legend.appendChild(wrap);
     });
 
-    // Kontext-Legende (nur BP)
-    if (metric === "bp") {
-      const ctxWrap = document.createElement("span");
-      ctxWrap.style.display="inline-flex";
-      ctxWrap.style.alignItems="center";
-      ctxWrap.style.gap="10px";
-      ctxWrap.innerHTML = `
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span class="dot" style="background:var(--ok); opacity:.5"></span><span>Training (Stack-Basis)</span>
-        </span>
-        <span style="display:inline-flex;align-items:center;gap:6px">
-          <span class="dot" style="background:var(--danger); opacity:.5"></span><span>Bad-Flags (Höhe = Anzahl)</span>
-        </span>
-      `;
-      this.legend.appendChild(ctxWrap);
-    }
-
-    // Tooltip reset bei Redraw
+    // Wenn wir im Sticky-Modus sind und gerade neu gezeichnet haben, Tooltip ausblenden (der Punkt ist evtl. weg)
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
-    // Perf
     const sPerf = (perfStats.add('drawChart', performance.now()-t0), perfStats.snap('drawChart'));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   }
 };
+  
+/* --- Button-Flash --- */
+let saveFlashTimer = null;
+function flashSaveOk(){
+const btn = document.getElementById('saveAllBtn');
+if(!btn) return;
+if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
+btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
+saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+}
+
+/* ===== Tabs / Segments ===== */
+function setTab(name){
+  $$(".view").forEach(v => v.classList.remove("active"));
+  $("#"+name).classList.add("active");
+  $$(".tabs .btn").forEach(b =>
+    b.classList.toggle("primary", b.dataset.tab === name)
+  );
+  if (name === "doctor") { renderDoctor(); }
+}
+
+function bindTabs(){
+  $$(".tabs .btn").forEach(b =>
+    b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
+  );
+}
   
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
@@ -1731,7 +1766,7 @@ diag.add("Webhook: Netzwerkfehler");
       weight: r.weight, map: r.map, notes: r.notes,
       training: r.training, low_intake: r.low_intake, sick: r.sick,
       valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
-      salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
+      salt_high: r.salt_high, sugar_high: r.sugar_high,
       remote_id: r.id
     };
     const existing = await getEntryByRemoteId(r.id);
@@ -1890,28 +1925,6 @@ diag.add("Auto-Sync: Fehler – " + (e.message||e));
 }finally{
 setBusy(false);
 }
-}
-
-function setTab(tabId) {
-  document.querySelectorAll('section.view').forEach(sec => {
-    sec.classList.toggle('active', sec.id === tabId);
-  });
-  document.querySelectorAll('nav.tabs button').forEach(btn => {
-    btn.classList.toggle('primary', btn.getAttribute('data-tab') === tabId);
-  });
-}
-
-function bindTabs() {
-  const tabs = document.querySelectorAll('nav.tabs button');
-  tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.getAttribute('data-tab');
-      document.querySelectorAll('section.view').forEach(sec => {
-        sec.classList.toggle('active', sec.id === tab);
-      });
-      tabs.forEach(b => b.classList.toggle('primary', b === btn));
-    });
-  });
 }
 
 /* ===== Main ===== */
