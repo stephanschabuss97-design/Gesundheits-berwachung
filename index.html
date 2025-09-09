@@ -1527,7 +1527,7 @@ if (metric === "bp") {
     )].sort((a,b)=>a-b);
     const dayXs = uniqDays.map(t => x(t));
     const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=> v - dayXs[i])) : innerW;
-    const bandW = Math.max(12, Math.floor(minStep * 0.5));
+    const bandW = Math.max(10, Math.floor(minStep * 0.45));
     const yBottom = PT + innerH;
     const slotH = innerH / 6; // 1 Slot Training + bis zu 5 Bad
 
@@ -1543,7 +1543,7 @@ if (metric === "bp") {
         const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
         r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
         r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-        r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity", "0.26");
+        r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity", "0.22");
         r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
         r.setAttribute("shape-rendering", "crispEdges");
         g.appendChild(r); used++;
@@ -1555,7 +1555,7 @@ if (metric === "bp") {
         const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
         r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
         r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-        r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity", "0.22");
+        r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity", "0.18");
         r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
         r.setAttribute("shape-rendering", "crispEdges");
         g.appendChild(r); used++;
@@ -2189,6 +2189,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
