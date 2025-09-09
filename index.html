@@ -1572,8 +1572,8 @@ if (metric === "bp") {
   // UTC! keine lokale "T00:00:00"
   flagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
 }
+    
 /* === ANKER: flags-x-union PREP END === */
-
 // Skala vorbereiten
 const xVals = X.filter(Boolean);
 let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
@@ -1685,12 +1685,11 @@ if (!e?.date) continue; // ALLE Einträge des Tages berücksichtigen (wie Arzt-A
     }
   }
 
-// Nur Tage MIT MESSUNGEN (aus meta) betrachten – und dort Flags prüfen
-const mDays = [...new Set((meta||[]).map(m => m.date))].sort();
-const flaggedDays = mDays.filter(d => {
+// Alle Tage mit irgendeinem Flag (Training oder Bad) – unabhängig von Messungen
+const flaggedDays = [...dayFlags.keys()].filter(d => {
   const r = dayFlags.get(d);
   return r && (r.training || r.badCount > 0);
-});
+}).sort();
 
   diag.add(`[flags] days with any flag=${flaggedDays.length}`);
   if (flaggedDays.length) {
@@ -2385,6 +2384,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
