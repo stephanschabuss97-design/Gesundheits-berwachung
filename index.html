@@ -1446,8 +1446,8 @@ if (metric === "flags") {
 /* === Ende Flags-POC === */
 
     // Schwellen (nur BP)
-    const TH_SYS = 130;
-    const TH_DIA = 90;
+    const TH_SYS = 129;
+    const TH_DIA = 89;
     // ⛳ ANKER: day-ts helper (UTC, kein TZ-Drift)
 const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
   if (!isoDate) return NaN;
@@ -1544,7 +1544,7 @@ const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
     const PL=48, PR=16, PT=12, PB=28;
     const innerW = W-PL-PR, innerH = H-PT-PB;
 
-    /* === ANKER: flags-x-union PREP START === */
+/* === ANKER: flags-x-union PREP START === */
 let flagTs = [];
 if (metric === "bp") {
   // Flag-Tage aus ALLEN Einträgen im Zeitraum ableiten (pro Kategorie je Tag dedupliziert)
@@ -1569,9 +1569,31 @@ if (metric === "bp") {
       if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
     }
   }
-  fflagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
+  // UTC! keine lokale "T00:00:00"
+  flagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
 }
 /* === ANKER: flags-x-union PREP END === */
+
+// Skala vorbereiten
+const xVals = X.filter(Boolean);
+let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+
+// Union mit Flag-Tagen: auch Tage ohne BP-Messung sichtbar machen
+if (metric === "bp" && flagTs.length) {
+  xmin = Math.min(xmin, Math.min(...flagTs));
+  xmax = Math.max(xmax, Math.max(...flagTs));
+}
+
+// Kleiner Rand (2%) erst NACH der Union
+const pad = (xmax > xmin) ? (xmax - xmin) * 0.02 : 0;
+xmin -= pad;
+xmax += pad;
+
+// kleiner Rand, damit die äußersten Balken nicht abgeschnitten sind
+const pad = (xmax > xmin) ? (xmax - xmin) * 0.02 : 0;
+xmin -= pad;
+xmax += pad;
+
 const xVals = X.filter(Boolean);
 let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
 
@@ -2363,5 +2385,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
