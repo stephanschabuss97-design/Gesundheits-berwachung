@@ -216,10 +216,11 @@ text-align:right; justify-content:flex-end;
 
 /* Spalte C – Spezialinfos */
 /* Gewicht: Überschrift + Zahl darunter */
-.doctor-view .weight-line{
+.doctor-view .weight-line,
+.doctor-view .hip-line{
   display:flex;
   flex-direction: column;
-  align-items: center;   /* mittig statt links */
+  align-items: center;
   gap: 4px;
   background: transparent;
   border: none;
@@ -227,17 +228,20 @@ text-align:right; justify-content:flex-end;
   font-weight: 600;
 }
 
-.doctor-view .weight-line > :first-child{
+.doctor-view .weight-line > :first-child,
+.doctor-view .hip-line > :first-child{
   font-size: 12px;
   opacity:.8;
   font-weight:600;
   letter-spacing:.2px;
 }
-.doctor-view .weight-line .num{
+
+.doctor-view .weight-line .num,
+.doctor-view .hip-line .num{
   font-size:clamp(16px,1.6vw,20px);
   font-weight:700;
   line-height:1.1;
-  text-align:center;   /* mittig */
+  text-align:center;
 }
 
 /* Spalten C/D/E: Gewicht | Flags | Kommentar */
@@ -250,7 +254,8 @@ text-align:right; justify-content:flex-end;
 }
 
 /* Elemente gezielt in Spalten setzen */
-.doctor-view .col-special > .weight-line { grid-column: 1; }
+.doctor-view .col-special > .weight-line,
+.doctor-view .col-special > .hip-line { grid-column: 1; }
 .doctor-view .col-special > .flags       { grid-column: 2; }
 .doctor-view .col-special > .notes       { grid-column: 3; }
 
@@ -263,7 +268,8 @@ text-align:right; justify-content:flex-end;
   gap: 6px 16px; /* vertikal 6px, horizontal 16px */
 }
 
-.doctor-view .weight-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
+.doctor-view .weight-line .num,
+.doctor-view .hip-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
 .doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
@@ -315,9 +321,10 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     white-space: nowrap;
     flex: 0 0 auto;
   }
-  .doctor-view .col-special .weight-line .num{
-    min-width: 5ch; /* „84.5“ o. Ä. */
-  }
+.doctor-view .col-special .weight-line .num,
+.doctor-view .col-special .hip-line .num{
+  min-width: 5ch;
+}
 
   /* Spalten: Gewicht | Flags nebeneinander, Kommentar darunter über volle Breite */
   .doctor-view .col-special{
@@ -554,6 +561,11 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
         <div style="flex:1">
           <label>Gewicht (kg)</label>
           <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+          <label class="field" style="display:inline-block;min-width:14rem;margin-left:1rem;">
+          <span>Hüftumfang (cm)</span>
+          <input id="input-hip-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+          <small class="hint">Auf Nabelhöhe, entspannt. Dezimal-Komma erlaubt.</small>
+          </label>
         </div>
       </div>
     </div>
@@ -682,6 +694,15 @@ function isServiceRoleKey(raw){
   }
 }
 
+// ANCHOR: num-helper-de
+function toNumDE(s) {
+  if (s == null) return null;
+  const v = String(s).trim();
+  if (!v) return null;
+  const n = parseFloat(v.replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+  
 /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
 try{
@@ -1031,17 +1052,19 @@ for (const e of list){
   // Day-Objekt holen/erzeugen
   let d = days.get(e.date);
   if (!d){
-    d = {
-      date: e.date,
-      morning: { sys:null, dia:null, pulse:null, map:null },
-      evening: { sys:null, dia:null, pulse:null, map:null },
-      weight: null,
-      notes: "",
-      flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
-      localIds: [],
-      remoteIds: [],
-      hasCloud: false
-    };
+  d = {
+  date: e.date,
+  morning: { sys:null, dia:null, pulse:null, map:null },
+  evening: { sys:null, dia:null, pulse:null, map:null },
+  weight: null,
+  hip_cm: null, // ⬅️ neu
+  notes: "",
+  flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+  localIds: [],
+  remoteIds: [],
+  hasCloud: false
+};
+
     days.set(e.date, d);
   }
 
@@ -1068,10 +1091,11 @@ for (const e of list){
   }
 
   // Tageszusammenfassung / Gewicht / Notizen
-  if (isDaySummary){
-    if (e.weight != null) d.weight = e.weight;
-    if (e.notes)          d.notes  = e.notes;
-  }
+if (isDaySummary){
+  if (e.weight != null) d.weight = e.weight;
+  if (e.hip_cm != null) d.hip_cm = e.hip_cm;
+  if (e.notes)          d.notes  = e.notes;
+}
 
   // Flags
   if (e.training)                         d.flags.training   = true;
@@ -1136,10 +1160,15 @@ const renderDoctorDay = (day) => `
 
 <!-- Spalte C: Spezial -->
 <div class="col-special">
-<div class="weight-line">
-<div>Gewicht</div>
-<div class="num">${dash(fmtNum(day.weight))}</div>
-</div>
+  <div class="weight-line">
+    <div>Gewicht</div>
+    <div class="num">${dash(fmtNum(day.weight))}</div>
+  </div>
+
+  <div class="hip-line">
+    <div>Hüfte (cm)</div>
+    <div class="num">${dash(fmtNum(day.hip_cm))}</div>
+  </div>
 
 <div class="flags">
 <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
@@ -1701,11 +1730,12 @@ if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 const hasM = blockHasData("M"); 
 const hasA = blockHasData("A"); 
 const weightVal = $("#weightDay")?.value?.trim();
+const hipValRaw = $("#input-hip-cm")?.value?.trim();           // NEU
 const notes = ($("#notesDay").value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
-valsartanMissed || forxigaMissed || nsarTaken ||
-saltHigh || sugarHigh);
-const hasDaySummary = !!(weightVal || hasAnyFlag || notes);
+  valsartanMissed || forxigaMissed || nsarTaken ||
+  saltHigh || sugarHigh);
+const hasDaySummary = !!(weightVal || hipValRaw || hasAnyFlag || notes); // NEU
 
 // 🔴 NEU: Kommentarpflicht bei Grenzwertüberschreitung
 const sysM = Number($("#sysM").value);
@@ -1763,7 +1793,7 @@ const ts = new Date(date + "T" + time).getTime();
 
 const entry = {
 date, time, dateTime: currentISO, ts,
-context: contextLabel, arm: "links", position: "sitzend",
+context: contextLabel, 
 sys, dia, pulse, weight,
 map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
 notes: "",
@@ -1787,7 +1817,7 @@ const iso = new Date(date + "T" + time).toISOString();
 const ts = new Date(date + "T" + time).getTime();
 return {
 date, time, dateTime: iso, ts,
-context: contextLabel, arm: "links", position: "sitzend",
+context: contextLabel, 
 sys: null, dia: null, pulse: null, weight: null, map: null,
 notes: ($("#notesDay").value || "").trim(),
 training: trainingActive,
@@ -1806,11 +1836,18 @@ const date = $("#date").value || todayStr();
 const time = $("#timeA").value || "19:00";
 
 const entry = baseEntry(date, time, "Tag");
+
+// Gewicht (kg)
 const w = $("#weightDay")?.value?.trim();
-entry.weight = w ? Number(w) : null;
+entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+
+// Hüftumfang (cm)
+const hipRaw = $("#input-hip-cm")?.value?.trim();
+entry.hip_cm = hipRaw ? toNumDE(hipRaw) : null;
 
 const hasContent =
 (entry.weight != null) ||
+(entry.hip_cm != null) ||
 !!entry.notes ||
 entry.training || entry.low_intake || entry.sick ||
 entry.valsartan_missed || entry.forxiga_missed ||
@@ -1869,8 +1906,8 @@ diag.add("Webhook: Netzwerkfehler");
   for(const r of remoteRows){
     const mapped = {
       date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-      arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-      weight: r.weight, map: r.map, notes: r.notes,
+      sys: r.sys, dia: r.dia, pulse: r.pulse,
+      weight: r.weight, hip_cm: r.hip_cm, map: r.map, notes: r.notes,
       training: r.training, low_intake: r.low_intake, sick: r.sick,
       valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
       salt_high: r.salt_high, sugar_high: r.sugar_high,
@@ -1963,8 +2000,8 @@ if(et === 'INSERT' || et === 'UPDATE'){
 const row = n;
 const mapped = {
 date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
-arm: row.arm, position: row.position, sys: row.sys, dia: row.dia, pulse: row.pulse,
-weight: row.weight, map: row.map, notes: row.notes,
+sys: row.sys, dia: row.dia, pulse: row.pulse,
+weight: row.weight, hip_cm: row.hip_cm, map: row.map, notes: row.notes,
 training: row.training, low_intake: row.low_intake, sick: row.sick,
 valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
 salt_high: row.salt_high, sugar_high: row.sugar_high, // <<< hinzufügen
@@ -1997,8 +2034,8 @@ const seen = new Set(remoteRows.map(r=>r.id));
 for(const r of remoteRows){
 const mapped = {
 date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
-arm: r.arm, position: r.position, sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, map: r.map, notes: r.notes,
+sys: r.sys, dia: r.dia, pulse: r.pulse,
+weight: r.weight, hip_cm: r.hip_cm, map: r.map, notes: r.notes,
 training: r.training, low_intake: r.low_intake, sick: r.sick,
 valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
 salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
@@ -2143,10 +2180,11 @@ $$('main input, main select, main textarea, main button, nav.tabs button').forEa
 document.body.classList.remove('auth-locked');
 
 function daySummaryActive(){
-const w = ($("#weightDay")?.value || "").trim();
-const n = ($("#notesDay")?.value || "").trim();
-return !!(w || n || trainingActive || lowIntakeActive || sickActive ||
-valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
+  const w   = ($("#weightDay")?.value || "").trim();
+  const hip = ($("#input-hip-cm")?.value || "").trim();
+  const n   = ($("#notesDay")?.value || "").trim();
+  return !!(w || hip || n || trainingActive || lowIntakeActive || sickActive ||
+    valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
 }
 
 const disableVitals = daySummaryActive();
@@ -2189,6 +2227,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
