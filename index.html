@@ -1476,7 +1476,10 @@ const chartPanel = {
     [...box.querySelectorAll(".kpi-dot, .kpi-sep")].forEach(n => n.remove());
 
     // Sichtbare KPI-Spans (display != none)
-    const items = [...box.querySelectorAll('[data-k]')].filter(el => el.style.display !== "none");
+    const items = [...box.querySelectorAll('[data-k]')].filter(el => {
+   const cs = window.getComputedStyle(el);
+   return cs.display !== "none" && cs.visibility !== "hidden";
+ });
 
     // Builder
     const makeDot = (color) => {
@@ -1877,7 +1880,7 @@ const chartPanel = {
     const mkPath = (values, color) => {
       let d = "";
       values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
+        if (v == null || !Number.isFinite(X[i])) return;
         d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
       });
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
@@ -1887,7 +1890,7 @@ const chartPanel = {
       // kind: "sys" | "dia" | "misc"
       let out = "";
       values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
+        if (v == null || !Number.isFinite(X[i])) return;
         const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
         let date = "", ctx = "", note = "";
         if (metric === "bp" && meta) {
@@ -1908,7 +1911,7 @@ const chartPanel = {
       const kind  = isSys ? "sys" : "dia";
       let out = "";
       seriesItem.values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
+        if (v == null || !Number.isFinite(X[i])) return;
         if (v > thr) {
           const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
           const m = meta?.[i] || {};
@@ -2517,6 +2520,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
