@@ -1352,11 +1352,12 @@ const chartPanel = {
     }
 
     // Redraw bei Resize/Orientation
-    if (this.el) {
-      const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
-      ro.observe(this.el);
-      this._ro = ro;
-    }
+if (this.el && typeof ResizeObserver !== "undefined") {
+  const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
+  ro.observe(this.el);
+  this._ro = ro;
+}
+
     window.addEventListener("orientationchange", () => {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
@@ -1388,7 +1389,11 @@ const chartPanel = {
         if (to   && e.date > to)   return false;
         return true;
       })
-      .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
+      .sort((a,b) => {
+  const at = a.ts ?? (Number.isFinite(Date.parse(a.dateTime)) ? Date.parse(a.dateTime) : (Number.isFinite(Date.parse(a.date)) ? Date.parse(a.date) : 0));
+  const bt = b.ts ?? (Number.isFinite(Date.parse(b.dateTime)) ? Date.parse(b.dateTime) : (Number.isFinite(Date.parse(b.date)) ? Date.parse(b.date) : 0));
+  return at - bt;
+});
   },
 
   // Höhe laden (Konfig oder Fallback 183 cm)
@@ -1476,10 +1481,10 @@ const chartPanel = {
     [...box.querySelectorAll(".kpi-dot, .kpi-sep")].forEach(n => n.remove());
 
     // Sichtbare KPI-Spans (display != none)
-    const items = [...box.querySelectorAll('[data-k]')].filter(el => {
-   const cs = window.getComputedStyle(el);
-   return cs.display !== "none" && cs.visibility !== "hidden";
- });
+const items = [...box.querySelectorAll('[data-k]')].filter(el => {
+  const cs = window.getComputedStyle(el);
+  return cs.display !== "none" && cs.visibility !== "hidden";
+});
 
     // Builder
     const makeDot = (color) => {
@@ -1834,7 +1839,11 @@ const chartPanel = {
         g.setAttribute("pointer-events","none");
         g.setAttribute("aria-hidden","true");
 
-        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTs(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
+        const uniqDays = [...new Set([
+  ...flaggedDays.map(d => toDayTs(d)),
+  ...X.filter(Number.isFinite)
+])].sort((a,b)=>a-b);
+
         const dayXs = uniqDays.map(t => x(t));
         const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
         const bandW   = Math.max(10, Math.floor(minStep * 0.45));
@@ -1877,14 +1886,17 @@ const chartPanel = {
     }
 
     // Linien + Punkte
-    const mkPath = (values, color) => {
-      let d = "";
-      values.forEach((v,i) => {
-        if (v == null || !Number.isFinite(X[i])) return;
-        d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
-      });
-      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-    };
+const mkPath = (values, color) => {
+  let d = "";
+  let count = 0;
+  values.forEach((v,i) => {
+    if (v == null || !Number.isFinite(X[i])) return;
+    d += (count === 0 ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+    count++;
+  });
+  if (count < 2) return ""; // nichts zeichnen, wenn zu wenige Punkte
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+};
 
     const mkDots = (values, color, kind) => {
       // kind: "sys" | "dia" | "misc"
@@ -2520,6 +2532,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
