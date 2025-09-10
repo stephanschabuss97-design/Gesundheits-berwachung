@@ -1230,8 +1230,8 @@ if (!daysArr.length){
   });
 }
 }
-
-/* ===== Simple SVG Chart (Daily) – komplett & robust ===== */
+  
+/* ===== Simple SVG Chart (Daily) – komplett & WHO-KPI-Dots ===== */
 /* Kleine Helfer/Fallbacks (verhindern ReferenceErrors) */
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s ?? "")
@@ -1431,6 +1431,7 @@ const chartPanel = {
     this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
   },
 
+  /* --- KPI-Felder einmalig sicherstellen (keine statischen Separatoren!) --- */
   ensureKpiFields() {
     const box = $("#chartAverages");
     if (!box) return;
@@ -1441,22 +1442,93 @@ const chartPanel = {
       { k: "bmi",  label: "BMI (letzter): –" },
       { k: "whtr", label: "WHtR (letzter): –" },
     ];
-    const addSep = () => {
-      const sep = document.createElement("span");
-      sep.className = "sep";
-      sep.setAttribute("aria-hidden", "true");
-      sep.textContent = "•";
-      box.appendChild(sep);
-    };
-    need.forEach((n, i) => {
+    need.forEach((n) => {
       if (!box.querySelector(`[data-k="${n.k}"]`)) {
-        if (box.children.length && i > 0) addSep();
         const span = document.createElement("span");
         span.setAttribute("data-k", n.k);
         span.textContent = n.label;
         box.appendChild(span);
       }
     });
+  },
+
+  /* --- WHO-Farblogik --- */
+  kpiColorBMI(v) {
+    if (v == null) return "#9aa3af";  // neutral
+    if (v < 18.5) return "#60a5fa";   // untergew.
+    if (v < 25)   return "#10b981";   // normal
+    if (v < 30)   return "#f59e0b";   // übergew.
+    return "#ef4444";                 // adipös
+  },
+  kpiColorWHtR(v) {
+    if (v == null) return "#9aa3af";
+    if (v < 0.5)   return "#10b981";  // ok
+    if (v <= 0.6)  return "#f59e0b";  // erhöht
+    return "#ef4444";                 // hoch
+  },
+
+  /* --- KPI-Leiste bei jedem Draw frisch layouten: 1 Dot pro KPI, sauber getrennt --- */
+  layoutKpis() {
+    const box = $("#chartAverages");
+    if (!box) return;
+
+    // Alte Deko entfernen
+    [...box.querySelectorAll(".kpi-dot, .kpi-sep")].forEach(n => n.remove());
+
+    // Sichtbare KPI-Spans (display != none)
+    const items = [...box.querySelectorAll('[data-k]')].filter(el => el.style.display !== "none");
+
+    // Builder
+    const makeDot = (color) => {
+      const d = document.createElement("span");
+      d.className = "kpi-dot";
+      Object.assign(d.style, {
+        display: "inline-block",
+        width: "8px", height: "8px",
+        borderRadius: "50%",
+        margin: "0 8px 0 12px",
+        background: color,
+        verticalAlign: "middle"
+      });
+      return d;
+    };
+    const makeSep = () => {
+      const s = document.createElement("span");
+      s.className = "kpi-sep";
+      s.textContent = "•";
+      Object.assign(s.style, {
+        color: "#6b7280",
+        margin: "0 10px",
+        userSelect: "none"
+      });
+      return s;
+    };
+
+    items.forEach((el, idx) => {
+      // Farbe je KPI
+      let color = "#9aa3af";
+      const k = el.getAttribute("data-k");
+      if (k === "bmi") {
+        const m = el.textContent.match(/([\d.]+)/);
+        const v = m ? parseFloat(m[1]) : null;
+        color = this.kpiColorBMI(Number.isFinite(v) ? v : null);
+      } else if (k === "whtr") {
+        const m = el.textContent.match(/([\d.]+)/);
+        const v = m ? parseFloat(m[1]) : null;
+        color = this.kpiColorWHtR(Number.isFinite(v) ? v : null);
+      } else {
+        // BP-KPIs neutral-bläulich
+        color = "#60a5fa";
+      }
+
+      // Punkt vor das Label
+      el.before(makeDot(color));
+      // Separator nach dem Item (außer letztes)
+      if (idx < items.length - 1) el.after(makeSep());
+    });
+
+    box.style.display = items.length ? "inline-flex" : "none";
+    box.style.alignItems = "center";
   },
 
   // ----- Zeichnen -----
@@ -1552,7 +1624,8 @@ const chartPanel = {
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
 
-        avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
+        // Re-Layout: 1 Dot je KPI, WHO-Farbe
+        this.layoutKpis();
       }
 
       // Serien definieren
@@ -1602,6 +1675,9 @@ const chartPanel = {
         if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
 
         avgBox.style.display = "inline-flex";
+
+        // Re-Layout: 1 Dot je KPI, WHO-Farbe
+        this.layoutKpis();
       }
     }
 
@@ -1642,13 +1718,7 @@ const chartPanel = {
         }
         if (e.training) rec.training = true;
         const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = {
-          water: !!e.low_intake,
-          salt:  !!e.salt_high,
-          sugar: !!e.sugar_high,
-          sick:  !!e.sick,
-          meds,
-        };
+        const flags = { water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds };
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
@@ -2447,6 +2517,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
