@@ -22,7 +22,7 @@
   }
   #chart .controls .kpis .sep { opacity: .6; }
   
-body.auth-locked main{ opacity:.6; }
+body.auth-locked main{ opacity:.6; } /* keine pointer-events:none; bewusst interaktiv */
 :root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; --danger:#ef4444; }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -87,8 +87,10 @@ nav.tabs .btn.primary {
 }
 
 .spacer{flex:1}
-section.view{display:none}
-section.view.active{display:block}
+ section.view{ display:none; }
+ section.view.active{ display:block; }
+ /* Fallback: wenn JS nicht greift, Capture sichtbar machen */
+ #capture{ display:block; }
 
 #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
@@ -359,16 +361,25 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 }
 
 /* Panels */
-.panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
-/* Panel (Charts) — Fullscreen */
-.panel.chart{
-  inset: 0;                 /* volle Fläche (top/right/bottom/left = 0) */
-  width: 100vw;
-  height: 100dvh;           /* korrekt auf Mobile (sichtbare Höhe) */
-  max-width: 100vw;
-  max-height: 100dvh;
-  border-radius: 0;         /* keine abgerundeten Ecken im Vollbild */
-}
+ .panel{
+   position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;
+   background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.35);
+  display:none; z-index:9998;
+  pointer-events:none; /* 👈 inaktiv wenn zu */
+ }
+ .panel[aria-hidden="false"]{ pointer-events:auto; } /* 👈 aktiv, wenn offen */
+
+  /* Panel (Charts) — Fullscreen */
+ .panel.chart{
+   inset: 0; width: 100vw; height: 100dvh; max-width: 100vw; max-height: 100dvh; border-radius: 0;
+ }
+ /* nur aktiv sichtbar */
+ .panel.chart[aria-hidden="false"]{ display:block; }
+ .panel.chart[aria-hidden="true"], .panel.chart:not([aria-hidden]){
+   display:none;
+ }
+ .panel.chart .content{ min-height: calc(100dvh - 44px - 2px); }
 
 /* Flex-Layout: Header fix oben, Inhalt füllt Rest */
 .panel.chart{
@@ -445,7 +456,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 </header>
 
 <nav class="tabs">
-<button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
+<button class="btn ghost primary" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
 <button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
 </nav>
 
@@ -1311,6 +1322,7 @@ const chartPanel = {
 
     // Panel initial nicht anzeigen
     this.el.style.display = "none";
+    this.el.setAttribute("aria-hidden","true");
 
     // Close + Metric-Select
     $("#chartClose").addEventListener("click", () => this.hide());
@@ -1396,14 +1408,16 @@ const chartPanel = {
     this.ensureKpiFields();
   },
 
-  toggle() {
-    this.open = !this.open;
-    this.el.style.display = this.open ? "block" : "none";
-  },
+ toggle() {
+   this.open = !this.open;
+   this.el.style.display = this.open ? "block" : "none";
+   this.el.setAttribute("aria-hidden", this.open ? "false" : "true");
+ }
 
   hide() {
     this.open = false;
     this.el.style.display = "none";
+    this.el.setAttribute("aria-hidden","true");
     this.tipSticky = false;
     this.hideTip();
   },
@@ -2498,11 +2512,12 @@ setDocBadges({ visible: true });
 });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-  setDocBadges({ visible: true });
-  chartPanel.open = true;
-  chartPanel.el.style.display = 'block';
-  await Promise.resolve().then(()=> chartPanel.draw());
-});
+   setDocBadges({ visible: true });
+   chartPanel.open = true;
+   chartPanel.el.style.display = 'block';
+   chartPanel.el.setAttribute("aria-hidden","false");
+   await Promise.resolve().then(()=> chartPanel.draw());
+ });
 
 document.addEventListener('keydown', (e)=>{
 const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
@@ -2572,6 +2587,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
