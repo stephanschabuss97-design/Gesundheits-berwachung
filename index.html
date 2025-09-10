@@ -415,16 +415,20 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 #chartSvg .flags { pointer-events: none; }
 #chart .controls > * {flex:1}
 #chart .controls .half{flex:0 0 calc(50% - 4px)}
-/* SVG füllt verbleibende Höhe vollständig */
+  
+  /* SVG füllt verbleibende Höhe vollständig */
 #chart svg{
+  flex: 1 1 auto;
   width: 100%;
-  height: 100%;
+  height: 100%;     /* statt auto */
+  min-height: 160px;
   display: block;
   background: #0f1116;
   border: 1px solid #2b2f3a;
   border-radius: 10px;
-  min-height: 0; /* wichtig für Flex-Container */
+  min-height: 0;
 }
+
 #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
 
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
@@ -1763,8 +1767,8 @@ const chartPanel = {
       const yDia = y(TH_DIA);
       grid += line(PL, ySys, W - PR, ySys, "#ef4444", "6 4");
       grid += line(PL, yDia, W - PR, yDia, "#ef4444", "6 4");
-      grid += text(W - PR + 2, ySys + 4, "Sys 130", "start");
-      grid += text(W - PR + 2, yDia + 4, "Dia 90",  "start");
+grid += text(W - PR - 2, ySys + 4, "Sys 130", "end");
+grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
     }
 
     if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
@@ -1846,25 +1850,39 @@ const chartPanel = {
     }
 
     // Linien + Punkte
-    const mkPath = (values, color) => {
-      let d = "";
-      values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
-        d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
-      });
-      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-    };
+const isFiniteTs = (t) => Number.isFinite(t);
 
-    const mkDots = (values, color, kind) => {
-      // kind: "sys" | "dia" | "misc"
-      let out = "";
-      values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
-        const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
-        let date = "", ctx = "", note = "";
-        if (metric === "bp" && meta) {
-          const m = meta[i]; date = m?.date || ""; ctx = m?.ctx || ""; note = m?.note || "";
-        }
+const mkPath = (values, color) => {
+  let d = "";
+  values.forEach((v,i) => {
+    if (v == null || !isFiniteTs(X[i])) return; // statt !X[i]
+    d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+  });
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+};
+
+const mkDots = (values, color, kind) => {
+  let out = "";
+  values.forEach((v, i) => {
+    if (v == null || !isFiniteTs(X[i])) return;
+
+    const cx = x(X[i]).toFixed(1);
+    const cy = y(v).toFixed(1);
+
+    // Tooltip/Meta: Index von BP-Serien passt zu mData/meta
+    const m = meta?.[i] || {};
+    const date = m.date || "";
+    const ctx  = m.ctx  || "";
+    const note = m.note || "";
+
+    out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
+              data-kind="${kind}" data-val="${v}"
+              data-date="${esc(date)}" data-ctx="${esc(ctx)}"
+              data-note="${esc(note)}" />`;
+  });
+  return out;
+};
+
         out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
                   data-kind="${kind}" data-val="${v}"
                   data-date="${esc(date)}" data-ctx="${esc(ctx)}"
@@ -1873,25 +1891,25 @@ const chartPanel = {
       return out;
     };
 
-    const mkAlertDots = (seriesItem) => {
-      if (metric !== "bp") return "";
-      const isSys = seriesItem.type === "sys";
-      const thr   = isSys ? TH_SYS : TH_DIA;
-      const kind  = isSys ? "sys" : "dia";
-      let out = "";
-      seriesItem.values.forEach((v,i) => {
-        if (v == null || !X[i]) return;
-        if (v > thr) {
-          const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
-          const m = meta?.[i] || {};
-          out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
-                   data-kind="${kind}" data-val="${v}"
-                   data-date="${esc(m.date || "")}" data-ctx="${esc(m.ctx || "")}"
-                   data-note="${esc(m.note || "")}" />`;
-        }
-      });
-      return out;
-    };
+const mkAlertDots = (seriesItem) => {
+  if (metric !== "bp") return "";
+  const isSys = seriesItem.type === "sys";
+  const thr   = isSys ? TH_SYS : TH_DIA;
+  const kind  = isSys ? "sys" : "dia";
+  let out = "";
+  seriesItem.values.forEach((v, i) => {
+    if (v == null || !isFiniteTs(X[i])) return;
+    if (v > thr) {
+      const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+      const m = meta?.[i] || {};
+      out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
+               data-kind="${kind}" data-val="${v}"
+               data-date="${esc(m.date || "")}" data-ctx="${esc(m.ctx || "")}"
+               data-note="${esc(m.note || "")}" />`;
+    }
+  });
+  return out;
+};
 
     // Zeichnen
     series.forEach((s) => {
@@ -2489,6 +2507,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
