@@ -1231,7 +1231,49 @@ if (!daysArr.length){
 }
 }
 
-/* ===== Simple SVG Chart (Daily) – komplett ===== */
+/* ===== Simple SVG Chart (Daily) – komplett & robust ===== */
+/* Kleine Helfer/Fallbacks (verhindern ReferenceErrors) */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? "")
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const perfStats = (typeof window !== "undefined" && window.perfStats) || (() => {
+  const xs = [];
+  return {
+    add: (_k, v) => xs.push(v),
+    snap: (_k) => {
+      const a = xs.slice().sort((x,y)=>x-y);
+      const q = (p)=>a.length? a[Math.min(a.length-1, Math.floor(p*(a.length-1)))] : 0;
+      return { p50:q(0.5), p95:q(0.95), p99:q(0.99), count:a.length };
+    }
+  };
+})();
+
+const diag = (typeof window !== "undefined" && window.diag) || { add: () => {} };
+
+/* Falls extern nicht vorhanden, sauber überspringen */
+const safeEnsureSupabaseClient = async () => {
+  try {
+    if (typeof ensureSupabaseClient === "function") return await ensureSupabaseClient();
+  } catch(_) {}
+  return null;
+};
+const safeGetConf = async (k) => {
+  try {
+    if (typeof getConf === "function") return await getConf(k);
+  } catch(_) {}
+  return null;
+};
+
+/* Gewicht-Only-Detektion, um Notizen-Tageszeilen zu erkennen */
+const isWeightOnly = (e) => {
+  const hasW = e?.weight != null || e?.weight_kg != null;
+  const hasBP = e?.sys != null || e?.dia != null || e?.map != null;
+  const hasWaist = e?.waist_cm != null;
+  return hasW && !hasBP && !hasWaist;
+};
+
 const chartPanel = {
   el: null,
   svg: null,
@@ -1246,14 +1288,16 @@ const chartPanel = {
     this.legend = $("#chartLegend");
 
     // Panel initial nicht anzeigen
-    this.el.style.display = "none";
+    if (this.el) this.el.style.display = "none";
 
     // Close + Metric-Select
-    $("#chartClose").addEventListener("click", () => this.hide());
-    $("#metricSel").addEventListener("change", () => this.draw());
+    const closeBtn = $("#chartClose");
+    if (closeBtn) closeBtn.addEventListener("click", () => this.hide());
+    const metricSel = $("#metricSel");
+    if (metricSel) metricSel.addEventListener("change", () => this.draw());
 
     // Tooltip (hover/click)
-    const contentHost = this.el.querySelector(".content") || this.el;
+    const contentHost = this.el?.querySelector(".content") || this.el || document.body;
     const tip = document.createElement("div");
     Object.assign(tip.style, {
       position: "absolute",
@@ -1278,37 +1322,41 @@ const chartPanel = {
     this.tip = tip;
 
     // Interaktivität
-    this.svg.addEventListener("pointermove", (e) => {
-      if (this.tipSticky) return;
-      const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) { this.hideTip(); return; }
-      this.fillTipFromTarget(tgt);
-      this.positionTip(e);
-    });
+    if (this.svg) {
+      this.svg.addEventListener("pointermove", (e) => {
+        if (this.tipSticky) return;
+        const tgt = e.target;
+        const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+        if (!hasNote) { this.hideTip(); return; }
+        this.fillTipFromTarget(tgt);
+        this.positionTip(e);
+      });
 
-    this.svg.addEventListener("pointerleave", () => {
-      if (this.tipSticky) return;
-      this.hideTip();
-    });
+      this.svg.addEventListener("pointerleave", () => {
+        if (this.tipSticky) return;
+        this.hideTip();
+      });
 
-    // Click/Tap: Tooltip toggeln (mobil-freundlich)
-    this.svg.addEventListener("click", (e) => {
-      const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) {
-        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-        return;
-      }
-      this.fillTipFromTarget(tgt);
-      this.tipSticky = !this.tipSticky;
-      this.positionTip(e);
-    });
+      // Click/Tap: Tooltip toggeln (mobil-freundlich)
+      this.svg.addEventListener("click", (e) => {
+        const tgt = e.target;
+        const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+        if (!hasNote) {
+          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+          return;
+        }
+        this.fillTipFromTarget(tgt);
+        this.tipSticky = !this.tipSticky;
+        this.positionTip(e);
+      });
+    }
 
     // Redraw bei Resize/Orientation
-    const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
-    ro.observe(this.el);
-    this._ro = ro;
+    if (this.el) {
+      const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
+      ro.observe(this.el);
+      this._ro = ro;
+    }
     window.addEventListener("orientationchange", () => {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
@@ -1319,21 +1367,21 @@ const chartPanel = {
 
   toggle() {
     this.open = !this.open;
-    this.el.style.display = this.open ? "block" : "none";
+    if (this.el) this.el.style.display = this.open ? "block" : "none";
   },
 
   hide() {
     this.open = false;
-    this.el.style.display = "none";
+    if (this.el) this.el.style.display = "none";
     this.tipSticky = false;
     this.hideTip();
   },
 
   // ----- Helpers -----
   async getFiltered() {
-    const entries = await getAllEntries();
-    const from = $("#from").value;
-    const to   = $("#to").value;
+    const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
+    const from = $("#from")?.value;
+    const to   = $("#to")?.value;
     return entries
       .filter(e => {
         if (from && e.date < from) return false;
@@ -1346,13 +1394,15 @@ const chartPanel = {
   // Höhe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
     // 1) Supabase-Profil
-    const supa = await ensureSupabaseClient();
+    const supa = await safeEnsureSupabaseClient();
     if (supa) {
-      const { data, error } = await supa.from("user_profiles").select("height_cm").single();
-      if (!error && data?.height_cm) return Number(data.height_cm);
+      try {
+        const { data, error } = await supa.from("user_profiles").select("height_cm").single();
+        if (!error && data?.height_cm) return Number(data.height_cm);
+      } catch(_) {}
     }
     // 2) lokale Konfig
-    const v = await getConf("height_cm");
+    const v = await safeGetConf("height_cm");
     const n = Number(v);
     if (Number.isFinite(n) && n > 0) return n;
     return 183;
@@ -1366,7 +1416,7 @@ const chartPanel = {
     }
   },
   positionTip(e) {
-    if (!this.tip) return;
+    if (!this.tip || !this.el) return;
     const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
     const x = e.clientX - hostRect.left;
     const y = e.clientY - hostRect.top;
@@ -1411,8 +1461,8 @@ const chartPanel = {
 
   // ----- Zeichnen -----
   async draw() {
-    const t0 = performance.now();
-    const metric = $("#metricSel").value;
+    const t0 = performance.now?.() ?? Date.now();
+    const metric = $("#metricSel")?.value || "bp";
     const data   = await this.getFiltered();
 
     // X-Basis
@@ -1437,8 +1487,8 @@ const chartPanel = {
     // Tageskommentare (erste Zeile)
     const notesByDate = new Map();
     for (const e of data) {
-      const hasDayLike = e.context === "Tag" || isWeightOnly(e);
-      const txt = (e.notes || "").trim();
+      const hasDayLike = e?.context === "Tag" || isWeightOnly(e);
+      const txt = (e?.notes || "").trim();
       if (hasDayLike && txt) {
         const firstLine = txt.split(/\r?\n/)[0].trim();
         if (firstLine) notesByDate.set(e.date, firstLine);
@@ -1491,17 +1541,16 @@ const chartPanel = {
         const f0 = (v) => (v == null ? "–" : Math.round(v).toString());
 
         // Zeige BP-KPIs, blende BMI/WHtR aus
-        avgBox.querySelector('[data-k="sys"]').style.display  = "";
-        avgBox.querySelector('[data-k="dia"]').style.display  = "";
-        avgBox.querySelector('[data-k="map"]').style.display  = "";
+        const sEl  = avgBox.querySelector('[data-k="sys"]');
+        const dEl  = avgBox.querySelector('[data-k="dia"]');
+        const mEl  = avgBox.querySelector('[data-k="map"]');
         const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
         const whtrEl = avgBox.querySelector('[data-k="whtr"]');
+        if (sEl)  { sEl.style.display  = ""; sEl.textContent  = "Durchschnitt Sys: " + f0(avgSys); }
+        if (dEl)  { dEl.style.display  = ""; dEl.textContent  = "Durchschnitt Dia: " + f0(avgDia); }
+        if (mEl)  { mEl.style.display  = ""; mEl.textContent  = "Durchschnitt MAP: " + f0(avgMap); }
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
-
-        avgBox.querySelector('[data-k="sys"]').textContent = "Durchschnitt Sys: " + f0(avgSys);
-        avgBox.querySelector('[data-k="dia"]').textContent = "Durchschnitt Dia: " + f0(avgDia);
-        avgBox.querySelector('[data-k="map"]').textContent = "Durchschnitt MAP: " + f0(avgMap);
 
         avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
       }
@@ -1557,21 +1606,21 @@ const chartPanel = {
     }
 
     // --- Render-Prep ---
-    this.svg.innerHTML = "";
-    this.legend.innerHTML = "";
+    if (this.svg) this.svg.innerHTML = "";
+    if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
     const hasAny = series.some(s => s.values.some(v => v != null));
     if (!hasAny) {
-      this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
+      if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
     }
 
     // Dynamische Größe
-    const bbox = this.svg.getBoundingClientRect();
+    const bbox = this.svg?.getBoundingClientRect?.() || { width: 640, height: 280 };
     const W = Math.max(300, Math.floor(bbox.width  || 640));
     const H = Math.max(200, Math.floor(bbox.height || 280));
-    this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    if (this.svg) this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
@@ -1677,10 +1726,10 @@ const chartPanel = {
       grid += text(W - PR + 2, yDia + 4, "Dia 90",  "start");
     }
 
-    this.svg.insertAdjacentHTML("beforeend", grid);
+    if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
 
     // === Flags Overlay (nur BP) ===
-    if (metric === "bp") {
+    if (metric === "bp" && this.svg) {
       const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
       for (const e of data) {
         if (!e?.date) continue;
@@ -1804,6 +1853,7 @@ const chartPanel = {
 
     // Zeichnen
     series.forEach((s) => {
+      if (!this.svg) return;
       this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
       this.svg.insertAdjacentHTML(
         "beforeend",
@@ -1813,21 +1863,26 @@ const chartPanel = {
         this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
       }
       // Legende
-      const wrap = document.createElement("span");
-      wrap.style.display = "inline-flex";
-      wrap.style.alignItems = "center";
-      wrap.style.gap = "6px";
-      const dot = Object.assign(document.createElement("span"), { className: "dot" });
-      dot.style.background = s.color;
-      const label = document.createElement("span");
-      label.textContent = s.name;
-      wrap.append(dot, label);
-      this.legend.appendChild(wrap);
+      if (this.legend) {
+        const wrap = document.createElement("span");
+        wrap.style.display = "inline-flex";
+        wrap.style.alignItems = "center";
+        wrap.style.gap = "6px";
+        const dot = Object.assign(document.createElement("span"), { className: "dot" });
+        dot.style.background = s.color;
+        dot.style.width = "10px";
+        dot.style.height = "10px";
+        dot.style.borderRadius = "50%";
+        const label = document.createElement("span");
+        label.textContent = s.name;
+        wrap.append(dot, label);
+        this.legend.appendChild(wrap);
+      }
     });
 
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
-    const sPerf = (perfStats.add("drawChart", performance.now() - t0), perfStats.snap("drawChart"));
+    const sPerf = (perfStats.add("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap("drawChart"));
     diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   },
 };
@@ -2392,5 +2447,6 @@ main();
 </div>
 </body>
 </html>
+
 
 
