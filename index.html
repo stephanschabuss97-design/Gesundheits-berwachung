@@ -217,7 +217,7 @@ text-align:right; justify-content:flex-end;
 /* Spalte C – Spezialinfos */
 /* Gewicht: Überschrift + Zahl darunter */
 .doctor-view .weight-line,
-.doctor-view .hip-line{
+.doctor-view .waist-line{
   display:flex;
   flex-direction: column;
   align-items: center;
@@ -229,7 +229,7 @@ text-align:right; justify-content:flex-end;
 }
 
 .doctor-view .weight-line > :first-child,
-.doctor-view .hip-line > :first-child{
+.doctor-view .waist-line > :first-child{
   font-size: 12px;
   opacity:.8;
   font-weight:600;
@@ -237,7 +237,7 @@ text-align:right; justify-content:flex-end;
 }
 
 .doctor-view .weight-line .num,
-.doctor-view .hip-line .num{
+.doctor-view .waist-line .num{
   font-size:clamp(16px,1.6vw,20px);
   font-weight:700;
   line-height:1.1;
@@ -255,7 +255,7 @@ text-align:right; justify-content:flex-end;
 
 /* Elemente gezielt in Spalten setzen */
 .doctor-view .col-special > .weight-line,
-.doctor-view .col-special > .hip-line { grid-column: 1; }
+.doctor-view .col-special > .waist-line { grid-column: 1; }
 .doctor-view .col-special > .flags       { grid-column: 2; }
 .doctor-view .col-special > .notes       { grid-column: 3; }
 
@@ -269,7 +269,7 @@ text-align:right; justify-content:flex-end;
 }
 
 .doctor-view .weight-line .num,
-.doctor-view .hip-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
+.doctor-view .waist-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
 .doctor-view .flag span:last-child{ white-space:nowrap; }
 .doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
 .doctor-view .flag-box{
@@ -322,7 +322,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     flex: 0 0 auto;
   }
 .doctor-view .col-special .weight-line .num,
-.doctor-view .col-special .hip-line .num{
+.doctor-view .col-special .waist-line .num{
   min-width: 5ch;
 }
 
@@ -562,8 +562,8 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
           <label>Gewicht (kg)</label>
           <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
           <label class="field" style="display:inline-block;min-width:14rem;margin-left:1rem;">
-          <span>Hüftumfang (cm)</span>
-          <input id="input-hip-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+          <span>Bauchumfang (cm)</span>
+          <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
           <small class="hint">Auf Nabelhöhe, entspannt. Dezimal-Komma erlaubt.</small>
           </label>
         </div>
@@ -1057,7 +1057,7 @@ for (const e of list){
   morning: { sys:null, dia:null, pulse:null, map:null },
   evening: { sys:null, dia:null, pulse:null, map:null },
   weight: null,
-  hip_cm: null, // ⬅️ neu
+  waist_cm: null,
   notes: "",
   flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
   localIds: [],
@@ -1093,7 +1093,7 @@ for (const e of list){
   // Tageszusammenfassung / Gewicht / Notizen
 if (isDaySummary){
   if (e.weight != null) d.weight = e.weight;
-  if (e.hip_cm != null) d.hip_cm = e.hip_cm;
+  if (e.waist_cm != null) d.waist_cm = e.waist_cm;
   if (e.notes)          d.notes  = e.notes;
 }
 
@@ -1165,9 +1165,9 @@ const renderDoctorDay = (day) => `
     <div class="num">${dash(fmtNum(day.weight))}</div>
   </div>
 
-  <div class="hip-line">
-    <div>Hüfte (cm)</div>
-    <div class="num">${dash(fmtNum(day.hip_cm))}</div>
+  <div class="waist-line">
+    <div>Bauchumfang (cm)</div>
+    <div class="num">${dash(fmtNum(day.waist_cm))}</div>
   </div>
 
 <div class="flags">
@@ -1730,12 +1730,12 @@ if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 const hasM = blockHasData("M"); 
 const hasA = blockHasData("A"); 
 const weightVal = $("#weightDay")?.value?.trim();
-const hipValRaw = $("#input-hip-cm")?.value?.trim();           // NEU
+const waistValRaw = $("#input-waist-cm")?.value?.trim();
 const notes = ($("#notesDay").value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
   valsartanMissed || forxigaMissed || nsarTaken ||
   saltHigh || sugarHigh);
-const hasDaySummary = !!(weightVal || hipValRaw || hasAnyFlag || notes); // NEU
+const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || notes);
 
 // 🔴 NEU: Kommentarpflicht bei Grenzwertüberschreitung
 const sysM = Number($("#sysM").value);
@@ -1841,9 +1841,9 @@ const entry = baseEntry(date, time, "Tag");
 const w = $("#weightDay")?.value?.trim();
 entry.weight = w ? Number((w||"").replace(',', '.')) : null;
 
-// Hüftumfang (cm)
-const hipRaw = $("#input-hip-cm")?.value?.trim();
-entry.hip_cm = hipRaw ? toNumDE(hipRaw) : null;
+// Bauchumfang (cm)
+const waistRaw = $("#input-waist-cm")?.value?.trim();
+entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
 const hasContent =
 (entry.weight != null) ||
@@ -1907,7 +1907,7 @@ diag.add("Webhook: Netzwerkfehler");
     const mapped = {
       date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
       sys: r.sys, dia: r.dia, pulse: r.pulse,
-      weight: r.weight, hip_cm: r.hip_cm, map: r.map, notes: r.notes,
+      weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
       training: r.training, low_intake: r.low_intake, sick: r.sick,
       valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
       salt_high: r.salt_high, sugar_high: r.sugar_high,
@@ -2001,7 +2001,7 @@ const row = n;
 const mapped = {
 date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
 sys: row.sys, dia: row.dia, pulse: row.pulse,
-weight: row.weight, hip_cm: row.hip_cm, map: row.map, notes: row.notes,
+weight: row.weight, waist_cm: row.hip_cm, map: row.map, notes: row.notes,
 training: row.training, low_intake: row.low_intake, sick: row.sick,
 valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
 salt_high: row.salt_high, sugar_high: row.sugar_high, // <<< hinzufügen
@@ -2035,7 +2035,7 @@ for(const r of remoteRows){
 const mapped = {
 date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
 sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, hip_cm: r.hip_cm, map: r.map, notes: r.notes,
+weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
 training: r.training, low_intake: r.low_intake, sick: r.sick,
 valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
 salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
@@ -2181,9 +2181,9 @@ document.body.classList.remove('auth-locked');
 
 function daySummaryActive(){
   const w   = ($("#weightDay")?.value || "").trim();
-  const hip = ($("#input-hip-cm")?.value || "").trim();
+  const waist = ($("#input-waist-cm")?.value || "").trim();
   const n   = ($("#notesDay")?.value || "").trim();
-  return !!(w || hip || n || trainingActive || lowIntakeActive || sickActive ||
+  return !!(w || waist || n || trainingActive || lowIntakeActive || sickActive ||
     valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
 }
 
@@ -2227,6 +2227,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
