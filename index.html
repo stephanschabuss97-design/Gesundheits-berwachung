@@ -577,10 +577,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
       <h3 class="blockTitle">Kommentar</h3>
-
-
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Kommentar</h3>
       <div class="row">
         <div style="flex:1">
           <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
@@ -1867,14 +1863,25 @@ const mkPath = (values, color) => {
 };
 
 const mkDots = (values, color, kind) => {
+  let out = "";
+  values.forEach((v, i) => {
+    if (v == null || !Number.isFinite(X[i])) return;
+    const cx = x(X[i]).toFixed(1);
+    const cy = y(v).toFixed(1);
 
-        out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-                  data-kind="${kind}" data-val="${v}"
-                  data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-                  data-note="${esc(note)}" />`;
-      });
-      return out;
-    };
+    // Tooltip-Infos (nur bei BP vorhanden)
+    const m = (kind === "sys" || kind === "dia") ? (meta?.[i] || {}) : {};
+    const date = m.date || "";
+    const ctx  = m.ctx  || "";
+    const note = m.note || "";
+
+    out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
+               data-kind="${esc(kind)}" data-val="${v}"
+               data-date="${esc(date)}" data-ctx="${esc(ctx)}"
+               data-note="${esc(note)}" />`;
+  });
+  return out;
+};
 
 const mkAlertDots = (seriesItem) => {
   if (metric !== "bp") return "";
@@ -2492,4 +2499,5 @@ main();
 </div>
 </body>
 </html>
+
 
