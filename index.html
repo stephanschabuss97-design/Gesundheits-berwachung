@@ -1231,7 +1231,7 @@ if (!daysArr.length){
 }
 }
   
-/* ===== Simple SVG Chart (Daily) – komplett & WHO-KPI-Dots ===== */
+/* ===== Simple SVG Chart (Daily) – komplett & robust (mit WHO-Ampellogik) ===== */
 /* Kleine Helfer/Fallbacks (verhindern ReferenceErrors) */
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s ?? "")
@@ -1317,14 +1317,9 @@ const chartPanel = {
       color: "var(--fg)",
     });
     tip.id = "chartTip";
-    if (getComputedStyle(contentHost).position === "static") {
-  contentHost.style.position = "relative";
-}
-if (getComputedStyle(contentHost).position === "static") {
-  contentHost.style.position = "relative";
-}
-contentHost.appendChild(tip);
-this.tip = tip;
+    contentHost.style.position = "relative";
+    contentHost.appendChild(tip);
+    this.tip = tip;
 
     // Interaktivität
     if (this.svg) {
@@ -1357,12 +1352,11 @@ this.tip = tip;
     }
 
     // Redraw bei Resize/Orientation
-if (this.el && typeof ResizeObserver !== "undefined") {
-  const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
-  ro.observe(this.el);
-  this._ro = ro;
-}
-
+    if (this.el) {
+      const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
+      ro.observe(this.el);
+      this._ro = ro;
+    }
     window.addEventListener("orientationchange", () => {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
@@ -1394,11 +1388,7 @@ if (this.el && typeof ResizeObserver !== "undefined") {
         if (to   && e.date > to)   return false;
         return true;
       })
-      .sort((a,b) => {
-  const at = a.ts ?? (Number.isFinite(Date.parse(a.dateTime)) ? Date.parse(a.dateTime) : (Number.isFinite(Date.parse(a.date)) ? Date.parse(a.date) : 0));
-  const bt = b.ts ?? (Number.isFinite(Date.parse(b.dateTime)) ? Date.parse(b.dateTime) : (Number.isFinite(Date.parse(b.date)) ? Date.parse(b.date) : 0));
-  return at - bt;
-});
+      .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
   },
 
   // Höhe laden (Konfig oder Fallback 183 cm)
@@ -1441,7 +1431,7 @@ if (this.el && typeof ResizeObserver !== "undefined") {
     this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
   },
 
-  /* --- KPI-Felder einmalig sicherstellen (keine statischen Separatoren!) --- */
+  /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
   ensureKpiFields() {
     const box = $("#chartAverages");
     if (!box) return;
@@ -1462,36 +1452,33 @@ if (this.el && typeof ResizeObserver !== "undefined") {
     });
   },
 
-  /* --- WHO-Farblogik --- */
+  // WHO-Farben
   kpiColorBMI(v) {
-    if (v == null) return "#9aa3af";  // neutral
-    if (v < 18.5) return "#60a5fa";   // untergew.
-    if (v < 25)   return "#10b981";   // normal
-    if (v < 30)   return "#f59e0b";   // übergew.
-    return "#ef4444";                 // adipös
+    if (v == null) return "#9aa3af";        // unknown
+    if (v < 18.5) return "#60a5fa";         // untergew.
+    if (v < 25)   return "#10b981";         // normal
+    if (v < 30)   return "#f59e0b";         // übergew.
+    return "#ef4444";                        // adipös
   },
   kpiColorWHtR(v) {
     if (v == null) return "#9aa3af";
-    if (v < 0.5)   return "#10b981";  // ok
-    if (v <= 0.6)  return "#f59e0b";  // erhöht
-    return "#ef4444";                 // hoch
+    if (v < 0.5)   return "#10b981";        // ok
+    if (v <= 0.6)  return "#f59e0b";        // erhöht
+    return "#ef4444";                        // hoch
   },
 
-  /* --- KPI-Leiste bei jedem Draw frisch layouten: 1 Dot pro KPI, sauber getrennt --- */
+  // Ein Punkt pro KPI, korrekt eingefärbt; saubere Separatoren
   layoutKpis() {
     const box = $("#chartAverages");
     if (!box) return;
 
-    // Alte Deko entfernen
+    // 1) Alle alten Deko-Elemente entfernen
     [...box.querySelectorAll(".kpi-dot, .kpi-sep")].forEach(n => n.remove());
 
-    // Sichtbare KPI-Spans (display != none)
-const items = [...box.querySelectorAll('[data-k]')].filter(el => {
-  const cs = window.getComputedStyle(el);
-  return cs.display !== "none" && cs.visibility !== "hidden";
-});
+    // 2) Sichtbare KPI-Spans ermitteln (display != "none")
+    const items = [...box.querySelectorAll('[data-k]')].filter(el => el.style.display !== "none");
 
-    // Builder
+    // 3) Pro Item farbigen Punkt einsetzen + exakt einen Separator zwischen Items
     const makeDot = (color) => {
       const d = document.createElement("span");
       d.className = "kpi-dot";
@@ -1518,25 +1505,23 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
     };
 
     items.forEach((el, idx) => {
-      // Farbe je KPI
       let color = "#9aa3af";
       const k = el.getAttribute("data-k");
+
+      // Wert aus Text extrahieren (erste Zahl im Text)
+      const m = el.textContent.match(/([\d.]+)/);
+      const v = m ? parseFloat(m[1]) : null;
+
       if (k === "bmi") {
-        const m = el.textContent.match(/([\d.]+)/);
-        const v = m ? parseFloat(m[1]) : null;
         color = this.kpiColorBMI(Number.isFinite(v) ? v : null);
       } else if (k === "whtr") {
-        const m = el.textContent.match(/([\d.]+)/);
-        const v = m ? parseFloat(m[1]) : null;
         color = this.kpiColorWHtR(Number.isFinite(v) ? v : null);
       } else {
-        // BP-KPIs neutral-bläulich
+        // BP-KPIs neutral blau
         color = "#60a5fa";
       }
 
-      // Punkt vor das Label
       el.before(makeDot(color));
-      // Separator nach dem Item (außer letztes)
       if (idx < items.length - 1) el.after(makeSep());
     });
 
@@ -1551,12 +1536,7 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
     const data   = await this.getFiltered();
 
     // X-Basis
-const xsAll = data.map(e =>
-  e?.ts ??
-  (e?.dateTime ? Date.parse(e.dateTime) :
-   (e?.date ? Date.parse(e.date) : NaN))
-);
-
+    const xsAll = data.map(e => e.ts ?? Date.parse(e.dateTime));
     let series = [];
     let X = xsAll;
 
@@ -1642,11 +1622,7 @@ const xsAll = data.map(e =>
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
 
-// Box sichtbar + Ampel (Dots) neu layouten
-avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
-this.layoutKpis();
-
-        // Re-Layout: 1 Dot je KPI, WHO-Farbe
+        avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
         this.layoutKpis();
       }
 
@@ -1659,39 +1635,14 @@ this.layoutKpis();
       ];
 
       X = xsBP; // wichtig
-} else if (metric === "weight") {
-// Serie Gewicht
-series = [{
-  name: "Gewicht (kg)",
-  values: data.map(e => e.weight != null ? Number(e.weight) : null),
-  color: "#f59e0b",
-  type: "misc",
-}];
-
-// X auf Tage normalisieren (fällt auf dateTime zurück)
-const toDayTs = (isoDate) => {
-  if (!isoDate) return NaN;
-  const [y, m, d] = isoDate.split("-").map(Number);
-  return Date.UTC(y, (m || 1) - 1, d || 1);
-};
-X = data.map(e =>
-  e?.ts ??
-  (e?.date ? toDayTs(e.date) :
-   (e?.dateTime ? Date.parse(e.dateTime) : NaN))
-);
-
-
-  // X auf Tage normalisieren (fällt auf dateTime zurück)
-  const toDayTs = (isoDate) => {
-    if (!isoDate) return NaN;
-    const [y, m, d] = isoDate.split("-").map(Number);
-    return Date.UTC(y, (m || 1) - 1, d || 1);
-  };
-  X = data.map(e =>
-    e?.ts ??
-    (e?.date ? toDayTs(e.date) :
-     (e?.dateTime ? Date.parse(e.dateTime) : NaN))
-  );
+    } else if (metric === "weight") {
+      // Serie Gewicht
+      series = [{
+        name: "Gewicht (kg)",
+        values: data.map(e => e.weight != null ? Number(e.weight) : null),
+        color: "#f59e0b",
+        type: "misc",
+      }];
 
       // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
       if (avgBox) {
@@ -1722,8 +1673,6 @@ X = data.map(e =>
         if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
 
         avgBox.style.display = "inline-flex";
-
-        // Re-Layout: 1 Dot je KPI, WHO-Farbe
         this.layoutKpis();
       }
     }
@@ -1765,7 +1714,13 @@ X = data.map(e =>
         }
         if (e.training) rec.training = true;
         const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = { water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds };
+        const flags = {
+          water: !!e.low_intake,
+          salt:  !!e.salt_high,
+          sugar: !!e.sugar_high,
+          sick:  !!e.sick,
+          meds,
+        };
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
@@ -1878,11 +1833,7 @@ X = data.map(e =>
         g.setAttribute("pointer-events","none");
         g.setAttribute("aria-hidden","true");
 
-        const uniqDays = [...new Set([
-  ...flaggedDays.map(d => toDayTs(d)),
-  ...X.filter(Number.isFinite)
-])].sort((a,b)=>a-b);
-
+        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTs(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
         const dayXs = uniqDays.map(t => x(t));
         const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
         const bandW   = Math.max(10, Math.floor(minStep * 0.45));
@@ -1925,24 +1876,20 @@ X = data.map(e =>
     }
 
     // Linien + Punkte
-const mkPath = (values, color) => {
-  let d = "";
-  let count = 0;
-let d = "";
-let count = 0;
-values.forEach((v,i) => {
-  if (v == null || !Number.isFinite(X[i])) return;
-  d += (count === 0 ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
-  count++;
-});
-if (count < 2) return ""; // keine Linie bei <2 Punkten
-return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+    const mkPath = (values, color) => {
+      let d = "";
+      values.forEach((v,i) => {
+        if (v == null || !X[i]) return;
+        d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+      });
+      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+    };
 
     const mkDots = (values, color, kind) => {
       // kind: "sys" | "dia" | "misc"
       let out = "";
       values.forEach((v,i) => {
-        if (v == null || !Number.isFinite(X[i])) return;
+        if (v == null || !X[i]) return;
         const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
         let date = "", ctx = "", note = "";
         if (metric === "bp" && meta) {
@@ -1963,7 +1910,7 @@ return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
       const kind  = isSys ? "sys" : "dia";
       let out = "";
       seriesItem.values.forEach((v,i) => {
-        if (v == null || !Number.isFinite(X[i])) return;
+        if (v == null || !X[i]) return;
         if (v > thr) {
           const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
           const m = meta?.[i] || {};
@@ -2013,6 +1960,7 @@ return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
 };
 
 /* --- Button-Flash --- */
+// (Platzhalter – falls du später den Flash für Chart-Open/Close brauchst)
 let saveFlashTimer = null;
 function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
@@ -2572,6 +2520,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
