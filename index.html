@@ -634,9 +634,16 @@ const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_entries`
 
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
-const box = document.getElementById('err');
-box.style.display='block';
-box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+  const box = document.getElementById('err');
+  box.style.display='block';
+  box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+});
+window.addEventListener('error', (e)=>{
+  const box = document.getElementById('err');
+  if (!box) return;
+  const msg = e?.error?.message || e?.message || 'Unbekannter Fehler';
+  box.style.display='block';
+  box.textContent = 'Fehler: ' + msg;
 });
 
 /* ===== Diagnostics ===== */
@@ -966,12 +973,16 @@ return { pushed, failed };
 }
 
 function showLoginBar(show){
-const bar = document.getElementById('loginBar');
-if (bar) bar.style.display = show ? 'flex' : 'none';
+  const bar = document.getElementById('loginBar');
+  if (!bar) return;
+  bar.style.display = show ? 'flex' : 'none';
 }
+
 function setUserUi(email){
-document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
-document.getElementById('logoutBtn').style.display = email ? '' : 'none';
+  const who = document.getElementById('whoAmI');
+  const lout = document.getElementById('logoutBtn');
+  if (who)  who.textContent = email ? `Angemeldet als: ${email}` : '';
+  if (lout) lout.style.display = email ? '' : 'none';
 }
 
 // Buttons binden (einmalig, z. B. in main())
@@ -1087,12 +1098,17 @@ const from = $("#from").value;
 const to = $("#to").value;
 const entries = await getAllEntries();
 const list = entries
-.filter(e => {
-if (from && e.date < from) return false;
-if (to && e.date > to) return false;
-return true;
-})
-.sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+  .filter(e => {
+    if (!e || !e.date) return false;
+    if (from && e.date < from) return false;
+    if (to && e.date > to) return false;
+    return true;
+  })
+  .sort((a,b)=> {
+    const ta = (a?.ts ?? Date.parse(a?.dateTime ?? a?.date ?? 0)) || 0;
+    const tb = (b?.ts ?? Date.parse(b?.dateTime ?? b?.date ?? 0)) || 0;
+    return ta - tb;
+  });
 
 // 2) Tagesobjekte aufbauen (nur Darstellung)
 const days = new Map();
@@ -2025,10 +2041,17 @@ function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltH
 function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
 
 function setSick(on){
-sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
-if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
-else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
+  sickActive=!!on;
+  setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
+  const fx = $("#forxigaMissToggle");
+  if (sickActive){
+    setForxigaMiss(true);
+    if (fx){ fx.disabled = true; fx.style.opacity = 0.6; }
+  } else {
+    if (fx){ fx.disabled = false; fx.style.opacity = 1; }
+  }
 }
+
 function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "⚠️ NSAR genommen – aktiv", "⚠️ NSAR genommen"); }
@@ -2278,6 +2301,10 @@ return user?.id ?? null;
 
 async function ensureSupabaseClient(){
 if (sbClient) return sbClient;
+if (!window.supabase || !window.supabase.createClient) {
+  diag.add("Supabase UMD nicht geladen – fahre ohne Auth fort");
+  return null;
+}
 
 const rest = await getConf("webhookUrl");
 const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
@@ -2471,10 +2498,10 @@ setDocBadges({ visible: true });
 });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-setDocBadges({ visible: true });
-chartPanel.open = true;
-chartPanel.el.style.display = 'block';
-await chartPanel.draw();
+  setDocBadges({ visible: true });
+  chartPanel.open = true;
+  chartPanel.el.style.display = 'block';
+  await Promise.resolve().then(()=> chartPanel.draw());
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -2545,6 +2572,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
