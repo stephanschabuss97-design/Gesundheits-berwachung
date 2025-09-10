@@ -494,7 +494,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 <div class="controls">
 <select id="metricSel" class="half compact" aria-label="Messgröße auswählen">
     <option value="bp">Blutdruck (Sys/Dia)</option>
-    <option value="weight">Gewicht</option>
+    <option value="weight">Körper</option>
 </select>
 
   <!-- ANKER: chart-averages (Daily) -->
@@ -561,7 +561,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
       
-<h3 class="blockTitle">Gewicht</h3>
+<h3 class="blockTitle">Körper</h3>
 <div class="grid" style="grid-template-columns:1fr 1fr">
   <div>
     <label>Gewicht (kg)</label>
@@ -1608,47 +1608,55 @@ const chartPanel = {
       ];
 
       X = xsBP; // wichtig
-    } else if (metric === "weight") {
-      // Serie Gewicht
-      series = [{
-        name: "Gewicht (kg)",
-        values: data.map(e => e.weight != null ? Number(e.weight) : null),
-        color: "#f59e0b",
-        type: "misc",
-      }];
-
-      // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
-      if (avgBox) {
-        // BP-KPIs ausblenden
-        ["sys","dia","map"].forEach(k => {
-          const el = avgBox.querySelector(`[data-k="${k}"]`);
-          if (el) el.style.display = "none";
-        });
-
-        // letzten Weight/Bauchumfang finden (data ist aufsteigend sortiert)
-        let lastWeight = null, lastWaist = null;
-        for (let i = data.length - 1; i >= 0; i--) {
-          if (lastWeight == null && data[i].weight   != null) lastWeight = Number(data[i].weight);
-          if (lastWaist  == null && data[i].waist_cm != null) lastWaist  = Number(data[i].waist_cm);
-          if (lastWeight != null && lastWaist != null) break;
-        }
-
-        const heightCm = await this.getHeightCm();
-        const hM = heightCm > 0 ? heightCm / 100 : null;
-
-        const bmi  = (lastWeight != null && hM)         ? lastWeight / (hM * hM) : null;
-        const whtr = (lastWaist  != null && heightCm>0) ? lastWaist  / heightCm  : null;
-
-        const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
-        const whtrEl = avgBox.querySelector('[data-k="whtr"]');
-
-        if (bmiEl)  { bmiEl.textContent  = `BMI (letzter): ${bmi  == null ? "–" : bmi.toFixed(1)}`;  bmiEl.style.display  = ""; }
-        if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
-
-        avgBox.style.display = "inline-flex";
-        this.layoutKpis();
-      }
+} else if (metric === "weight") {
+  // Serien: Gewicht + Bauchumfang
+  series = [
+    {
+      name: "Gewicht (kg)",
+      values: data.map(e => e.weight != null ? Number(e.weight) : null),
+      color: "#f59e0b", // Amber
+      type: "misc",
+    },
+    {
+      name: "Bauchumfang (cm)",
+      values: data.map(e => e.waist_cm != null ? Number(e.waist_cm) : null),
+      color: "#10b981", // Grün
+      type: "misc",
     }
+  ];
+
+  // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
+  if (avgBox) {
+    // BP-KPIs ausblenden
+    ["sys","dia","map"].forEach(k => {
+      const el = avgBox.querySelector(`[data-k="${k}"]`);
+      if (el) el.style.display = "none";
+    });
+
+    // letzten Weight/Bauchumfang finden (data ist aufsteigend sortiert)
+    let lastWeight = null, lastWaist = null;
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (lastWeight == null && data[i].weight   != null) lastWeight = Number(data[i].weight);
+      if (lastWaist  == null && data[i].waist_cm != null) lastWaist  = Number(data[i].waist_cm);
+      if (lastWeight != null && lastWaist != null) break;
+    }
+
+    const heightCm = await this.getHeightCm();
+    const hM = heightCm > 0 ? heightCm / 100 : null;
+
+    const bmi  = (lastWeight != null && hM)         ? lastWeight / (hM * hM) : null;
+    const whtr = (lastWaist  != null && heightCm>0) ? lastWaist  / heightCm  : null;
+
+    const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
+    const whtrEl = avgBox.querySelector('[data-k="whtr"]');
+
+    if (bmiEl)  { bmiEl.textContent  = `BMI (letzter): ${bmi  == null ? "–" : bmi.toFixed(1)}`;  bmiEl.style.display  = ""; }
+    if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
+
+    avgBox.style.display = "inline-flex";
+    this.layoutKpis();
+  }
+}
 
     // --- Render-Prep ---
     if (this.svg) this.svg.innerHTML = "";
@@ -2498,6 +2506,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
