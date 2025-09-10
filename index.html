@@ -560,6 +560,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     </div>
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      
 <h3 class="blockTitle">Gewicht</h3>
 <div class="grid" style="grid-template-columns:1fr 1fr">
   <div>
@@ -572,6 +573,11 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
     <small class="hint">Auf Nabelhöhe, entspannt. Dezimal-Komma erlaubt.</small>
   </div>
 </div>
+</div>
+
+    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
+      <h3 class="blockTitle">Kommentar</h3>
+
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
       <h3 class="blockTitle">Kommentar</h3>
@@ -1861,25 +1867,6 @@ const mkPath = (values, color) => {
 };
 
 const mkDots = (values, color, kind) => {
-  let out = "";
-  values.forEach((v, i) => {
-    if (v == null || !Number.isFinite(X[i])) return;
-
-    const cx = x(X[i]).toFixed(1);
-    const cy = y(v).toFixed(1);
-
-    const m = meta?.[i] || {};
-    const date = m.date || "";
-    const ctx  = m.ctx  || "";
-    const note = m.note || "";
-
-    out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-              data-kind="${kind}" data-val="${v}"
-              data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-              data-note="${esc(note)}" />`;
-  });
-  return out;
-};
 
         out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
                   data-kind="${kind}" data-val="${v}"
@@ -2505,3 +2492,4 @@ main();
 </div>
 </body>
 </html>
+
