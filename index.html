@@ -1320,8 +1320,11 @@ const chartPanel = {
     if (getComputedStyle(contentHost).position === "static") {
   contentHost.style.position = "relative";
 }
-    contentHost.appendChild(tip);
-    this.tip = tip;
+if (getComputedStyle(contentHost).position === "static") {
+  contentHost.style.position = "relative";
+}
+contentHost.appendChild(tip);
+this.tip = tip;
 
     // Interaktivität
     if (this.svg) {
@@ -1548,11 +1551,12 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
     const data   = await this.getFiltered();
 
     // X-Basis
-    const xsAll = data.map(e =>
+const xsAll = data.map(e =>
   e?.ts ??
   (e?.dateTime ? Date.parse(e.dateTime) :
    (e?.date ? Date.parse(e.date) : NaN))
 );
+
     let series = [];
     let X = xsAll;
 
@@ -1638,6 +1642,10 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
 
+// Box sichtbar + Ampel (Dots) neu layouten
+avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
+this.layoutKpis();
+
         // Re-Layout: 1 Dot je KPI, WHO-Farbe
         this.layoutKpis();
       }
@@ -1652,13 +1660,26 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
 
       X = xsBP; // wichtig
 } else if (metric === "weight") {
-  // Serie Gewicht
-  series = [{
-    name: "Gewicht (kg)",
-    values: data.map(e => e.weight != null ? Number(e.weight) : null),
-    color: "#f59e0b",
-    type: "misc",
-  }];
+// Serie Gewicht
+series = [{
+  name: "Gewicht (kg)",
+  values: data.map(e => e.weight != null ? Number(e.weight) : null),
+  color: "#f59e0b",
+  type: "misc",
+}];
+
+// X auf Tage normalisieren (fällt auf dateTime zurück)
+const toDayTs = (isoDate) => {
+  if (!isoDate) return NaN;
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return Date.UTC(y, (m || 1) - 1, d || 1);
+};
+X = data.map(e =>
+  e?.ts ??
+  (e?.date ? toDayTs(e.date) :
+   (e?.dateTime ? Date.parse(e.dateTime) : NaN))
+);
+
 
   // X auf Tage normalisieren (fällt auf dateTime zurück)
   const toDayTs = (isoDate) => {
@@ -1907,14 +1928,15 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
 const mkPath = (values, color) => {
   let d = "";
   let count = 0;
-  values.forEach((v,i) => {
-    if (v == null || !Number.isFinite(X[i])) return;
-    d += (count === 0 ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
-    count++;
-  });
-  if (count < 2) return ""; // nichts zeichnen, wenn zu wenige Punkte
-  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
-};
+let d = "";
+let count = 0;
+values.forEach((v,i) => {
+  if (v == null || !Number.isFinite(X[i])) return;
+  d += (count === 0 ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+  count++;
+});
+if (count < 2) return ""; // keine Linie bei <2 Punkten
+return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
 
     const mkDots = (values, color, kind) => {
       // kind: "sys" | "dia" | "misc"
@@ -2550,6 +2572,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
