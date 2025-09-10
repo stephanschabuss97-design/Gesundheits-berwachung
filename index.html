@@ -1231,47 +1231,16 @@ if (!daysArr.length){
 }
 }
   
-/* ===== Simple SVG Chart (Daily) – komplett & robust (mit WHO-Ampellogik) ===== */
-/* Kleine Helfer/Fallbacks (verhindern ReferenceErrors) */
-const $ = (sel, root = document) => root.querySelector(sel);
-const esc = (s) => String(s ?? "")
-  .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+/* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
-const perfStats = (typeof window !== "undefined" && window.perfStats) || (() => {
-  const xs = [];
-  return {
-    add: (_k, v) => xs.push(v),
-    snap: (_k) => {
-      const a = xs.slice().sort((x,y)=>x-y);
-      const q = (p)=>a.length? a[Math.min(a.length-1, Math.floor(p*(a.length-1)))] : 0;
-      return { p50:q(0.5), p95:q(0.95), p99:q(0.99), count:a.length };
-    }
-  };
-})();
-
-const diag = (typeof window !== "undefined" && window.diag) || { add: () => {} };
-
-/* Falls extern nicht vorhanden, sauber überspringen */
+/* Fallbacks nur, wenn extern nicht verfügbar */
 const safeEnsureSupabaseClient = async () => {
-  try {
-    if (typeof ensureSupabaseClient === "function") return await ensureSupabaseClient();
-  } catch(_) {}
+  try { if (typeof ensureSupabaseClient === "function") return await ensureSupabaseClient(); } catch(_) {}
   return null;
 };
 const safeGetConf = async (k) => {
-  try {
-    if (typeof getConf === "function") return await getConf(k);
-  } catch(_) {}
+  try { if (typeof getConf === "function") return await getConf(k); } catch(_) {}
   return null;
-};
-
-/* Gewicht-Only-Detektion, um Notizen-Tageszeilen zu erkennen */
-const isWeightOnly = (e) => {
-  const hasW = e?.weight != null || e?.weight_kg != null;
-  const hasBP = e?.sys != null || e?.dia != null || e?.map != null;
-  const hasWaist = e?.waist_cm != null;
-  return hasW && !hasBP && !hasWaist;
 };
 
 const chartPanel = {
@@ -1472,8 +1441,8 @@ const chartPanel = {
     const box = $("#chartAverages");
     if (!box) return;
 
-    // 1) Alle alten Deko-Elemente entfernen
-    [...box.querySelectorAll(".kpi-dot, .kpi-sep")].forEach(n => n.remove());
+    // 1) Alle alten Deko-Elemente entfernen (auch statische .sep aus dem HTML!)
+    [...box.querySelectorAll(".kpi-dot, .kpi-sep, .sep")].forEach(n => n.remove());
 
     // 2) Sichtbare KPI-Spans ermitteln (display != "none")
     const items = [...box.querySelectorAll('[data-k]')].filter(el => el.style.display !== "none");
@@ -1725,7 +1694,7 @@ const chartPanel = {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
       }
-      flagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
+      flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
     }
 
     // Skalen
@@ -1820,6 +1789,7 @@ const chartPanel = {
         }
       }
 
+      const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
       const flaggedDays = [...dayFlags.keys()]
         .filter(d => {
           const r = dayFlags.get(d);
@@ -1833,7 +1803,7 @@ const chartPanel = {
         g.setAttribute("pointer-events","none");
         g.setAttribute("aria-hidden","true");
 
-        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTs(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
+        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
         const dayXs = uniqDays.map(t => x(t));
         const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
         const bandW   = Math.max(10, Math.floor(minStep * 0.45));
@@ -1841,7 +1811,7 @@ const chartPanel = {
         const slotH   = innerH / 6; // 1 Training + bis zu 5 Bad
 
         for (const d of flaggedDays) {
-          const t = toDayTs(d);
+          const t = toDayTsLocal(d);
           const cx = x(t), xLeft = Math.round(cx - bandW/2);
           const rec = dayFlags.get(d);
           let used = 0;
@@ -1954,13 +1924,12 @@ const chartPanel = {
 
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
-    const sPerf = (perfStats.add("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap("drawChart"));
-    diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+    const sPerf = (perfStats.add?.("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap?.("drawChart")) || {p50:0,p95:0,p99:0,count:0};
+    diag.add?.(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   },
 };
 
-/* --- Button-Flash --- */
-// (Platzhalter – falls du später den Flash für Chart-Open/Close brauchst)
+/* --- Button-Flash (nur Platzhalter, wie gehabt) --- */
 let saveFlashTimer = null;
 function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
@@ -2520,6 +2489,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
