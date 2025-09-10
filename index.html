@@ -1231,7 +1231,7 @@ if (!daysArr.length){
 }
 }
 
-/* ===== Simple SVG Chart (Daily) – korrigiert & komplett ===== */
+/* ===== Simple SVG Chart (Daily) – komplett ===== */
 const chartPanel = {
   el: null,
   svg: null,
@@ -1281,12 +1281,8 @@ const chartPanel = {
     this.svg.addEventListener("pointermove", (e) => {
       if (this.tipSticky) return;
       const tgt = e.target;
-      const hasNote =
-        tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) {
-        this.hideTip();
-        return;
-      }
+      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      if (!hasNote) { this.hideTip(); return; }
       this.fillTipFromTarget(tgt);
       this.positionTip(e);
     });
@@ -1299,13 +1295,9 @@ const chartPanel = {
     // Click/Tap: Tooltip toggeln (mobil-freundlich)
     this.svg.addEventListener("click", (e) => {
       const tgt = e.target;
-      const hasNote =
-        tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
       if (!hasNote) {
-        if (this.tipSticky) {
-          this.tipSticky = false;
-          this.hideTip();
-        }
+        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
         return;
       }
       this.fillTipFromTarget(tgt);
@@ -1314,18 +1306,14 @@ const chartPanel = {
     });
 
     // Redraw bei Resize/Orientation
-    const ro = new ResizeObserver(() => {
-      if (this.open) this.draw();
-    });
+    const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
     ro.observe(this.el);
     this._ro = ro;
     window.addEventListener("orientationchange", () => {
-      setTimeout(() => {
-        if (this.open) this.draw();
-      }, 150);
+      setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
 
-    // KPI-Box aufrüsten (BMI/WHtR-Spans nachrüsten, falls nicht vorhanden)
+    // KPI-Box: Felder sicherstellen
     this.ensureKpiFields();
   },
 
@@ -1345,35 +1333,30 @@ const chartPanel = {
   async getFiltered() {
     const entries = await getAllEntries();
     const from = $("#from").value;
-    const to = $("#to").value;
+    const to   = $("#to").value;
     return entries
-      .filter((e) => {
+      .filter(e => {
         if (from && e.date < from) return false;
-        if (to && e.date > to) return false;
+        if (to   && e.date > to)   return false;
         return true;
       })
-      .sort(
-        (a, b) =>
-          (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))
-      );
+      .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
   },
 
   // Höhe laden (Konfig oder Fallback 183 cm)
-async function getHeightCm() {
-  // 1) Versuch: Supabase Profil
-  const supa = await ensureSupabaseClient();
-  if (supa) {
-    const { data, error } = await supa
-      .from('user_profiles')
-      .select('height_cm')
-      .single();
-    if (!error && data?.height_cm) return Number(data.height_cm);
-  }
-  // 2) Fallback: lokale Konfig
-  const v = await getConf('height_cm');
-  const n = Number(v); if (Number.isFinite(n) && n > 0) return n;
-  return 183;
-}
+  async getHeightCm() {
+    // 1) Supabase-Profil
+    const supa = await ensureSupabaseClient();
+    if (supa) {
+      const { data, error } = await supa.from("user_profiles").select("height_cm").single();
+      if (!error && data?.height_cm) return Number(data.height_cm);
+    }
+    // 2) lokale Konfig
+    const v = await getConf("height_cm");
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+    return 183;
+  },
 
   // Tooltip
   hideTip() {
@@ -1384,21 +1367,17 @@ async function getHeightCm() {
   },
   positionTip(e) {
     if (!this.tip) return;
-    const hostRect =
-      (this.el.querySelector(".content") || this.el).getBoundingClientRect();
+    const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
     const x = e.clientX - hostRect.left;
     const y = e.clientY - hostRect.top;
     this.tip.style.left = `${x + 10}px`;
-    this.tip.style.top = `${y + 10}px`;
+    this.tip.style.top  = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
   fillTipFromTarget(tgt) {
     if (!this.tip) return;
     const note = tgt.getAttribute("data-note") || "";
-    if (!note) {
-      this.hideTip();
-      return;
-    }
+    if (!note) { this.hideTip(); return; }
     this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
   },
 
@@ -1406,11 +1385,11 @@ async function getHeightCm() {
     const box = $("#chartAverages");
     if (!box) return;
     const need = [
-      { k: "sys", label: "Durchschnitt Sys: –" },
-      { k: "dia", label: "Durchschnitt Dia: –" },
-      { k: "map", label: "Durchschnitt MAP: –" },
-      { k: "bmi", label: "BMI Ø: –" },
-      { k: "whtr", label: "WHtR Ø: –" },
+      { k: "sys",  label: "Durchschnitt Sys: –" },
+      { k: "dia",  label: "Durchschnitt Dia: –" },
+      { k: "map",  label: "Durchschnitt MAP: –" },
+      { k: "bmi",  label: "BMI (letzter): –" },
+      { k: "whtr", label: "WHtR (letzter): –" },
     ];
     const addSep = () => {
       const sep = document.createElement("span");
@@ -1419,7 +1398,6 @@ async function getHeightCm() {
       sep.textContent = "•";
       box.appendChild(sep);
     };
-    // Stelle sicher, dass alle KPI-Spans existieren (Reihenfolge: Sys • Dia • MAP • BMI • WHtR)
     need.forEach((n, i) => {
       if (!box.querySelector(`[data-k="${n.k}"]`)) {
         if (box.children.length && i > 0) addSep();
@@ -1435,10 +1413,10 @@ async function getHeightCm() {
   async draw() {
     const t0 = performance.now();
     const metric = $("#metricSel").value;
-    const data = await this.getFiltered();
+    const data   = await this.getFiltered();
 
     // X-Basis
-    const xsAll = data.map((e) => e.ts ?? Date.parse(e.dateTime));
+    const xsAll = data.map(e => e.ts ?? Date.parse(e.dateTime));
     let series = [];
     let X = xsAll;
 
@@ -1473,122 +1451,109 @@ async function getHeightCm() {
     if (metric === "bp") {
       // Nur echte Messungen
       const mData = data.filter(
-        (e) =>
-          (e.context === "Morgen" || e.context === "Abend") &&
-          (e.sys != null || e.dia != null)
+        e => (e.context === "Morgen" || e.context === "Abend") && (e.sys != null || e.dia != null)
       );
 
       // Meta
-      meta = mData.map((e) => ({
+      meta = mData.map(e => ({
         date: e.date,
-        ctx: e.context,
-        sys: e.sys != null ? Number(e.sys) : null,
-        dia: e.dia != null ? Number(e.dia) : null,
+        ctx:  e.context,
+        sys:  e.sys != null ? Number(e.sys) : null,
+        dia:  e.dia != null ? Number(e.dia) : null,
         note: notesByDate.get(e.date) || "",
       }));
 
       // X auf Tage normalisieren
-      const xsBP = mData.map((e) => toDayTs(e.date));
+      const xsBP = mData.map(e => toDayTs(e.date));
 
       // Werte-Reihen (Index passend zu meta)
-      const sysM = mData.map((e) =>
-        e.context === "Morgen" && e.sys != null ? Number(e.sys) : null
-      );
-      const sysA = mData.map((e) =>
-        e.context === "Abend" && e.sys != null ? Number(e.sys) : null
-      );
-      const diaM = mData.map((e) =>
-        e.context === "Morgen" && e.dia != null ? Number(e.dia) : null
-      );
-      const diaA = mData.map((e) =>
-        e.context === "Abend" && e.dia != null ? Number(e.dia) : null
-      );
+      const sysM = mData.map(e => (e.context === "Morgen" && e.sys != null) ? Number(e.sys) : null);
+      const sysA = mData.map(e => (e.context === "Abend"  && e.sys != null) ? Number(e.sys) : null);
+      const diaM = mData.map(e => (e.context === "Morgen" && e.dia != null) ? Number(e.dia) : null);
+      const diaA = mData.map(e => (e.context === "Abend"  && e.dia != null) ? Number(e.dia) : null);
 
       // KPIs (ø über alle Messungen)
       const avg = (arr) => {
-        const v = arr.filter((x) => x != null);
-        return v.length ? v.reduce((p, c) => p + c, 0) / v.length : null;
+        const v = arr.filter(x => x != null);
+        return v.length ? v.reduce((p,c) => p + c, 0) / v.length : null;
       };
-      const mapArr = mData.map((e) =>
+      const mapArr = mData.map(e =>
         e.sys != null && e.dia != null
           ? Number(e.dia) + (Number(e.sys) - Number(e.dia)) / 3
           : null
       );
 
       if (avgBox) {
-        const avgSys = avg(mData.map((e) => (e.sys != null ? Number(e.sys) : null)));
-        const avgDia = avg(mData.map((e) => (e.dia != null ? Number(e.dia) : null)));
+        const avgSys = avg(mData.map(e => (e.sys != null ? Number(e.sys) : null)));
+        const avgDia = avg(mData.map(e => (e.dia != null ? Number(e.dia) : null)));
         const avgMap = avg(mapArr);
 
-        if (avgSys != null || avgDia != null || avgMap != null) {
-          avgBox.style.display = "inline-flex";
-          const f0 = (v) => (v == null ? "–" : Math.round(v).toString());
-          avgBox.querySelector('[data-k="sys"]').textContent =
-            "Durchschnitt Sys: " + f0(avgSys);
-          avgBox.querySelector('[data-k="dia"]').textContent =
-            "Durchschnitt Dia: " + f0(avgDia);
-          avgBox.querySelector('[data-k="map"]').textContent =
-            "Durchschnitt MAP: " + f0(avgMap);
-        } else {
-          avgBox.style.display = "none";
-        }
-      }
+        const f0 = (v) => (v == null ? "–" : Math.round(v).toString());
 
-      // ➕ PKI: BMI & WHtR (aus Ø Gewicht/Bauchumfang im Zeitraum)
-      const avgNum = (arr) => {
-        const v = arr.filter((x) => Number.isFinite(x));
-        return v.length ? v.reduce((p, c) => p + c, 0) / v.length : null;
-      };
-      const weights = data
-        .map((e) => (e.weight != null ? Number(e.weight) : null))
-        .filter((v) => v != null);
-      const waists = data
-        .map((e) => (e.waist_cm != null ? Number(e.waist_cm) : null))
-        .filter((v) => v != null);
-      const avgWeight = avgNum(weights);
-      const avgWaist = avgNum(waists);
-
-      const heightCm = await this.getHeightCm();
-      const heightM = heightCm > 0 ? heightCm / 100 : null;
-
-      const bmi =
-        avgWeight != null && heightM
-          ? avgWeight / (heightM * heightM)
-          : null;
-      const whtr =
-        avgWaist != null && heightCm > 0 ? avgWaist / heightCm : null;
-
-      if (avgBox) {
-        const f1 = (v) => (v == null ? "–" : v.toFixed(1));
-        const f2 = (v) => (v == null ? "–" : v.toFixed(2));
-        // KPI-Felder existieren dank ensureKpiFields()
-        const bmiEl = avgBox.querySelector('[data-k="bmi"]');
+        // Zeige BP-KPIs, blende BMI/WHtR aus
+        avgBox.querySelector('[data-k="sys"]').style.display  = "";
+        avgBox.querySelector('[data-k="dia"]').style.display  = "";
+        avgBox.querySelector('[data-k="map"]').style.display  = "";
+        const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
         const whtrEl = avgBox.querySelector('[data-k="whtr"]');
-        if (bmiEl) bmiEl.textContent = `BMI Ø: ${f1(bmi)}`;
-        if (whtrEl) whtrEl.textContent = `WHtR Ø: ${f2(whtr)}`;
+        if (bmiEl)  bmiEl.style.display  = "none";
+        if (whtrEl) whtrEl.style.display = "none";
+
+        avgBox.querySelector('[data-k="sys"]').textContent = "Durchschnitt Sys: " + f0(avgSys);
+        avgBox.querySelector('[data-k="dia"]').textContent = "Durchschnitt Dia: " + f0(avgDia);
+        avgBox.querySelector('[data-k="map"]').textContent = "Durchschnitt MAP: " + f0(avgMap);
+
+        avgBox.style.display = (avgSys != null || avgDia != null || avgMap != null) ? "inline-flex" : "none";
       }
 
       // Serien definieren
       series = [
         { name: "Sys Morgens", values: sysM, color: "#93c5fd", type: "sys" },
-        { name: "Sys Abends", values: sysA, color: "#2563eb", type: "sys" },
+        { name: "Sys Abends",  values: sysA, color: "#2563eb", type: "sys" },
         { name: "Dia Morgens", values: diaM, color: "#f9a8d4", type: "dia" },
-        { name: "Dia Abends", values: diaA, color: "#db2777", type: "dia" },
+        { name: "Dia Abends",  values: diaA, color: "#db2777", type: "dia" },
       ];
 
       X = xsBP; // wichtig
     } else if (metric === "weight") {
-      if (avgBox) avgBox.style.display = "none";
-      series = [
-        {
-          name: "Gewicht (kg)",
-          values: data.map((e) =>
-            e.weight != null ? Number(e.weight) : null
-          ),
-          color: "#f59e0b",
-          type: "misc",
-        },
-      ];
+      // Serie Gewicht
+      series = [{
+        name: "Gewicht (kg)",
+        values: data.map(e => e.weight != null ? Number(e.weight) : null),
+        color: "#f59e0b",
+        type: "misc",
+      }];
+
+      // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
+      if (avgBox) {
+        // BP-KPIs ausblenden
+        ["sys","dia","map"].forEach(k => {
+          const el = avgBox.querySelector(`[data-k="${k}"]`);
+          if (el) el.style.display = "none";
+        });
+
+        // letzten Weight/Bauchumfang finden (data ist aufsteigend sortiert)
+        let lastWeight = null, lastWaist = null;
+        for (let i = data.length - 1; i >= 0; i--) {
+          if (lastWeight == null && data[i].weight   != null) lastWeight = Number(data[i].weight);
+          if (lastWaist  == null && data[i].waist_cm != null) lastWaist  = Number(data[i].waist_cm);
+          if (lastWeight != null && lastWaist != null) break;
+        }
+
+        const heightCm = await this.getHeightCm();
+        const hM = heightCm > 0 ? heightCm / 100 : null;
+
+        const bmi  = (lastWeight != null && hM)         ? lastWeight / (hM * hM) : null;
+        const whtr = (lastWaist  != null && heightCm>0) ? lastWaist  / heightCm  : null;
+
+        const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
+        const whtrEl = avgBox.querySelector('[data-k="whtr"]');
+
+        if (bmiEl)  { bmiEl.textContent  = `BMI (letzter): ${bmi  == null ? "–" : bmi.toFixed(1)}`;  bmiEl.style.display  = ""; }
+        if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
+
+        avgBox.style.display = "inline-flex";
+      }
     }
 
     // --- Render-Prep ---
@@ -1596,25 +1561,20 @@ async function getHeightCm() {
     this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
-    const hasAny = series.some((s) => s.values.some((v) => v != null));
+    const hasAny = series.some(s => s.values.some(v => v != null));
     if (!hasAny) {
-      this.svg.innerHTML =
-        '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
+      this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
     }
 
     // Dynamische Größe
     const bbox = this.svg.getBoundingClientRect();
-    const W = Math.max(300, Math.floor(bbox.width || 640));
+    const W = Math.max(300, Math.floor(bbox.width  || 640));
     const H = Math.max(200, Math.floor(bbox.height || 280));
     this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
-    const PL = 48,
-      PR = 16,
-      PT = 12,
-      PB = 28;
-    const innerW = W - PL - PR,
-      innerH = H - PT - PB;
+    const PL = 48, PR = 16, PT = 12, PB = 28;
+    const innerW = W - PL - PR, innerH = H - PT - PB;
 
     // === Flags -> X-Bereich erweitern ===
     let flagTs = [];
@@ -1635,28 +1595,25 @@ async function getHeightCm() {
         const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
         const flags = {
           water: !!e.low_intake,
-          salt: !!e.salt_high,
+          salt:  !!e.salt_high,
           sugar: !!e.sugar_high,
-          sick: !!e.sick,
+          sick:  !!e.sick,
           meds,
         };
         for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) {
-            rec.seen[k] = true;
-            rec.bad++;
-          }
+          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
       }
-      flagTs = [...dayFlagsTmp.keys()].map((d) => toDayTs(d));
+      flagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
     }
 
     // Skalen
-    const xVals = X.filter((t) => Number.isFinite(t));
+    const xVals = X.filter(t => Number.isFinite(t));
     let xmin = Math.min(...xVals);
     let xmax = Math.max(...xVals);
 
     if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) {
-      // Fallback (sollte praktisch nicht passieren)
+      // Fallback
       xmin = Date.now() - 7 * 864e5;
       xmax = Date.now();
     }
@@ -1669,37 +1626,31 @@ async function getHeightCm() {
 
     // Padding (2%)
     const pad = xmax > xmin ? (xmax - xmin) * 0.02 : 0;
-    xmin -= pad;
-    xmax += pad;
+    xmin -= pad; xmax += pad;
 
-    const allY = series.flatMap((s) => s.values.filter((v) => v != null));
+    const allY   = series.flatMap(s => s.values.filter(v => v != null));
     const yminRaw = Math.min(...allY);
     const ymaxRaw = Math.max(...allY);
-    const range = Math.max(1, ymaxRaw - yminRaw);
-    const ypad = Math.max(range * 0.08, 1);
+    const range   = Math.max(1, ymaxRaw - yminRaw);
+    const ypad    = Math.max(range * 0.08, 1);
     const y0 = yminRaw - ypad;
     const y1 = ymaxRaw + ypad;
 
     const x = (t) => PL + ((t - xmin) / Math.max(1, xmax - xmin)) * innerW;
-    const y = (v) =>
-      PT + (1 - (v - y0) / Math.max(1, y1 - y0)) * innerH;
+    const y = (v) => PT + (1 - (v - y0) / Math.max(1, y1 - y0)) * innerH;
 
-    const line = (x1, y1_, x2, y2, stroke, dash = "") =>
-      `<line x1="${x1}" y1="${y1_}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${
-        dash ? `stroke-dasharray="${dash}"` : ""
-      } />`;
-    const text = (tx, ty, str, anchor = "end") =>
-      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(
-        str
-      )}</text>`;
+    const line = (x1,y1_,x2,y2,stroke,dash="") =>
+      `<line x1="${x1}" y1="${y1_}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash ? `stroke-dasharray="${dash}"` : ""} />`;
+    const text = (tx,ty,str,anchor="end") =>
+      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
 
     // Grid + Labels
     let grid = "";
     const ticks = 9;
-    for (let i = 0; i <= ticks; i++) {
+    for (let i=0; i<=ticks; i++) {
       const vv = y0 + (i * (y1 - y0)) / ticks;
       const yy = y(vv);
-      grid += line(PL, yy, W - PR, yy, "#2a3140");
+      grid += line(PL, yy, W-PR, yy, "#2a3140");
       grid += text(PL - 6, yy + 4, Math.round(vv).toString());
     }
     // vertikale Wochenlinien + Datum
@@ -1709,9 +1660,7 @@ async function getHeightCm() {
       const xx = x(t);
       grid += line(xx, PT, xx, H - PB, "#1b1f28", "3 3");
       const d = new Date(t);
-      const lbl = `${String(d.getDate()).padStart(2, "0")}.${String(
-        d.getMonth() + 1
-      ).padStart(2, "0")}.`;
+      const lbl = `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.`;
       grid += text(xx, H - 8, lbl, "middle");
     }
     // Achsen
@@ -1725,125 +1674,90 @@ async function getHeightCm() {
       grid += line(PL, ySys, W - PR, ySys, "#ef4444", "6 4");
       grid += line(PL, yDia, W - PR, yDia, "#ef4444", "6 4");
       grid += text(W - PR + 2, ySys + 4, "Sys 130", "start");
-      grid += text(W - PR + 2, yDia + 4, "Dia 90", "start");
+      grid += text(W - PR + 2, yDia + 4, "Dia 90",  "start");
     }
 
     this.svg.insertAdjacentHTML("beforeend", grid);
 
-    // === Flags Overlay (über gesamte Plotfläche) ===
+    // === Flags Overlay (nur BP) ===
     if (metric === "bp") {
       const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
       for (const e of data) {
         if (!e?.date) continue;
         let rec = dayFlags.get(e.date);
         if (!rec) {
-          rec = {
-            training: false,
-            badCount: 0,
-            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
-          };
+          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
           dayFlags.set(e.date, rec);
         }
         if (e.training) rec.training = true;
         const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
         const flags = {
-          water: !!e.low_intake,
-          salt: !!e.salt_high,
-          sugar: !!e.sugar_high,
-          sick: !!e.sick,
-          meds,
+          water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds
         };
         for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) {
-            rec.seen[k] = true;
-            rec.badCount++;
-          }
+          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
         }
       }
 
       const flaggedDays = [...dayFlags.keys()]
-        .filter((d) => {
+        .filter(d => {
           const r = dayFlags.get(d);
           return r && (r.training || r.badCount > 0);
         })
         .sort();
 
       if (flaggedDays.length) {
-        const g = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "g"
-        );
-        g.setAttribute("class", "flags");
-        g.setAttribute("pointer-events", "none");
-        g.setAttribute("aria-hidden", "true");
+        const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+        g.setAttribute("class","flags");
+        g.setAttribute("pointer-events","none");
+        g.setAttribute("aria-hidden","true");
 
-        const uniqDays = [
-          ...new Set([...flaggedDays.map((d) => toDayTs(d)), ...X.filter(Boolean)]),
-        ].sort((a, b) => a - b);
-        const dayXs = uniqDays.map((t) => x(t));
-        const minStep =
-          dayXs.length > 1
-            ? Math.min(...dayXs.slice(1).map((v, i) => v - dayXs[i]))
-            : innerW;
-        const bandW = Math.max(10, Math.floor(minStep * 0.45));
+        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTs(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
+        const dayXs = uniqDays.map(t => x(t));
+        const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
+        const bandW   = Math.max(10, Math.floor(minStep * 0.45));
         const yBottom = PT + innerH;
-        const slotH = innerH / 6; // 1 Training + bis zu 5 Bad
+        const slotH   = innerH / 6; // 1 Training + bis zu 5 Bad
 
         for (const d of flaggedDays) {
           const t = toDayTs(d);
-          const cx = x(t),
-            xLeft = Math.round(cx - bandW / 2);
+          const cx = x(t), xLeft = Math.round(cx - bandW/2);
           const rec = dayFlags.get(d);
           let used = 0;
 
           // Training (grün)
           if (rec.training) {
             const yTop = Math.round(yBottom - (used + 1) * slotH);
-            const r = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "rect"
-            );
-            r.setAttribute("x", xLeft);
-            r.setAttribute("y", yTop);
-            r.setAttribute("width", bandW);
-            r.setAttribute("height", Math.ceil(slotH));
-            r.setAttribute("fill", "#10b981");
-            r.setAttribute("fill-opacity", "0.22");
-            r.setAttribute("stroke", "#fff");
-            r.setAttribute("stroke-opacity", "0.06");
-            r.setAttribute("shape-rendering", "crispEdges");
+            const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+            r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
+            r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
+            r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity","0.22");
+            r.setAttribute("stroke", "#fff");  r.setAttribute("stroke-opacity","0.06");
+            r.setAttribute("shape-rendering","crispEdges");
             g.appendChild(r);
             used++;
           }
-
           // Bad-Flags (rot gestapelt)
-          for (let i = 0; i < rec.badCount; i++) {
+          for (let i=0; i<rec.badCount; i++) {
             const yTop = Math.round(yBottom - (used + 1) * slotH);
-            const r = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "rect"
-            );
-            r.setAttribute("x", xLeft);
-            r.setAttribute("y", yTop);
-            r.setAttribute("width", bandW);
-            r.setAttribute("height", Math.ceil(slotH));
-            r.setAttribute("fill", "#ef4444");
-            r.setAttribute("fill-opacity", "0.18");
-            r.setAttribute("stroke", "#fff");
-            r.setAttribute("stroke-opacity", "0.06");
-            r.setAttribute("shape-rendering", "crispEdges");
+            const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+            r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
+            r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
+            r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity","0.18");
+            r.setAttribute("stroke", "#fff");  r.setAttribute("stroke-opacity","0.06");
+            r.setAttribute("shape-rendering","crispEdges");
             g.appendChild(r);
             used++;
           }
         }
-        this.svg.appendChild(g); // liegt hinter den Linien/Punkten
+        this.svg.appendChild(g); // hinter den Linien/Punkten
       }
     }
 
     // Linien + Punkte
     const mkPath = (values, color) => {
       let d = "";
-      values.forEach((v, i) => {
+      values.forEach((v,i) => {
         if (v == null || !X[i]) return;
         d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
       });
@@ -1853,23 +1767,16 @@ async function getHeightCm() {
     const mkDots = (values, color, kind) => {
       // kind: "sys" | "dia" | "misc"
       let out = "";
-      values.forEach((v, i) => {
+      values.forEach((v,i) => {
         if (v == null || !X[i]) return;
-        const cx = x(X[i]).toFixed(1),
-          cy = y(v).toFixed(1);
-        let date = "",
-          ctx = "",
-          note = "";
+        const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+        let date = "", ctx = "", note = "";
         if (metric === "bp" && meta) {
-          const m = meta[i];
-          date = m?.date || "";
-          ctx = m?.ctx || "";
-          note = m?.note || "";
+          const m = meta[i]; date = m?.date || ""; ctx = m?.ctx || ""; note = m?.note || "";
         }
         out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-                  data-kind="${kind}" data-val="${v}" data-date="${esc(
-          date
-        )}" data-ctx="${esc(ctx)}"
+                  data-kind="${kind}" data-val="${v}"
+                  data-date="${esc(date)}" data-ctx="${esc(ctx)}"
                   data-note="${esc(note)}" />`;
       });
       return out;
@@ -1878,14 +1785,13 @@ async function getHeightCm() {
     const mkAlertDots = (seriesItem) => {
       if (metric !== "bp") return "";
       const isSys = seriesItem.type === "sys";
-      const thr = isSys ? TH_SYS : TH_DIA;
-      const kind = isSys ? "sys" : "dia";
+      const thr   = isSys ? TH_SYS : TH_DIA;
+      const kind  = isSys ? "sys" : "dia";
       let out = "";
-      seriesItem.values.forEach((v, i) => {
+      seriesItem.values.forEach((v,i) => {
         if (v == null || !X[i]) return;
         if (v > thr) {
-          const cx = x(X[i]).toFixed(1),
-            cy = y(v).toFixed(1);
+          const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
           const m = meta?.[i] || {};
           out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
                    data-kind="${kind}" data-val="${v}"
@@ -1901,7 +1807,7 @@ async function getHeightCm() {
       this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
       this.svg.insertAdjacentHTML(
         "beforeend",
-        mkDots(s.values, s.color, s.type === "sys" || s.type === "dia" ? s.type : "misc")
+        mkDots(s.values, s.color, (s.type === "sys" || s.type === "dia") ? s.type : "misc")
       );
       if (metric === "bp") {
         this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
@@ -1911,9 +1817,7 @@ async function getHeightCm() {
       wrap.style.display = "inline-flex";
       wrap.style.alignItems = "center";
       wrap.style.gap = "6px";
-      const dot = Object.assign(document.createElement("span"), {
-        className: "dot",
-      });
+      const dot = Object.assign(document.createElement("span"), { className: "dot" });
       dot.style.background = s.color;
       const label = document.createElement("span");
       label.textContent = s.name;
@@ -1921,20 +1825,10 @@ async function getHeightCm() {
       this.legend.appendChild(wrap);
     });
 
-    if (this.tipSticky) {
-      this.tipSticky = false;
-      this.hideTip();
-    }
+    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
-    const sPerf = (
-      perfStats.add("drawChart", performance.now() - t0),
-      perfStats.snap("drawChart")
-    );
-    diag.add(
-      `[perf] drawChart p50=${sPerf.p50 | 0}ms p95=${sPerf.p95 | 0}ms p99=${
-        sPerf.p99 | 0
-      }ms (n=${sPerf.count})`
-    );
+    const sPerf = (perfStats.add("drawChart", performance.now() - t0), perfStats.snap("drawChart"));
+    diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   },
 };
 
@@ -2498,4 +2392,5 @@ main();
 </div>
 </body>
 </html>
+
 
