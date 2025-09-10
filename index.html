@@ -1359,15 +1359,21 @@ const chartPanel = {
   },
 
   // Höhe laden (Konfig oder Fallback 183 cm)
-  async getHeightCm() {
-    // Nutzt deine IndexedDB-CONF (getConf ist global definiert)
-    try {
-      const v = await getConf("height_cm");
-      const n = Number(v);
-      if (Number.isFinite(n) && n > 0) return n;
-    } catch (_) {}
-    return 183; // Fallback
-  },
+async function getHeightCm() {
+  // 1) Versuch: Supabase Profil
+  const supa = await ensureSupabaseClient();
+  if (supa) {
+    const { data, error } = await supa
+      .from('user_profiles')
+      .select('height_cm')
+      .single();
+    if (!error && data?.height_cm) return Number(data.height_cm);
+  }
+  // 2) Fallback: lokale Konfig
+  const v = await getConf('height_cm');
+  const n = Number(v); if (Number.isFinite(n) && n > 0) return n;
+  return 183;
+}
 
   // Tooltip
   hideTip() {
@@ -2112,7 +2118,7 @@ entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
 const hasContent =
 (entry.weight != null) ||
-(entry.hip_cm != null) ||
+(entry.waist_cm != null) ||
 !!entry.notes ||
 entry.training || entry.low_intake || entry.sick ||
 entry.valsartan_missed || entry.forxiga_missed ||
@@ -2172,7 +2178,7 @@ diag.add("Webhook: Netzwerkfehler");
     const mapped = {
       date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
       sys: r.sys, dia: r.dia, pulse: r.pulse,
-      weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
+      weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
       training: r.training, low_intake: r.low_intake, sick: r.sick,
       valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
       salt_high: r.salt_high, sugar_high: r.sugar_high,
@@ -2266,7 +2272,7 @@ const row = n;
 const mapped = {
 date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
 sys: row.sys, dia: row.dia, pulse: row.pulse,
-weight: row.weight, waist_cm: row.hip_cm, map: row.map, notes: row.notes,
+weight: row.weight, waist_cm: row.waist_cm, map: row.map, notes: row.notes,
 training: row.training, low_intake: row.low_intake, sick: row.sick,
 valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
 salt_high: row.salt_high, sugar_high: row.sugar_high, // <<< hinzufügen
@@ -2300,7 +2306,7 @@ for(const r of remoteRows){
 const mapped = {
 date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
 sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
+weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
 training: r.training, low_intake: r.low_intake, sick: r.sick,
 valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
 salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
@@ -2492,3 +2498,4 @@ main();
 </div>
 </body>
 </html>
+
