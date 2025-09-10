@@ -1317,7 +1317,9 @@ const chartPanel = {
       color: "var(--fg)",
     });
     tip.id = "chartTip";
-    contentHost.style.position = "relative";
+    if (getComputedStyle(contentHost).position === "static") {
+  contentHost.style.position = "relative";
+}
     contentHost.appendChild(tip);
     this.tip = tip;
 
@@ -1546,7 +1548,11 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
     const data   = await this.getFiltered();
 
     // X-Basis
-    const xsAll = data.map(e => e.ts ?? Date.parse(e.dateTime));
+    const xsAll = data.map(e =>
+  e?.ts ??
+  (e?.dateTime ? Date.parse(e.dateTime) :
+   (e?.date ? Date.parse(e.date) : NaN))
+);
     let series = [];
     let X = xsAll;
 
@@ -1645,14 +1651,26 @@ const items = [...box.querySelectorAll('[data-k]')].filter(el => {
       ];
 
       X = xsBP; // wichtig
-    } else if (metric === "weight") {
-      // Serie Gewicht
-      series = [{
-        name: "Gewicht (kg)",
-        values: data.map(e => e.weight != null ? Number(e.weight) : null),
-        color: "#f59e0b",
-        type: "misc",
-      }];
+} else if (metric === "weight") {
+  // Serie Gewicht
+  series = [{
+    name: "Gewicht (kg)",
+    values: data.map(e => e.weight != null ? Number(e.weight) : null),
+    color: "#f59e0b",
+    type: "misc",
+  }];
+
+  // X auf Tage normalisieren (fällt auf dateTime zurück)
+  const toDayTs = (isoDate) => {
+    if (!isoDate) return NaN;
+    const [y, m, d] = isoDate.split("-").map(Number);
+    return Date.UTC(y, (m || 1) - 1, d || 1);
+  };
+  X = data.map(e =>
+    e?.ts ??
+    (e?.date ? toDayTs(e.date) :
+     (e?.dateTime ? Date.parse(e.dateTime) : NaN))
+  );
 
       // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
       if (avgBox) {
@@ -2532,6 +2550,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
