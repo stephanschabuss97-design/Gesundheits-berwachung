@@ -1864,12 +1864,11 @@ const mkPath = (values, color) => {
 const mkDots = (values, color, kind) => {
   let out = "";
   values.forEach((v, i) => {
-    if (v == null || !isFiniteTs(X[i])) return;
+    if (v == null || !Number.isFinite(X[i])) return;
 
     const cx = x(X[i]).toFixed(1);
     const cy = y(v).toFixed(1);
 
-    // Tooltip/Meta: Index von BP-Serien passt zu mData/meta
     const m = meta?.[i] || {};
     const date = m.date || "";
     const ctx  = m.ctx  || "";
@@ -2507,6 +2506,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
