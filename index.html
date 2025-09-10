@@ -494,13 +494,16 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 </select>
 
   <!-- ANKER: chart-averages (Daily) -->
-  <div id="chartAverages" class="kpis" aria-live="polite">
-    <span data-k="sys">Durchschnitt Sys: –</span>
-    <span class="sep" aria-hidden="true">•</span>
-    <span data-k="dia">Durchschnitt Dia: –</span>
-    <span class="sep" aria-hidden="true">•</span>
-    <span data-k="map">Durchschnitt MAP: –</span>
-  </div>
+<div id="chartAverages" class="kpis" aria-live="polite">
+  <span data-k="sys">Durchschnitt Sys: –</span>
+  <span class="sep" aria-hidden="true">•</span>
+  <span data-k="dia">Durchschnitt Dia: –</span>
+  <span class="sep" aria-hidden="true">•</span>
+  <span data-k="map">Durchschnitt MAP: –</span>
+  <span class="sep" aria-hidden="true">•</span>
+  <span data-k="bmi">BMI Ø: –</span>
+  <span class="sep" aria-hidden="true">•</span>
+  <span data-k="whtr">WHtR Ø: –</span>
 </div>
 
 <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
@@ -701,6 +704,57 @@ function toNumDE(s) {
   if (!v) return null;
   const n = parseFloat(v.replace(',', '.'));
   return Number.isFinite(n) ? n : null;
+}
+
+// ===== Height (cm) per user =====
+async function getHeightCm() {
+  // 1) Cache (CONF)
+  const cached = await getConf("height_cm");
+  if (cached != null && Number(cached) > 0) return Number(cached);
+
+  // 2) Supabase lesen
+  const supa = await ensureSupabaseClient();
+  const uid  = await getUserId();
+  if (!supa || !uid) return 183; // Fallback
+
+  // REST via PostgREST (mit gleichen Headern wie Entries)
+  const url = await getConf("webhookUrl");
+  const base = baseUrlFromRest(url);
+  const headers = await getHeaders();
+  try {
+    const q = `${base}/rest/v1/user_profile?select=height_cm&user_id=eq.${encodeURIComponent(uid)}&limit=1`;
+    const res = await fetch(q, { headers });
+    if (!res.ok) return 183;
+    const arr = await res.json();
+    const h = Number(arr?.[0]?.height_cm);
+    if (h && h > 100 && h < 250) {
+      await putConf("height_cm", h);
+      return h;
+    }
+  } catch {}
+  return 183;
+}
+
+async function setHeightCm(newCm) {
+  const cm = Number(newCm);
+  if (!(cm > 100 && cm < 250)) throw new Error("Ungültige Körpergröße");
+  await putConf("height_cm", cm);
+
+  const supa = await ensureSupabaseClient();
+  const uid  = await getUserId();
+  if (!supa || !uid) return;
+
+  const url = await getConf("webhookUrl");
+  const base = baseUrlFromRest(url);
+  const headers = await getHeaders();
+  const payload = { user_id: uid, height_cm: cm, updated_at: new Date().toISOString() };
+
+  // Upsert via PostgREST
+  await fetch(`${base}/rest/v1/user_profile`, {
+    method: "POST",
+    headers: { ...headers, Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify(payload)
+  }).catch(()=>{});
 }
   
 /* ===== Auth-Guard ===== */
@@ -1231,53 +1285,81 @@ if (!daysArr.length){
 }
 }
 
-/* ===== Simple SVG Chart (Daily) ===== */
+/* ===== Simple SVG Chart (Daily) – korrigiert & komplett ===== */
 const chartPanel = {
-  el:null, svg:null, legend:null, open:false, tip:null, tipSticky:false,
-  init(){
+  el: null,
+  svg: null,
+  legend: null,
+  open: false,
+  tip: null,
+  tipSticky: false,
+
+  init() {
     this.el = $("#chart");
     this.svg = $("#chartSvg");
-    this.el.style.display = 'none';
     this.legend = $("#chartLegend");
-    $("#chartClose").addEventListener("click", ()=>this.hide());
-    $("#metricSel").addEventListener("change", ()=> this.draw());
+
+    // Panel initial nicht anzeigen
+    this.el.style.display = "none";
+
+    // Close + Metric-Select
+    $("#chartClose").addEventListener("click", () => this.hide());
+    $("#metricSel").addEventListener("change", () => this.draw());
 
     // Tooltip (hover/click)
     const contentHost = this.el.querySelector(".content") || this.el;
     const tip = document.createElement("div");
     Object.assign(tip.style, {
-      position:"absolute", inset:"auto auto auto auto", transform:"translate(8px,8px)",
-      display:"none", pointerEvents:"none", zIndex:2,
-      background:"#10131a", border:"1px solid #2b2f3a", borderRadius:"8px",
-      padding:"8px 10px", fontSize:"12px", lineHeight:"1.35", maxWidth:"280px",
-      boxShadow:"0 6px 18px rgba(0,0,0,.35)", color:"var(--fg)"
+      position: "absolute",
+      inset: "auto auto auto auto",
+      transform: "translate(8px,8px)",
+      display: "none",
+      pointerEvents: "none",
+      zIndex: 2,
+      background: "#10131a",
+      border: "1px solid #2b2f3a",
+      borderRadius: "8px",
+      padding: "8px 10px",
+      fontSize: "12px",
+      lineHeight: "1.35",
+      maxWidth: "280px",
+      boxShadow: "0 6px 18px rgba(0,0,0,.35)",
+      color: "var(--fg)",
     });
     tip.id = "chartTip";
     contentHost.style.position = "relative";
     contentHost.appendChild(tip);
     this.tip = tip;
 
-    // Interaktivität auf dem SVG
-    this.svg.addEventListener("pointermove", (e)=>{
-      if (this.tipSticky) return; // bei Sticky nicht folgen
+    // Interaktivität
+    this.svg.addEventListener("pointermove", (e) => {
+      if (this.tipSticky) return;
       const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-      if (!hasNote) { this.hideTip(); return; }
+      const hasNote =
+        tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      if (!hasNote) {
+        this.hideTip();
+        return;
+      }
       this.fillTipFromTarget(tgt);
       this.positionTip(e);
     });
 
-    this.svg.addEventListener("pointerleave", ()=>{
+    this.svg.addEventListener("pointerleave", () => {
       if (this.tipSticky) return;
       this.hideTip();
     });
 
     // Click/Tap: Tooltip toggeln (mobil-freundlich)
-    this.svg.addEventListener("click", (e)=>{
+    this.svg.addEventListener("click", (e) => {
       const tgt = e.target;
-      const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
+      const hasNote =
+        tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
       if (!hasNote) {
-        if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+        if (this.tipSticky) {
+          this.tipSticky = false;
+          this.hideTip();
+        }
         return;
       }
       this.fillTipFromTarget(tgt);
@@ -1285,386 +1367,623 @@ const chartPanel = {
       this.positionTip(e);
     });
 
-    // Resize/Orientation -> neu zeichnen, wenn offen
-    const ro = new ResizeObserver(() => { if (this.open) this.draw(); });
+    // Redraw bei Resize/Orientation
+    const ro = new ResizeObserver(() => {
+      if (this.open) this.draw();
+    });
     ro.observe(this.el);
     this._ro = ro;
-    window.addEventListener('orientationchange', () => {
-      setTimeout(() => { if (this.open) this.draw(); }, 150);
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        if (this.open) this.draw();
+      }, 150);
     });
-  },
-  toggle(){ this.open = !this.open; this.el.style.display = this.open ? 'block' : 'none'; },
-  hide(){ this.open = false; this.el.style.display = 'none'; this.tipSticky = false; this.hideTip(); },
 
-  async getFiltered(){
+    // KPI-Box aufrüsten (BMI/WHtR-Spans nachrüsten, falls nicht vorhanden)
+    this.ensureKpiFields();
+  },
+
+  toggle() {
+    this.open = !this.open;
+    this.el.style.display = this.open ? "block" : "none";
+  },
+
+  hide() {
+    this.open = false;
+    this.el.style.display = "none";
+    this.tipSticky = false;
+    this.hideTip();
+  },
+
+  // ----- Helpers -----
+  async getFiltered() {
     const entries = await getAllEntries();
     const from = $("#from").value;
-    const to   = $("#to").value;
+    const to = $("#to").value;
     return entries
-      .filter(e=>{
+      .filter((e) => {
         if (from && e.date < from) return false;
-        if (to   && e.date > to)   return false;
+        if (to && e.date > to) return false;
         return true;
       })
-      .sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+      .sort(
+        (a, b) =>
+          (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))
+      );
   },
 
-  // Tooltip-Helfer
-  hideTip(){ if (this.tip){ this.tip.style.display = "none"; this.tip.textContent = ""; } },
-  positionTip(e){
+  // Höhe laden (Konfig oder Fallback 183 cm)
+  async getHeightCm() {
+    // Nutzt deine IndexedDB-CONF (getConf ist global definiert)
+    try {
+      const v = await getConf("height_cm");
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return n;
+    } catch (_) {}
+    return 183; // Fallback
+  },
+
+  // Tooltip
+  hideTip() {
+    if (this.tip) {
+      this.tip.style.display = "none";
+      this.tip.textContent = "";
+    }
+  },
+  positionTip(e) {
     if (!this.tip) return;
-    const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
+    const hostRect =
+      (this.el.querySelector(".content") || this.el).getBoundingClientRect();
     const x = e.clientX - hostRect.left;
     const y = e.clientY - hostRect.top;
     this.tip.style.left = `${x + 10}px`;
-    this.tip.style.top  = `${y + 10}px`;
+    this.tip.style.top = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
-  fillTipFromTarget(tgt){
+  fillTipFromTarget(tgt) {
     if (!this.tip) return;
     const note = tgt.getAttribute("data-note") || "";
-    if (!note) { this.hideTip(); return; }
-    // Nur den Kommentar anzeigen – keine Werte, kein Header
+    if (!note) {
+      this.hideTip();
+      return;
+    }
     this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
   },
 
-  async draw(){
+  ensureKpiFields() {
+    const box = $("#chartAverages");
+    if (!box) return;
+    const need = [
+      { k: "sys", label: "Durchschnitt Sys: –" },
+      { k: "dia", label: "Durchschnitt Dia: –" },
+      { k: "map", label: "Durchschnitt MAP: –" },
+      { k: "bmi", label: "BMI Ø: –" },
+      { k: "whtr", label: "WHtR Ø: –" },
+    ];
+    const addSep = () => {
+      const sep = document.createElement("span");
+      sep.className = "sep";
+      sep.setAttribute("aria-hidden", "true");
+      sep.textContent = "•";
+      box.appendChild(sep);
+    };
+    // Stelle sicher, dass alle KPI-Spans existieren (Reihenfolge: Sys • Dia • MAP • BMI • WHtR)
+    need.forEach((n, i) => {
+      if (!box.querySelector(`[data-k="${n.k}"]`)) {
+        if (box.children.length && i > 0) addSep();
+        const span = document.createElement("span");
+        span.setAttribute("data-k", n.k);
+        span.textContent = n.label;
+        box.appendChild(span);
+      }
+    });
+  },
+
+  // ----- Zeichnen -----
+  async draw() {
     const t0 = performance.now();
     const metric = $("#metricSel").value;
-    const data   = await this.getFiltered();
+    const data = await this.getFiltered();
 
-    // Basis-X: alle (fallback)
-    const xsAll  = data.map(e => (e.ts ?? Date.parse(e.dateTime)));
+    // X-Basis
+    const xsAll = data.map((e) => e.ts ?? Date.parse(e.dateTime));
     let series = [];
     let X = xsAll;
 
     // KPI-Box
     const avgBox = $("#chartAverages");
 
-        // Schwellen (nur BP)
+    // Schwellen (nur BP)
     const TH_SYS = 130;
     const TH_DIA = 90;
-    // ⛳ ANKER: day-ts helper (UTC, kein TZ-Drift)
-const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
-  if (!isoDate) return NaN;
-  const [y,m,d] = isoDate.split("-").map(Number);
-  return Date.UTC(y, (m||1)-1, (d||1));
-};
 
-    // Map der Tages-Kommentare (erste Zeile)
+    // Tagesstempel (UTC, 00:00)
+    const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
+      if (!isoDate) return NaN;
+      const [y, m, d] = isoDate.split("-").map(Number);
+      return Date.UTC(y, (m || 1) - 1, d || 1);
+    };
+
+    // Tageskommentare (erste Zeile)
     const notesByDate = new Map();
-    for (const e of data){
-      const hasDayLike = (e.context === "Tag") || isWeightOnly(e);
+    for (const e of data) {
+      const hasDayLike = e.context === "Tag" || isWeightOnly(e);
       const txt = (e.notes || "").trim();
-      if (hasDayLike && txt){
+      if (hasDayLike && txt) {
         const firstLine = txt.split(/\r?\n/)[0].trim();
         if (firstLine) notesByDate.set(e.date, firstLine);
       }
     }
 
-    // Für BP brauchen wir die Messungs-Meta je Index
+    // Für BP benötigen wir Meta je Punkt
     let meta = null;
 
     if (metric === "bp") {
-      // Nur echte Messungen (kein „Tag“/Gewicht-only)
-      const mData = data.filter(e =>
-        (e.context === "Morgen" || e.context === "Abend") &&
-        (e.sys != null || e.dia != null)
+      // Nur echte Messungen
+      const mData = data.filter(
+        (e) =>
+          (e.context === "Morgen" || e.context === "Abend") &&
+          (e.sys != null || e.dia != null)
       );
 
-      // Meta-Infos je Punktindex (für Tooltip)
-      meta = mData.map(e=>({
+      // Meta
+      meta = mData.map((e) => ({
         date: e.date,
-        ctx:  e.context,                  // "Morgen" | "Abend"
-        sys:  (e.sys!=null?Number(e.sys):null),
-        dia:  (e.dia!=null?Number(e.dia):null),
-        note: (notesByDate.get(e.date) || "")
+        ctx: e.context,
+        sys: e.sys != null ? Number(e.sys) : null,
+        dia: e.dia != null ? Number(e.dia) : null,
+        note: notesByDate.get(e.date) || "",
       }));
 
-      // X auf Tagesebene (00:00) -> alle Punkte je Tag bündig
-      const xsBP = mData.map(e => toDayTs(e.date));
+      // X auf Tage normalisieren
+      const xsBP = mData.map((e) => toDayTs(e.date));
 
-      // Vier Reihen (Werte-Arrays, aber Index passt zu meta)
-      const sysM = mData.map(e => (e.context==="Morgen" && e.sys!=null) ? Number(e.sys) : null);
-      const sysA = mData.map(e => (e.context==="Abend"  && e.sys!=null) ? Number(e.sys) : null);
-      const diaM = mData.map(e => (e.context==="Morgen" && e.dia!=null) ? Number(e.dia) : null);
-      const diaA = mData.map(e => (e.context==="Abend"  && e.dia!=null) ? Number(e.dia) : null);
+      // Werte-Reihen (Index passend zu meta)
+      const sysM = mData.map((e) =>
+        e.context === "Morgen" && e.sys != null ? Number(e.sys) : null
+      );
+      const sysA = mData.map((e) =>
+        e.context === "Abend" && e.sys != null ? Number(e.sys) : null
+      );
+      const diaM = mData.map((e) =>
+        e.context === "Morgen" && e.dia != null ? Number(e.dia) : null
+      );
+      const diaA = mData.map((e) =>
+        e.context === "Abend" && e.dia != null ? Number(e.dia) : null
+      );
 
-      // KPIs (ø über alle Messungen, unabhängig M/A)
-      const mapArr = mData.map(e => (e.sys!=null && e.dia!=null) ? (Number(e.dia)+(Number(e.sys)-Number(e.dia))/3) : null);
-      const avg = a => { const v=a.filter(x=>x!=null); return v.length ? v.reduce((p,c)=>p+c,0)/v.length : null; };
-      if (avgBox){
-        const avgSys = avg(mData.map(e=>e.sys!=null?Number(e.sys):null));
-        const avgDia = avg(mData.map(e=>e.dia!=null?Number(e.dia):null));
+      // KPIs (ø über alle Messungen)
+      const avg = (arr) => {
+        const v = arr.filter((x) => x != null);
+        return v.length ? v.reduce((p, c) => p + c, 0) / v.length : null;
+      };
+      const mapArr = mData.map((e) =>
+        e.sys != null && e.dia != null
+          ? Number(e.dia) + (Number(e.sys) - Number(e.dia)) / 3
+          : null
+      );
+
+      if (avgBox) {
+        const avgSys = avg(mData.map((e) => (e.sys != null ? Number(e.sys) : null)));
+        const avgDia = avg(mData.map((e) => (e.dia != null ? Number(e.dia) : null)));
         const avgMap = avg(mapArr);
-        if (avgSys!=null || avgDia!=null || avgMap!=null){
-          avgBox.style.display="inline-flex";
-          const f0 = v => v==null ? "–" : Math.round(v).toString();
-          avgBox.querySelector('[data-k="sys"]').textContent = `Durchschnitt Sys: ${f0(avgSys)}`;
-          avgBox.querySelector('[data-k="dia"]').textContent = `Durchschnitt Dia: ${f0(avgDia)}`;
-          avgBox.querySelector('[data-k="map"]').textContent = `Durchschnitt MAP: ${f0(avgMap)}`;
-        } else { avgBox.style.display="none"; }
+
+        if (avgSys != null || avgDia != null || avgMap != null) {
+          avgBox.style.display = "inline-flex";
+          const f0 = (v) => (v == null ? "–" : Math.round(v).toString());
+          avgBox.querySelector('[data-k="sys"]').textContent =
+            "Durchschnitt Sys: " + f0(avgSys);
+          avgBox.querySelector('[data-k="dia"]').textContent =
+            "Durchschnitt Dia: " + f0(avgDia);
+          avgBox.querySelector('[data-k="map"]').textContent =
+            "Durchschnitt MAP: " + f0(avgMap);
+        } else {
+          avgBox.style.display = "none";
+        }
       }
 
+      // ➕ PKI: BMI & WHtR (aus Ø Gewicht/Bauchumfang im Zeitraum)
+      const avgNum = (arr) => {
+        const v = arr.filter((x) => Number.isFinite(x));
+        return v.length ? v.reduce((p, c) => p + c, 0) / v.length : null;
+      };
+      const weights = data
+        .map((e) => (e.weight != null ? Number(e.weight) : null))
+        .filter((v) => v != null);
+      const waists = data
+        .map((e) => (e.waist_cm != null ? Number(e.waist_cm) : null))
+        .filter((v) => v != null);
+      const avgWeight = avgNum(weights);
+      const avgWaist = avgNum(waists);
+
+      const heightCm = await this.getHeightCm();
+      const heightM = heightCm > 0 ? heightCm / 100 : null;
+
+      const bmi =
+        avgWeight != null && heightM
+          ? avgWeight / (heightM * heightM)
+          : null;
+      const whtr =
+        avgWaist != null && heightCm > 0 ? avgWaist / heightCm : null;
+
+      if (avgBox) {
+        const f1 = (v) => (v == null ? "–" : v.toFixed(1));
+        const f2 = (v) => (v == null ? "–" : v.toFixed(2));
+        // KPI-Felder existieren dank ensureKpiFields()
+        const bmiEl = avgBox.querySelector('[data-k="bmi"]');
+        const whtrEl = avgBox.querySelector('[data-k="whtr"]');
+        if (bmiEl) bmiEl.textContent = `BMI Ø: ${f1(bmi)}`;
+        if (whtrEl) whtrEl.textContent = `WHtR Ø: ${f2(whtr)}`;
+      }
+
+      // Serien definieren
       series = [
-        { name:"Sys Morgens", values: sysM, color:"#93c5fd", type:"sys" },
-        { name:"Sys Abends",  values: sysA, color:"#2563eb", type:"sys" },
-        { name:"Dia Morgens", values: diaM, color:"#f9a8d4", type:"dia" },
-        { name:"Dia Abends",  values: diaA, color:"#db2777", type:"dia" },
+        { name: "Sys Morgens", values: sysM, color: "#93c5fd", type: "sys" },
+        { name: "Sys Abends", values: sysA, color: "#2563eb", type: "sys" },
+        { name: "Dia Morgens", values: diaM, color: "#f9a8d4", type: "dia" },
+        { name: "Dia Abends", values: diaA, color: "#db2777", type: "dia" },
       ];
 
-      X = xsBP; // wichtig: ab hier überall dieses X verwenden
+      X = xsBP; // wichtig
     } else if (metric === "weight") {
-      if (avgBox) avgBox.style.display="none";
-      series = [{ name:"Gewicht (kg)", values: data.map(e=>e.weight!=null?Number(e.weight):null), color:"#f59e0b", type:"misc" }];
+      if (avgBox) avgBox.style.display = "none";
+      series = [
+        {
+          name: "Gewicht (kg)",
+          values: data.map((e) =>
+            e.weight != null ? Number(e.weight) : null
+          ),
+          color: "#f59e0b",
+          type: "misc",
+        },
+      ];
     }
 
     // --- Render-Prep ---
-    this.svg.innerHTML = ""; this.legend.innerHTML = "";
+    this.svg.innerHTML = "";
+    this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
-    const hasAny = series.some(s => s.values.some(v=>v!=null));
-    if (!hasAny){
-      this.svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>`;
+
+    const hasAny = series.some((s) => s.values.some((v) => v != null));
+    if (!hasAny) {
+      this.svg.innerHTML =
+        '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
     }
 
     // Dynamische Größe
     const bbox = this.svg.getBoundingClientRect();
-    const W = Math.max(300, Math.floor(bbox.width  || 640));
+    const W = Math.max(300, Math.floor(bbox.width || 640));
     const H = Math.max(200, Math.floor(bbox.height || 280));
     this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 
-    const PL=48, PR=16, PT=12, PB=28;
-    const innerW = W-PL-PR, innerH = H-PT-PB;
+    const PL = 48,
+      PR = 16,
+      PT = 12,
+      PB = 28;
+    const innerW = W - PL - PR,
+      innerH = H - PT - PB;
 
-/* === ANKER: flags-x-union PREP START === */
-let flagTs = [];
-if (metric === "bp") {
-  // Flag-Tage aus ALLEN Einträgen (pro Kategorie pro Tag einmal), UTC-Tagesstempel
-  const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
-  for (const e of data) {
-    if (!e?.date) continue;
-    let rec = dayFlagsTmp.get(e.date);
-    if (!rec) {
-      rec = { training:false, bad:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
-      dayFlagsTmp.set(e.date, rec);
+    // === Flags -> X-Bereich erweitern ===
+    let flagTs = [];
+    if (metric === "bp") {
+      const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
+      for (const e of data) {
+        if (!e?.date) continue;
+        let rec = dayFlagsTmp.get(e.date);
+        if (!rec) {
+          rec = {
+            training: false,
+            bad: 0,
+            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
+          };
+          dayFlagsTmp.set(e.date, rec);
+        }
+        if (e.training) rec.training = true;
+        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const flags = {
+          water: !!e.low_intake,
+          salt: !!e.salt_high,
+          sugar: !!e.sugar_high,
+          sick: !!e.sick,
+          meds,
+        };
+        for (const k of Object.keys(flags)) {
+          if (flags[k] && !rec.seen[k]) {
+            rec.seen[k] = true;
+            rec.bad++;
+          }
+        }
+      }
+      flagTs = [...dayFlagsTmp.keys()].map((d) => toDayTs(d));
     }
-    if (e.training) rec.training = true;
-    const meds  = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-    const flags = { water:!!e.low_intake, salt:!!e.salt_high, sugar:!!e.sugar_high, sick:!!e.sick, meds };
-    for (const k of Object.keys(flags)) if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
-  }
-  flagTs = [...dayFlagsTmp.keys()].map(d => toDayTs(d));
-}
-/* === ANKER: flags-x-union PREP END === */
 
-// Skala vorbereiten
-const xVals = X.filter(Boolean);
-let xmin = Math.min(...xVals), xmax = Math.max(...xVals);
+    // Skalen
+    const xVals = X.filter((t) => Number.isFinite(t));
+    let xmin = Math.min(...xVals);
+    let xmax = Math.max(...xVals);
 
-// Union mit Flag-Tagen: auch Tage ohne BP-Messung sichtbar
-if (metric === "bp" && flagTs.length) {
-  xmin = Math.min(xmin, Math.min(...flagTs));
-  xmax = Math.max(xmax, Math.max(...flagTs));
-}
+    if (!Number.isFinite(xmin) || !Number.isFinite(xmax)) {
+      // Fallback (sollte praktisch nicht passieren)
+      xmin = Date.now() - 7 * 864e5;
+      xmax = Date.now();
+    }
 
-// Kleinen Rand (2%) erst NACH der Union
-const pad = (xmax > xmin) ? (xmax - xmin) * 0.02 : 0;
-xmin -= pad;
-xmax += pad;
+    // Union mit Flag-Tagen
+    if (metric === "bp" && flagTs.length) {
+      xmin = Math.min(xmin, Math.min(...flagTs));
+      xmax = Math.max(xmax, Math.max(...flagTs));
+    }
 
-    const allY = series.flatMap(s => s.values.filter(v=>v!=null));
-    const ymin = Math.min(...allY), ymax = Math.max(...allY);
-    const ypad = Math.max((ymax-ymin)*0.08, 1);
-    const y0 = ymin-ypad, y1 = ymax+ypad;
+    // Padding (2%)
+    const pad = xmax > xmin ? (xmax - xmin) * 0.02 : 0;
+    xmin -= pad;
+    xmax += pad;
 
-    const x = t => PL + ((t - xmin)/Math.max(1,(xmax-xmin))) * innerW;
-    const y = v => PT + (1 - ((v - y0)/Math.max(1,(y1 - y0)))) * innerH;
+    const allY = series.flatMap((s) => s.values.filter((v) => v != null));
+    const yminRaw = Math.min(...allY);
+    const ymaxRaw = Math.max(...allY);
+    const range = Math.max(1, ymaxRaw - yminRaw);
+    const ypad = Math.max(range * 0.08, 1);
+    const y0 = yminRaw - ypad;
+    const y1 = ymaxRaw + ypad;
 
-    const line = (x1,y1,x2,y2, stroke, dash="") =>
-      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:""} />`;
-    const text = (tx,ty,str,anchor="end") =>
-      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
+    const x = (t) => PL + ((t - xmin) / Math.max(1, xmax - xmin)) * innerW;
+    const y = (v) =>
+      PT + (1 - (v - y0) / Math.max(1, y1 - y0)) * innerH;
+
+    const line = (x1, y1_, x2, y2, stroke, dash = "") =>
+      `<line x1="${x1}" y1="${y1_}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${
+        dash ? `stroke-dasharray="${dash}"` : ""
+      } />`;
+    const text = (tx, ty, str, anchor = "end") =>
+      `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(
+        str
+      )}</text>`;
 
     // Grid + Labels
     let grid = "";
     const ticks = 9;
-    for(let i=0;i<=ticks;i++){
-      const vv = y0 + (i*(y1-y0)/ticks);
+    for (let i = 0; i <= ticks; i++) {
+      const vv = y0 + (i * (y1 - y0)) / ticks;
       const yy = y(vv);
-      grid += line(PL,yy,W-PR,yy,"#2a3140");
-      grid += text(PL-6,yy+4, Math.round(vv).toString());
+      grid += line(PL, yy, W - PR, yy, "#2a3140");
+      grid += text(PL - 6, yy + 4, Math.round(vv).toString());
     }
-    // vertikale Wochenlinien + Datum unten
-    const week = 7*24*3600*1000;
+    // vertikale Wochenlinien + Datum
+    const week = 7 * 24 * 3600 * 1000;
     let start = xmin - (xmin % week) + week;
-    for(let t=start; t<xmax; t+=week){
+    for (let t = start; t < xmax; t += week) {
       const xx = x(t);
-      grid += line(xx,PT,xx,H-PB,"#1b1f28","3 3");
+      grid += line(xx, PT, xx, H - PB, "#1b1f28", "3 3");
       const d = new Date(t);
-      const lbl = `${pad2(d.getDate())}.${pad2(d.getMonth()+1)}.`;
-      grid += text(xx, H-8, lbl, "middle");
+      const lbl = `${String(d.getDate()).padStart(2, "0")}.${String(
+        d.getMonth() + 1
+      ).padStart(2, "0")}.`;
+      grid += text(xx, H - 8, lbl, "middle");
     }
     // Achsen
-    grid += line(PL,PT,PL,H-PB,"#2b2f3a");
-    grid += line(PL,H-PB,W-PR,H-PB,"#2b2f3a");
+    grid += line(PL, PT, PL, H - PB, "#2b2f3a");
+    grid += line(PL, H - PB, W - PR, H - PB, "#2b2f3a");
 
-    // Schwellenlinien (nur bei BP)
+    // Schwellenlinien (BP)
     if (metric === "bp") {
       const ySys = y(TH_SYS);
       const yDia = y(TH_DIA);
-      grid += line(PL,ySys,W-PR,ySys,"#ef4444","6 4"); // dezent gestrichelt
-      grid += line(PL,yDia,W-PR,yDia,"#ef4444","6 4");
-      grid += text(W-PR+2, ySys+4, "Sys 130", "start");
-      grid += text(W-PR+2, yDia+4, "Dia 90", "start");
+      grid += line(PL, ySys, W - PR, ySys, "#ef4444", "6 4");
+      grid += line(PL, yDia, W - PR, yDia, "#ef4444", "6 4");
+      grid += text(W - PR + 2, ySys + 4, "Sys 130", "start");
+      grid += text(W - PR + 2, yDia + 4, "Dia 90", "start");
     }
 
     this.svg.insertAdjacentHTML("beforeend", grid);
 
-/* === ANKER: flags-overlay (Variante A, voller Plotbereich) START === */
-if (metric === "bp") {
-  // Tages-Flags aggregieren (ALLE Einträge je Tag; Kategorien pro Tag dedupliziert)
-  const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
-  for (const e of data) {
-    if (!e?.date) continue;
-    let rec = dayFlags.get(e.date);
-    if (!rec) {
-      rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
-      dayFlags.set(e.date, rec);
-    }
-    if (e.training) rec.training = true;
-    const meds  = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-    const flags = { water:!!e.low_intake, salt:!!e.salt_high, sugar:!!e.sugar_high, sick:!!e.sick, meds };
-    for (const k of Object.keys(flags)) if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
-  }
-
-  // Alle Tage mit irgend einem Flag (nicht nur Mess-Tage)
-  const flaggedDays = [...dayFlags.keys()].filter(d => {
-    const r = dayFlags.get(d);
-    return r && (r.training || r.badCount > 0);
-  }).sort();
-
-  if (flaggedDays.length) {
-    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-    g.setAttribute("class","flags");
-    g.setAttribute("pointer-events","none");
-    g.setAttribute("aria-hidden","true");
-
-    // Balkenbreite aus minimalem Tagesabstand ableiten (robust)
-    const uniqDays = [...new Set(
-      [...flaggedDays.map(d => toDayTs(d)), ...X.filter(Boolean)]
-    )].sort((a,b)=>a-b);
-    const dayXs = uniqDays.map(t => x(t));
-    const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=> v - dayXs[i])) : innerW;
-    const bandW = Math.max(10, Math.floor(minStep * 0.45));
-    const yBottom = PT + innerH;
-    const slotH = innerH / 6; // 1 Slot Training + bis zu 5 Bad
-
-    for (const d of flaggedDays) {
-      const t = toDayTs(d);
-      const cx = x(t), xLeft = Math.round(cx - bandW/2);
-      const rec = dayFlags.get(d);
-      let used = 0;
-
-      // Grün unten (Training)
-      if (rec.training) {
-        const yTop = Math.round(yBottom - (used + 1) * slotH);
-        const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-        r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
-        r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-        r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity", "0.22");
-        r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
-        r.setAttribute("shape-rendering", "crispEdges");
-        g.appendChild(r); used++;
+    // === Flags Overlay (über gesamte Plotfläche) ===
+    if (metric === "bp") {
+      const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
+      for (const e of data) {
+        if (!e?.date) continue;
+        let rec = dayFlags.get(e.date);
+        if (!rec) {
+          rec = {
+            training: false,
+            badCount: 0,
+            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
+          };
+          dayFlags.set(e.date, rec);
+        }
+        if (e.training) rec.training = true;
+        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const flags = {
+          water: !!e.low_intake,
+          salt: !!e.salt_high,
+          sugar: !!e.sugar_high,
+          sick: !!e.sick,
+          meds,
+        };
+        for (const k of Object.keys(flags)) {
+          if (flags[k] && !rec.seen[k]) {
+            rec.seen[k] = true;
+            rec.badCount++;
+          }
+        }
       }
 
-      // Rot gestapelt (Bad-Flags)
-      for (let i=0; i<rec.badCount; i++) {
-        const yTop = Math.round(yBottom - (used + 1) * slotH);
-        const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-        r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
-        r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-        r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity", "0.18");
-        r.setAttribute("stroke", "#fff"); r.setAttribute("stroke-opacity", "0.06");
-        r.setAttribute("shape-rendering", "crispEdges");
-        g.appendChild(r); used++;
+      const flaggedDays = [...dayFlags.keys()]
+        .filter((d) => {
+          const r = dayFlags.get(d);
+          return r && (r.training || r.badCount > 0);
+        })
+        .sort();
+
+      if (flaggedDays.length) {
+        const g = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "g"
+        );
+        g.setAttribute("class", "flags");
+        g.setAttribute("pointer-events", "none");
+        g.setAttribute("aria-hidden", "true");
+
+        const uniqDays = [
+          ...new Set([...flaggedDays.map((d) => toDayTs(d)), ...X.filter(Boolean)]),
+        ].sort((a, b) => a - b);
+        const dayXs = uniqDays.map((t) => x(t));
+        const minStep =
+          dayXs.length > 1
+            ? Math.min(...dayXs.slice(1).map((v, i) => v - dayXs[i]))
+            : innerW;
+        const bandW = Math.max(10, Math.floor(minStep * 0.45));
+        const yBottom = PT + innerH;
+        const slotH = innerH / 6; // 1 Training + bis zu 5 Bad
+
+        for (const d of flaggedDays) {
+          const t = toDayTs(d);
+          const cx = x(t),
+            xLeft = Math.round(cx - bandW / 2);
+          const rec = dayFlags.get(d);
+          let used = 0;
+
+          // Training (grün)
+          if (rec.training) {
+            const yTop = Math.round(yBottom - (used + 1) * slotH);
+            const r = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "rect"
+            );
+            r.setAttribute("x", xLeft);
+            r.setAttribute("y", yTop);
+            r.setAttribute("width", bandW);
+            r.setAttribute("height", Math.ceil(slotH));
+            r.setAttribute("fill", "#10b981");
+            r.setAttribute("fill-opacity", "0.22");
+            r.setAttribute("stroke", "#fff");
+            r.setAttribute("stroke-opacity", "0.06");
+            r.setAttribute("shape-rendering", "crispEdges");
+            g.appendChild(r);
+            used++;
+          }
+
+          // Bad-Flags (rot gestapelt)
+          for (let i = 0; i < rec.badCount; i++) {
+            const yTop = Math.round(yBottom - (used + 1) * slotH);
+            const r = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "rect"
+            );
+            r.setAttribute("x", xLeft);
+            r.setAttribute("y", yTop);
+            r.setAttribute("width", bandW);
+            r.setAttribute("height", Math.ceil(slotH));
+            r.setAttribute("fill", "#ef4444");
+            r.setAttribute("fill-opacity", "0.18");
+            r.setAttribute("stroke", "#fff");
+            r.setAttribute("stroke-opacity", "0.06");
+            r.setAttribute("shape-rendering", "crispEdges");
+            g.appendChild(r);
+            used++;
+          }
+        }
+        this.svg.appendChild(g); // liegt hinter den Linien/Punkten
       }
     }
-    this.svg.appendChild(g); // vor den Linien eingefügt -> liegt im Hintergrund
-  }
-}
-/* === ANKER: flags-overlay (Variante A, voller Plotbereich) ENDE === */
 
     // Linien + Punkte
-    const mkPath = (values, color)=>{
-      let d=""; values.forEach((v,i)=>{ if(v==null || !X[i]) return;
-        d += (d===""?"M":"L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
+    const mkPath = (values, color) => {
+      let d = "";
+      values.forEach((v, i) => {
+        if (v == null || !X[i]) return;
+        d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
       });
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
     };
 
-    const mkDots = (values, color, kind)=>{
+    const mkDots = (values, color, kind) => {
       // kind: "sys" | "dia" | "misc"
-      let out="";
-      values.forEach((v,i)=>{
-        if(v==null || !X[i]) return;
-        const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
-        let date="", ctx="", note="";
-        if (metric==="bp" && meta){
+      let out = "";
+      values.forEach((v, i) => {
+        if (v == null || !X[i]) return;
+        const cx = x(X[i]).toFixed(1),
+          cy = y(v).toFixed(1);
+        let date = "",
+          ctx = "",
+          note = "";
+        if (metric === "bp" && meta) {
           const m = meta[i];
           date = m?.date || "";
-          ctx  = m?.ctx  || "";
+          ctx = m?.ctx || "";
           note = m?.note || "";
         }
         out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-                    data-kind="${kind}" data-val="${v}" data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-                    data-note="${esc(note)}" />`;
+                  data-kind="${kind}" data-val="${v}" data-date="${esc(
+          date
+        )}" data-ctx="${esc(ctx)}"
+                  data-note="${esc(note)}" />`;
       });
       return out;
     };
 
-    // Hervorhebungs-Punkte (größer + rot) für Grenzüberschreitungen
-    const mkAlertDots = (seriesItem)=>{
+    const mkAlertDots = (seriesItem) => {
       if (metric !== "bp") return "";
       const isSys = seriesItem.type === "sys";
       const thr = isSys ? TH_SYS : TH_DIA;
       const kind = isSys ? "sys" : "dia";
-      let out="";
-      seriesItem.values.forEach((v,i)=>{
-        if(v==null || !X[i]) return;
-        if (v > thr){
-          const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
+      let out = "";
+      seriesItem.values.forEach((v, i) => {
+        if (v == null || !X[i]) return;
+        if (v > thr) {
+          const cx = x(X[i]).toFixed(1),
+            cy = y(v).toFixed(1);
           const m = meta?.[i] || {};
           out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
-                     data-kind="${kind}" data-val="${v}"
-                     data-date="${esc(m.date||"")}" data-ctx="${esc(m.ctx||"")}"
-                     data-note="${esc(m.note||"")}" />`;
+                   data-kind="${kind}" data-val="${v}"
+                   data-date="${esc(m.date || "")}" data-ctx="${esc(m.ctx || "")}"
+                   data-note="${esc(m.note || "")}" />`;
         }
       });
       return out;
     };
 
     // Zeichnen
-    series.forEach(s=>{
+    series.forEach((s) => {
       this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
-      this.svg.insertAdjacentHTML("beforeend", mkDots(s.values, s.color, (s.type==="sys"||s.type==="dia")?s.type:"misc"));
+      this.svg.insertAdjacentHTML(
+        "beforeend",
+        mkDots(s.values, s.color, s.type === "sys" || s.type === "dia" ? s.type : "misc")
+      );
       if (metric === "bp") {
         this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
       }
       // Legende
       const wrap = document.createElement("span");
-      wrap.style.display="inline-flex"; wrap.style.alignItems="center"; wrap.style.gap="6px";
-      const dot = Object.assign(document.createElement("span"), { className:"dot" });
+      wrap.style.display = "inline-flex";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = "6px";
+      const dot = Object.assign(document.createElement("span"), {
+        className: "dot",
+      });
       dot.style.background = s.color;
-      const label = document.createElement("span"); label.textContent = s.name;
-      wrap.append(dot, label); this.legend.appendChild(wrap);
+      const label = document.createElement("span");
+      label.textContent = s.name;
+      wrap.append(dot, label);
+      this.legend.appendChild(wrap);
     });
 
-    if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
+    if (this.tipSticky) {
+      this.tipSticky = false;
+      this.hideTip();
+    }
 
-    const sPerf = (perfStats.add('drawChart', performance.now()-t0), perfStats.snap('drawChart'));
-    diag.add(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
-  }
+    const sPerf = (
+      perfStats.add("drawChart", performance.now() - t0),
+      perfStats.snap("drawChart")
+    );
+    diag.add(
+      `[perf] drawChart p50=${sPerf.p50 | 0}ms p95=${sPerf.p95 | 0}ms p99=${
+        sPerf.p99 | 0
+      }ms (n=${sPerf.count})`
+    );
+  },
 };
 
 /* --- Button-Flash --- */
@@ -1847,7 +2166,7 @@ entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
 const hasContent =
 (entry.weight != null) ||
-(entry.hip_cm != null) ||
+(entry.waist_cm != null) ||
 !!entry.notes ||
 entry.training || entry.low_intake || entry.sick ||
 entry.valsartan_missed || entry.forxiga_missed ||
@@ -1907,7 +2226,7 @@ diag.add("Webhook: Netzwerkfehler");
     const mapped = {
       date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
       sys: r.sys, dia: r.dia, pulse: r.pulse,
-      weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
+      weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
       training: r.training, low_intake: r.low_intake, sick: r.sick,
       valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
       salt_high: r.salt_high, sugar_high: r.sugar_high,
@@ -2035,7 +2354,7 @@ for(const r of remoteRows){
 const mapped = {
 date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
 sys: r.sys, dia: r.dia, pulse: r.pulse,
-weight: r.weight, waist_cm: r.hip_cm, map: r.map, notes: r.notes,
+weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
 training: r.training, low_intake: r.low_intake, sick: r.sick,
 valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
 salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
@@ -2227,6 +2546,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
