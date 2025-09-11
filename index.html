@@ -441,8 +441,35 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .hidden{display:none!important}
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
 
+/* App-Lock Overlay */
+#appLock{
+  position: fixed; inset: 0; z-index: 10001;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
+}
+#appLock .lock-card{
+  width: min(420px, 92vw);
+  background: #fff; color: #111;
+  border-radius: 16px; padding: 18px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.35);
+  border: 1px solid #e5e7eb;
+}
+#appLock .lock-card h3{ margin: 0 0 6px; }
+#appLock .btn.primary{ background: var(--accent); color: #fff; }
+#appLock .pin-wrap{ display:flex; gap:8px; margin-top:8px; }
+#appLock .pin-wrap input{
+  flex:1; background:#f8fafc; color:#111; border:1px solid #e5e7eb;
+}
+
+/* Body-State: solange gelockt ist, Interaktion sperren (Overlay deckt ohnehin ab) */
+body.app-locked main, body.app-locked nav, body.app-locked header{
+  filter: blur(0); /* bewusst ohne Blur, nur visuelles Dimmen optional */
+}
+body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
+
 /* Login-Overlay */
 #loginOverlay{
+
   position: fixed; inset: 0; z-index: 10000;
   display: none; align-items: center; justify-content: center;
   background: rgba(0,0,0,.35); backdrop-filter: blur(2px);
@@ -1019,6 +1046,7 @@ setAuthGuard(!!session);
 setDoctorAccess(!!session);
 if (session) {
   await afterLoginBoot();
+  await ensureAppLock(); // 👈 App-Lock nach erfolgreichem Login
 }
 });
 }
@@ -2409,6 +2437,153 @@ setBusy(false);
 }
 }
 
+/* ===== App-Lock (Passkey + PIN) ===== */
+
+/* Kleine Utils */
+const u8 = (len)=>{ const a=new Uint8Array(len); crypto.getRandomValues(a); return a; };
+const b64u = {
+  enc: (buf)=> btoa(String.fromCharCode(...new Uint8Array(buf)))
+                .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+  dec: (str)=> Uint8Array.from(atob(str.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0))
+};
+async function sha256(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return b64u.enc(buf);
+}
+
+/* Config-Keys in IndexedDB.CONF */
+const LOCK_ENABLED_KEY   = "app_lock_enabled";     // bool
+const LOCK_CRED_ID_KEY   = "lock_cred_id";         // base64url
+const LOCK_PIN_HASH_KEY  = "lock_pin_hash";        // SHA-256 b64url
+const LOCK_LAST_OK_KEY   = "lock_last_ok";         // timestamp
+
+/* UI Helpers */
+function lockUi(on){
+  document.body.classList.toggle('app-locked', !!on);
+  const ov = document.getElementById('appLock');
+  if (ov) ov.style.display = on ? 'flex' : 'none';
+}
+function setLockMsg(msg){
+  const el = document.getElementById('lockMsg');
+  if (el) el.textContent = msg || '';
+}
+
+/* Setup: Passkey registrieren (platform) */
+async function registerPasskey(){
+  try{
+    const rpId = location.hostname;
+    const userId = u8(16);
+    const challenge = u8(32);
+    const pubKeyOpts = {
+      publicKey: {
+        challenge,
+        rp: { name: "Gesundheits-Logger", id: rpId },
+        user: { id: userId, name: "local-user", displayName: "Local User" },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        timeout: 60000,
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'preferred', residentKey: 'preferred' },
+        attestation: 'none'
+      }
+    };
+    const cred = await navigator.credentials.create(pubKeyOpts);
+    if (!cred) throw new Error("Keine Antwort vom Authenticator.");
+    const idB64 = b64u.enc(cred.rawId);
+    await putConf(LOCK_CRED_ID_KEY, idB64);
+    await putConf(LOCK_ENABLED_KEY, true);
+    setLockMsg("Passkey eingerichtet ✔︎");
+    return true;
+  }catch(e){
+    setLockMsg("Passkey-Setup fehlgeschlagen: " + (e.message||e));
+    return false;
+  }
+}
+
+/* Entsperren per Passkey (nur Besitz+UV Check – lokal ausreichend für App-Lock) */
+async function unlockWithPasskey(){
+  try{
+    const credId = await getConf(LOCK_CRED_ID_KEY);
+    if (!credId){
+      setLockMsg("Noch kein Passkey eingerichtet.");
+      return false;
+    }
+    const allow = [{ type:'public-key', id: b64u.dec(credId) }];
+    const challenge = u8(32);
+    const opts = { publicKey: { challenge, rpId: location.hostname, timeout: 60000, allowCredentials: allow, userVerification:'preferred' } };
+    const assertion = await navigator.credentials.get(opts);
+    if (!assertion) throw new Error("Abgebrochen.");
+    // Lokaler Gate: Erfolg der Challenge => entsperrt
+    await putConf(LOCK_LAST_OK_KEY, Date.now());
+    lockUi(false);
+    return true;
+  }catch(e){
+    setLockMsg("Passkey fehlgeschlagen: " + (e.message||e));
+    return false;
+  }
+}
+
+/* PIN setzen/prüfen */
+async function setPinInteractive(){
+  const pin = prompt("Neue PIN (4–10 Ziffern):") || "";
+  if (!/^\d{4,10}$/.test(pin)){ alert("Ungültige PIN."); return false; }
+  const hash = await sha256("pin:"+pin);
+  await putConf(LOCK_PIN_HASH_KEY, hash);
+  await putConf(LOCK_ENABLED_KEY, true);
+  setLockMsg("PIN gesetzt ✔︎");
+  return true;
+}
+async function unlockWithPin(){
+  const input = document.getElementById('pinInput');
+  const pin = (input?.value||"").trim();
+  if (!pin){ setLockMsg("PIN eingeben."); return false; }
+  const saved = await getConf(LOCK_PIN_HASH_KEY);
+  if (!saved){ setLockMsg("Keine PIN hinterlegt."); return false; }
+  const hash = await sha256("pin:"+pin);
+  if (hash !== saved){ setLockMsg("PIN falsch."); return false; }
+  await putConf(LOCK_LAST_OK_KEY, Date.now());
+  input.value = "";
+  lockUi(false);
+  return true;
+}
+
+/* Ensure: Lock aktiv? Wann anzeigen? */
+async function ensureAppLock(){
+  // Nur wenn eingeloggt (sonst regelt loginOverlay)
+  if (!(await isLoggedIn())) { lockUi(false); return; }
+
+  // Ist App-Lock konfiguriert/aktiv?
+  let enabled = await getConf(LOCK_ENABLED_KEY);
+  const hasCred = !!(await getConf(LOCK_CRED_ID_KEY));
+  const hasPin  = !!(await getConf(LOCK_PIN_HASH_KEY));
+  if (!enabled && (hasCred || hasPin)) enabled = true;
+
+  // Erster Start ohne Setup: Lock optional deaktiviert bis Setup?
+  // Wir zeigen den Lock und bieten Setup im Overlay an.
+  if (!enabled) {
+    // Noch kein Setup? Dann Lock trotzdem anzeigen, aber mit Setup-Buttons.
+    lockUi(true);
+    setLockMsg(hasCred||hasPin ? "" : "Tipp: Richte Passkey oder PIN ein.");
+    return;
+  }
+
+  // Aktiv → sperren bis entsperrt
+  lockUi(true);
+  setLockMsg("");
+}
+
+/* Events binden (einmal in main()) */
+function bindAppLockButtons(){
+  const btnPass = document.getElementById('unlockPasskeyBtn');
+  const btnPin  = document.getElementById('unlockPinBtn');
+  const btnSetPass = document.getElementById('setupPasskeyBtn');
+  const btnSetPin  = document.getElementById('setPinBtn');
+
+  if (btnPass) btnPass.addEventListener('click', unlockWithPasskey);
+  if (btnPin)  btnPin.addEventListener('click', unlockWithPin);
+  if (btnSetPass) btnSetPass.addEventListener('click', registerPasskey);
+  if (btnSetPin)  btnSetPin.addEventListener('click', setPinInteractive);
+}
+
 /* ===== Main ===== */
 async function main(){
 diag.init(); helpPanel.init(); await initDB();
@@ -2432,7 +2607,9 @@ if (sbClient) watchAuthState()
 const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot(); // wichtig für Reload mit persistierter Session
+  await ensureAppLock();  // 👈 App-Lock direkt nach Boot prüfen/anzeigen
 }
+bindAppLockButtons();     // 👈 Buttons der Lock-Card binden
 
 // Konfiguration laden
 const savedUrl = await getConf("webhookUrl");
@@ -2568,8 +2745,43 @@ main();
     <div id="whoAmI" class="small" style="text-align:center;margin-top:6px"></div>
   </div>
 </div>
+
+<!-- App-Lock Overlay (zentriert) -->
+<div id="appLock" style="display:none">
+  <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <h3 id="lockTitle">App gesperrt</h3>
+    <p class="small" style="margin:0 0 8px">
+      Bitte entsperren: bevorzugt per Passkey (Finger/Face). Alternativ PIN.
+    </p>
+
+    <div class="row" style="gap:8px">
+      <button class="btn primary" id="unlockPasskeyBtn" type="button" style="width:100%;height:48px">
+        Per Passkey entsperren
+      </button>
+    </div>
+
+    <div class="pin-wrap">
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN (optional)" />
+      <button class="btn ghost" id="unlockPinBtn" type="button">PIN</button>
+    </div>
+
+    <div class="small" style="margin-top:8px; opacity:.8">
+      <button class="btn ghost" id="setupPasskeyBtn" type="button" style="width:100%;margin-top:6px">
+        Passkey einrichten
+      </button>
+      <button class="btn ghost" id="setPinBtn" type="button" style="width:100%;margin-top:6px">
+        PIN setzen/ändern
+      </button>
+    </div>
+
+    <div id="lockMsg" class="small" style="margin-top:6px;color:#6b7280"></div>
+  </div>
+</div>
+
 </body>
 </html>
+
+
 
 
 
