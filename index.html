@@ -441,6 +441,22 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .seg .seg-btn.active{background:var(--accent);color:#fff}
 .hidden{display:none!important}
 :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* Login-Overlay */
+#loginOverlay{
+  position: fixed; inset: 0; z-index: 10000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(2px);
+}
+#loginOverlay .login-card{
+  width: min(420px, 92vw);
+  background: #fff; color: #111;
+  border-radius: 16px; padding: 18px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.35);
+  border: 1px solid #e5e7eb;
+}
+#loginOverlay .login-card h3{ margin: 0 0 6px; }
+#loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
   
 </style>
 </head>
@@ -723,6 +739,22 @@ function setAuthGuard(logged){
   // Kein auto-boot mehr hier – Start erfolgt in main()/watchAuthState.
 }
 
+function setDoctorAccess(enabled){
+  // Tab-Button
+  const tabBtn = document.getElementById('tab-doctor');
+  if (tabBtn){
+    tabBtn.disabled = !enabled;
+    tabBtn.classList.toggle('ghost', !enabled);
+    tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
+  }
+  // „Werte anzeigen“-Button
+  const chartBtn = document.getElementById('doctorChartBtn');
+  if (chartBtn){
+    chartBtn.disabled = !enabled;
+    chartBtn.title = enabled ? 'Werte als Grafik' : 'Bitte zuerst anmelden';
+  }
+}
+  
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
@@ -921,13 +953,15 @@ await sleep(50);
 return { pushed, failed };
 }
 
-function showLoginBar(show){
-const bar = document.getElementById('loginBar');
-if (bar) bar.style.display = show ? 'flex' : 'none';
+function showLoginOverlay(show){
+  const ov = document.getElementById('loginOverlay');
+  if (ov) ov.style.display = show ? 'flex' : 'none';
 }
 function setUserUi(email){
-document.getElementById('whoAmI').textContent = email ? `Angemeldet als: ${email}` : '';
-document.getElementById('logoutBtn').style.display = email ? '' : 'none';
+  const who = document.getElementById('whoAmI');
+  const lout = document.getElementById('logoutBtn');
+  if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
+  if (lout) lout.style.display = email ? '' : 'none';
 }
 
 // Buttons binden (einmalig, z. B. in main())
@@ -954,7 +988,7 @@ if (supa) await supa.auth.signOut();
 await teardownRealtime(); // <- Channels sauber schließen
 __booted = false; // <- erlaubt späteren Re-Login-Start
 setUserUi('');
-showLoginBar(true);
+showLoginOverlay(true);
 setAuthGuard(false);
 });
 }
@@ -970,8 +1004,9 @@ return false;
 const { data: { session } } = await sbClient.auth.getSession();
 const email = session?.user?.email || '';
 setUserUi(email);
-showLoginBar(!session);
+showLoginOverlay(!session);
 setAuthGuard(!!session);
+setDoctorAccess(!!session);
 return !!session;
 }
 
@@ -980,10 +1015,11 @@ function watchAuthState(){
 sbClient.auth.onAuthStateChange(async (_event, session)=>{
 const email = session?.user?.email || '';
 setUserUi(email);
-showLoginBar(!session);
-setAuthGuard(!!session); // <— NEU: UI sperren/freigeben
+showLoginOverlay(!session);
+setAuthGuard(!!session);
+setDoctorAccess(!!session);
 if (session) {
-  await afterLoginBoot(); // Start nach frischem Login
+  await afterLoginBoot();
 }
 });
 }
@@ -1028,6 +1064,11 @@ const __t0 = performance.now();
 async function renderDoctor(){
 const host = $("#doctorView");
 if (!host) return;
+if (!(await isLoggedIn())){
+  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
+  setDocBadges({ visible: false });
+  return;
+}
 host.innerHTML = "";
 
 // Helpers (nur Anzeige)
@@ -1505,7 +1546,13 @@ const chartPanel = {
   // ----- Zeichnen -----
   async draw() {
     const t0 = performance.now?.() ?? Date.now();
-    const metric = $("#metricSel")?.value || "bp";
+if (!(await isLoggedIn())) {
+  if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Bitte anmelden</text>';
+  if (this.legend) this.legend.innerHTML = "";
+  return;
+}
+const metric = $("#metricSel")?.value || "bp";
+
     const data   = await this.getFiltered();
 
     // X-Basis
@@ -1957,7 +2004,13 @@ function flashSaveOk(){
 }
 
 /* ===== Tabs / Segments ===== */
-function setTab(name){
+async function setTab(name){
+  if (name === "doctor"){
+    if (!(await isLoggedIn())){
+      showLoginOverlay(true);
+      name = "capture";
+    }
+  }
   $$(".view").forEach(v => v.classList.remove("active"));
   $("#"+name).classList.add("active");
   $$(".tabs .btn").forEach(b =>
@@ -1968,7 +2021,14 @@ function setTab(name){
 
 function bindTabs(){
   $$(".tabs .btn").forEach(b =>
-    b.addEventListener("click", e => setTab(e.currentTarget.dataset.tab))
+    b.addEventListener("click", async (e) => {
+      const tab = e.currentTarget.dataset.tab;
+      if (tab === "doctor" && !(await isLoggedIn())){
+        showLoginOverlay(true);
+        return;
+      }
+      setTab(tab);
+    })
   );
 }
 
@@ -2432,10 +2492,11 @@ setDocBadges({ visible: true });
 });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-setDocBadges({ visible: true });
-chartPanel.open = true;
-chartPanel.el.style.display = 'block';
-await chartPanel.draw();
+  if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
+  setDocBadges({ visible: true });
+  chartPanel.open = true;
+  chartPanel.el.style.display = 'block';
+  await chartPanel.draw();
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -2498,14 +2559,19 @@ main();
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
 </script>
-<!-- Google-Login (einfach) -->
-<div id="loginBar" style="position:fixed;left:8px;bottom:8px;z-index:10000;display:none;gap:8px">
-<button class="btn primary" id="googleLoginBtn" type="button">Mit Google anmelden</button>
-<span id="whoAmI" class="small" style="margin-left:8px"></span>
-<button class="btn ghost" id="logoutBtn" type="button" style="display:none">Abmelden</button>
+<!-- Login-Overlay (zentriert) -->
+<div id="loginOverlay" style="display:none">
+  <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <h3 id="loginTitle">Willkommen</h3>
+    <p class="small" style="margin:0 0 8px">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
+    <button class="btn primary" id="googleLoginBtn" type="button" style="width:100%;height:48px">Mit Google anmelden</button>
+    <button class="btn ghost" id="logoutBtn" type="button" style="display:none;width:100%;height:40px;margin-top:8px">Abmelden</button>
+    <div id="whoAmI" class="small" style="text-align:center;margin-top:6px"></div>
+  </div>
 </div>
 </body>
 </html>
+
 
 
 
