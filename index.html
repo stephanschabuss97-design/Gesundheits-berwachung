@@ -426,7 +426,6 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   background: #0f1116;
   border: 1px solid #2b2f3a;
   border-radius: 10px;
-  min-height: 0;
 }
 
 #chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
@@ -997,7 +996,7 @@ setAuthGuard(false);
 async function requireSession(){
 if(!sbClient){
 setUserUi('');
-showLoginBar(true);
+showLoginOverlay(true);
 setAuthGuard(false);
 return false;
 }
@@ -1411,7 +1410,7 @@ const chartPanel = {
     const supa = await safeEnsureSupabaseClient();
     if (supa) {
       try {
-        const { data, error } = await supa.from("user_profiles").select("height_cm").single();
+        const { data, error } = await supa.from("user_profile").select("height_cm").single();
         if (!error && data?.height_cm) return Number(data.height_cm);
       } catch(_) {}
     }
@@ -2571,6 +2570,7 @@ main();
 </div>
 </body>
 </html>
+
 
 
 
