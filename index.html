@@ -1296,7 +1296,7 @@ async function renderDoctor(){
   const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
   const onClass = b => (b ? "on" : "");
   const fmtDateDE = (iso) => {
-    const d = new Date(iso + "T00:00:00");
+    const d = new Date(iso + "T00:00:00Z");
     return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
   };
 
@@ -1535,18 +1535,101 @@ const chartPanel = {
   },
 
   // ----- Helpers -----
-  async getFiltered() {
-    const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
-    const from = $("#from")?.value;
-    const to   = $("#to")?.value;
-    return entries
-      .filter(e => {
-        if (from && e.date < from) return false;
-        if (to   && e.date > to)   return false;
-        return true;
-      })
-      .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
-  },
+async getFiltered() {
+  const from = $("#from")?.value;
+  const to   = $("#to")?.value;
+
+  // Wenn eingeloggt: Cloud nehmen (Events -> Daily), sonst fallback: lokale Entries
+  if (await isLoggedIn()) {
+    // gleiche Aggregation wie Arzt-Ansicht
+    const days = await fetchDailyOverview(from, to);
+    // Für die Chart-Logik bauen wir flache "entry"-ähnliche Objekte
+    const flat = [];
+    for (const d of days) {
+      // Morgen
+      if (d.morning.sys != null || d.morning.dia != null || d.morning.pulse != null) {
+        const ts = Date.parse(d.date + "T07:00:00Z"); // Fix-Zeit am Tag
+        flat.push({
+          date: d.date,
+          dateTime: new Date(ts).toISOString(),
+          ts,
+          context: "Morgen",
+          sys: d.morning.sys,
+          dia: d.morning.dia,
+          pulse: d.morning.pulse,
+          weight: null,
+          waist_cm: null,
+          notes: d.notes || "",
+          training: d.flags.training,
+          low_intake: d.flags.water_lt2,
+          sick: d.flags.sick,
+          valsartan_missed: false,
+          forxiga_missed: false,
+          nsar_taken: false,
+          salt_high: d.flags.salt_gt5,
+          sugar_high: d.flags.sugar_gt10
+        });
+      }
+      // Abend
+      if (d.evening.sys != null || d.evening.dia != null || d.evening.pulse != null) {
+        const ts = Date.parse(d.date + "T19:00:00Z");
+        flat.push({
+          date: d.date,
+          dateTime: new Date(ts).toISOString(),
+          ts,
+          context: "Abend",
+          sys: d.evening.sys,
+          dia: d.evening.dia,
+          pulse: d.evening.pulse,
+          weight: null,
+          waist_cm: null,
+          notes: d.notes || "",
+          training: d.flags.training,
+          low_intake: d.flags.water_lt2,
+          sick: d.flags.sick,
+          valsartan_missed: false,
+          forxiga_missed: false,
+          nsar_taken: false,
+          salt_high: d.flags.salt_gt5,
+          sugar_high: d.flags.sugar_gt10
+        });
+      }
+      // Body (Gewicht/Bauch)
+      if (d.weight != null || d.waist_cm != null) {
+        const ts = Date.parse(d.date + "T12:00:00Z");
+        flat.push({
+          date: d.date,
+          dateTime: new Date(ts).toISOString(),
+          ts,
+          context: "Tag",
+          sys: null, dia: null, pulse: null,
+          weight: d.weight,
+          waist_cm: d.waist_cm,
+          notes: d.notes || "",
+          training: d.flags.training,
+          low_intake: d.flags.water_lt2,
+          sick: d.flags.sick,
+          valsartan_missed: false,
+          forxiga_missed: false,
+          nsar_taken: false,
+          salt_high: d.flags.salt_gt5,
+          sugar_high: d.flags.sugar_gt10
+        });
+      }
+    }
+    return flat.sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
+  }
+
+  // Fallback: lokal (wenn nicht eingeloggt)
+  const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
+  return entries
+    .filter(e => {
+      if (from && e.date < from) return false;
+      if (to   && e.date > to)   return false;
+      return true;
+    })
+    .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
+},
 
   // Höhe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
