@@ -1002,10 +1002,124 @@ return {ok: res.ok, status: res.status};
 return {ok:false, status:0};
 }
 }
-// VORERST deaktiviert – Arzt-Ansicht folgt in Schritt 2
+/* === Remote-Fetch für Arzt-Ansicht (Events) === */
+async function fetchEventsRange(fromIso /*YYYY-MM-DD*/, toIso /*YYYY-MM-DD*/){
+  const url = await getConf("webhookUrl");     // .../rest/v1/health_events
+  const headers = await getHeaders();
+  if (!url || !headers) return [];
+
+  // [from, to] inklusiv → REST: ts >= fromT00:00Z UND ts < (to+1)T00:00Z
+  const toNext = new Date(toIso + "T00:00:00Z"); 
+  toNext.setUTCDate(toNext.getUTCDate() + 1);
+  const toNextIso = toNext.toISOString().slice(0,10);
+
+  const q = `${url}` +
+            `?select=id,ts,type,payload` +
+            `&ts=gte.${encodeURIComponent(fromIso)}T00:00:00Z` +
+            `&ts=lt.${encodeURIComponent(toNextIso)}T00:00:00Z` +
+            `&order=ts.asc`;
+
+  const res = await withRetry(()=> fetch(q, { headers }));
+  if (!res.ok) return [];
+  const rows = await res.json();
+  // Normalisieren: Datum je Event (YYYY-MM-DD) berechnen
+  return rows.map(r => {
+    const d = new Date(r.ts);
+    const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    return { id:r.id, date, ts:r.ts, type:r.type, payload:r.payload||{} };
+  });
+}
+
+function aggregateDailyFromEvents(events){
+  // Zielstruktur wie bisher in renderDoctor verwendet
+  const days = new Map();
+  const ensure = (date) => {
+    let d = days.get(date);
+    if (!d){
+      d = {
+        date,
+        morning: { sys:null, dia:null, pulse:null, map:null },
+        evening: { sys:null, dia:null, pulse:null, map:null },
+        weight: null,
+        waist_cm: null,
+        notes: "",
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+        remoteIds: [],
+        hasCloud: true  // kommt ja vom Server
+      };
+      days.set(date, d);
+    }
+    return d;
+  };
+
+  for (const ev of events){
+    const d = ensure(ev.date);
+    d.remoteIds.push(ev.id);
+
+    if (ev.type === "bp"){
+      const p = ev.payload||{};
+      const ctx = p.ctx; // "Morgen"|"Abend"
+      const blk = (ctx === "Morgen") ? d.morning : (ctx === "Abend") ? d.evening : null;
+      if (blk){
+        if (p.sys   != null) blk.sys   = Number(p.sys);
+        if (p.dia   != null) blk.dia   = Number(p.dia);
+        if (p.pulse != null) blk.pulse = Number(p.pulse);
+        if (blk.sys != null && blk.dia != null) blk.map = calcMAP(blk.sys, blk.dia);
+      }
+    }
+    else if (ev.type === "body"){
+      const p = ev.payload||{};
+      if (p.kg != null) d.weight   = Number(p.kg);
+      if (p.cm != null) d.waist_cm = Number(p.cm);
+    }
+    else if (ev.type === "day_flags"){
+      const f = ev.payload||{};
+      if (f.low_intake)       d.flags.water_lt2  = true;
+      if (f.salt_high)        d.flags.salt_gt5   = true;
+      if (f.sugar_high)       d.flags.sugar_gt10 = true;
+      if (f.sick)             d.flags.sick       = true;
+      if (f.training)         d.flags.training   = true;
+      if (f.valsartan_missed || f.forxiga_missed || f.nsar_taken) d.flags.meds = true;
+    }
+    else if (ev.type === "note"){
+      const t = (ev.payload?.text||"").trim();
+      // letzte Notiz des Tages gewinnt (Server ist zeitlich sortiert)
+      if (t) d.notes = t;
+    }
+  }
+
+  return Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+}
+
+async function fetchDailyOverview(fromIso, toIso){
+  const events = await fetchEventsRange(fromIso, toIso);
+  return aggregateDailyFromEvents(events);
+}
+
+/* Server: alle Events eines Tages löschen (RLS: nur eigene Records) */
+async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if (!url || !headers) return { ok:false, status:0 };
+
+  const from = `${dateIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+
+  const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+  try{
+    const res = await withRetry(() => fetch(q, { method:"DELETE", headers }));
+    return { ok: res.ok, status: res.status };
+  }catch{
+    return { ok:false, status:0 };
+  }
+}
+
+/* (vorerst) weiterhin No-Op */
 async function pullAllFromRemote(){
   return []; // No-Op bis zur Anzeige-Umstellung
 }
+
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
@@ -1168,95 +1282,142 @@ function setDocBadges({ training, bad, visible } = {}) {
 
 const __t0 = performance.now();
 async function renderDoctor(){
-const host = $("#doctorView");
-if (!host) return;
-if (!(await isLoggedIn())){
-  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
-  setDocBadges({ visible: false });
-  return;
-}
-host.innerHTML = "";
+  const host = $("#doctorView");
+  if (!host) return;
 
-// Helpers (nur Anzeige)
-const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
-const onClass = b => (b ? "on" : "");
-const fmtDateDE = (iso) => {
-const d = new Date(iso + "T00:00:00");
-return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
-};
+  if (!(await isLoggedIn())){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
+    setDocBadges({ visible: false });
+    return;
+  }
+  host.innerHTML = "";
 
-// 1) Filter + Sort wie bisher
-const from = $("#from").value;
-const to = $("#to").value;
-const entries = await getAllEntries();
-const list = entries
-.filter(e => {
-if (from && e.date < from) return false;
-if (to && e.date > to) return false;
-return true;
-})
-.sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+  // Anzeige-Helper
+  const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
+  const onClass = b => (b ? "on" : "");
+  const fmtDateDE = (iso) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+  };
 
-// 2) Tagesobjekte aufbauen (nur Darstellung)
-const days = new Map();
-for (const e of list){
-  // Day-Objekt holen/erzeugen
-  let d = days.get(e.date);
-  if (!d){
-  d = {
-  date: e.date,
-  morning: { sys:null, dia:null, pulse:null, map:null },
-  evening: { sys:null, dia:null, pulse:null, map:null },
-  weight: null,
-  waist_cm: null,
-  notes: "",
-  flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
-  localIds: [],
-  remoteIds: [],
-  hasCloud: false
-};
-
-    days.set(e.date, d);
+  // Zeitraum lesen
+  const from = $("#from").value;
+  const to   = $("#to").value;
+  if (!from || !to){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum wählen.</div>`;
+    setDocBadges({ visible: false });
+    return;
   }
 
-  // IDs & Cloud-Status sammeln
-  if (e?.id != null) d.localIds.push(e.id);
-  if (e?.remote_id != null) { d.remoteIds.push(e.remote_id); d.hasCloud = true; }
-
-  const legacyWeightOnly = isWeightOnly(e);
-  const hasVitals = !!(e.sys || e.dia || e.pulse);
-  const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
-  const isMeasurement = hasVitals && !isDaySummary;
-
-  // Messblöcke
-  if (isMeasurement && e.context === "Morgen"){
-    d.morning.sys   = e.sys ?? null;
-    d.morning.dia   = e.dia ?? null;
-    d.morning.pulse = e.pulse ?? null;
-    d.morning.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
-  } else if (isMeasurement && e.context === "Abend"){
-    d.evening.sys   = e.sys ?? null;
-    d.evening.dia   = e.dia ?? null;
-    d.evening.pulse = e.pulse ?? null;
-    d.evening.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+  // 🔹 Server lesen → Tagesobjekte
+  let daysArr = [];
+  try{
+    daysArr = await fetchDailyOverview(from, to);
+  }catch(_){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
+    setDocBadges({ visible: false });
+    return;
   }
 
-  // Tageszusammenfassung / Gewicht / Notizen
-if (isDaySummary){
-  if (e.weight != null) d.weight = e.weight;
-  if (e.waist_cm != null) d.waist_cm = e.waist_cm;
-  if (e.notes)          d.notes  = e.notes;
-}
+  // KPIs
+  const trainingDays = daysArr.filter(d => !!d.flags.training).length;
+  const badDays = daysArr.filter(d => {
+    const f = d.flags;
+    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
+  }).length;
+  setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
-  // Flags
-  if (e.training)                         d.flags.training   = true;
-  if (e.low_intake)                       d.flags.water_lt2  = true;
-  if (e.salt_high)                        d.flags.salt_gt5   = true;
-  if (e.sugar_high)                       d.flags.sugar_gt10 = true;
-  if (e.sick)                             d.flags.sick       = true;
-  if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
-}
+  // Renderer je Tag
+  const renderDoctorDay = (day) => `
+<section class="doctor-day" data-date="${day.date}">
+  <div class="col-date">
+    <div class="date-top">
+      <span class="date-label">${fmtDateDE(day.date)}</span>
+      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
+    </div>
+    <div class="date-actions">
+      <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
+    </div>
+  </div>
 
+  <div class="col-measure">
+    <div class="measure-head">
+      <div></div>
+      <div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
+    </div>
+    <div class="measure-grid">
+      <div class="measure-row">
+        <div class="label">morgens</div>
+        <div class="num ${ (day.morning.sys!=null && day.morning.sys>130) ? 'alert' : '' }">${dash(day.morning.sys)}</div>
+        <div class="num ${ (day.morning.dia!=null && day.morning.dia>90)  ? 'alert' : '' }">${dash(day.morning.dia)}</div>
+        <div class="num">${dash(day.morning.pulse)}</div>
+        <div class="num ${ (day.morning.map!=null && day.morning.map>100) ? 'alert' : '' }">${dash(fmtNum(day.morning.map))}</div>
+      </div>
+      <div class="measure-row">
+        <div class="label">abends</div>
+        <div class="num ${ (day.evening.sys!=null && day.evening.sys>130) ? 'alert' : '' }">${dash(day.evening.sys)}</div>
+        <div class="num ${ (day.evening.dia!=null && day.evening.dia>90)  ? 'alert' : '' }">${dash(day.evening.dia)}</div>
+        <div class="num">${dash(day.evening.pulse)}</div>
+        <div class="num ${ (day.evening.map!=null && day.evening.map>100) ? 'alert' : '' }">${dash(fmtNum(day.evening.map))}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-special">
+    <div class="weight-line">
+      <div>Gewicht</div>
+      <div class="num">${dash(fmtNum(day.weight))}</div>
+    </div>
+
+    <div class="waist-line">
+      <div>Bauchumfang (cm)</div>
+      <div class="num">${dash(fmtNum(day.waist_cm))}</div>
+    </div>
+
+    <div class="flags">
+      <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
+    </div>
+
+    <div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
+  </div>
+</section>
+`;
+
+  // Rendern / Leerzustand
+  if (!daysArr.length){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+  } else {
+    host.innerHTML = daysArr.map(renderDoctorDay).join("");
+
+    // 🔹 Löschen: alle Server-Events des Tages entfernen
+    host.querySelectorAll('[data-del-day]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const date = btn.getAttribute('data-del-day');
+        if (!date) return;
+        if (!confirm(`Alle Einträge in der Cloud für ${date} löschen?`)) return;
+
+        btn.disabled = true;
+        const old = btn.textContent;
+        btn.textContent = 'Lösche…';
+        try{
+          const r = await deleteRemoteDay(date);
+          if (!r.ok){
+            alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}).`);
+          }
+          await renderDoctor();           // neu laden
+          if (chartPanel.open) chartPanel.draw();
+        } finally {
+          btn.disabled = false; btn.textContent = old;
+        }
+      });
+    });
+  }
+}
 const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
  
   // --- KPI: Anzahl Trainingstage und Tage mit mind. einem Bad-Flag
@@ -2776,6 +2937,7 @@ main();
 
 </body>
 </html>
+
 
 
 
