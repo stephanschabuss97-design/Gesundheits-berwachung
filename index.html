@@ -729,6 +729,37 @@ close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='no
 };
 
 /* ===== Helpers ===== */
+// --- Zentrales Toggle Binding ---
+function bindTogglesToEntry(entry) {
+  const map = [
+    ['trainingToggle',      'training'],
+    ['sickToggle',          'sick'],
+    ['lowIntakeToggle',     'low_intake'],
+    ['saltHighToggle',      'salt_high'],
+    ['sugarHighToggle',     'sugar_high'],
+    ['valsartanMissToggle', 'valsartan_missed'],
+    ['forxigaMissToggle',   'forxiga_missed'],
+    ['nsarToggle',          'nsar_taken'] // 👈 NSAR anbinden
+  ];
+
+  for (const [btnId, key] of map) {
+    const btn = document.getElementById(btnId);
+    if (!btn) continue;
+
+    // Initialzustand spiegeln
+    btn.classList.toggle('active', !!entry[key]);
+    btn.setAttribute('aria-pressed', String(!!entry[key]));
+
+    btn.addEventListener('click', () => {
+      const next = !btn.classList.contains('active');
+      btn.classList.toggle('active', next);
+      btn.setAttribute('aria-pressed', String(next));
+      entry[key] = next;
+    });
+  }
+}
+
+  
 // --- Service-Role-Schutz (NIEMALS im Browser) ---
 function isServiceRoleKey(raw){
   const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
@@ -1540,6 +1571,7 @@ async getFiltered() {
   if (await isLoggedIn()) {
     // gleiche Aggregation wie Arzt-Ansicht
     const days = await fetchDailyOverview(from, to);
+
     // Für die Chart-Logik bauen wir flache "entry"-ähnliche Objekte
     const flat = [];
     for (const d of days) {
@@ -1562,11 +1594,12 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: false,
+          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
+
       // Abend
       if (d.evening.sys != null || d.evening.dia != null || d.evening.pulse != null) {
         const ts = Date.parse(d.date + "T19:00:00Z");
@@ -1586,11 +1619,12 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: false,
+          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
+
       // Body (Gewicht/Bauch)
       if (d.weight != null || d.waist_cm != null) {
         const ts = Date.parse(d.date + "T12:00:00Z");
@@ -1608,25 +1642,20 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: false,
+          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
     }
+
     return flat.sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
   }
 
-  // Fallback: lokal (wenn nicht eingeloggt)
-  const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
-  return entries
-    .filter(e => {
-      if (from && e.date < from) return false;
-      if (to   && e.date > to)   return false;
-      return true;
-    })
-    .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
-},
+  // Fallback (nicht eingeloggt): lokale Entries aus IndexedDB
+  const all = await getAllEntries();
+  return all.sort((a,b) => Date.parse(a.dateTime) - Date.parse(b.dateTime));
+}
 
   // Höhe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
@@ -2377,6 +2406,8 @@ salt_high: false,
 sugar_high: false
 };
 
+  bindTogglesToEntry(entry);
+
 const localId = await addEntry(entry);
 await syncWebhook(entry, localId);
 return true;
@@ -2896,17 +2927,3 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
