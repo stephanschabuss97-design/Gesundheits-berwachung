@@ -1008,27 +1008,56 @@ async function pullAllFromRemote(){
 }
 
 async function pushPendingToRemote(){
-const url = await getConf("webhookUrl");
-const headers = await getHeaders();
-if(!url || !headers) return { pushed:0, failed:0 };
-const all = await getAllEntries();
-const pending = all.filter(e=>!e.remote_id);
-let pushed=0, failed=0;
-for(const e of pending){
-try{
-const uid = await getUserId();
-const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
-const payload = uid ? { ...safe, user_id: uid } : safe;
-const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
-if(!res.ok){ failed++; continue; }
-const json = await res.json();
-const rid = json?.[0]?.id;
-if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
-else { failed++; }
-await sleep(50);
-}catch(_){ failed++; }
-}
-return { pushed, failed };
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if(!url || !headers) return { pushed:0, failed:0 };
+
+  const all = await getAllEntries();
+  const pending = all.filter(e => !e.remote_id);
+
+  let pushed = 0, failed = 0;
+
+  for (const e of pending){
+    try{
+      const uid = await getUserId();
+
+      // 1) Legacy-Entry → 0..N Events
+      const events = toHealthEvents(e);
+      if (!events.length) { 
+        // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht hängen bleiben
+        await updateEntry(e.id, { remote_id: -1 });
+        continue;
+      }
+
+      // 2) user_id anhängen (RLS)
+      const payload = uid ? events.map(ev => ({...ev, user_id: uid})) : events;
+
+      // 3) Batch-POST (Array)
+      const res = await withRetry(() => fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      }));
+      if (!res.ok) { failed++; continue; }
+
+      const json = await res.json();
+      const firstId = json?.[0]?.id ?? null;
+
+      // 4) Lokal markieren: irgendein Remote-Event existiert → Cloud-Icon ok
+      if (firstId != null) {
+        await updateEntry(e.id, { remote_id: firstId });
+        pushed++;
+      } else {
+        failed++;
+      }
+
+      await sleep(50);
+    } catch(_){
+      failed++;
+    }
+  }
+
+  return { pushed, failed };
 }
 
 function showLoginOverlay(show){
@@ -2293,7 +2322,11 @@ throw lastErr;
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
-  if(!url || !headers) return;
+  if(!url || !headers){
+    diag.add("Webhook: keine Header/URL – vermutlich nicht eingeloggt. Bitte Login ausführen.");
+    showLoginOverlay(true);
+    return;
+  }
 
   try{
     const uid = await getUserId();
@@ -2395,18 +2428,9 @@ async function setupRealtime(){
 
 // Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
 async function initialAutoSync(){
-  const headers = await getHeaders();
-  const url = await getConf("webhookUrl");
-  if(!headers || !url){ diag.add("Auto-Sync: keine Konfiguration – übersprungen"); return; }
-  setBusy(true);
-  try{
-    const push = await pushPendingToRemote();
-    if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
-  }catch(e){
-    diag.add("Auto-Sync: Fehler – " + (e.message||e));
-  }finally{
-    setBusy(false);
-  }
+  // Vorerst deaktiviert, bis Anzeige komplett auf Events migriert ist.
+  diag.add("Auto-Sync: deaktiviert (Event-Migration Phase)");
+  return;
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
@@ -2752,6 +2776,7 @@ main();
 
 </body>
 </html>
+
 
 
 
