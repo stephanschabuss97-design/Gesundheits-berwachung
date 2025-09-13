@@ -824,34 +824,34 @@ function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Numb
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
 // Erzeugt pro Eingabe die nötigen Events (bp/body/day_flags/note)
 function toHealthEvents(entry){
-  const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
+  const tsIso = entry.dateTime;
   const out = [];
 
-  // 1) Blutdruck-Messungen (Morgen/Abend)
-  if (entry.context === "Morgen" || entry.context === "Abend"){
+  // 1) Blutdruck
+  if (entry.context === "Morgen" || entry.context === "Abend") {
     const hasVitals = (entry.sys != null) || (entry.dia != null) || (entry.pulse != null);
-    if (hasVitals){
+    if (hasVitals) {
       const payload = {};
       if (entry.sys   != null) payload.sys   = Number(entry.sys);
       if (entry.dia   != null) payload.dia   = Number(entry.dia);
       if (entry.pulse != null) payload.pulse = Number(entry.pulse);
-      payload.ctx = entry.context; // "Morgen" | "Abend"
+      payload.ctx = entry.context;
       out.push({ ts: tsIso, type: "bp", payload });
     }
   }
 
-  // 2) Tageszusammenfassung (Gewicht, Bauchumfang, Flags, Kommentar)
-  if (entry.context === "Tag"){
-    // body (Gewicht + Bauchumfang)
+  // 2) Tageszusammenfassung
+  if (entry.context === "Tag") {
+    // Body
     const hasBody = (entry.weight != null) || (entry.waist_cm != null);
-    if (hasBody){
+    if (hasBody) {
       const payload = {};
-      if (Number.isFinite(Number(entry.weight))) payload.kg = Number(entry.weight);
+      if (Number.isFinite(Number(entry.weight)))   payload.kg = Number(entry.weight);
       if (Number.isFinite(Number(entry.waist_cm))) payload.cm = Number(entry.waist_cm);
       out.push({ ts: tsIso, type: "body", payload });
     }
 
-    // day_flags (alle Booleans)
+    // Flags (NSAR eigenes Flag!)
     const flags = {
       training:         !!entry.training,
       sick:             !!entry.sick,
@@ -860,18 +860,15 @@ function toHealthEvents(entry){
       sugar_high:       !!entry.sugar_high,
       valsartan_missed: !!entry.valsartan_missed,
       forxiga_missed:   !!entry.forxiga_missed,
-      nsar_taken:       !!entry.nsar_taken,
+      nsar_taken:       !!entry.nsar_taken
     };
-    const anyFlag = Object.values(flags).some(Boolean);
-    if (anyFlag){
+    if (Object.values(flags).some(Boolean)) {
       out.push({ ts: tsIso, type: "day_flags", payload: flags });
     }
 
-    // note (optional, 1 Zeile Text)
+    // Note
     const note = (entry.notes || "").trim();
-    if (note){
-      out.push({ ts: tsIso, type: "note", payload: { text: note } });
-    }
+    if (note) out.push({ ts: tsIso, type: "note", payload: { text: note } });
   }
 
   return out;
@@ -1136,8 +1133,8 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const headers = await getHeaders();
   if (!url || !headers) return { ok:false, status:0 };
 
-const fromUtc = new Date(dateIso + "T00:00:00").toISOString();
-const toUtc = new Date(new Date(dateIso + "T00:00:00").getTime() + 24*3600*1000).toISOString();
+const fromUtc = new Date(dateIso + "T00:00:00Z").toISOString();              // explizit UTC
+const toUtc   = new Date(new Date(dateIso + "T00:00:00Z").getTime() + 864e5).toISOString();
 const q = `${url}?ts=gte.${encodeURIComponent(fromUtc)}&ts=lt.${encodeURIComponent(toUtc)}`;
   
   try{
@@ -2007,7 +2004,7 @@ const flags = {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
       }
-      flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
+      flagTs = Array.from(dayFlagsTmp.keys()).map(d => Date.parse(d + "T00:00:00Z"));
     }
 
     // Skalen
@@ -2109,7 +2106,7 @@ for (const k of Object.keys(flags)) {
 }
 
       const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
-      const flaggedDays = [...dayFlags.keys()]
+      const flaggedDays = Array.from(dayFlags.keys())
         .filter(d => {
           const r = dayFlags.get(d);
           return r && (r.training || r.badCount > 0);
@@ -2122,7 +2119,7 @@ for (const k of Object.keys(flags)) {
         g.setAttribute("pointer-events","none");
         g.setAttribute("aria-hidden","true");
 
-        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
+        const uniqDays = Array.from(new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])).sort((a,b)=>a-b);
         const dayXs = uniqDays.map(t => x(t));
         const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
         const bandW   = Math.max(10, Math.floor(minStep * 0.45));
@@ -2405,8 +2402,6 @@ nsar_taken: false,
 salt_high: false,
 sugar_high: false
 };
-
-  bindTogglesToEntry(entry);
 
 const localId = await addEntry(entry);
 await syncWebhook(entry, localId);
@@ -2927,3 +2922,4 @@ main();
 
 </body>
 </html>
+
