@@ -1418,131 +1418,7 @@ async function renderDoctor(){
     });
   }
 }
-const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
- 
-  // --- KPI: Anzahl Trainingstage und Tage mit mind. einem Bad-Flag
-const trainingDays = daysArr.filter(d => !!d.flags.training).length;
-const badDays = daysArr.filter(d => {
-  const f = d.flags;
-  return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
-}).length;
 
-// Badges setzen (nur Daily)
-setDocBadges({ training: trainingDays, bad: badDays, visible: true });
-
-
-// 3) Renderer pro Tag (-> 3 Spalten)
-const renderDoctorDay = (day) => `
-<section class="doctor-day" data-date="${day.date}">
-<!-- Spalte A: Datum -->
-<!-- Spalte A: Datum (+ Cloud + Löschen) -->
-<div class="col-date">
-  <div class="date-top">
-    <span class="date-label">${fmtDateDE(day.date)}</span>
-    <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
-  </div>
-  <div class="date-actions">
-    <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
-  </div>
-</div>
-
-<!-- Spalte B: Messungen -->
-<div class="col-measure">
-<div class="measure-head">
-<div></div>
-<div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
-</div>
-<div class="measure-grid">
-<div class="measure-row">
-<div class="label">morgens</div>
-<div class="num ${ (day.morning.sys!=null && day.morning.sys>130) ? 'alert' : '' }">${dash(day.morning.sys)}</div>
-<div class="num ${ (day.morning.dia!=null && day.morning.dia>90)  ? 'alert' : '' }">${dash(day.morning.dia)}</div>
-<div class="num">${dash(day.morning.pulse)}</div>
-<div class="num ${ (day.morning.map!=null && day.morning.map>100) ? 'alert' : '' }">${dash(fmtNum(day.morning.map))}</div>
-</div>
-<div class="measure-row">
-<div class="label">abends</div>
-<div class="num ${ (day.evening.sys!=null && day.evening.sys>130) ? 'alert' : '' }">${dash(day.evening.sys)}</div>
-<div class="num ${ (day.evening.dia!=null && day.evening.dia>90)  ? 'alert' : '' }">${dash(day.evening.dia)}</div>
-<div class="num">${dash(day.evening.pulse)}</div>
-<div class="num ${ (day.evening.map!=null && day.evening.map>100) ? 'alert' : '' }">${dash(fmtNum(day.evening.map))}</div>
-</div>
-</div>
-</div>
-
-<!-- Spalte C: Spezial -->
-<div class="col-special">
-  <div class="weight-line">
-    <div>Gewicht</div>
-    <div class="num">${dash(fmtNum(day.weight))}</div>
-  </div>
-
-  <div class="waist-line">
-    <div>Bauchumfang (cm)</div>
-    <div class="num">${dash(fmtNum(day.waist_cm))}</div>
-  </div>
-
-<div class="flags">
-<div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
-<div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
-</div>
-
-<div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
-</div>
-</section>
-`;
-
-// 4) Rendern oder Leerzustand
-if (!daysArr.length){
-  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
-} else {
-  host.innerHTML = daysArr.map(renderDoctorDay).join("");
-
-  // 🔹 Tages-Löschbuttons (löscht ALLE Einträge dieses Datums – lokal + remote)
-  host.querySelectorAll('[data-del-day]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const date = btn.getAttribute('data-del-day');
-      if (!date) return;
-      if (!confirm(`Alle Einträge für ${date} löschen? (Cloud-Einträge werden – falls möglich – mitgelöscht)`)) return;
-
-      btn.disabled = true;
-      const old = btn.textContent;
-      btn.textContent = 'Lösche…';
-
-      try{
-        const all = await getAllEntries();
-        const ofDay = all.filter(e => e.date === date);
-        // 1) Remote löschen (falls remote_id vorhanden)
-        for (const e of ofDay){
-          if (e.remote_id){
-            const r = await deleteRemote(e.remote_id);
-            if (!r.ok){
-              alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}) für einen Eintrag am ${date}. Vorgang abgebrochen.`);
-              btn.disabled = false; btn.textContent = old;
-              return;
-            }
-          }
-        }
-        // 2) Lokal löschen
-        for (const e of ofDay){
-          await deleteEntryLocal(e.id);
-        }
-        // 3) UI aktualisieren
-        await renderDoctor();
-        if (chartPanel.open) chartPanel.draw();
-      } finally {
-        btn.disabled = false;
-        btn.textContent = old;
-      }
-    });
-  });
-}
-}
-  
 /* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
 /* Fallbacks nur, wenn extern nicht verfügbar */
@@ -2937,6 +2813,7 @@ main();
 
 </body>
 </html>
+
 
 
 
