@@ -729,37 +729,6 @@ close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='no
 };
 
 /* ===== Helpers ===== */
-// --- Zentrales Toggle Binding ---
-function bindTogglesToEntry(entry) {
-  const map = [
-    ['trainingToggle',      'training'],
-    ['sickToggle',          'sick'],
-    ['lowIntakeToggle',     'low_intake'],
-    ['saltHighToggle',      'salt_high'],
-    ['sugarHighToggle',     'sugar_high'],
-    ['valsartanMissToggle', 'valsartan_missed'],
-    ['forxigaMissToggle',   'forxiga_missed'],
-    ['nsarToggle',          'nsar_taken'] // 👈 NSAR anbinden
-  ];
-
-  for (const [btnId, key] of map) {
-    const btn = document.getElementById(btnId);
-    if (!btn) continue;
-
-    // Initialzustand spiegeln
-    btn.classList.toggle('active', !!entry[key]);
-    btn.setAttribute('aria-pressed', String(!!entry[key]));
-
-    btn.addEventListener('click', () => {
-      const next = !btn.classList.contains('active');
-      btn.classList.toggle('active', next);
-      btn.setAttribute('aria-pressed', String(next));
-      entry[key] = next;
-    });
-  }
-}
-
-  
 // --- Service-Role-Schutz (NIEMALS im Browser) ---
 function isServiceRoleKey(raw){
   const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
@@ -824,34 +793,34 @@ function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Numb
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
 // Erzeugt pro Eingabe die nötigen Events (bp/body/day_flags/note)
 function toHealthEvents(entry){
-  const tsIso = entry.dateTime;
+  const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
   const out = [];
 
-  // 1) Blutdruck
-  if (entry.context === "Morgen" || entry.context === "Abend") {
+  // 1) Blutdruck-Messungen (Morgen/Abend)
+  if (entry.context === "Morgen" || entry.context === "Abend"){
     const hasVitals = (entry.sys != null) || (entry.dia != null) || (entry.pulse != null);
-    if (hasVitals) {
+    if (hasVitals){
       const payload = {};
       if (entry.sys   != null) payload.sys   = Number(entry.sys);
       if (entry.dia   != null) payload.dia   = Number(entry.dia);
       if (entry.pulse != null) payload.pulse = Number(entry.pulse);
-      payload.ctx = entry.context;
+      payload.ctx = entry.context; // "Morgen" | "Abend"
       out.push({ ts: tsIso, type: "bp", payload });
     }
   }
 
-  // 2) Tageszusammenfassung
-  if (entry.context === "Tag") {
-    // Body
+  // 2) Tageszusammenfassung (Gewicht, Bauchumfang, Flags, Kommentar)
+  if (entry.context === "Tag"){
+    // body (Gewicht + Bauchumfang)
     const hasBody = (entry.weight != null) || (entry.waist_cm != null);
-    if (hasBody) {
+    if (hasBody){
       const payload = {};
-      if (Number.isFinite(Number(entry.weight)))   payload.kg = Number(entry.weight);
-      if (Number.isFinite(Number(entry.waist_cm))) payload.cm = Number(entry.waist_cm);
+      if (entry.weight   != null) payload.kg = Number(entry.weight);
+      if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
       out.push({ ts: tsIso, type: "body", payload });
     }
 
-    // Flags (NSAR eigenes Flag!)
+    // day_flags (alle Booleans)
     const flags = {
       training:         !!entry.training,
       sick:             !!entry.sick,
@@ -860,15 +829,18 @@ function toHealthEvents(entry){
       sugar_high:       !!entry.sugar_high,
       valsartan_missed: !!entry.valsartan_missed,
       forxiga_missed:   !!entry.forxiga_missed,
-      nsar_taken:       !!entry.nsar_taken
+      nsar_taken:       !!entry.nsar_taken,
     };
-    if (Object.values(flags).some(Boolean)) {
+    const anyFlag = Object.values(flags).some(Boolean);
+    if (anyFlag){
       out.push({ ts: tsIso, type: "day_flags", payload: flags });
     }
 
-    // Note
+    // note (optional, 1 Zeile Text)
     const note = (entry.notes || "").trim();
-    if (note) out.push({ ts: tsIso, type: "note", payload: { text: note } });
+    if (note){
+      out.push({ ts: tsIso, type: "note", payload: { text: note } });
+    }
   }
 
   return out;
@@ -1041,13 +1013,11 @@ async function fetchEventsRange(fromIso /*YYYY-MM-DD*/, toIso /*YYYY-MM-DD*/){
   toNext.setUTCDate(toNext.getUTCDate() + 1);
   const toNextIso = toNext.toISOString().slice(0,10);
 
-const fromUtc = new Date(fromIso + "T00:00:00Z").toISOString();
-const toUtc   = new Date(toNextIso + "T00:00:00Z").toISOString();
-const q = `${url}`
-  + `?select=id,ts,type,payload`
-  + `&ts=gte.${encodeURIComponent(fromUtc)}`
-  + `&ts=lt.${encodeURIComponent(toUtc)}`
-  + `&order=ts.asc`;
+  const q = `${url}` +
+            `?select=id,ts,type,payload` +
+            `&ts=gte.${encodeURIComponent(fromIso)}T00:00:00Z` +
+            `&ts=lt.${encodeURIComponent(toNextIso)}T00:00:00Z` +
+            `&order=ts.asc`;
 
   const res = await withRetry(()=> fetch(q, { headers }));
   if (!res.ok) return [];
@@ -1073,7 +1043,7 @@ function aggregateDailyFromEvents(events){
         weight: null,
         waist_cm: null,
         notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, nsar:false, training:false },
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
         remoteIds: [],
         hasCloud: true  // kommt ja vom Server
       };
@@ -1101,7 +1071,7 @@ function aggregateDailyFromEvents(events){
       const p = ev.payload||{};
       if (p.kg != null) d.weight   = Number(p.kg);
       if (p.cm != null) d.waist_cm = Number(p.cm);
-    } 
+    }
     else if (ev.type === "day_flags"){
       const f = ev.payload||{};
       if (f.low_intake)       d.flags.water_lt2  = true;
@@ -1109,9 +1079,8 @@ function aggregateDailyFromEvents(events){
       if (f.sugar_high)       d.flags.sugar_gt10 = true;
       if (f.sick)             d.flags.sick       = true;
       if (f.training)         d.flags.training   = true;
-      if (f.valsartan_missed || f.forxiga_missed) d.flags.meds = true;  
-      if (f.nsar_taken)       d.flags.nsar = true;  
-     }
+      if (f.valsartan_missed || f.forxiga_missed || f.nsar_taken) d.flags.meds = true;
+    }
     else if (ev.type === "note"){
       const t = (ev.payload?.text||"").trim();
       // letzte Notiz des Tages gewinnt (Server ist zeitlich sortiert)
@@ -1133,10 +1102,11 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const headers = await getHeaders();
   if (!url || !headers) return { ok:false, status:0 };
 
-const fromUtc = new Date(dateIso + "T00:00:00Z").toISOString();              // explizit UTC
-const toUtc   = new Date(new Date(dateIso + "T00:00:00Z").getTime() + 864e5).toISOString();
-const q = `${url}?ts=gte.${encodeURIComponent(fromUtc)}&ts=lt.${encodeURIComponent(toUtc)}`;
-  
+  const from = `${dateIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+
+  const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
   try{
     const res = await withRetry(() => fetch(q, { method:"DELETE", headers }));
     return { ok: res.ok, status: res.status };
@@ -1144,6 +1114,12 @@ const q = `${url}?ts=gte.${encodeURIComponent(fromUtc)}&ts=lt.${encodeURICompone
     return { ok:false, status:0 };
   }
 }
+
+/* (vorerst) weiterhin No-Op */
+async function pullAllFromRemote(){
+  return []; // No-Op bis zur Anzeige-Umstellung
+}
+
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
@@ -1347,7 +1323,7 @@ async function renderDoctor(){
   const trainingDays = daysArr.filter(d => !!d.flags.training).length;
   const badDays = daysArr.filter(d => {
     const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds || f.nsar);
+    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
   }).length;
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
@@ -1403,8 +1379,7 @@ async function renderDoctor(){
       <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medis vergessen</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.nsar)}"></span><span>NSAR genommen</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
     </div>
 
@@ -1568,7 +1543,6 @@ async getFiltered() {
   if (await isLoggedIn()) {
     // gleiche Aggregation wie Arzt-Ansicht
     const days = await fetchDailyOverview(from, to);
-
     // Für die Chart-Logik bauen wir flache "entry"-ähnliche Objekte
     const flat = [];
     for (const d of days) {
@@ -1591,12 +1565,11 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
+          nsar_taken: false,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
-
       // Abend
       if (d.evening.sys != null || d.evening.dia != null || d.evening.pulse != null) {
         const ts = Date.parse(d.date + "T19:00:00Z");
@@ -1616,12 +1589,11 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
+          nsar_taken: false,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
-
       // Body (Gewicht/Bauch)
       if (d.weight != null || d.waist_cm != null) {
         const ts = Date.parse(d.date + "T12:00:00Z");
@@ -1639,20 +1611,25 @@ async getFiltered() {
           sick: d.flags.sick,
           valsartan_missed: false,
           forxiga_missed: false,
-          nsar_taken: d.flags.nsar,     // 👈 WICHTIG
+          nsar_taken: false,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
       }
     }
-
     return flat.sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
   }
 
-  // Fallback (nicht eingeloggt): lokale Entries aus IndexedDB
-  const all = await getAllEntries();
-  return all.sort((a,b) => Date.parse(a.dateTime) - Date.parse(b.dateTime));
-}
+  // Fallback: lokal (wenn nicht eingeloggt)
+  const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
+  return entries
+    .filter(e => {
+      if (from && e.date < from) return false;
+      if (to   && e.date > to)   return false;
+      return true;
+    })
+    .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
+},
 
   // Höhe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
@@ -1985,26 +1962,24 @@ const metric = $("#metricSel")?.value || "bp";
           rec = {
             training: false,
             bad: 0,
-            seen: { water: false, salt: false, sugar: false, sick: false, meds: false, nsar: false },
+            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
           };
           dayFlagsTmp.set(e.date, rec);
         }
         if (e.training) rec.training = true;
-const medsMissed = !!(e.valsartan_missed || e.forxiga_missed);
-const flags = {
-  water: !!e.low_intake,
-  salt:  !!e.salt_high,
-  sugar: !!e.sugar_high,
-  sick:  !!e.sick,
-  meds:  medsMissed,     // Bad: Medikamente vergessen
-  nsar:  !!e.nsar_taken, // Bad: NSAR genommen
-};
-        
+        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const flags = {
+          water: !!e.low_intake,
+          salt:  !!e.salt_high,
+          sugar: !!e.sugar_high,
+          sick:  !!e.sick,
+          meds,
+        };
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
       }
-      flagTs = Array.from(dayFlagsTmp.keys()).map(d => Date.parse(d + "T00:00:00Z"));
+      flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
     }
 
     // Skalen
@@ -2086,27 +2061,21 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
         if (!e?.date) continue;
         let rec = dayFlags.get(e.date);
         if (!rec) {
-          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false, nsar:false } };
+          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
           dayFlags.set(e.date, rec);
         }
-if (e.training) rec.training = true;
-
-const medsMissed = !!(e.valsartan_missed || e.forxiga_missed);
-const flags = {
-  water: !!e.low_intake,
-  salt:  !!e.salt_high,
-  sugar: !!e.sugar_high,
-  sick:  !!e.sick,
-  meds:  medsMissed,     // Bad: Medikamente vergessen
-  nsar:  !!e.nsar_taken, // Bad: NSAR genommen
-};
-
-for (const k of Object.keys(flags)) {
-  if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
-}
+        if (e.training) rec.training = true;
+        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const flags = {
+          water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds
+        };
+        for (const k of Object.keys(flags)) {
+          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
+        }
+      }
 
       const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
-      const flaggedDays = Array.from(dayFlags.keys())
+      const flaggedDays = [...dayFlags.keys()]
         .filter(d => {
           const r = dayFlags.get(d);
           return r && (r.training || r.badCount > 0);
@@ -2119,7 +2088,7 @@ for (const k of Object.keys(flags)) {
         g.setAttribute("pointer-events","none");
         g.setAttribute("aria-hidden","true");
 
-        const uniqDays = Array.from(new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])).sort((a,b)=>a-b);
+        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
         const dayXs = uniqDays.map(t => x(t));
         const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
         const bandW   = Math.max(10, Math.floor(minStep * 0.45));
@@ -2435,13 +2404,11 @@ const entry = baseEntry(date, time, "Tag");
 
 // Gewicht (kg)
 const w = $("#weightDay")?.value?.trim();
-{ const n = w ? Number((w||"").replace(',', '.')) : null;
-entry.weight = Number.isFinite(n) ? n : null; }
+entry.weight = w ? Number((w||"").replace(',', '.')) : null;
 
 // Bauchumfang (cm)
 const waistRaw = $("#input-waist-cm")?.value?.trim();
-{  const n = toNumDE(waistRaw);
-  entry.waist_cm = Number.isFinite(n) ? n : null; }
+entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
 const hasContent =
 (entry.weight != null) ||
@@ -2577,6 +2544,13 @@ return sbClient;
 // VORERST deaktiviert – Arzt-Ansicht + Realtime folgen in Schritt 2
 async function setupRealtime(){
   // No-Op
+}
+
+// Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
+async function initialAutoSync(){
+  // Vorerst deaktiviert, bis Anzeige komplett auf Events migriert ist.
+  diag.add("Auto-Sync: deaktiviert (Event-Migration Phase)");
+  return;
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
@@ -2922,4 +2896,3 @@ main();
 
 </body>
 </html>
-
