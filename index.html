@@ -815,8 +815,8 @@ function toHealthEvents(entry){
     const hasBody = (entry.weight != null) || (entry.waist_cm != null);
     if (hasBody){
       const payload = {};
-      if (entry.weight   != null) payload.kg = Number(entry.weight);
-      if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
+      if (Number.isFinite(Number(entry.weight))) payload.kg = Number(entry.weight);
+      if (Number.isFinite(Number(entry.waist_cm))) payload.cm = Number(entry.waist_cm);
       out.push({ ts: tsIso, type: "body", payload });
     }
 
@@ -1013,11 +1013,13 @@ async function fetchEventsRange(fromIso /*YYYY-MM-DD*/, toIso /*YYYY-MM-DD*/){
   toNext.setUTCDate(toNext.getUTCDate() + 1);
   const toNextIso = toNext.toISOString().slice(0,10);
 
-  const q = `${url}` +
-            `?select=id,ts,type,payload` +
-            `&ts=gte.${encodeURIComponent(fromIso)}T00:00:00Z` +
-            `&ts=lt.${encodeURIComponent(toNextIso)}T00:00:00Z` +
-            `&order=ts.asc`;
+const fromUtc = new Date(fromIso + "T00:00:00Z").toISOString();
+const toUtc   = new Date(toNextIso + "T00:00:00Z").toISOString();
+const q = `${url}`
+  + `?select=id,ts,type,payload`
+  + `&ts=gte.${encodeURIComponent(fromUtc)}`
+  + `&ts=lt.${encodeURIComponent(toUtc)}`
+  + `&order=ts.asc`;
 
   const res = await withRetry(()=> fetch(q, { headers }));
   if (!res.ok) return [];
@@ -1043,7 +1045,7 @@ function aggregateDailyFromEvents(events){
         weight: null,
         waist_cm: null,
         notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, nsar:false, training:false },
         remoteIds: [],
         hasCloud: true  // kommt ja vom Server
       };
@@ -1071,7 +1073,7 @@ function aggregateDailyFromEvents(events){
       const p = ev.payload||{};
       if (p.kg != null) d.weight   = Number(p.kg);
       if (p.cm != null) d.waist_cm = Number(p.cm);
-    }
+    } 
     else if (ev.type === "day_flags"){
       const f = ev.payload||{};
       if (f.low_intake)       d.flags.water_lt2  = true;
@@ -1079,8 +1081,9 @@ function aggregateDailyFromEvents(events){
       if (f.sugar_high)       d.flags.sugar_gt10 = true;
       if (f.sick)             d.flags.sick       = true;
       if (f.training)         d.flags.training   = true;
-      if (f.valsartan_missed || f.forxiga_missed || f.nsar_taken) d.flags.meds = true;
-    }
+      if (f.valsartan_missed || f.forxiga_missed) d.flags.meds = true;  
+      if (f.nsar_taken)       d.flags.nsar = true;  
+     }
     else if (ev.type === "note"){
       const t = (ev.payload?.text||"").trim();
       // letzte Notiz des Tages gewinnt (Server ist zeitlich sortiert)
@@ -1102,11 +1105,10 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const headers = await getHeaders();
   if (!url || !headers) return { ok:false, status:0 };
 
-  const from = `${dateIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+const fromUtc = new Date(dateIso + "T00:00:00").toISOString();
+const toUtc = new Date(new Date(dateIso + "T00:00:00").getTime() + 24*3600*1000).toISOString();
+const q = `${url}?ts=gte.${encodeURIComponent(fromUtc)}&ts=lt.${encodeURIComponent(toUtc)}`;
+  
   try{
     const res = await withRetry(() => fetch(q, { method:"DELETE", headers }));
     return { ok: res.ok, status: res.status };
@@ -1114,12 +1116,6 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
     return { ok:false, status:0 };
   }
 }
-
-/* (vorerst) weiterhin No-Op */
-async function pullAllFromRemote(){
-  return []; // No-Op bis zur Anzeige-Umstellung
-}
-
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
@@ -1323,7 +1319,7 @@ async function renderDoctor(){
   const trainingDays = daysArr.filter(d => !!d.flags.training).length;
   const badDays = daysArr.filter(d => {
     const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
+    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds || f.nsar);
   }).length;
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
@@ -1379,7 +1375,8 @@ async function renderDoctor(){
       <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medis vergessen</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.nsar)}"></span><span>NSAR genommen</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
     </div>
 
@@ -1962,19 +1959,21 @@ const metric = $("#metricSel")?.value || "bp";
           rec = {
             training: false,
             bad: 0,
-            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
+            seen: { water: false, salt: false, sugar: false, sick: false, meds: false, nsar: false },
           };
           dayFlagsTmp.set(e.date, rec);
         }
         if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = {
-          water: !!e.low_intake,
-          salt:  !!e.salt_high,
-          sugar: !!e.sugar_high,
-          sick:  !!e.sick,
-          meds,
-        };
+const medsMissed = !!(e.valsartan_missed || e.forxiga_missed);
+const flags = {
+  water: !!e.low_intake,
+  salt:  !!e.salt_high,
+  sugar: !!e.sugar_high,
+  sick:  !!e.sick,
+  meds:  medsMissed,     // Bad: Medikamente vergessen
+  nsar:  !!e.nsar_taken, // Bad: NSAR genommen
+};
+        
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
@@ -2061,18 +2060,24 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
         if (!e?.date) continue;
         let rec = dayFlags.get(e.date);
         if (!rec) {
-          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
+          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false, nsar:false } };
           dayFlags.set(e.date, rec);
         }
-        if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = {
-          water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds
-        };
-        for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
-        }
-      }
+if (e.training) rec.training = true;
+
+const medsMissed = !!(e.valsartan_missed || e.forxiga_missed);
+const flags = {
+  water: !!e.low_intake,
+  salt:  !!e.salt_high,
+  sugar: !!e.sugar_high,
+  sick:  !!e.sick,
+  meds:  medsMissed,     // Bad: Medikamente vergessen
+  nsar:  !!e.nsar_taken, // Bad: NSAR genommen
+};
+
+for (const k of Object.keys(flags)) {
+  if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
+}
 
       const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
       const flaggedDays = [...dayFlags.keys()]
@@ -2404,11 +2409,13 @@ const entry = baseEntry(date, time, "Tag");
 
 // Gewicht (kg)
 const w = $("#weightDay")?.value?.trim();
-entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+{ const n = w ? Number((w||"").replace(',', '.')) : null;
+entry.weight = Number.isFinite(n) ? n : null; }
 
 // Bauchumfang (cm)
 const waistRaw = $("#input-waist-cm")?.value?.trim();
-entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
+{  const n = toNumDE(waistRaw);
+  entry.waist_cm = Number.isFinite(n) ? n : null; }
 
 const hasContent =
 (entry.weight != null) ||
@@ -2544,13 +2551,6 @@ return sbClient;
 // VORERST deaktiviert – Arzt-Ansicht + Realtime folgen in Schritt 2
 async function setupRealtime(){
   // No-Op
-}
-
-// Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
-async function initialAutoSync(){
-  // Vorerst deaktiviert, bis Anzeige komplett auf Events migriert ist.
-  diag.add("Auto-Sync: deaktiviert (Event-Migration Phase)");
-  return;
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
@@ -2896,6 +2896,7 @@ main();
 
 </body>
 </html>
+
 
 
 
