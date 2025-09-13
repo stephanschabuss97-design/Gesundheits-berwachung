@@ -679,7 +679,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 /* ===== Supabase Defaults (ANON only – niemals service_role!) ===== */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
-const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
+const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_entries`;
 
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
@@ -790,62 +790,6 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
-  // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
-// Erzeugt pro Eingabe die nötigen Events (bp/body/day_flags/note)
-function toHealthEvents(entry){
-  const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
-  const out = [];
-
-  // 1) Blutdruck-Messungen (Morgen/Abend)
-  if (entry.context === "Morgen" || entry.context === "Abend"){
-    const hasVitals = (entry.sys != null) || (entry.dia != null) || (entry.pulse != null);
-    if (hasVitals){
-      const payload = {};
-      if (entry.sys   != null) payload.sys   = Number(entry.sys);
-      if (entry.dia   != null) payload.dia   = Number(entry.dia);
-      if (entry.pulse != null) payload.pulse = Number(entry.pulse);
-      payload.ctx = entry.context; // "Morgen" | "Abend"
-      out.push({ ts: tsIso, type: "bp", payload });
-    }
-  }
-
-  // 2) Tageszusammenfassung (Gewicht, Bauchumfang, Flags, Kommentar)
-  if (entry.context === "Tag"){
-    // body (Gewicht + Bauchumfang)
-    const hasBody = (entry.weight != null) || (entry.waist_cm != null);
-    if (hasBody){
-      const payload = {};
-      if (entry.weight   != null) payload.kg = Number(entry.weight);
-      if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
-      out.push({ ts: tsIso, type: "body", payload });
-    }
-
-    // day_flags (alle Booleans)
-    const flags = {
-      training:         !!entry.training,
-      sick:             !!entry.sick,
-      low_intake:       !!entry.low_intake,
-      salt_high:        !!entry.salt_high,
-      sugar_high:       !!entry.sugar_high,
-      valsartan_missed: !!entry.valsartan_missed,
-      forxiga_missed:   !!entry.forxiga_missed,
-      nsar_taken:       !!entry.nsar_taken,
-    };
-    const anyFlag = Object.values(flags).some(Boolean);
-    if (anyFlag){
-      out.push({ ts: tsIso, type: "day_flags", payload: flags });
-    }
-
-    // note (optional, 1 Zeile Text)
-    const note = (entry.notes || "").trim();
-    if (note){
-      out.push({ ts: tsIso, type: "note", payload: { text: note } });
-    }
-  }
-
-  return out;
-}
-
 // „Legacy“: Measurement Eintrag, der nur Gewicht enthält
 function isWeightOnly(e){
 const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
@@ -1002,176 +946,37 @@ return {ok: res.ok, status: res.status};
 return {ok:false, status:0};
 }
 }
-/* === Remote-Fetch für Arzt-Ansicht (Events) === */
-async function fetchEventsRange(fromIso /*YYYY-MM-DD*/, toIso /*YYYY-MM-DD*/){
-  const url = await getConf("webhookUrl");     // .../rest/v1/health_events
-  const headers = await getHeaders();
-  if (!url || !headers) return [];
-
-  // [from, to] inklusiv → REST: ts >= fromT00:00Z UND ts < (to+1)T00:00Z
-  const toNext = new Date(toIso + "T00:00:00Z"); 
-  toNext.setUTCDate(toNext.getUTCDate() + 1);
-  const toNextIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}` +
-            `?select=id,ts,type,payload` +
-            `&ts=gte.${encodeURIComponent(fromIso)}T00:00:00Z` +
-            `&ts=lt.${encodeURIComponent(toNextIso)}T00:00:00Z` +
-            `&order=ts.asc`;
-
-  const res = await withRetry(()=> fetch(q, { headers }));
-  if (!res.ok) return [];
-  const rows = await res.json();
-  // Normalisieren: Datum je Event (YYYY-MM-DD) berechnen
-  return rows.map(r => {
-    const d = new Date(r.ts);
-    const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-    return { id:r.id, date, ts:r.ts, type:r.type, payload:r.payload||{} };
-  });
-}
-
-function aggregateDailyFromEvents(events){
-  // Zielstruktur wie bisher in renderDoctor verwendet
-  const days = new Map();
-  const ensure = (date) => {
-    let d = days.get(date);
-    if (!d){
-      d = {
-        date,
-        morning: { sys:null, dia:null, pulse:null, map:null },
-        evening: { sys:null, dia:null, pulse:null, map:null },
-        weight: null,
-        waist_cm: null,
-        notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
-        remoteIds: [],
-        hasCloud: true  // kommt ja vom Server
-      };
-      days.set(date, d);
-    }
-    return d;
-  };
-
-  for (const ev of events){
-    const d = ensure(ev.date);
-    d.remoteIds.push(ev.id);
-
-    if (ev.type === "bp"){
-      const p = ev.payload||{};
-      const ctx = p.ctx; // "Morgen"|"Abend"
-      const blk = (ctx === "Morgen") ? d.morning : (ctx === "Abend") ? d.evening : null;
-      if (blk){
-        if (p.sys   != null) blk.sys   = Number(p.sys);
-        if (p.dia   != null) blk.dia   = Number(p.dia);
-        if (p.pulse != null) blk.pulse = Number(p.pulse);
-        if (blk.sys != null && blk.dia != null) blk.map = calcMAP(blk.sys, blk.dia);
-      }
-    }
-    else if (ev.type === "body"){
-      const p = ev.payload||{};
-      if (p.kg != null) d.weight   = Number(p.kg);
-      if (p.cm != null) d.waist_cm = Number(p.cm);
-    }
-    else if (ev.type === "day_flags"){
-      const f = ev.payload||{};
-      if (f.low_intake)       d.flags.water_lt2  = true;
-      if (f.salt_high)        d.flags.salt_gt5   = true;
-      if (f.sugar_high)       d.flags.sugar_gt10 = true;
-      if (f.sick)             d.flags.sick       = true;
-      if (f.training)         d.flags.training   = true;
-      if (f.valsartan_missed || f.forxiga_missed || f.nsar_taken) d.flags.meds = true;
-    }
-    else if (ev.type === "note"){
-      const t = (ev.payload?.text||"").trim();
-      // letzte Notiz des Tages gewinnt (Server ist zeitlich sortiert)
-      if (t) d.notes = t;
-    }
-  }
-
-  return Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
-}
-
-async function fetchDailyOverview(fromIso, toIso){
-  const events = await fetchEventsRange(fromIso, toIso);
-  return aggregateDailyFromEvents(events);
-}
-
-/* Server: alle Events eines Tages löschen (RLS: nur eigene Records) */
-async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if (!url || !headers) return { ok:false, status:0 };
-
-  const from = `${dateIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  try{
-    const res = await withRetry(() => fetch(q, { method:"DELETE", headers }));
-    return { ok: res.ok, status: res.status };
-  }catch{
-    return { ok:false, status:0 };
-  }
-}
-
-/* (vorerst) weiterhin No-Op */
 async function pullAllFromRemote(){
-  return []; // No-Op bis zur Anzeige-Umstellung
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) throw new Error("Webhook nicht konfiguriert");
+const q = `${url}?select=*&order=ts.asc`;
+const res = await fetch(q, { headers });
+if(!res.ok) throw new Error(`Fetch fehlgeschlagen (${res.status})`);
+return res.json();
 }
-
-
 async function pushPendingToRemote(){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers) return { pushed:0, failed:0 };
-
-  const all = await getAllEntries();
-  const pending = all.filter(e => !e.remote_id);
-
-  let pushed = 0, failed = 0;
-
-  for (const e of pending){
-    try{
-      const uid = await getUserId();
-
-      // 1) Legacy-Entry → 0..N Events
-      const events = toHealthEvents(e);
-      if (!events.length) { 
-        // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht hängen bleiben
-        await updateEntry(e.id, { remote_id: -1 });
-        continue;
-      }
-
-      // 2) user_id anhängen (RLS)
-      const payload = uid ? events.map(ev => ({...ev, user_id: uid})) : events;
-
-      // 3) Batch-POST (Array)
-      const res = await withRetry(() => fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload)
-      }));
-      if (!res.ok) { failed++; continue; }
-
-      const json = await res.json();
-      const firstId = json?.[0]?.id ?? null;
-
-      // 4) Lokal markieren: irgendein Remote-Event existiert → Cloud-Icon ok
-      if (firstId != null) {
-        await updateEntry(e.id, { remote_id: firstId });
-        pushed++;
-      } else {
-        failed++;
-      }
-
-      await sleep(50);
-    } catch(_){
-      failed++;
-    }
-  }
-
-  return { pushed, failed };
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) return { pushed:0, failed:0 };
+const all = await getAllEntries();
+const pending = all.filter(e=>!e.remote_id);
+let pushed=0, failed=0;
+for(const e of pending){
+try{
+const uid = await getUserId();
+const { id: _dropLocal, remote_id: _dropRemote, ...safe } = e;
+const payload = uid ? { ...safe, user_id: uid } : safe;
+const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+if(!res.ok){ failed++; continue; }
+const json = await res.json();
+const rid = json?.[0]?.id;
+if(rid){ await updateEntry(e.id, { remote_id: rid }); pushed++; }
+else { failed++; }
+await sleep(50);
+}catch(_){ failed++; }
+}
+return { pushed, failed };
 }
 
 function showLoginOverlay(show){
@@ -1250,10 +1055,12 @@ if (session) {
 let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
 
 async function afterLoginBoot(){
-  if (__booted) return;
-  __booted = true;
-  // Keine Auto-Sync/Realtime bis Arzt-Ansicht umgestellt ist
-  await renderDoctor(); // lässt "Bitte anmelden" o. "Keine Einträge" stehen
+if (__booted) return; // <- Guard gegen Doppelstart
+__booted = true;
+await initialAutoSync();
+await teardownRealtime();
+await setupRealtime();
+await renderDoctor();
 }
 
 /* ===== CSV/JSON export (Daily) ===== */
@@ -1282,143 +1089,220 @@ function setDocBadges({ training, bad, visible } = {}) {
 
 const __t0 = performance.now();
 async function renderDoctor(){
-  const host = $("#doctorView");
-  if (!host) return;
+const host = $("#doctorView");
+if (!host) return;
+if (!(await isLoggedIn())){
+  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
+  setDocBadges({ visible: false });
+  return;
+}
+host.innerHTML = "";
 
-  if (!(await isLoggedIn())){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
-    setDocBadges({ visible: false });
-    return;
+// Helpers (nur Anzeige)
+const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
+const onClass = b => (b ? "on" : "");
+const fmtDateDE = (iso) => {
+const d = new Date(iso + "T00:00:00");
+return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+};
+
+// 1) Filter + Sort wie bisher
+const from = $("#from").value;
+const to = $("#to").value;
+const entries = await getAllEntries();
+const list = entries
+.filter(e => {
+if (from && e.date < from) return false;
+if (to && e.date > to) return false;
+return true;
+})
+.sort((a,b)=> ((a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime))));
+
+// 2) Tagesobjekte aufbauen (nur Darstellung)
+const days = new Map();
+for (const e of list){
+  // Day-Objekt holen/erzeugen
+  let d = days.get(e.date);
+  if (!d){
+  d = {
+  date: e.date,
+  morning: { sys:null, dia:null, pulse:null, map:null },
+  evening: { sys:null, dia:null, pulse:null, map:null },
+  weight: null,
+  waist_cm: null,
+  notes: "",
+  flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+  localIds: [],
+  remoteIds: [],
+  hasCloud: false
+};
+
+    days.set(e.date, d);
   }
-  host.innerHTML = "";
 
-  // Anzeige-Helper
-  const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
-  const onClass = b => (b ? "on" : "");
-  const fmtDateDE = (iso) => {
-    const d = new Date(iso + "T00:00:00Z");
-    return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
-  };
+  // IDs & Cloud-Status sammeln
+  if (e?.id != null) d.localIds.push(e.id);
+  if (e?.remote_id != null) { d.remoteIds.push(e.remote_id); d.hasCloud = true; }
 
-  // Zeitraum lesen
-  const from = $("#from").value;
-  const to   = $("#to").value;
-  if (!from || !to){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum wählen.</div>`;
-    setDocBadges({ visible: false });
-    return;
+  const legacyWeightOnly = isWeightOnly(e);
+  const hasVitals = !!(e.sys || e.dia || e.pulse);
+  const isDaySummary = (e.context === "Tag") || legacyWeightOnly;
+  const isMeasurement = hasVitals && !isDaySummary;
+
+  // Messblöcke
+  if (isMeasurement && e.context === "Morgen"){
+    d.morning.sys   = e.sys ?? null;
+    d.morning.dia   = e.dia ?? null;
+    d.morning.pulse = e.pulse ?? null;
+    d.morning.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
+  } else if (isMeasurement && e.context === "Abend"){
+    d.evening.sys   = e.sys ?? null;
+    d.evening.dia   = e.dia ?? null;
+    d.evening.pulse = e.pulse ?? null;
+    d.evening.map   = (e.map != null ? e.map : calcMAP(e.sys, e.dia));
   }
 
-  // 🔹 Server lesen → Tagesobjekte
-  let daysArr = [];
-  try{
-    daysArr = await fetchDailyOverview(from, to);
-  }catch(_){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
-    setDocBadges({ visible: false });
-    return;
-  }
+  // Tageszusammenfassung / Gewicht / Notizen
+if (isDaySummary){
+  if (e.weight != null) d.weight = e.weight;
+  if (e.waist_cm != null) d.waist_cm = e.waist_cm;
+  if (e.notes)          d.notes  = e.notes;
+}
 
-  // KPIs
-  const trainingDays = daysArr.filter(d => !!d.flags.training).length;
-  const badDays = daysArr.filter(d => {
-    const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
-  }).length;
-  setDocBadges({ training: trainingDays, bad: badDays, visible: true });
+  // Flags
+  if (e.training)                         d.flags.training   = true;
+  if (e.low_intake)                       d.flags.water_lt2  = true;
+  if (e.salt_high)                        d.flags.salt_gt5   = true;
+  if (e.sugar_high)                       d.flags.sugar_gt10 = true;
+  if (e.sick)                             d.flags.sick       = true;
+  if (e.valsartan_missed || e.forxiga_missed || e.nsar_taken) d.flags.meds = true;
+}
 
-  // Renderer je Tag
-  const renderDoctorDay = (day) => `
+const daysArr = Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+ 
+  // --- KPI: Anzahl Trainingstage und Tage mit mind. einem Bad-Flag
+const trainingDays = daysArr.filter(d => !!d.flags.training).length;
+const badDays = daysArr.filter(d => {
+  const f = d.flags;
+  return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
+}).length;
+
+// Badges setzen (nur Daily)
+setDocBadges({ training: trainingDays, bad: badDays, visible: true });
+
+
+// 3) Renderer pro Tag (-> 3 Spalten)
+const renderDoctorDay = (day) => `
 <section class="doctor-day" data-date="${day.date}">
-  <div class="col-date">
-    <div class="date-top">
-      <span class="date-label">${fmtDateDE(day.date)}</span>
-      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
-    </div>
-    <div class="date-actions">
-      <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
-    </div>
+<!-- Spalte A: Datum -->
+<!-- Spalte A: Datum (+ Cloud + Löschen) -->
+<div class="col-date">
+  <div class="date-top">
+    <span class="date-label">${fmtDateDE(day.date)}</span>
+    <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
+  </div>
+  <div class="date-actions">
+    <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
+  </div>
+</div>
+
+<!-- Spalte B: Messungen -->
+<div class="col-measure">
+<div class="measure-head">
+<div></div>
+<div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
+</div>
+<div class="measure-grid">
+<div class="measure-row">
+<div class="label">morgens</div>
+<div class="num ${ (day.morning.sys!=null && day.morning.sys>130) ? 'alert' : '' }">${dash(day.morning.sys)}</div>
+<div class="num ${ (day.morning.dia!=null && day.morning.dia>90)  ? 'alert' : '' }">${dash(day.morning.dia)}</div>
+<div class="num">${dash(day.morning.pulse)}</div>
+<div class="num ${ (day.morning.map!=null && day.morning.map>100) ? 'alert' : '' }">${dash(fmtNum(day.morning.map))}</div>
+</div>
+<div class="measure-row">
+<div class="label">abends</div>
+<div class="num ${ (day.evening.sys!=null && day.evening.sys>130) ? 'alert' : '' }">${dash(day.evening.sys)}</div>
+<div class="num ${ (day.evening.dia!=null && day.evening.dia>90)  ? 'alert' : '' }">${dash(day.evening.dia)}</div>
+<div class="num">${dash(day.evening.pulse)}</div>
+<div class="num ${ (day.evening.map!=null && day.evening.map>100) ? 'alert' : '' }">${dash(fmtNum(day.evening.map))}</div>
+</div>
+</div>
+</div>
+
+<!-- Spalte C: Spezial -->
+<div class="col-special">
+  <div class="weight-line">
+    <div>Gewicht</div>
+    <div class="num">${dash(fmtNum(day.weight))}</div>
   </div>
 
-  <div class="col-measure">
-    <div class="measure-head">
-      <div></div>
-      <div>Sys</div><div>Dia</div><div>Puls</div><div>MAP</div>
-    </div>
-    <div class="measure-grid">
-      <div class="measure-row">
-        <div class="label">morgens</div>
-        <div class="num ${ (day.morning.sys!=null && day.morning.sys>130) ? 'alert' : '' }">${dash(day.morning.sys)}</div>
-        <div class="num ${ (day.morning.dia!=null && day.morning.dia>90)  ? 'alert' : '' }">${dash(day.morning.dia)}</div>
-        <div class="num">${dash(day.morning.pulse)}</div>
-        <div class="num ${ (day.morning.map!=null && day.morning.map>100) ? 'alert' : '' }">${dash(fmtNum(day.morning.map))}</div>
-      </div>
-      <div class="measure-row">
-        <div class="label">abends</div>
-        <div class="num ${ (day.evening.sys!=null && day.evening.sys>130) ? 'alert' : '' }">${dash(day.evening.sys)}</div>
-        <div class="num ${ (day.evening.dia!=null && day.evening.dia>90)  ? 'alert' : '' }">${dash(day.evening.dia)}</div>
-        <div class="num">${dash(day.evening.pulse)}</div>
-        <div class="num ${ (day.evening.map!=null && day.evening.map>100) ? 'alert' : '' }">${dash(fmtNum(day.evening.map))}</div>
-      </div>
-    </div>
+  <div class="waist-line">
+    <div>Bauchumfang (cm)</div>
+    <div class="num">${dash(fmtNum(day.waist_cm))}</div>
   </div>
 
-  <div class="col-special">
-    <div class="weight-line">
-      <div>Gewicht</div>
-      <div class="num">${dash(fmtNum(day.weight))}</div>
-    </div>
+<div class="flags">
+<div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+<div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
+</div>
 
-    <div class="waist-line">
-      <div>Bauchumfang (cm)</div>
-      <div class="num">${dash(fmtNum(day.waist_cm))}</div>
-    </div>
-
-    <div class="flags">
-      <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
-    </div>
-
-    <div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
-  </div>
+<div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
+</div>
 </section>
 `;
 
-  // Rendern / Leerzustand
-  if (!daysArr.length){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
-  } else {
-    host.innerHTML = daysArr.map(renderDoctorDay).join("");
+// 4) Rendern oder Leerzustand
+if (!daysArr.length){
+  host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+} else {
+  host.innerHTML = daysArr.map(renderDoctorDay).join("");
 
-    // 🔹 Löschen: alle Server-Events des Tages entfernen
-    host.querySelectorAll('[data-del-day]').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        const date = btn.getAttribute('data-del-day');
-        if (!date) return;
-        if (!confirm(`Alle Einträge in der Cloud für ${date} löschen?`)) return;
+  // 🔹 Tages-Löschbuttons (löscht ALLE Einträge dieses Datums – lokal + remote)
+  host.querySelectorAll('[data-del-day]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const date = btn.getAttribute('data-del-day');
+      if (!date) return;
+      if (!confirm(`Alle Einträge für ${date} löschen? (Cloud-Einträge werden – falls möglich – mitgelöscht)`)) return;
 
-        btn.disabled = true;
-        const old = btn.textContent;
-        btn.textContent = 'Lösche…';
-        try{
-          const r = await deleteRemoteDay(date);
-          if (!r.ok){
-            alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}).`);
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = 'Lösche…';
+
+      try{
+        const all = await getAllEntries();
+        const ofDay = all.filter(e => e.date === date);
+        // 1) Remote löschen (falls remote_id vorhanden)
+        for (const e of ofDay){
+          if (e.remote_id){
+            const r = await deleteRemote(e.remote_id);
+            if (!r.ok){
+              alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}) für einen Eintrag am ${date}. Vorgang abgebrochen.`);
+              btn.disabled = false; btn.textContent = old;
+              return;
+            }
           }
-          await renderDoctor();           // neu laden
-          if (chartPanel.open) chartPanel.draw();
-        } finally {
-          btn.disabled = false; btn.textContent = old;
         }
-      });
+        // 2) Lokal löschen
+        for (const e of ofDay){
+          await deleteEntryLocal(e.id);
+        }
+        // 3) UI aktualisieren
+        await renderDoctor();
+        if (chartPanel.open) chartPanel.draw();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
     });
-  }
+  });
 }
-
+}
+  
 /* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
 /* Fallbacks nur, wenn extern nicht verfügbar */
@@ -1535,101 +1419,18 @@ const chartPanel = {
   },
 
   // ----- Helpers -----
-async getFiltered() {
-  const from = $("#from")?.value;
-  const to   = $("#to")?.value;
-
-  // Wenn eingeloggt: Cloud nehmen (Events -> Daily), sonst fallback: lokale Entries
-  if (await isLoggedIn()) {
-    // gleiche Aggregation wie Arzt-Ansicht
-    const days = await fetchDailyOverview(from, to);
-    // Für die Chart-Logik bauen wir flache "entry"-ähnliche Objekte
-    const flat = [];
-    for (const d of days) {
-      // Morgen
-      if (d.morning.sys != null || d.morning.dia != null || d.morning.pulse != null) {
-        const ts = Date.parse(d.date + "T07:00:00Z"); // Fix-Zeit am Tag
-        flat.push({
-          date: d.date,
-          dateTime: new Date(ts).toISOString(),
-          ts,
-          context: "Morgen",
-          sys: d.morning.sys,
-          dia: d.morning.dia,
-          pulse: d.morning.pulse,
-          weight: null,
-          waist_cm: null,
-          notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
-          salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
-        });
-      }
-      // Abend
-      if (d.evening.sys != null || d.evening.dia != null || d.evening.pulse != null) {
-        const ts = Date.parse(d.date + "T19:00:00Z");
-        flat.push({
-          date: d.date,
-          dateTime: new Date(ts).toISOString(),
-          ts,
-          context: "Abend",
-          sys: d.evening.sys,
-          dia: d.evening.dia,
-          pulse: d.evening.pulse,
-          weight: null,
-          waist_cm: null,
-          notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
-          salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
-        });
-      }
-      // Body (Gewicht/Bauch)
-      if (d.weight != null || d.waist_cm != null) {
-        const ts = Date.parse(d.date + "T12:00:00Z");
-        flat.push({
-          date: d.date,
-          dateTime: new Date(ts).toISOString(),
-          ts,
-          context: "Tag",
-          sys: null, dia: null, pulse: null,
-          weight: d.weight,
-          waist_cm: d.waist_cm,
-          notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
-          salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
-        });
-      }
-    }
-    return flat.sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
-  }
-
-  // Fallback: lokal (wenn nicht eingeloggt)
-  const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
-  return entries
-    .filter(e => {
-      if (from && e.date < from) return false;
-      if (to   && e.date > to)   return false;
-      return true;
-    })
-    .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
-},
+  async getFiltered() {
+    const entries = typeof getAllEntries === "function" ? await getAllEntries() : [];
+    const from = $("#from")?.value;
+    const to   = $("#to")?.value;
+    return entries
+      .filter(e => {
+        if (from && e.date < from) return false;
+        if (to   && e.date > to)   return false;
+        return true;
+      })
+      .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
+  },
 
   // Höhe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
@@ -2225,7 +2026,7 @@ function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
   if(!btn) return;
   if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Events gespeichert';
+  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Gespeichert';
   saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
@@ -2438,53 +2239,59 @@ lastErr = e;
 }
 throw lastErr;
 }
-  
 async function syncWebhook(entry, localId){
-  const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
-  if(!url || !headers){
-    diag.add("Webhook: keine Header/URL – vermutlich nicht eingeloggt. Bitte Login ausführen.");
-    showLoginOverlay(true);
-    return;
-  }
-
-  try{
-    const uid = await getUserId();
-    const events = toHealthEvents(entry);
-    if (!events.length){
-      diag.add("Webhook: keine Events zu senden");
-      return;
-    }
-
-    // POST der Events in einer Batch-Anfrage (array)
-    // Supabase akzeptiert JSON-Array für bulk insert.
-    const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
-    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
-
-    if(!res.ok){
-      const txt = await res.text().catch(()=>'?');
-      diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
-      return;
-    }
-
-    // Antwort: Liste der eingefügten Events (je ein id)
-    const json = await res.json();
-    const firstId = json?.[0]?.id ?? null;
-    if(firstId != null){
-      // Wir mappen EINEN local entry auf mehrere server events.
-      // Fürs Erfassen brauchen wir nur wissen: "ist was in der Cloud?" -> remote_id setzen.
-      await updateEntry(localId, { remote_id: firstId });
-      diag.add(`Webhook: OK (${events.length} Event(s))`);
-    }
-  }catch(e){
-    diag.add("Webhook: Netzwerkfehler");
-  }
+const url = await getConf("webhookUrl");
+const headers = await getHeaders();
+if(!url || !headers) return;
+try{
+const uid = await getUserId();
+const { id: _d1, remote_id: _d2, ...safe } = entry;
+const payload = uid ? { ...safe, user_id: uid } : safe;
+const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+if(!res.ok){
+const txt = await res.text().catch(()=>'?');
+diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
+return;
+}
+const json = await res.json();
+const remoteId = json?.[0]?.id;
+if(remoteId!=null){
+await updateEntry(localId, { remote_id: remoteId });
+diag.add("Webhook: OK");
+}
+}catch(e){
+diag.add("Webhook: Netzwerkfehler");
+}
 }
 
 /* ===== Realtime / Auto-Sync ===== */
-// VORERST deaktiviert – Arzt-Ansicht folgt in Schritt 2
-async function reconcileFromRemote(){
-  // No-Op
+  async function reconcileFromRemote(){
+  const remoteRows = await pullAllFromRemote();
+  const seen = new Set(remoteRows.map(r => r.id));
+
+  for(const r of remoteRows){
+    const mapped = {
+      date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+      sys: r.sys, dia: r.dia, pulse: r.pulse,
+      weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
+      training: r.training, low_intake: r.low_intake, sick: r.sick,
+      valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+      salt_high: r.salt_high, sugar_high: r.sugar_high,
+      remote_id: r.id
+    };
+    const existing = await getEntryByRemoteId(r.id);
+    if (existing) await updateEntry(existing.id, mapped);
+    else          await addEntry(mapped);
+  }
+
+  // lokale Leichen entfernen
+  const allLocal = await getAllEntries();
+  for (const e of allLocal){
+    if (e.remote_id && !seen.has(e.remote_id)) await deleteEntryLocal(e.id);
+  }
+
+  await renderDoctor();
+  if (chartPanel.open) await chartPanel.draw();
 }
 
 let sbClient = null;
@@ -2541,16 +2348,93 @@ diag.add("Supabase: Client (Auth) initialisiert");
 return sbClient;
 }
 
-// VORERST deaktiviert – Arzt-Ansicht + Realtime folgen in Schritt 2
 async function setupRealtime(){
-  // No-Op
-}
+const supa = await ensureSupabaseClient();
+const uid = await getUserId();
+if(!supa) return;
+if(!uid) return;
 
-// Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
+// health_entries
+trackChannel(
+supa.channel('ch_health_entries')
+.on('postgres_changes', {
+  event: '*', schema: 'public', table: 'health_entries',
+  filter: `user_id=eq.${uid}`
+}, async (payload)=>{
+const et = payload.eventType; const n = payload.new; const o = payload.old;
+if(et === 'INSERT' || et === 'UPDATE'){
+const row = n;
+const mapped = {
+date: row.date, time: row.time, dateTime: row.dateTime, ts: row.ts, context: row.context,
+sys: row.sys, dia: row.dia, pulse: row.pulse,
+weight: row.weight, waist_cm: row.waist_cm, map: row.map, notes: row.notes,
+training: row.training, low_intake: row.low_intake, sick: row.sick,
+valsartan_missed: row.valsartan_missed, forxiga_missed: row.forxiga_missed, nsar_taken: row.nsar_taken,
+salt_high: row.salt_high, sugar_high: row.sugar_high, // <<< hinzufügen
+remote_id: row.id
+};
+const existing = await getEntryByRemoteId(row.id);
+if(existing){ await updateEntry(existing.id, mapped); }
+else{ await addEntry(mapped); }
+await renderDoctor();
+if(chartPanel.open) chartPanel.draw();
+diag.add(`Realtime health_entries: ${et}`);
+}
+if(et === 'DELETE'){
+const rid = o?.id;
+if(rid!=null){
+const existing = await getEntryByRemoteId(rid);
+if(existing){ await deleteEntryLocal(existing.id); }
+await renderDoctor();
+if(chartPanel.open) chartPanel.draw();
+diag.add("Realtime health_entries: DELETE");
+}
+}
+})
+.subscribe((status)=>{ if(status==='SUBSCRIBED') diag.add("Realtime health_entries: subscribed"); })
+);
+
+// Daily
+const remoteRows = await pullAllFromRemote();
+const seen = new Set(remoteRows.map(r=>r.id));
+for(const r of remoteRows){
+const mapped = {
+date: r.date, time: r.time, dateTime: r.dateTime, ts: r.ts, context: r.context,
+sys: r.sys, dia: r.dia, pulse: r.pulse,
+weight: r.weight, waist_cm: r.waist_cm, map: r.map, notes: r.notes,
+training: r.training, low_intake: r.low_intake, sick: r.sick,
+valsartan_missed: r.valsartan_missed, forxiga_missed: r.forxiga_missed, nsar_taken: r.nsar_taken,
+salt_high: r.salt_high, sugar_high: r.sugar_high, // <<< hinzufügen
+remote_id: r.id
+};
+
+const existing = await getEntryByRemoteId(r.id);
+if(existing){ await updateEntry(existing.id, mapped); }
+else { await addEntry(mapped); }
+}
+// Entferne lokale Einträge, die serverseitig gelöscht wurden
+const allLocal = await getAllEntries();
+for(const e of allLocal){
+if(e.remote_id && !seen.has(e.remote_id)){ await deleteEntryLocal(e.id); }
+}
+await renderDoctor();
+if(chartPanel.open) chartPanel.draw();
+}
 async function initialAutoSync(){
-  // Vorerst deaktiviert, bis Anzeige komplett auf Events migriert ist.
-  diag.add("Auto-Sync: deaktiviert (Event-Migration Phase)");
-  return;
+const headers = await getHeaders();
+const url = await getConf("webhookUrl");
+if(!headers || !url){ diag.add("Auto-Sync: keine Konfiguration – übersprungen"); return; }
+setBusy(true);
+try{
+const push = await pushPendingToRemote();
+if(push.pushed || push.failed) diag.add(`Auto-Push: OK=${push.pushed}, FAIL=${push.failed}`);
+await reconcileFromRemote();
+diag.add("Auto-Sync: Abgleich fertig (ohne Wipe)");
+}catch(e){
+diag.add("Auto-Sync: Fehler – " + (e.message||e));
+}finally{
+setBusy(false);
+}
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
