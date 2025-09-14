@@ -981,6 +981,27 @@ async function getHeaders() {
   };
 }
 
+// ===== UI-Helfer für Meldungen =====
+function uiError(msg){
+  try {
+    const box = document.getElementById('err');
+    if (box) {
+      box.style.display = 'block';
+      box.textContent = msg;
+      return;
+    }
+  } catch(_){}
+  alert(msg); // Fallback
+}
+
+function uiInfo(msg){
+  try {
+    diag.add(msg);
+  } catch(_){
+    console.log("INFO:", msg);
+  }
+}
+
 /* ===== Remote (Supabase REST) ===== */
 // ANKER: views-api
 async function fetchBpDays({ from, to }) {
@@ -1254,7 +1275,11 @@ async function renderDoctor() {
 
   // Tage sortieren und ins UI schreiben
   const days = Array.from(byDay.values()).sort((a,b) => (a.day < b.day ? -1 : 1));
-  renderDoctorTable(days); // <- deine bestehende Tabellen-/UI-Funktion weiterverwenden
+  if (typeof renderDoctorTable === "function") {
+  renderDoctorTable(days); // <- deine bestehende Tabellen-/UI-Funktion
+} else {
+  console.warn("renderDoctorTable nicht definiert – Arzt-Ansicht zeigt nichts an.");
+}
 }
 
 /* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
@@ -2772,6 +2797,7 @@ main();
 
 </body>
 </html>
+
 
 
 
