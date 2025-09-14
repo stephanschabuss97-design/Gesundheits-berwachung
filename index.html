@@ -748,6 +748,34 @@ function toNumDE(s) {
   const n = parseFloat(v.replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
+
+// ANKER: ui-utils
+function uiError(msg) {
+  const box = document.getElementById('err');
+  if (box) {
+    box.textContent = String(msg || 'Fehler');
+    box.style.display = 'block';
+    // Auto-hide nach 5s:
+    setTimeout(()=>{ box.style.display='none'; }, 5000);
+  } else {
+    alert(msg);
+  }
+}
+function uiInfo(msg) {
+  const box = document.getElementById('err');
+  if (box) {
+    box.textContent = String(msg || 'OK');
+    box.style.display = 'block';
+    setTimeout(()=>{ box.style.display='none'; }, 2000);
+  } else {
+    console.log(msg);
+  }
+}
+function withBusy(el, on=true){
+  if (!el) return;
+  el.disabled = !!on;
+  el.classList.toggle('is-busy', !!on);
+}
   
 /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
@@ -2343,9 +2371,9 @@ async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
 const time = $(`#time${which}`).value || timeStr();
 
-const sys = $(`#sys${which}`).value ? Number($(`#sys${which}`).value) : null;
-const dia = $(`#dia${which}`).value ? Number($(`#dia${which}`).value) : null;
-const pulse = $(`#pulse${which}`).value ? Number($(`#pulse${which}`).value) : null;
+const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : null;
+const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
+const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
 
 // Nur vitale Werte; Gewicht NICHT mehr in M/A
 const weight = null;
@@ -2443,7 +2471,7 @@ async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers){
-    diag.add("Webhook: keine Header/URL – vermutlich nicht eingeloggt. Bitte Login ausführen.");
+    uiError("Nicht angemeldet – bitte Google-Login ausführen.");
     showLoginOverlay(true);
     return;
   }
@@ -2456,28 +2484,45 @@ async function syncWebhook(entry, localId){
       return;
     }
 
-    // POST der Events in einer Batch-Anfrage (array)
-    // Supabase akzeptiert JSON-Array für bulk insert.
     const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
     const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
 
     if(!res.ok){
-      const txt = await res.text().catch(()=>'?');
-      diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
-      return;
+      // Details ziehen (falls PostgREST JSON liefert)
+      let details = "";
+      try {
+        const e = await res.json();
+        details = (e?.message || e?.details || "");
+      } catch { /* plain text? */ }
+
+      if (res.status === 409 || /duplicate|unique/i.test(details)) {
+        uiError("Es gibt bereits einen Eintrag für diesen Tag/Kontext.");
+      } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
+        uiError("Eingaben ungültig – bitte Wertebereiche/Pflichtfelder prüfen.");
+      } else if (res.status === 401 || res.status === 403) {
+        uiError("Zugriff verweigert – bitte erneut anmelden.");
+      } else {
+        uiError(`Speichern fehlgeschlagen (HTTP ${res.status}).`);
+      }
+
+      diag.add(`Webhook-Fehler ${res.status}: ${details || "—"}`);
+      throw new Error(`save-failed-${res.status}`);
     }
 
-    // Antwort: Liste der eingefügten Events (je ein id)
     const json = await res.json();
     const firstId = json?.[0]?.id ?? null;
     if(firstId != null){
-      // Wir mappen EINEN local entry auf mehrere server events.
-      // Fürs Erfassen brauchen wir nur wissen: "ist was in der Cloud?" -> remote_id setzen.
       await updateEntry(localId, { remote_id: firstId });
+      uiInfo("Gespeichert.");
       diag.add(`Webhook: OK (${events.length} Event(s))`);
+    } else {
+      uiError("Unerwartete Antwort vom Server – kein Datensatz zurückgegeben.");
     }
   }catch(e){
+    // Netzwerkfehler, 5xx nach Exhaust, etc.
+    uiError("Netzwerkfehler beim Speichern. Bitte später erneut versuchen.");
     diag.add("Webhook: Netzwerkfehler");
+    throw e;
   }
 }
 
@@ -2776,7 +2821,17 @@ bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
 bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
-$("#saveAllBtn").addEventListener("click", saveAll);
+document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
+  const btn = e.currentTarget;
+  withBusy(btn, true);
+  try {
+    await saveAll();
+  } catch(_) {
+    // Fehler werden in saveAll/syncWebhook via uiError gezeigt
+  } finally {
+    withBusy(btn, false);
+  }
+});
 $("#applyRange").addEventListener("click", async ()=>{
   await renderDoctor();
 setDocBadges({ visible: true });
@@ -2896,3 +2951,4 @@ main();
 
 </body>
 </html>
+
