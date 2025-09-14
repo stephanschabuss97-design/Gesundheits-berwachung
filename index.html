@@ -677,26 +677,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <script>
 /* ===== Supabase Defaults (ANON only – niemals service_role!) ===== */
-const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
+const SUPABASE_URL = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
-const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
-
-// === UI-Utils (global) ===
-function uiError(msg) {
-  const box = document.getElementById('err');
-  if (box) { box.style.display = 'block'; box.textContent = msg; }
-  else { alert(msg); }
-}
-function uiInfo(msg) {
-  const box = document.getElementById('msg') || document.getElementById('err');
-  if (box) { box.style.display = 'block'; box.textContent = msg; setTimeout(()=> box.style.display='none', 3000); }
-  else { console.log(msg); }
-}
-function withBusy(el, on = true) {
-  if (!el) return;
-  el.disabled = !!on;
-  el.classList.toggle('is-busy', !!on);
-}
+const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL}/rest/v1/health_events`;
 
 // === Fehlerbox: nur noch Handler, keine Utils mehr hier definieren ===
 window.addEventListener('unhandledrejection', (e)=>{
@@ -986,6 +969,16 @@ function deleteEntryLocal(id){
     tx.oncomplete = ()=> res();
     tx.onerror    = (e)=> rej(e);
   });
+}
+
+async function getHeaders() {
+  const anon = SUPABASE_ANON_DEFAULT || SUPABASE_ANON_KEY;
+  return {
+    apikey: anon,
+    Authorization: `Bearer ${anon}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation'
+  };
 }
 
 /* ===== Remote (Supabase REST) ===== */
@@ -2574,7 +2567,7 @@ diag.init(); helpPanel.init(); await initDB();
 try {
 const haveUrl = await getConf("webhookUrl");
 const haveKey = await getConf("webhookKey");
-if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+if (!haveUrl && SUPABASE_URL) await putConf("webhookUrl", `${SUPABASE_URL}/rest/v1/health_events`);
 if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
 } catch (_) {}
 chartPanel.init(); bindTabs();
@@ -2779,5 +2772,6 @@ main();
 
 </body>
 </html>
+
 
 
