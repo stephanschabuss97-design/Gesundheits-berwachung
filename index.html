@@ -1297,7 +1297,6 @@ function showLoginOverlay(show){
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
   if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
-  if (lout) lout.style.display = email ? '' : 'none';
 }
 
 // Buttons binden (einmalig, z. B. in main())
@@ -1315,16 +1314,6 @@ provider: 'google',
 options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
 });
 if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
-});
-
-if (lout) lout.addEventListener('click', async ()=>{
-const supa = await ensureSupabaseClient();
-if (supa) await supa.auth.signOut();
-await teardownRealtime(); // <- Channels sauber schließen
-__booted = false; // <- erlaubt späteren Re-Login-Start
-setUserUi('');
-showLoginOverlay(true);
-setAuthGuard(false);
 });
 }
 
@@ -3054,6 +3043,7 @@ main();
 
 </body>
 </html>
+
 
 
 
