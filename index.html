@@ -1302,7 +1302,6 @@ function showLoginOverlay(show){
 }
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
-  const lout = document.getElementById('logoutBtn');
   if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
   if (lout) lout.style.display = email ? '' : 'none';
 }
@@ -1310,7 +1309,6 @@ function setUserUi(email){
 // Buttons binden (einmalig, z. B. in main())
 function bindAuthButtons(){
 const gbtn = document.getElementById('googleLoginBtn');
-const lout = document.getElementById('logoutBtn');
 
 if (gbtn) gbtn.addEventListener('click', async ()=>{
 const supa = await ensureSupabaseClient();
@@ -2986,7 +2984,7 @@ setDocBadges({ visible: true });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" hängen blieb)
 $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
-  if (el.id !== 'logoutBtn') el.disabled = false;
+el.disabled = false;
 });
 document.body.classList.remove('auth-locked');
 
@@ -3036,7 +3034,6 @@ main();
     <h3 id="loginTitle">Willkommen</h3>
     <p class="small" style="margin:0 0 8px">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
     <button class="btn primary" id="googleLoginBtn" type="button" style="width:100%;height:48px">Mit Google anmelden</button>
-    <button class="btn ghost" id="logoutBtn" type="button" style="display:none;width:100%;height:40px;margin-top:8px">Abmelden</button>
     <div id="whoAmI" class="small" style="text-align:center;margin-top:6px"></div>
   </div>
 </div>
@@ -3075,6 +3072,7 @@ main();
 
 </body>
 </html>
+
 
 
 
