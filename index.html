@@ -743,7 +743,7 @@ const requestUiRefresh = debounce(async (reason = '') => {
   }catch(e){ /* still ok */ }
 }, 250);
 
-// kleines visuelles Ping bei Realtime (optional, no-op wenn Element fehlt)
+// kleines visuelles Ping bei Realtime
 function livePulse(){
   const el = document.getElementById('doctorLive');
   if (!el) return;
@@ -1236,12 +1236,6 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
     return { ok:false, status:0 };
   }
 }
-
-/* (vorerst) weiterhin No-Op */
-async function pullAllFromRemote(){
-  return []; // No-Op bis zur Anzeige-Umstellung
-}
-
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
@@ -2625,11 +2619,6 @@ async function syncWebhook(entry, localId){
 }
 
 /* ===== Realtime / Auto-Sync ===== */
-// VORERST deaktiviert – Arzt-Ansicht folgt in Schritt 2
-async function reconcileFromRemote(){
-  // No-Op
-}
-
 let sbClient = null;
 
 let __channels = [];
@@ -2709,13 +2698,6 @@ async function setupRealtime(){
   }catch(e){
     diag.add?.('Realtime: setup failed');
   }
-}
-
-// Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
-async function initialAutoSync(){
-  // Vorerst deaktiviert, bis Anzeige komplett auf Events migriert ist.
-  diag.add("Auto-Sync: deaktiviert (Event-Migration Phase)");
-  return;
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
@@ -3072,6 +3054,7 @@ main();
 
 </body>
 </html>
+
 
 
 
