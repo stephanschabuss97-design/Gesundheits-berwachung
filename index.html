@@ -740,6 +740,32 @@ function isServiceRoleKey(raw){
   }
 }
 
+// ANKER: sb-rest
+async function sbSelect({ table, select, filters = [], order = null, limit = null }) {
+  // Basis-URL aus gespeicherter REST-URL ableiten (z. B. .../rest/v1/health_events)
+  const restUrl = await getConf("webhookUrl");
+  const base    = baseUrlFromRest(restUrl) || SUPABASE_URL_DEFAULT;
+  if (!base) throw new Error("REST-Basis fehlt");
+
+  const url = new URL(`${base}/rest/v1/${table}`);
+  if (select) url.searchParams.set('select', select);
+  for (const [k, v] of filters) url.searchParams.set(k, v);
+  if (order) url.searchParams.set('order', order);
+  if (limit) url.searchParams.set('limit', String(limit));
+
+  // WICHTIG: mit User-JWT lesen (RLS)!
+  const headers = await getHeaders();
+  if (!headers) throw new Error("Nicht angemeldet – keine Leseberechtigung.");
+
+  const res = await withRetry(() => fetch(url.toString(), { headers }));
+  if (!res.ok) {
+    let details = '';
+    try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
+    throw new Error(`REST ${table} failed ${res.status} – ${details}`);
+  }
+  return await res.json();
+}
+  
 // ANCHOR: num-helper-de
 function toNumDE(s) {
   if (s == null) return null;
@@ -1030,42 +1056,73 @@ return {ok: res.ok, status: res.status};
 return {ok:false, status:0};
 }
 }
-/* === Remote-Fetch für Arzt-Ansicht (Events) === */
-async function fetchEventsRange(fromIso /*YYYY-MM-DD*/, toIso /*YYYY-MM-DD*/){
-  const url = await getConf("webhookUrl");     // .../rest/v1/health_events
-  const headers = await getHeaders();
-  if (!url || !headers) return [];
-
-  // [from, to] inklusiv → REST: ts >= fromT00:00Z UND ts < (to+1)T00:00Z
-  const toNext = new Date(toIso + "T00:00:00Z"); 
-  toNext.setUTCDate(toNext.getUTCDate() + 1);
-  const toNextIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}` +
-            `?select=id,ts,type,payload` +
-            `&ts=gte.${encodeURIComponent(fromIso)}T00:00:00Z` +
-            `&ts=lt.${encodeURIComponent(toNextIso)}T00:00:00Z` +
-            `&order=ts.asc`;
-
-  const res = await withRetry(()=> fetch(q, { headers }));
-  if (!res.ok) return [];
-  const rows = await res.json();
-  // Normalisieren: Datum je Event (YYYY-MM-DD) berechnen
-  return rows.map(r => {
-    const d = new Date(r.ts);
-    const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-    return { id:r.id, date, ts:r.ts, type:r.type, payload:r.payload||{} };
+  
+/* === Remote-Fetch Arzt-Ansicht (Views) === */
+async function loadBpFromView({ user_id, from, to }) {
+  const filters = [['user_id', `eq.${user_id}`]];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to)   filters.push(['day', `lte.${to}`]);
+  return await sbSelect({
+    table: 'v_events_bp',
+    select: 'day,ctx,sys,dia,pulse',
+    filters,
+    order: 'day.asc'
   });
 }
 
-function aggregateDailyFromEvents(events){
-  // Zielstruktur wie bisher in renderDoctor verwendet
+async function loadBodyFromView({ user_id, from, to }) {
+  const filters = [['user_id', `eq.${user_id}`]];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to)   filters.push(['day', `lte.${to}`]);
+  return await sbSelect({
+    table: 'v_events_body',
+    select: 'day,kg,cm',
+    filters,
+    order: 'day.asc'
+  });
+}
+
+async function loadFlagsFromView({ user_id, from, to }) {
+  const filters = [['user_id', `eq.${user_id}`]];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to)   filters.push(['day', `lte.${to}`]);
+  return await sbSelect({
+    table: 'v_events_day_flags',
+    select: 'day,training,sick,low_intake,salt_high,sugar_high,valsartan_missed,forxiga_missed,nsar_taken',
+    filters,
+    order: 'day.asc'
+  });
+}
+
+/* Optional: Notes (aus health_events, falls keine View v_events_note existiert) */
+async function loadNotesLastPerDay({ user_id, from, to }) {
+  const filters = [['user_id', `eq.${user_id}`], ['type', 'eq.note']];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to)   filters.push(['day', `lte.${to}`]);
+  const rows = await sbSelect({
+    table: 'health_events',
+    select: 'day,ts,payload',
+    filters,
+    order: 'ts.desc', // letzter zuerst
+  });
+  const out = [];
+  const seen = new Set();
+  for (const r of rows) {
+    if (seen.has(r.day)) continue;
+    const t = (r?.payload?.text || '').trim();
+    if (t) { out.push({ day: r.day, ts: r.ts, text: t }); seen.add(r.day); }
+  }
+  return out;
+}
+
+/* View-Zeilen → Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
+function joinViewsToDaily({ bp, body, flags, notes = [] }) {
   const days = new Map();
-  const ensure = (date) => {
-    let d = days.get(date);
-    if (!d){
+  const ensure = (day) => {
+    let d = days.get(day);
+    if (!d) {
       d = {
-        date,
+        date: day,
         morning: { sys:null, dia:null, pulse:null, map:null },
         evening: { sys:null, dia:null, pulse:null, map:null },
         weight: null,
@@ -1073,55 +1130,65 @@ function aggregateDailyFromEvents(events){
         notes: "",
         flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
         remoteIds: [],
-        hasCloud: true  // kommt ja vom Server
+        hasCloud: true
       };
-      days.set(date, d);
+      days.set(day, d);
     }
     return d;
   };
 
-  for (const ev of events){
-    const d = ensure(ev.date);
-    d.remoteIds.push(ev.id);
+  // body (1x/Tag)
+  for (const r of body) {
+    const d = ensure(r.day);
+    if (r.kg != null) d.weight   = Number(r.kg);
+    if (r.cm != null) d.waist_cm = Number(r.cm);
+  }
 
-    if (ev.type === "bp"){
-      const p = ev.payload||{};
-      const ctx = p.ctx; // "Morgen"|"Abend"
-      const blk = (ctx === "Morgen") ? d.morning : (ctx === "Abend") ? d.evening : null;
-      if (blk){
-        if (p.sys   != null) blk.sys   = Number(p.sys);
-        if (p.dia   != null) blk.dia   = Number(p.dia);
-        if (p.pulse != null) blk.pulse = Number(p.pulse);
-        if (blk.sys != null && blk.dia != null) blk.map = calcMAP(blk.sys, blk.dia);
-      }
+  // bp (max 2x/Tag – Morgen/Abend)
+  for (const r of bp) {
+    const d = ensure(r.day);
+    const blk = r.ctx === 'Morgen' ? d.morning : (r.ctx === 'Abend' ? d.evening : null);
+    if (blk) {
+      if (r.sys   != null) blk.sys   = Number(r.sys);
+      if (r.dia   != null) blk.dia   = Number(r.dia);
+      if (r.pulse != null) blk.pulse = Number(r.pulse);
+      if (blk.sys != null && blk.dia != null) blk.map = calcMAP(blk.sys, blk.dia);
     }
-    else if (ev.type === "body"){
-      const p = ev.payload||{};
-      if (p.kg != null) d.weight   = Number(p.kg);
-      if (p.cm != null) d.waist_cm = Number(p.cm);
-    }
-    else if (ev.type === "day_flags"){
-      const f = ev.payload||{};
-      if (f.low_intake)       d.flags.water_lt2  = true;
-      if (f.salt_high)        d.flags.salt_gt5   = true;
-      if (f.sugar_high)       d.flags.sugar_gt10 = true;
-      if (f.sick)             d.flags.sick       = true;
-      if (f.training)         d.flags.training   = true;
-      if (f.valsartan_missed || f.forxiga_missed || f.nsar_taken) d.flags.meds = true;
-    }
-    else if (ev.type === "note"){
-      const t = (ev.payload?.text||"").trim();
-      // letzte Notiz des Tages gewinnt (Server ist zeitlich sortiert)
-      if (t) d.notes = t;
-    }
+  }
+
+  // flags (1x/Tag)
+  for (const r of flags) {
+    const d = ensure(r.day);
+    d.flags.training   = !!r.training;
+    d.flags.sick       = !!r.sick;
+    d.flags.water_lt2  = !!r.low_intake;
+    d.flags.salt_gt5   = !!r.salt_high;
+    d.flags.sugar_gt10 = !!r.sugar_high;
+    d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || r.nsar_taken);
+  }
+
+  // notes (letzter gewinnt – wir bekommen schon "letzten" aus Loader)
+  for (const n of notes) {
+    const d = ensure(n.day);
+    d.notes = n.text || "";
   }
 
   return Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
 }
 
+/* Neues fetchDailyOverview: liest direkt aus den Views */
 async function fetchDailyOverview(fromIso, toIso){
-  const events = await fetchEventsRange(fromIso, toIso);
-  return aggregateDailyFromEvents(events);
+  const user_id = await getUserId();
+  if (!user_id) return [];
+
+  const [bp, body, flags, notes] = await Promise.all([
+    loadBpFromView({ user_id, from: fromIso, to: toIso }),
+    loadBodyFromView({ user_id, from: fromIso, to: toIso }),
+    loadFlagsFromView({ user_id, from: fromIso, to: toIso }),
+    loadNotesLastPerDay({ user_id, from: fromIso, to: toIso }) // optional
+  ]);
+
+  return joinViewsToDaily({ bp, body, flags, notes });
 }
 
 /* Server: alle Events eines Tages löschen (RLS: nur eigene Records) */
@@ -2951,4 +3018,5 @@ main();
 
 </body>
 </html>
+
 
