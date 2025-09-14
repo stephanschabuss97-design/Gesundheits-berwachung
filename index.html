@@ -1275,10 +1275,10 @@ async function renderDoctor() {
 
   // Tage sortieren und ins UI schreiben
   const days = Array.from(byDay.values()).sort((a,b) => (a.day < b.day ? -1 : 1));
-  if (typeof renderDoctorTable === "function") {
-  renderDoctorTable(days); // <- deine bestehende Tabellen-/UI-Funktion
-} else {
-  console.warn("renderDoctorTable nicht definiert – Arzt-Ansicht zeigt nichts an.");
+// Minimal-Fallback: zeige JSON
+const wrap = document.getElementById("doctorView");
+if (wrap) {
+  wrap.textContent = JSON.stringify(days, null, 2);
 }
 }
 
@@ -2797,6 +2797,7 @@ main();
 
 </body>
 </html>
+
 
 
 
