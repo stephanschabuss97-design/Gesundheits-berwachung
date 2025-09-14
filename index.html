@@ -681,11 +681,30 @@ const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
 
-/* ===== Fehlerbox ===== */
+// === UI-Utils (global) ===
+function uiError(msg) {
+  const box = document.getElementById('err');
+  if (box) { box.style.display = 'block'; box.textContent = msg; }
+  else { alert(msg); }
+}
+function uiInfo(msg) {
+  const box = document.getElementById('msg') || document.getElementById('err');
+  if (box) { box.style.display = 'block'; box.textContent = msg; setTimeout(()=> box.style.display='none', 3000); }
+  else { console.log(msg); }
+}
+function withBusy(el, on = true) {
+  if (!el) return;
+  el.disabled = !!on;
+  el.classList.toggle('is-busy', !!on);
+}
+
+// === Fehlerbox: nur noch Handler, keine Utils mehr hier definieren ===
 window.addEventListener('unhandledrejection', (e)=>{
-const box = document.getElementById('err');
-box.style.display='block';
-box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+  const box = document.getElementById('err');
+  if (box) {
+    box.style.display='block';
+    box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+  }
 });
 
 /* ===== Diagnostics ===== */
@@ -2442,42 +2461,68 @@ throw lastErr;
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
-  if(!url || !headers){
+  if (!url || !headers) {
     diag.add("Webhook: keine Header/URL – vermutlich nicht eingeloggt. Bitte Login ausführen.");
     showLoginOverlay(true);
+    uiError("Zugriff verweigert. Bitte erneut anmelden.");
     return;
   }
 
-  try{
+  try {
     const uid = await getUserId();
     const events = toHealthEvents(entry);
-    if (!events.length){
+    if (!events.length) {
       diag.add("Webhook: keine Events zu senden");
       return;
     }
 
-    // POST der Events in einer Batch-Anfrage (array)
-    // Supabase akzeptiert JSON-Array für bulk insert.
+    // user_id anreichern (Policy-konform)
     const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
-    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
 
-    if(!res.ok){
-      const txt = await res.text().catch(()=>'?');
-      diag.add(`Webhook-Fehler ${res.status}: ${txt}`);
-      return;
+    const res = await withRetry(() => fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    }));
+
+    if (!res.ok) {
+      // Versuche strukturierte Fehlermeldung zu lesen
+      let msg = "", details = "";
+      try {
+        const j = await res.json();
+        msg = j?.message || "";
+        details = j?.details || "";
+      } catch {
+        msg = await res.text().catch(()=> "");
+      }
+
+      // Status-Mapping
+      if (res.status === 409 || /duplicate|unique/i.test(msg + " " + details)) {
+        uiError("Es gibt bereits einen Eintrag für diesen Tag (und Kontext).");
+      } else if (res.status === 422 || /invalid|range|null value|check constraint/i.test(msg + " " + details)) {
+        uiError("Eingaben ungültig: Bitte Werte und Pflichtfelder prüfen.");
+      } else if (res.status === 401 || res.status === 403) {
+        uiError("Zugriff verweigert. Bitte erneut anmelden.");
+        showLoginOverlay(true);
+      } else {
+        uiError("Speichern fehlgeschlagen. Bitte später erneut versuchen.");
+      }
+
+      diag.add(`Webhook-Fehler ${res.status}: ${msg || details || "?"}`);
+      return; // kein Throw → UI bleibt responsiv
     }
 
-    // Antwort: Liste der eingefügten Events (je ein id)
+    // Erfolg: erste id reicht für "Cloud vorhanden"
     const json = await res.json();
     const firstId = json?.[0]?.id ?? null;
-    if(firstId != null){
-      // Wir mappen EINEN local entry auf mehrere server events.
-      // Fürs Erfassen brauchen wir nur wissen: "ist was in der Cloud?" -> remote_id setzen.
+    if (firstId != null) {
       await updateEntry(localId, { remote_id: firstId });
       diag.add(`Webhook: OK (${events.length} Event(s))`);
+      uiInfo("Gespeichert.");
     }
-  }catch(e){
+  } catch(e) {
     diag.add("Webhook: Netzwerkfehler");
+    uiError("Netzwerkfehler beim Speichern. Bitte später erneut versuchen.");
   }
 }
 
@@ -2776,7 +2821,17 @@ bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
 bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
 
-$("#saveAllBtn").addEventListener("click", saveAll);
+// ANKER: save-btn-busy
+$("#saveAllBtn").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  withBusy(btn, true);
+  try {
+    await saveAll();
+  } finally {
+    withBusy(btn, false);
+  }
+});
+
 $("#applyRange").addEventListener("click", async ()=>{
   await renderDoctor();
 setDocBadges({ visible: true });
@@ -2791,9 +2846,14 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
   await chartPanel.draw();
 });
 
-document.addEventListener('keydown', (e)=>{
-const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-if(isSave){ e.preventDefault(); saveAll(); }
+document.addEventListener('keydown', async (e) => {
+  const isSave = (e.key.toLowerCase() === 's') && (e.ctrlKey || e.metaKey);
+  if (isSave) {
+    e.preventDefault();
+    const btn = document.getElementById('saveAllBtn');
+    withBusy(btn, true);
+    try { await saveAll(); } finally { withBusy(btn, false); }
+  }
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
@@ -2896,3 +2956,4 @@ main();
 
 </body>
 </html>
+
