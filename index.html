@@ -729,6 +729,28 @@ close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='no
 };
 
 /* ===== Helpers ===== */
+  // --- Debounce ---
+function debounce(fn, wait=250){
+  let t = null;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+// UI-Refresh: rendert nur, wenn Arzt-Ansicht sichtbar; Chart nur wenn offen
+const requestUiRefresh = debounce(async (reason = '') => {
+  try{
+    const doctorActive = document.getElementById('doctor')?.classList?.contains('active');
+    if (doctorActive) await renderDoctor();
+    if (chartPanel?.open) await chartPanel.draw();
+  }catch(e){ /* still ok */ }
+}, 250);
+
+// kleines visuelles Ping bei Realtime (optional, no-op wenn Element fehlt)
+function livePulse(){
+  const el = document.getElementById('doctorLive');
+  if (!el) return;
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 900);
+}
+
 // --- Service-Role-Schutz (NIEMALS im Browser) ---
 function isServiceRoleKey(raw){
   const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
@@ -779,17 +801,21 @@ function toNumDE(s) {
 function uiError(msg) {
   const box = document.getElementById('err');
   if (box) {
+    box.setAttribute('role','status');
+    box.setAttribute('aria-live','polite');
     box.textContent = String(msg || 'Fehler');
     box.style.display = 'block';
-    // Auto-hide nach 5s:
     setTimeout(()=>{ box.style.display='none'; }, 5000);
   } else {
     alert(msg);
   }
 }
+
 function uiInfo(msg) {
   const box = document.getElementById('err');
   if (box) {
+    box.setAttribute('role','status');
+    box.setAttribute('aria-live','polite');
     box.textContent = String(msg || 'OK');
     box.style.display = 'block';
     setTimeout(()=>{ box.style.display='none'; }, 2000);
@@ -797,6 +823,7 @@ function uiInfo(msg) {
     console.log(msg);
   }
 }
+
 function withBusy(el, on=true){
   if (!el) return;
   el.disabled = !!on;
@@ -1328,17 +1355,23 @@ return !!session;
 
 // Reagiert auch auf spätere Logins (z. B. nach Redirect)
 function watchAuthState(){
-sbClient.auth.onAuthStateChange(async (_event, session)=>{
-const email = session?.user?.email || '';
-setUserUi(email);
-showLoginOverlay(!session);
-setAuthGuard(!!session);
-setDoctorAccess(!!session);
-if (session) {
-  await afterLoginBoot();
-  await ensureAppLock(); // 👈 App-Lock nach erfolgreichem Login
-}
-});
+  sbClient.auth.onAuthStateChange(async (_event, session)=>{
+    const email = session?.user?.email || '';
+    setUserUi(email);
+    showLoginOverlay(!session);
+    setAuthGuard(!!session);
+    setDoctorAccess(!!session);
+
+    if (session) {
+      await afterLoginBoot();
+      await ensureAppLock();
+      await setupRealtime();     // 🔹 NEU: Realtime aktivieren nach Login
+      await requestUiRefresh();  // initialer Refresh
+    } else {
+      teardownRealtime();        // 🔹 NEU: Channels sauber schließen
+      // UI in „abgemeldet“ lassen – renderDoctor() zeigt Info ohnehin
+    }
+  });
 }
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
@@ -2653,9 +2686,31 @@ diag.add("Supabase: Client (Auth) initialisiert");
 return sbClient;
 }
 
-// VORERST deaktiviert – Arzt-Ansicht + Realtime folgen in Schritt 2
 async function setupRealtime(){
-  // No-Op
+  try{
+    const supa = await ensureSupabaseClient();
+    if (!supa) return;
+
+    // Bestehende Channels schließen, um Doppelbindungen zu vermeiden
+    teardownRealtime();
+
+    // Channel auf health_events – RLS begrenzt automatisch auf auth.uid()
+    const ch = trackChannel(
+      supa.channel('rt-health-events')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'health_events' },
+            (payload) => {
+              // Optional: Zeitraum grob prüfen? (einfach halten: immer refreshen)
+              livePulse();
+              requestUiRefresh('realtime');
+            })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: subscribed'); }
+        })
+    );
+  }catch(e){
+    diag.add?.('Realtime: setup failed');
+  }
 }
 
 // Nur noch "Pending" pushen; kein Pull solange Anzeige noch nicht migriert
@@ -2836,6 +2891,8 @@ const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot(); // wichtig für Reload mit persistierter Session
   await ensureAppLock();  // 👈 App-Lock direkt nach Boot prüfen/anzeigen
+  await setupRealtime();  // 🔹 NEU: Realtime direkt aktivieren
+  await requestUiRefresh();
 }
 bindAppLockButtons();     // 👈 Buttons der Lock-Card binden
 
@@ -3018,5 +3075,6 @@ main();
 
 </body>
 </html>
+
 
 
