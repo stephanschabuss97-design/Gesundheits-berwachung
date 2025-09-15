@@ -32,8 +32,14 @@
   }, true);
   window.addEventListener("keydown", e=>{
     if(e.altKey && e.key.toLowerCase()==="d"){
-      var el = document.getElementById("touchLog");
-      if(el) el.style.display = (el.style.display==="none"?"block":"none");
+var el = document.getElementById("touchLog");
+if(!el){
+  el = document.createElement("pre");
+  el.id = "touchLog";
+  el.style.cssText="display:block;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000";
+  document.body.appendChild(el);
+}
+el.style.display = (el.style.display==="none"?"block":"none");
     }
   });
 })();
@@ -3083,6 +3089,7 @@ main();
 
 </body>
 </html>
+
 
 
 
