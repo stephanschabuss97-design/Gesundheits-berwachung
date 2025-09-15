@@ -2,6 +2,43 @@
 <html lang="de">
 <head>
 <meta charset="utf-8" />
+
+<!-- ANKER: bootstrap-logger -->
+<script>
+(function(){
+  function log(msg){
+    try{
+      var el = document.getElementById("diagLog") || document.getElementById("touchLog");
+      if(!el){
+        var fb = document.createElement("pre");
+        fb.id="touchLog";
+        fb.style.cssText="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000";
+        document.body.appendChild(fb);
+        el=fb;
+      }
+      el.textContent = (msg + "\n" + el.textContent).slice(0,5000);
+    }catch(e){ /* not fatal */ }
+  }
+  window.addEventListener("error", e=>{
+    log("[Error] "+(e.message||e)+" @"+(e.filename||"")+"#"+(e.lineno||0));
+  });
+  window.addEventListener("unhandledrejection", e=>{
+    log("[Promise] "+(e.reason?.message||e.reason||"Unknown"));
+  });
+  window.addEventListener("error", e=>{
+    if(e.target && (e.target.src||e.target.href)){
+      log("[Resource] "+(e.target.src||e.target.href)+" failed to load");
+    }
+  }, true);
+  window.addEventListener("keydown", e=>{
+    if(e.altKey && e.key.toLowerCase()==="d"){
+      var el = document.getElementById("touchLog");
+      if(el) el.style.display = (el.style.display==="none"?"block":"none");
+    }
+  });
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.0.0)</title>
 <style>
@@ -487,6 +524,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 </style>
 </head>
 <body>
+<!-- ANKER: touch-log-fallback -->
+<pre id="touchLog" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000"></pre>
+
 <header>
 <div style="display:flex;align-items:center;gap:10px">
 <h1>Gesundheits-Logger</h1><span class="small">V1.0.0</span>
@@ -3043,6 +3083,7 @@ main();
 
 </body>
 </html>
+
 
 
 
