@@ -689,7 +689,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
       <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
       <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
       <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
-      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
+      <button class="btn toggle" id="protein90Toggle" type="button" aria-pressed="false" title="≥ 90 g Protein">🍗 ≥ 90 g Protein</button>
       <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
       <div class="spacer"></div>
     </div>
@@ -964,7 +964,7 @@ function toHealthEvents(entry){
       sick:             !!entry.sick,
       low_intake:       !!entry.low_intake,
       salt_high:        !!entry.salt_high,
-      sugar_high:       !!entry.sugar_high,
+      protein_ge90:     !!entry.protein_ge90,
       valsartan_missed: !!entry.valsartan_missed,
       forxiga_missed:   !!entry.forxiga_missed,
       // nsar_taken wird optional separat als eigenes Event gespeichert
@@ -1178,7 +1178,7 @@ async function loadFlagsFromView({ user_id, from, to }) {
   if (to)   filters.push(['day', `lte.${to}`]);
   return await sbSelect({
     table: 'v_events_day_flags',
-    select: 'day,training,sick,low_intake,salt_high,sugar_high,valsartan_missed,forxiga_missed,nsar_taken',
+    select: 'day,training,sick,low_intake,salt_high,protein_ge90,valsartan_missed,forxiga_missed,nsar_taken',
     filters,
     order: 'day.asc'
   });
@@ -1232,7 +1232,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
         weight: null,
         waist_cm: null,
         notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false, nsar:false },
+        flags: { water_lt2:false, salt_gt5:false, protein_ge90:false, sick:false, meds:false, training:false, nsar:false },
         nsar: [],
         remoteIds: [],
         hasCloud: true
@@ -1268,7 +1268,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
     d.flags.sick       = !!r.sick;
     d.flags.water_lt2  = !!r.low_intake;
     d.flags.salt_gt5   = !!r.salt_high;
-    d.flags.sugar_gt10 = !!r.sugar_high;
+    d.flags.protein_ge90 = !!r.protein_ge90;
     // S8: NSAR nicht mehr Teil von meds, wenn separat
     d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || (!window.S8_NSAR_SEPARATE && r.nsar_taken));
     if (window.S8_NSAR_SEPARATE && r.nsar_taken) d.flags.nsar = true; // Altbestand aus View berücksichtigen
@@ -1529,7 +1529,8 @@ async function renderDoctor(){
   const trainingDays = daysArr.filter(d => !!d.flags.training).length;
   const badDays = daysArr.filter(d => {
     const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds || f.nsar);
+    // Protein ≥90g ist kein "bad"-Flag
+    return !!(f.water_lt2 || f.salt_gt5 || f.sick || f.meds || f.nsar);
   }).length;
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
@@ -1583,7 +1584,7 @@ async function renderDoctor(){
     <div class="flags">
       <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.protein_ge90)}"></span><span>Protein ≥90g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.nsar)}"></span><span>NSAR</span></div>
@@ -1775,7 +1776,7 @@ async getFiltered() {
           nsar_taken: false,
           meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
+          protein_ge90: d.flags.protein_ge90
         });
       }
       // Abend
@@ -1800,7 +1801,7 @@ async getFiltered() {
           nsar_taken: false,
           meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
+          protein_ge90: d.flags.protein_ge90
         });
       }
       // Body (Gewicht/Bauch)
@@ -1823,7 +1824,7 @@ async getFiltered() {
           nsar_taken: false,
           meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
-          sugar_high: d.flags.sugar_gt10
+          protein_ge90: d.flags.protein_ge90
         });
       }
     }
@@ -2172,7 +2173,7 @@ const metric = $("#metricSel")?.value || "bp";
           rec = {
             training: false,
             bad: 0,
-            seen: { water: false, salt: false, sugar: false, sick: false, meds: false },
+            seen: { water: false, salt: false, sick: false, meds: false },
           };
           dayFlagsTmp.set(e.date, rec);
         }
@@ -2183,7 +2184,6 @@ const metric = $("#metricSel")?.value || "bp";
         const flags = {
           water: !!e.low_intake,
           salt:  !!e.salt_high,
-          sugar: !!e.sugar_high,
           sick:  !!e.sick,
           meds,
         };
@@ -2273,7 +2273,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
         if (!e?.date) continue;
         let rec = dayFlags.get(e.date);
         if (!rec) {
-          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sugar:false, sick:false, meds:false } };
+          rec = { training:false, badCount:0, seen:{ water:false, salt:false, sick:false, meds:false } };
           dayFlags.set(e.date, rec);
         }
         if (e.training) rec.training = true;
@@ -2281,7 +2281,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
           ? !!e.meds
           : !!(e.valsartan_missed || e.forxiga_missed || (!window.S8_NSAR_SEPARATE && e.nsar_taken));
         const flags = {
-          water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds
+          water: !!e.low_intake, salt: !!e.salt_high, sick: !!e.sick, meds
         };
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
@@ -2474,7 +2474,7 @@ function bindTabs(){
 
 /* ===== Save flows ===== */
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
-saltHigh=false, sugarHigh=false;
+saltHigh=false, proteinHigh=false;
 function setToggle(el, on, activeText, baseText){
 el.classList.toggle("active", !!on);
 el.setAttribute("aria-pressed", on ? "true" : "false");
@@ -2483,7 +2483,7 @@ el.textContent = on ? activeText : baseText;
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋️ Training heute (aktiv)", "🏋️ Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🚰 < 2 L – aktiv", "🚰 < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
+function setProteinHigh(on){ proteinHigh = !!on; setToggle($("#protein90Toggle"), proteinHigh, "🍗 ≥ 90 g Protein – aktiv", "🍗 ≥ 90 g Protein"); }
 
 function setSick(on){
 sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
@@ -2513,7 +2513,7 @@ const waistValRaw = $("#input-waist-cm")?.value?.trim();
 const notes = ($("#notesDay").value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
   valsartanMissed || forxigaMissed || nsarTaken ||
-  saltHigh || sugarHigh);
+  saltHigh || proteinHigh);
 const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || notes);
 
 // 🔴 NEU: Kommentarpflicht bei Grenzwertüberschreitung
@@ -2583,7 +2583,7 @@ valsartan_missed: false,
 forxiga_missed: false,
 nsar_taken: false,
 salt_high: false,
-sugar_high: false
+protein_ge90: false
 };
 
 const localId = await addEntry(entry);
@@ -2606,7 +2606,7 @@ valsartan_missed: valsartanMissed,
 forxiga_missed: forxigaMissed,
 nsar_taken: nsarTaken,
 salt_high: saltHigh,
-sugar_high: sugarHigh
+protein_ge90: proteinHigh
 };
 }
 
@@ -2630,7 +2630,7 @@ const hasContent =
 !!entry.notes ||
 entry.training || entry.low_intake || entry.sick ||
 entry.valsartan_missed || entry.forxiga_missed ||
-entry.nsar_taken || entry.salt_high || entry.sugar_high;
+entry.nsar_taken || entry.salt_high || entry.protein_ge90;
 
 if (!hasContent) return false;
 
@@ -3017,7 +3017,7 @@ bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
 bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
 bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
-bindToggle("#sugarHighToggle", setSugarHigh, ()=>sugarHigh);
+bindToggle("#protein90Toggle", setProteinHigh, ()=>proteinHigh);
 
 document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
   const btn = e.currentTarget;
@@ -3069,7 +3069,7 @@ function daySummaryActive(){
   const waist = ($("#input-waist-cm")?.value || "").trim();
   const n   = ($("#notesDay")?.value || "").trim();
   return !!(w || waist || n || trainingActive || lowIntakeActive || sickActive ||
-    valsartanMissed || forxigaMissed || nsarTaken || saltHigh || sugarHigh);
+    valsartanMissed || forxigaMissed || nsarTaken || saltHigh || proteinHigh);
 }
 
 const disableVitals = daySummaryActive();
