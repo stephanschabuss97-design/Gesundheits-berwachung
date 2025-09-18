@@ -3,6 +3,15 @@
 <head>
 <meta charset="utf-8" />
 
+<!-- S8 Feature Flags -->
+<script>
+  // Separates NSAR from day_flags into its own event type
+  // Set to true once backend and UI fully support separate nsar events
+  const S8_NSAR_SEPARATE = true;
+  window.S8_NSAR_SEPARATE = S8_NSAR_SEPARATE;
+  // expose on window to allow use from any inline scripts
+</script>
+
 <!-- ANKER: bootstrap-logger -->
 <script>
 (function(){
@@ -48,7 +57,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.0.0)</title>
+<title>Gesundheits-Logger (V1.3.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -537,7 +546,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.0.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.3.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -958,11 +967,17 @@ function toHealthEvents(entry){
       sugar_high:       !!entry.sugar_high,
       valsartan_missed: !!entry.valsartan_missed,
       forxiga_missed:   !!entry.forxiga_missed,
-      nsar_taken:       !!entry.nsar_taken,
+      // nsar_taken wird optional separat als eigenes Event gespeichert
+      ...(window.S8_NSAR_SEPARATE ? {} : { nsar_taken: !!entry.nsar_taken })
     };
     const anyFlag = Object.values(flags).some(Boolean);
     if (anyFlag){
       out.push({ ts: tsIso, type: "day_flags", payload: flags });
+    }
+
+    // S8: NSAR separat als eigenes Event erfassen
+    if (window.S8_NSAR_SEPARATE && entry.nsar_taken) {
+      out.push({ ts: tsIso, type: "nsar", payload: { taken: true } });
     }
 
     // note (optional, 1 Zeile Text)
@@ -1190,8 +1205,22 @@ async function loadNotesLastPerDay({ user_id, from, to }) {
   return out;
 }
 
+// S8: NSAR-Ereignisse direkt aus health_events laden (type='nsar')
+async function loadNsarFromEvents({ user_id, from, to }) {
+  const filters = [['user_id', `eq.${user_id}`], ['type', 'eq.nsar']];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to)   filters.push(['day', `lte.${to}`]);
+  const rows = await sbSelect({
+    table: 'health_events',
+    select: 'day,ts,payload',
+    filters,
+    order: 'ts.asc'
+  });
+  return rows.map(r => ({ day: r.day, ts: r.ts, taken: !!(r?.payload?.taken) }));
+}
+
 /* View-Zeilen → Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
-function joinViewsToDaily({ bp, body, flags, notes = [] }) {
+function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
   const days = new Map();
   const ensure = (day) => {
     let d = days.get(day);
@@ -1204,6 +1233,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
         waist_cm: null,
         notes: "",
         flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+        nsar: [],
         remoteIds: [],
         hasCloud: true
       };
@@ -1239,7 +1269,17 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     d.flags.water_lt2  = !!r.low_intake;
     d.flags.salt_gt5   = !!r.salt_high;
     d.flags.sugar_gt10 = !!r.sugar_high;
-    d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || r.nsar_taken);
+    // S8: NSAR nicht mehr Teil von meds, wenn separat
+    d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || (!window.S8_NSAR_SEPARATE && r.nsar_taken));
+  }
+
+  // S8: NSAR-Ereignisse an Tag hängen
+  if (window.S8_NSAR_SEPARATE) {
+    for (const n of nsar) {
+      const d = ensure(n.day);
+      d.nsar.push({ ts: n.ts, taken: !!n.taken });
+      d.flags.meds = true;
+    }
   }
 
   // notes (letzter gewinnt – wir bekommen schon "letzten" aus Loader)
@@ -1256,14 +1296,22 @@ async function fetchDailyOverview(fromIso, toIso){
   const user_id = await getUserId();
   if (!user_id) return [];
 
-  const [bp, body, flags, notes] = await Promise.all([
+  const loaders = [
     loadBpFromView({ user_id, from: fromIso, to: toIso }),
     loadBodyFromView({ user_id, from: fromIso, to: toIso }),
     loadFlagsFromView({ user_id, from: fromIso, to: toIso }),
     loadNotesLastPerDay({ user_id, from: fromIso, to: toIso }) // optional
-  ]);
+  ];
 
-  return joinViewsToDaily({ bp, body, flags, notes });
+  // S8: NSAR separat laden, wenn Feature aktiv
+  if (window.S8_NSAR_SEPARATE) {
+    loaders.push(loadNsarFromEvents({ user_id, from: fromIso, to: toIso }));
+  }
+
+  const results = await Promise.all(loaders);
+  const [bp, body, flags, notes, nsar = []] = results;
+
+  return joinViewsToDaily({ bp, body, flags, notes, nsar });
 }
 
 /* Server: alle Events eines Tages löschen (RLS: nur eigene Records) */
@@ -1723,6 +1771,7 @@ async getFiltered() {
           valsartan_missed: false,
           forxiga_missed: false,
           nsar_taken: false,
+          meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
@@ -1747,6 +1796,7 @@ async getFiltered() {
           valsartan_missed: false,
           forxiga_missed: false,
           nsar_taken: false,
+          meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
@@ -1769,6 +1819,7 @@ async getFiltered() {
           valsartan_missed: false,
           forxiga_missed: false,
           nsar_taken: false,
+          meds: !!d.flags.meds,
           salt_high: d.flags.salt_gt5,
           sugar_high: d.flags.sugar_gt10
         });
@@ -2124,7 +2175,9 @@ const metric = $("#metricSel")?.value || "bp";
           dayFlagsTmp.set(e.date, rec);
         }
         if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const meds = (e.meds !== undefined)
+          ? !!e.meds
+          : !!(e.valsartan_missed || e.forxiga_missed || (!window.S8_NSAR_SEPARATE && e.nsar_taken));
         const flags = {
           water: !!e.low_intake,
           salt:  !!e.salt_high,
@@ -2222,7 +2275,9 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
           dayFlags.set(e.date, rec);
         }
         if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
+        const meds = (e.meds !== undefined)
+          ? !!e.meds
+          : !!(e.valsartan_missed || e.forxiga_missed || (!window.S8_NSAR_SEPARATE && e.nsar_taken));
         const flags = {
           water: !!e.low_intake, salt: !!e.salt_high, sugar: !!e.sugar_high, sick: !!e.sick, meds
         };
@@ -3091,14 +3146,3 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
