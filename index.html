@@ -1232,7 +1232,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
         weight: null,
         waist_cm: null,
         notes: "",
-        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false },
+        flags: { water_lt2:false, salt_gt5:false, sugar_gt10:false, sick:false, meds:false, training:false, nsar:false },
         nsar: [],
         remoteIds: [],
         hasCloud: true
@@ -1271,6 +1271,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
     d.flags.sugar_gt10 = !!r.sugar_high;
     // S8: NSAR nicht mehr Teil von meds, wenn separat
     d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || (!window.S8_NSAR_SEPARATE && r.nsar_taken));
+    if (window.S8_NSAR_SEPARATE && r.nsar_taken) d.flags.nsar = true; // Altbestand aus View berücksichtigen
   }
 
   // S8: NSAR-Ereignisse an Tag hängen
@@ -1278,7 +1279,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [], nsar = [] }) {
     for (const n of nsar) {
       const d = ensure(n.day);
       d.nsar.push({ ts: n.ts, taken: !!n.taken });
-      d.flags.meds = true;
+      d.flags.nsar = d.flags.nsar || !!n.taken;
     }
   }
 
@@ -1528,7 +1529,7 @@ async function renderDoctor(){
   const trainingDays = daysArr.filter(d => !!d.flags.training).length;
   const badDays = daysArr.filter(d => {
     const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds);
+    return !!(f.water_lt2 || f.salt_gt5 || f.sugar_gt10 || f.sick || f.meds || f.nsar);
   }).length;
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
@@ -1585,6 +1586,7 @@ async function renderDoctor(){
       <div class="flag"><span class="flag-box ${onClass(day.flags.sugar_gt10)}"></span><span>Zucker &gt;10g</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
+      <div class="flag"><span class="flag-box ${onClass(day.flags.nsar)}"></span><span>NSAR</span></div>
       <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
     </div>
 
