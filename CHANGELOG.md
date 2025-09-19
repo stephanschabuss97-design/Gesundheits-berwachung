@@ -1,4 +1,4 @@
-[CHANGELOG.md](https://github.com/user-attachments/files/22433029/CHANGELOG.md)
+[CHANGELOG.md](https://github.com/user-attachments/files/22433417/CHANGELOG.md)
 ## v1.1.0 (MINOR)
 
 - Replace sugar flag with protein flag across UI/DB/Admin.
@@ -12,3 +12,13 @@
 Notes:
 - Backward compatibility: existing events with `sugar_high` are not referenced anymore; new events use `protein_high90`.
   If historical data exists, consider a one-off migration.
+## v1.2.0 (MINOR)
+
+Added:
+- SVG-Tooltips zeigen Tages-Flags pro Datenpunkt (Hover/Tap), ohne Nachbarwerte.
+- Accessibility: Punkte sind fokussierbar (tabindex, role); Tooltip hat aria-live Region; Enter/Space öffnet, ESC schließt.
+
+Changed:
+- Chart baut Flags-Lookup pro Tag und zeigt Flags im Tooltip (Training, Krank, < 2 L Wasser, > 5 g Salz, 🍗 Protein ≥90 g, NSAR, Valsartan/Forxiga vergessen, Medikamente).
+
+
