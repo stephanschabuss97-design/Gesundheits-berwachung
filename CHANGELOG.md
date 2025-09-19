@@ -1,4 +1,4 @@
-[CHANGELOG.md](https://github.com/user-attachments/files/22433417/CHANGELOG.md)
+[CHANGELOG.md](https://github.com/user-attachments/files/22434265/CHANGELOG.md)
 ## v1.1.0 (MINOR)
 
 - Replace sugar flag with protein flag across UI/DB/Admin.
@@ -22,3 +22,12 @@ Changed:
 - Chart baut Flags-Lookup pro Tag und zeigt Flags im Tooltip (Training, Krank, < 2 L Wasser, > 5 g Salz, 🍗 Protein ≥90 g, NSAR, Valsartan/Forxiga vergessen, Medikamente).
 
 
+
+## v1.2.1 (PATCH)
+
+Fixed:
+- Save: day_flags duplicate (409) handled with PATCH upsert fallback; other events are inserted afterward. Kein Voll-Löschen des Tages nötig.
+
+Improved:
+- Capture: Flag-Toggles synchronisieren sich beim Öffnen/Datumwechsel mit bestehenden Tages-Flags aus der Cloud.
+- UX: Nach Sync sind bereits gesetzte Flags sichtbar, um Doppel-Speichern zu vermeiden.
