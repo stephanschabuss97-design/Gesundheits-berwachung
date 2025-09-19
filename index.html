@@ -457,7 +457,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   margin-bottom:6px;
 }
 /* ANKER: flags-overlay CSS */
-#chartSvg .flags { pointer-events: none; }
+#chartSvg .flags { pointer-events: auto; }
 #chart .controls > * {flex:1}
 #chart .controls .half{flex:0 0 calc(50% - 4px)}
   
@@ -1663,8 +1663,9 @@ const chartPanel = {
       this.svg.addEventListener("pointermove", (e) => {
         if (this.tipSticky) return;
         const tgt = e.target;
-        const isPt = tgt && tgt.classList.contains("pt");
-        if (!isPt) { this.hideTip(); return; }
+        const isPt  = !!(tgt && tgt.classList?.contains("pt"));
+        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        if (!(isPt || isHit)) { this.hideTip(); return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
         const hasFlags = this.hasFlagsForDate?.(date);
@@ -1681,8 +1682,9 @@ const chartPanel = {
       // Click/Tap: Tooltip toggeln (mobil-freundlich)
       this.svg.addEventListener("click", (e) => {
         const tgt = e.target;
-        const isPt = tgt && tgt.classList.contains("pt");
-        if (!isPt) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
+        const isPt  = !!(tgt && tgt.classList?.contains("pt"));
+        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        if (!(isPt || isHit)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
         const hasFlags = this.hasFlagsForDate?.(date);
@@ -1695,7 +1697,9 @@ const chartPanel = {
       // Keyboard: Enter/Space toggelt Tooltip, ESC schließt
       this.svg.addEventListener("keydown", (e) => {
         const tgt = e.target;
-        if (!tgt || !tgt.classList?.contains("pt")) return;
+        const isPt  = !!(tgt && tgt.classList?.contains("pt"));
+        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        if (!(isPt || isHit)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           const date = tgt.getAttribute("data-date") || "";
@@ -2363,7 +2367,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
       if (flaggedDays.length) {
         const g = document.createElementNS("http://www.w3.org/2000/svg","g");
         g.setAttribute("class","flags");
-        g.setAttribute("pointer-events","none");
+        g.setAttribute("pointer-events","auto");
         g.setAttribute("aria-hidden","true");
 
         const uniqDays = [...new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
@@ -2403,6 +2407,39 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             g.appendChild(r);
             used++;
           }
+
+          // Interaktiver Hit-Bereich pro Tag über alle Slots
+          const totalSlots = used;
+          if (totalSlots > 0) {
+            const yTopAll = Math.round(yBottom - totalSlots * slotH);
+            const hit = document.createElementNS("http://www.w3.org/2000/svg","rect");
+            hit.setAttribute("x", xLeft); hit.setAttribute("y", yTopAll);
+            hit.setAttribute("width", bandW); hit.setAttribute("height", Math.ceil(totalSlots * slotH));
+            hit.setAttribute("fill", "transparent");
+            hit.setAttribute("pointer-events", "all");
+            hit.setAttribute("class", "flag-hit");
+            hit.setAttribute("data-date", d);
+            hit.setAttribute("role", "button");
+            hit.setAttribute("tabindex", "0");
+            // ARIA-Label aus Flags ableiten
+            try {
+              const f = this.flagsByDate?.get?.(d);
+              if (f) {
+                const items = [];
+                if (f.training) items.push("Training");
+                if (f.sick) items.push("Krank");
+                if (f.low_intake) items.push("< 2 L Wasser");
+                if (f.salt_high) items.push("> 5 g Salz");
+                if (f.protein_high90) items.push("Protein ≥ 90 g");
+                if (f.valsartan_missed) items.push("Valsartan vergessen");
+                if (f.forxiga_missed) items.push("Forxiga vergessen");
+                if (f.nsar_taken) items.push("NSAR genommen");
+                if (!f.valsartan_missed && !f.forxiga_missed && !f.nsar_taken && f.meds) items.push("Medikamente");
+                if (items.length) hit.setAttribute("aria-label", `Flags: ${items.join(", ")}`);
+              }
+            } catch(_){}
+            g.appendChild(hit);
+          }
         }
         this.svg.appendChild(g); // hinter den Linien/Punkten
       }
@@ -2417,7 +2454,7 @@ const mkPath = (values, color) => {
     if (v == null || !isFiniteTs(X[i])) return; // statt !X[i]
     d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
   });
-  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" />`;
+  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" pointer-events="none" />`;
 };
 
 const mkDots = (values, color, kind) => {
