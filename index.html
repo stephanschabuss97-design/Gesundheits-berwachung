@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.1.0)</title>
+<title>Gesundheits-Logger (V1.2.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -537,7 +537,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.1.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.2.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1240,6 +1240,10 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     d.flags.salt_gt5   = !!r.salt_high;
     d.flags.protein_ge90 = !!r.protein_high90;
     d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || r.nsar_taken);
+    // Detail-Medikamentenflags (für Tooltip)
+    d.flags.valsartan_missed = !!r.valsartan_missed;
+    d.flags.forxiga_missed   = !!r.forxiga_missed;
+    d.flags.nsar_taken       = !!r.nsar_taken;
   }
 
   // notes (letzter gewinnt – wir bekommen schon "letzten" aus Loader)
@@ -1635,13 +1639,36 @@ const chartPanel = {
     contentHost.appendChild(tip);
     this.tip = tip;
 
+    // ARIA Live-Region (nur Text, für Screenreader)
+    const live = document.createElement("div");
+    live.id = "chartAria";
+    live.setAttribute("aria-live", "polite");
+    live.setAttribute("role", "status");
+    Object.assign(live.style, {
+      position: "absolute",
+      width: "1px",
+      height: "1px",
+      padding: 0,
+      border: 0,
+      margin: "-1px",
+      clip: "rect(0 0 0 0)",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+    });
+    contentHost.appendChild(live);
+    this.live = live;
+
     // Interaktivität
     if (this.svg) {
       this.svg.addEventListener("pointermove", (e) => {
         if (this.tipSticky) return;
         const tgt = e.target;
-        const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-        if (!hasNote) { this.hideTip(); return; }
+        const isPt = tgt && tgt.classList.contains("pt");
+        if (!isPt) { this.hideTip(); return; }
+        const date = tgt.getAttribute("data-date") || "";
+        const hasNote = !!(tgt.getAttribute("data-note"));
+        const hasFlags = this.hasFlagsForDate?.(date);
+        if (!(hasNote || hasFlags)) { this.hideTip(); return; }
         this.fillTipFromTarget(tgt);
         this.positionTip(e);
       });
@@ -1654,14 +1681,32 @@ const chartPanel = {
       // Click/Tap: Tooltip toggeln (mobil-freundlich)
       this.svg.addEventListener("click", (e) => {
         const tgt = e.target;
-        const hasNote = tgt && tgt.classList.contains("pt") && tgt.getAttribute("data-note");
-        if (!hasNote) {
-          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-          return;
-        }
+        const isPt = tgt && tgt.classList.contains("pt");
+        if (!isPt) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
+        const date = tgt.getAttribute("data-date") || "";
+        const hasNote = !!(tgt.getAttribute("data-note"));
+        const hasFlags = this.hasFlagsForDate?.(date);
+        if (!(hasNote || hasFlags)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
         this.fillTipFromTarget(tgt);
         this.tipSticky = !this.tipSticky;
         this.positionTip(e);
+      });
+
+      // Keyboard: Enter/Space toggelt Tooltip, ESC schließt
+      this.svg.addEventListener("keydown", (e) => {
+        const tgt = e.target;
+        if (!tgt || !tgt.classList?.contains("pt")) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          const date = tgt.getAttribute("data-date") || "";
+          const hasNote = !!(tgt.getAttribute("data-note"));
+          const hasFlags = this.hasFlagsForDate?.(date);
+          if (!(hasNote || hasFlags)) return;
+          this.fillTipFromTarget(tgt);
+          this.tipSticky = !this.tipSticky;
+        } else if (e.key === "Escape") {
+          this.tipSticky = false; this.hideTip();
+        }
       });
     }
 
@@ -1720,9 +1765,9 @@ async getFiltered() {
           training: d.flags.training,
           low_intake: d.flags.water_lt2,
           sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
+          valsartan_missed: !!d.flags.valsartan_missed,
+          forxiga_missed:   !!d.flags.forxiga_missed,
+          nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
           protein_high90: d.flags.protein_ge90
         });
@@ -1744,9 +1789,9 @@ async getFiltered() {
           training: d.flags.training,
           low_intake: d.flags.water_lt2,
           sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
+          valsartan_missed: !!d.flags.valsartan_missed,
+          forxiga_missed:   !!d.flags.forxiga_missed,
+          nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
           protein_high90: d.flags.protein_ge90
         });
@@ -1766,9 +1811,9 @@ async getFiltered() {
           training: d.flags.training,
           low_intake: d.flags.water_lt2,
           sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
+          valsartan_missed: !!d.flags.valsartan_missed,
+          forxiga_missed:   !!d.flags.forxiga_missed,
+          nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
           protein_high90: d.flags.protein_ge90
         });
@@ -1793,9 +1838,9 @@ async getFiltered() {
           training: d.flags.training,
           low_intake: d.flags.water_lt2,
           sick: d.flags.sick,
-          valsartan_missed: false,
-          forxiga_missed: false,
-          nsar_taken: false,
+          valsartan_missed: !!d.flags.valsartan_missed,
+          forxiga_missed:   !!d.flags.forxiga_missed,
+          nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
           protein_high90: d.flags.protein_ge90
         });
@@ -1851,8 +1896,33 @@ async getFiltered() {
   fillTipFromTarget(tgt) {
     if (!this.tip) return;
     const note = tgt.getAttribute("data-note") || "";
-    if (!note) { this.hideTip(); return; }
-    this.tip.innerHTML = `<div style="white-space:pre-wrap">${esc(note)}</div>`;
+    const date = tgt.getAttribute("data-date") || "";
+    const ctx  = tgt.getAttribute("data-ctx")  || "";
+    const flags = (typeof this.flagsByDate?.get === 'function') ? this.flagsByDate.get(date) : null;
+    const items = [];
+    if (flags) {
+      if (flags.training)         items.push("Training");
+      if (flags.sick)             items.push("Krank");
+      if (flags.low_intake)       items.push("< 2 L Wasser");
+      if (flags.salt_high)        items.push("> 5 g Salz");
+      if (flags.protein_high90)   items.push("Protein ≥ 90 g");
+      if (flags.valsartan_missed) items.push("Valsartan vergessen");
+      if (flags.forxiga_missed)   items.push("Forxiga vergessen");
+      if (flags.nsar_taken)       items.push("NSAR genommen");
+      if (!flags.valsartan_missed && !flags.forxiga_missed && !flags.nsar_taken && flags.meds) items.push("Medikamente");
+    }
+
+    const parts = [];
+    const hdr = (date || ctx) ? `<div style="opacity:.85;margin-bottom:4px">${esc([date, ctx].filter(Boolean).join(" · "))}</div>` : "";
+    if (hdr) parts.push(hdr);
+    if (note) parts.push(`<div style="white-space:pre-wrap;margin-bottom:${items.length? '6' : '0'}px">${esc(note)}</div>`);
+    if (items.length) {
+      const lis = items.map(esc).map(t => `<li>${t}</li>`).join("");
+      parts.push(`<div style="margin-top:${note? '0' : '2'}px"><strong>Flags:</strong><ul style="margin:4px 0 0 16px; padding:0">${lis}</ul></div>`);
+    }
+    if (!parts.length) { this.hideTip(); return; }
+    this.tip.innerHTML = parts.join("");
+    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note ? 'Notiz vorhanden. ' : ''}${items.length ? 'Flags: ' + items.join(', ') : ''}`.trim();
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
@@ -2115,7 +2185,7 @@ const metric = $("#metricSel")?.value || "bp";
   }
 }
 
-    // --- Render-Prep ---
+  // --- Render-Prep ---
     if (this.svg) this.svg.innerHTML = "";
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
@@ -2137,10 +2207,11 @@ const metric = $("#metricSel")?.value || "bp";
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
 
-    // === Flags -> X-Bereich erweitern (immer) ===
+    // === Flags -> X-Bereich erweitern (immer) + Lookup für Tooltip ===
     let flagTs = [];
     {
       const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
+      const flagsByDate = new Map(); // date -> detailed flags for tooltip
       for (const e of data) {
         if (!e?.date) continue;
         let rec = dayFlagsTmp.get(e.date);
@@ -2164,8 +2235,29 @@ const metric = $("#metricSel")?.value || "bp";
         for (const k of Object.keys(flags)) {
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
         }
+
+        // Tooltip-Detailflags sammeln
+        let f = flagsByDate.get(e.date);
+        if (!f) f = { training:false, sick:false, low_intake:false, salt_high:false, protein_high90:false, valsartan_missed:false, forxiga_missed:false, nsar_taken:false, meds:false };
+        f.training = f.training || !!e.training;
+        f.sick = f.sick || !!e.sick;
+        f.low_intake = f.low_intake || !!e.low_intake;
+        f.salt_high = f.salt_high || !!e.salt_high;
+        f.protein_high90 = f.protein_high90 || !!e.protein_high90;
+        f.valsartan_missed = f.valsartan_missed || !!e.valsartan_missed;
+        f.forxiga_missed   = f.forxiga_missed   || !!e.forxiga_missed;
+        f.nsar_taken       = f.nsar_taken       || !!e.nsar_taken;
+        f.meds = f.meds || meds;
+        flagsByDate.set(e.date, f);
       }
       flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
+      this.flagsByDate = flagsByDate;
+      this.hasFlagsForDate = (dayIso) => {
+        if (!dayIso || !this.flagsByDate) return false;
+        const f = this.flagsByDate.get(dayIso);
+        if (!f) return false;
+        return !!(f.training || f.sick || f.low_intake || f.salt_high || f.protein_high90 || f.valsartan_missed || f.forxiga_missed || f.nsar_taken || f.meds);
+      };
     }
 
     // Skalen
@@ -2340,11 +2432,13 @@ const mkDots = (values, color, kind) => {
     const date = m.date || "";
     const ctx  = m.ctx  || "";
     const note = m.note || "";
+    const labelBase = (kind === "sys" || kind === "dia") ? `${kind.toUpperCase()} ${v}` : `${v}`;
+    const aria = `${date} ${ctx} ${labelBase}`.trim();
 
     out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
                data-kind="${esc(kind)}" data-val="${v}"
                data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-               data-note="${esc(note)}" />`;
+               data-note="${esc(note)}" tabindex="0" role="button" aria-label="${esc(aria)}" />`;
   });
   return out;
 };
