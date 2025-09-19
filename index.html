@@ -537,7 +537,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.0.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.1.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1774,6 +1774,33 @@ async getFiltered() {
         });
       }
     }
+    // Ergänze Tage mit ausschließlich Flags (ohne BP/Body), damit Flags-Overlay immer angezeigt wird
+    for (const d of days) {
+      const hasFlags = !!(d?.flags?.training || d?.flags?.sick || d?.flags?.water_lt2 || d?.flags?.salt_gt5 || d?.flags?.protein_ge90 || d?.flags?.meds);
+      if (!hasFlags) continue;
+      const already = flat.some(e => e?.date === d.date);
+      if (!already) {
+        const ts = Date.parse(d.date + "T12:00:00Z");
+        flat.push({
+          date: d.date,
+          dateTime: new Date(ts).toISOString(),
+          ts,
+          context: "Tag",
+          sys: null, dia: null, pulse: null,
+          weight: null,
+          waist_cm: null,
+          notes: d.notes || "",
+          training: d.flags.training,
+          low_intake: d.flags.water_lt2,
+          sick: d.flags.sick,
+          valsartan_missed: false,
+          forxiga_missed: false,
+          nsar_taken: false,
+          salt_high: d.flags.salt_gt5,
+          protein_high90: d.flags.protein_ge90
+        });
+      }
+    }
     return flat.sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
   }
 
@@ -2093,7 +2120,9 @@ const metric = $("#metricSel")?.value || "bp";
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
-    const hasAny = series.some(s => s.values.some(v => v != null));
+    // Wenn es Flags gibt, soll das Chart nicht frühzeitig abbrechen
+    const hasAnyFlagsData = (Array.isArray(data) && data.some(e => !!(e?.training || e?.low_intake || e?.sick || e?.salt_high || e?.protein_high90 || e?.valsartan_missed || e?.forxiga_missed || e?.nsar_taken)));
+    const hasAny = series.some(s => s.values.some(v => v != null)) || hasAnyFlagsData;
     if (!hasAny) {
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
@@ -2108,9 +2137,9 @@ const metric = $("#metricSel")?.value || "bp";
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
 
-    // === Flags -> X-Bereich erweitern ===
+    // === Flags -> X-Bereich erweitern (immer) ===
     let flagTs = [];
-    if (metric === "bp") {
+    {
       const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
       for (const e of data) {
         if (!e?.date) continue;
@@ -2150,8 +2179,8 @@ const metric = $("#metricSel")?.value || "bp";
       xmax = Date.now();
     }
 
-    // Union mit Flag-Tagen
-    if (metric === "bp" && flagTs.length) {
+    // Union mit Flag-Tagen (immer)
+    if (flagTs.length) {
       xmin = Math.min(xmin, Math.min(...flagTs));
       xmax = Math.max(xmax, Math.max(...flagTs));
     }
@@ -2211,8 +2240,8 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
 
-    // === Flags Overlay (nur BP) ===
-    if (metric === "bp" && this.svg) {
+    // === Flags Overlay (immer) ===
+    if (this.svg) {
       const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
       for (const e of data) {
         if (!e?.date) continue;
