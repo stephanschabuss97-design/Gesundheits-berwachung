@@ -2429,16 +2429,17 @@ const mkDots = (values, color, kind) => {
 
     // Tooltip-Infos (nur bei BP vorhanden)
     const m = (kind === "sys" || kind === "dia") ? (meta?.[i] || {}) : {};
-    const date = m.date || "";
-    const ctx  = m.ctx  || "";
-    const note = m.note || "";
+    const date = (m.date || (data?.[i]?.date || ""));
+    const ctx  = (m.ctx  || (kind === "misc" ? "Tag" : ""));
+    const note = (m.note || "");
     const labelBase = (kind === "sys" || kind === "dia") ? `${kind.toUpperCase()} ${v}` : `${v}`;
     const aria = `${date} ${ctx} ${labelBase}`.trim();
 
     out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-               data-kind="${esc(kind)}" data-val="${v}"
-               data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-               data-note="${esc(note)}" tabindex="0" role="button" aria-label="${esc(aria)}" />`;
+                data-kind="${esc(kind)}" data-val="${v}"
+                data-date="${esc(date)}" data-ctx="${esc(ctx)}"
+               data-note="${esc(note)}" tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
+               stroke="rgba(0,0,0,0)" stroke-width="12" pointer-events="stroke" />`;
   });
   return out;
 };
