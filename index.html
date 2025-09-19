@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.2.0)</title>
+<title>Gesundheits-Logger (V1.2.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -537,7 +537,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.2.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.2.1</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1169,6 +1169,30 @@ async function loadFlagsFromView({ user_id, from, to }) {
   });
 }
 
+// Sync capture toggles with existing day flags from the cloud for the selected date
+async function syncCaptureFlagTogglesForCurrentDate(){
+  try{
+    if (!(await isLoggedIn())) return;
+    const dateEl = document.getElementById('date');
+    const dayIso = dateEl?.value;
+    if (!dayIso) return;
+    const user_id = await getUserId();
+    if (!user_id) return;
+    const rows = await loadFlagsFromView({ user_id, from: dayIso, to: dayIso });
+    const r = Array.isArray(rows) && rows.length ? rows[0] : null;
+    // Apply or clear
+    const f = r || { training:false, sick:false, low_intake:false, salt_high:false, protein_high90:false, valsartan_missed:false, forxiga_missed:false, nsar_taken:false };
+    setTraining(!!f.training);
+    setSick(!!f.sick);
+    setLowIntake(!!f.low_intake);
+    setSaltHigh(!!f.salt_high);
+    setProteinHigh(!!f.protein_high90);
+    setValsartanMiss(!!f.valsartan_missed);
+    setForxigaMiss(!!f.forxiga_missed);
+    setNsar(!!f.nsar_taken);
+  }catch(_){ /* non-blocking */ }
+}
+
 /* Optional: Notes (aus health_events, falls keine View v_events_note existiert) */
 async function loadNotesLastPerDay({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`], ['type', 'eq.note']];
@@ -1287,6 +1311,27 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   }catch{
     return { ok:false, status:0 };
   }
+}
+
+// PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
+async function patchDayFlags({ user_id, dayIso, flags }){
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if (!url || !headers || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
+
+  const from = `${dayIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+
+  const q = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.day_flags`+
+            `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+  const res = await withRetry(() => fetch(q, { method: 'PATCH', headers, body: JSON.stringify({ payload: flags }) }));
+  if (!res.ok) {
+    let details = '';
+    try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
+    throw new Error(`patch day_flags failed ${res.status} - ${details}`);
+  }
+  return await res.json();
 }
 
 async function pushPendingToRemote(){
@@ -2561,6 +2606,7 @@ async function setTab(name){
     b.classList.toggle("primary", b.dataset.tab === name)
   );
   if (name === "doctor") { renderDoctor(); }
+  if (name === "capture") { try { await syncCaptureFlagTogglesForCurrentDate(); } catch(_){} }
 }
 
 function bindTabs(){
@@ -2799,6 +2845,24 @@ async function syncWebhook(entry, localId){
         const e = await res.json();
         details = (e?.message || e?.details || "");
       } catch { /* plain text? */ }
+
+      // v1.2.1: Fallback for duplicate day_flags (upsert via PATCH)
+      if (res.status === 409 || /duplicate|unique/i.test(details)) {
+        const flagsEv = events.find(ev => ev.type === 'day_flags');
+        try {
+          if (flagsEv && uid) {
+            const dayIso = entry.date;
+            await patchDayFlags({ user_id: uid, dayIso, flags: flagsEv.payload });
+            const others = events.filter(ev => ev.type !== 'day_flags');
+            if (others.length) {
+              const res2 = await withRetry(() => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }));
+              if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
+            }
+            uiInfo("Flags aktualisiert.");
+            diag.add("Fallback: day_flags via PATCH");
+            return;
+          }
+        } catch (_) { /* fallback failed: proceed to generic handling */ }
 
       if (res.status === 409 || /duplicate|unique/i.test(details)) {
         uiError("Es gibt bereits einen Eintrag für diesen Tag/Kontext.");
@@ -3076,6 +3140,7 @@ $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10
 $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
+try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
@@ -3149,6 +3214,9 @@ document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
     withBusy(btn, false);
   }
 });
+// Sync toggles when the date changes in capture view
+const __dateEl = document.getElementById('date');
+if (__dateEl) __dateEl.addEventListener('change', async ()=>{ try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}});
 $("#applyRange").addEventListener("click", async ()=>{
   await renderDoctor();
 setDocBadges({ visible: true });
