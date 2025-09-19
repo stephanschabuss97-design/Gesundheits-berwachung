@@ -2451,12 +2451,14 @@ function bindTabs(){
   if (legacy) {
     legacy.id = 'proteinHighToggle';
     legacy.setAttribute('title','Protein >= 90 g');
-    legacy.textContent = 'Protein >= 90 g';
+    // Icon hinzufügen (🍗 Hühnerbein)
+    legacy.textContent = '🍗 Protein >= 90 g';
   }
 })();
 function setProteinHigh(on){
   proteinHigh = !!on;
-  setToggle($("#proteinHighToggle"), proteinHigh, "Protein >= 90 g - aktiv", "Protein >= 90 g");
+  // Icon in Labels übernehmen, damit es beim Umschalten erhalten bleibt
+  setToggle($("#proteinHighToggle"), proteinHigh, "🍗 Protein >= 90 g - aktiv", "🍗 Protein >= 90 g");
 }
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
 saltHigh=false, proteinHigh=false;
