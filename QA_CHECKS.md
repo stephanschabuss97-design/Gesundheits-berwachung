@@ -1,4 +1,4 @@
-[QA_CHECKS.md](https://github.com/user-attachments/files/22433419/QA_CHECKS.md)
+[QA_CHECKS.md](https://github.com/user-attachments/files/22434270/QA_CHECKS.md)
 QA Checklist for v1.1.0 Protein Flag
 
 - UI
@@ -37,7 +37,7 @@ QA Checklist for v1.2.0 Chart Tooltips
 - UI/Behavior
   - Tooltip on hover/tap shows only same-day flags (no neighbor aggregation).
   - Tooltip combines optional "Notiz" and a list "Flags:" below.
-  - Flags covered: Training, Krank, < 2 L Wasser, > 5 g Salz, Protein ≥ 90 g, NSAR genommen, Valsartan/Forxiga vergessen, Medikamente.
+  - Flags covered: Training, Krank, < 2 L Wasser, > 5 g Salz, 🍗 Protein ≥ 90 g, NSAR genommen, Valsartan/Forxiga vergessen, Medikamente.
 
 - Accessibility
   - Points (.pt) are focusable via keyboard (tabindex="0", role="button").
@@ -52,3 +52,17 @@ QA Checklist for v1.2.0 Chart Tooltips
   - No changes to lines/axes/KPIs rendering.
   - Overlay still renders for BP and Weight; flags-only days still included.
 
+QA Checklist for v1.2.1 Flags Upsert
+
+- Save behavior
+  - Saving day with flags already present does not produce 409; flags are updated via PATCH.
+  - Other events for the same save (BP/Body/Note) are inserted successfully after flags update.
+  - No need to delete the full day to adjust flags.
+
+- Capture sync
+  - On opening capture tab, toggles reflect current cloud flags for the selected date.
+  - On changing the date field, toggles refresh to that day’s flags.
+
+- Idempotence
+  - Re-saving the same flags without change causes no error; backend performs a no-op update.
+  - Non-flag changes (e.g., adding BP later) do not duplicate flags.
