@@ -1,4 +1,4 @@
-[CHANGELOG.md](https://github.com/user-attachments/files/22434265/CHANGELOG.md)
+[CHANGELOG.md](https://github.com/user-attachments/files/22440708/CHANGELOG.md)
 ## v1.1.0 (MINOR)
 
 - Replace sugar flag with protein flag across UI/DB/Admin.
@@ -31,3 +31,19 @@ Fixed:
 Improved:
 - Capture: Flag-Toggles synchronisieren sich beim Öffnen/Datumwechsel mit bestehenden Tages-Flags aus der Cloud.
 - UX: Nach Sync sind bereits gesetzte Flags sichtbar, um Doppel-Speichern zu vermeiden.
+
+## v1.3.0 (MINOR)
+
+Added:
+- Supabase Schema: `health_events` akzeptiert neuen Typ `intake`; Trigger/Checks validieren Wasser/Salz/Protein, Unique-Index pro Tag/User.
+- Admin Checks: Intake in Duplikat-/Range-/Unknown-Key-Prüfungen aufgenommen.
+- UI: Lifestyle-Tab speichert Tageswerte zu Wasser/Salz/Protein über REST (POST/PATCH) inkl. Realtime-Refresh.
+- Progress Bars zeigen Zielstatus mit Farblogik (Wasser: Aufholphase→Ziel, Salz: Warn-/Überbereich, Protein: Zielkorridor 78–90 g).
+
+Changed:
+- Save-Flow blockt BP-Einträge ohne Sys+Dia (verhindert 400er vom Trigger).
+- Fehlerdiagnose: Detail-Logging bei misslungenen Lifestyle-POSTs, Config/Key-Status im Touch-Log, `getHeaders()` liefert präzise Hinweise.
+- Labels der Lifestyle-Balken enthalten Status-Texte und nutzen kontrastreiche Schriftfarben.
+
+Fixed:
+- Trigger entfernt Aufruf von `jsonb_object_length` (nicht verfügbar auf Supabase), damit Intake-Insert kein 404/42883 mehr auslöst.
