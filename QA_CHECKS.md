@@ -1,4 +1,4 @@
-[QA_CHECKS.md](https://github.com/user-attachments/files/22434270/QA_CHECKS.md)
+[QA_CHECKS.md](https://github.com/user-attachments/files/22440710/QA_CHECKS.md)
 QA Checklist for v1.1.0 Protein Flag
 
 - UI
@@ -66,3 +66,30 @@ QA Checklist for v1.2.1 Flags Upsert
 - Idempotence
   - Re-saving the same flags without change causes no error; backend performs a no-op update.
   - Non-flag changes (e.g., adding BP later) do not duplicate flags.
+
+
+QA Checklist for v1.3.0 Lifestyle Intake
+
+- Database / Supabase
+  - `public.health_events` accepts `type='intake'` inserts; constraint check includes `'intake'`.
+  - Trigger `trg_events_validate` validiert Keys/Zahlenbereiche (0–6000 ml, 0–30 g, 0–300 g) ohne `jsonb_object_length` Fehler.
+  - Unique Index `uq_events_intake_per_day` verhindert zweite Intake-Zeile pro Tag/User (POST→409→PATCH funktioniert).
+  - Admin Checks (Dupes/Range/Unknown Keys) erkennen Intake korrekt.
+
+- API / Fehlerbehandlung
+  - Lifestyle-POST liefert 200/201; bei 409 erfolgt automatischer PATCH (Status 204/200) ohne Fehltoast.
+  - Touch-Log zeigt detaillierte Meldung, falls POST fehlschlägt (Config/Key/JWT/Supabase Diagnose).
+  - `getHeaders()` meldet: fehlenden Key, service_role Block, fehlende Session.
+
+- UI / UX
+  - BP-Speichern erfordert Sys+Dia (Puls optional) – kein Backend-400 mehr.
+  - Lifestyle-Inputs aktualisieren Balken sofort; Realtime-Refresh lädt Werte nach Login.
+  - Progress-Balken Farben:
+    - Wasser: <50 % rot, 50–89 % gelb, ≥90 % grün.
+    - Salz: ≤4.9 g grün, 5–6 g gelb, >6 g rot.
+    - Protein: <78 g neutral, 78–90 g grün, >90 g rot.
+  - Label-Texte bleiben lesbar (dunkle/helle Schrift je Zustand) und zeigen Status („niedrig“, „Warnung“, „Zielbereich“, „über Ziel“).
+
+- Regression
+  - Capture/Doctor Tabs weiterhin funktionsfähig (kein Einfluss auf bestehende Flags/BP/Charts).
+  - Default-Key/URL Initialisierung funktioniert, Logging beeinflusst keine Produktionsfunktion.
