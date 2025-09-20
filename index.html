@@ -3008,9 +3008,17 @@ const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : n
 
 // Nur vitale Werte; Gewicht NICHT mehr in M/A
 const weight = null;
-
-const nothingToSave = !sys && !dia && !pulse;
-if (!force && nothingToSave) return false;
+// Validierung gegen DB-Trigger: bp erfordert sys UND dia
+const hasAny = (sys != null) || (dia != null) || (pulse != null);
+if (!force && !hasAny) return false;
+if ((sys != null && dia == null) || (dia != null && sys == null)){
+  uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
+  return false;
+}
+if (pulse != null && (sys == null || dia == null)){
+  uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
+  return false;
+}
 
 const currentISO = new Date(date + "T" + time).toISOString();
 const ts = new Date(date + "T" + time).getTime();
