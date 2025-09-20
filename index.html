@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.2.1)</title>
+<title>Gesundheits-Logger (V1.3.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -527,8 +527,16 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   border: 1px solid #e5e7eb;
 }
 #loginOverlay .login-card h3{ margin: 0 0 6px; }
-#loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
+  #loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
   
+/* Lifestyle: Progress Bars */
+.progress{ position: relative; height:16px; background:#0f1116; border:1px solid #2b2f3a; border-radius:10px; overflow:hidden; margin-top:6px }
+.progress .bar{ position:absolute; inset:0 auto 0 0; width:0%; background:var(--accent); transition: width .25s ease; }
+.progress .label{ position:relative; z-index:1; text-align:center; font-size:12px; color:var(--muted); line-height:16px }
+.progress.ok   .bar{ background: var(--ok); }
+.progress.warn .bar{ background: var(--warn); }
+.progress.bad  .bar{ background: var(--danger); }
+
 </style>
 </head>
 <body>
@@ -537,7 +545,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.2.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.3.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -547,6 +555,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <nav class="tabs">
 <button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
 <button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
+<button class="btn ghost" data-tab="lifestyle" id="tab-lifestyle" type="button">Lifestyle</button>
 </nav>
 
 <!-- Hilfe-Panel -->
@@ -692,6 +701,60 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   </section>
 </section>
 
+<!-- Lifestyle (Heute) -->
+<section class="view" id="lifestyle">
+  <section class="card" id="lifestyleCard">
+    <strong style="display:block;margin-bottom:8px">Lifestyle Intake (heute)</strong>
+
+    <div class="row">
+      <div style="flex:1;min-width:180px">
+        <label>Wasser hinzufügen (ml)</label>
+        <input type="number" id="ls-water-add" min="0" step="50" inputmode="numeric" placeholder="z. B. 250">
+      </div>
+      <div style="width:140px;align-self:flex-end">
+        <button class="btn primary" id="ls-water-add-btn" type="button">+ Menge</button>
+      </div>
+    </div>
+    <div class="progress" id="ls-water-prog" aria-label="Wasser Fortschritt">
+      <div class="bar" id="ls-water-bar"></div>
+      <div class="label" id="ls-water-label">0 / 2000 ml</div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div style="flex:1;min-width:180px">
+        <label>Salz hinzufügen (g)</label>
+        <input type="text" id="ls-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
+      </div>
+      <div style="width:140px;align-self:flex-end">
+        <button class="btn primary" id="ls-salt-add-btn" type="button">+ Menge</button>
+      </div>
+    </div>
+    <div class="progress" id="ls-salt-prog" aria-label="Salz Fortschritt">
+      <div class="bar" id="ls-salt-bar"></div>
+      <div class="label" id="ls-salt-label">0,0 / 6,0 g</div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div style="flex:1;min-width:180px">
+        <label>Protein hinzufügen (g)</label>
+        <input type="text" id="ls-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
+      </div>
+      <div style="width:140px;align-self:flex-end">
+        <button class="btn primary" id="ls-protein-add-btn" type="button">+ Menge</button>
+      </div>
+    </div>
+    <div class="progress" id="ls-protein-prog" aria-label="Protein Fortschritt">
+      <div class="bar" id="ls-protein-bar"></div>
+      <div class="label" id="ls-protein-label">0,0 / 90,0 g</div>
+    </div>
+
+    <div class="small" style="opacity:.75;margin-top:10px">
+      Ziele: Wasser 2000 ml • Salz max. 6 g • Protein Ziel 90 g (grün bei 78–89 g)
+    </div>
+  </section>
+  <div class="small" style="margin-top:6px;opacity:.7">Hinweis: nur der heutige Intake wird gespeichert und synchronisiert.</div>
+</section>
+
 <!-- Doctor -->
 <section class="view" id="doctor">
   <section class="card" id="doctorCard">
@@ -787,6 +850,8 @@ const requestUiRefresh = debounce(async (reason = '') => {
   try{
     const doctorActive = document.getElementById('doctor')?.classList?.contains('active');
     if (doctorActive) await renderDoctor();
+    const lifestyleActive = document.getElementById('lifestyle')?.classList?.contains('active');
+    if (lifestyleActive && typeof renderLifestyle === 'function') await renderLifestyle();
     if (chartPanel?.open) await chartPanel.draw();
   }catch(e){ /* still ok */ }
 }, 250);
@@ -907,6 +972,13 @@ function setDoctorAccess(enabled){
   if (chartBtn){
     chartBtn.disabled = !enabled;
     chartBtn.title = enabled ? 'Werte als Grafik' : 'Bitte zuerst anmelden';
+  }
+  // Lifestyle-Tab mitsteuern
+  const lifeBtn = document.getElementById('tab-lifestyle');
+  if (lifeBtn){
+    lifeBtn.disabled = !enabled;
+    lifeBtn.classList.toggle('ghost', !enabled);
+    lifeBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
   }
 }
   
@@ -1132,6 +1204,75 @@ return {ok:false, status:0};
 }
 }
   
+/* === Lifestyle Intake REST Helpers === */
+async function loadIntakeToday({ user_id, dayIso }){
+  const from = `${dayIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+  const rows = await sbSelect({
+    table: 'health_events',
+    select: 'id,day,ts,payload',
+    filters: [
+      ['user_id', `eq.${user_id}`],
+      ['type', 'eq.intake'],
+      ['ts', `gte.${from}`],
+      ['ts', `lt.${toIso}T00:00:00Z`]
+    ],
+    order: 'ts.desc',
+    limit: 1
+  });
+  const r = Array.isArray(rows) && rows.length ? rows[0] : null;
+  const p = r?.payload || {};
+  return {
+    id: r?.id ?? null,
+    water_ml: Number(p.water_ml || 0),
+    salt_g: Number(p.salt_g || 0),
+    protein_g: Number(p.protein_g || 0)
+  };
+}
+
+async function saveIntakeTotals({ dayIso, totals }){
+  const url = await getConf('webhookUrl');
+  const headers = await getHeaders();
+  const uid = await getUserId();
+  if (!url || !headers || !uid) throw new Error('saveIntakeTotals: missing config/auth');
+  const nowIso = new Date().toISOString();
+  const payload = [{ ts: nowIso, type: 'intake', payload: totals, user_id: uid }];
+  const res = await withRetry(()=> fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }));
+  if (res.ok) return await res.json();
+
+  // Conflict → PATCH (Upsert)
+  let details = '';
+  try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
+  if (res.status === 409 || /duplicate|unique/i.test(details)){
+    const toNext = new Date(`${dayIso}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
+    const toIso = toNext.toISOString().slice(0,10);
+    const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
+              `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+    const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: totals }) }));
+    if (!res2.ok){
+      let d2='';
+      try{ const e2 = await res2.json(); d2 = e2?.message || e2?.details || ''; }catch{}
+      throw new Error(`intake-patch-failed ${res2.status} ${d2}`);
+    }
+    return await res2.json();
+  }
+  throw new Error(`intake-post-failed ${res.status}`);
+}
+
+async function cleanupOldIntake(){
+  try{
+    const url = await getConf('webhookUrl');
+    const headers = await getHeaders();
+    const uid = await getUserId();
+    if (!url || !headers || !uid) return;
+    const today = todayStr();
+    const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
+              `&ts=lt.${encodeURIComponent(today)}T00:00:00Z`;
+    await withRetry(()=> fetch(q, { method:'DELETE', headers }));
+  }catch(_){ /* non-blocking */ }
+}
+
 /* === Remote-Fetch Arzt-Ansicht (Views) === */
 async function loadBpFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
@@ -1311,6 +1452,137 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   }catch{
     return { ok:false, status:0 };
   }
+}
+
+/* ===== Lifestyle (Heute) ===== */
+const LS_WATER_GOAL = 2000;
+const LS_SALT_MAX = 6;
+const LS_PROTEIN_GOAL = 90;
+
+let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
+
+function setProgState(el, state){
+  if (!el) return;
+  el.classList.remove('ok','warn','bad');
+  if (state) el.classList.add(state);
+}
+
+function fmtDE(n, digits){
+  if (!Number.isFinite(n)) return '0';
+  return n.toFixed(digits).replace('.', ',');
+}
+
+function updateLifestyleBars(){
+  const wBar = document.getElementById('ls-water-bar');
+  const wProg = document.getElementById('ls-water-prog');
+  const wLbl = document.getElementById('ls-water-label');
+  const sBar = document.getElementById('ls-salt-bar');
+  const sProg = document.getElementById('ls-salt-prog');
+  const sLbl = document.getElementById('ls-salt-label');
+  const pBar = document.getElementById('ls-protein-bar');
+  const pProg = document.getElementById('ls-protein-prog');
+  const pLbl = document.getElementById('ls-protein-label');
+
+  const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, 6000));
+  const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, 30));
+  const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, 300));
+
+  const wPct = Math.min(1, w / LS_WATER_GOAL) * 100;
+  const sPct = Math.min(1, s / LS_SALT_MAX) * 100;
+  const pPct = Math.min(1, p / LS_PROTEIN_GOAL) * 100;
+
+  if (wBar) wBar.style.width = `${wPct.toFixed(1)}%`;
+  if (sBar) sBar.style.width = `${sPct.toFixed(1)}%`;
+  if (pBar) pBar.style.width = `${pPct.toFixed(1)}%`;
+
+  if (wLbl) wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml`;
+  if (sLbl) sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g`;
+  if (pLbl) pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g`;
+
+  // Farben
+  setProgState(wProg, w >= LS_WATER_GOAL ? 'ok' : 'warn');
+  let sState = 'ok';
+  if (s >= 5 && s <= 6) sState = 'warn';
+  else if (s > 6) sState = 'bad';
+  setProgState(sProg, sState);
+
+  let pState = 'warn';
+  if (p >= 78 && p < 90) pState = 'ok';
+  else if (p >= 90) pState = 'bad';
+  setProgState(pProg, pState);
+}
+
+async function renderLifestyle(){
+  const logged = await isLoggedIn();
+  if (!logged){
+    // Nichts anzeigen, Tab ist ohnehin gesperrt
+    return;
+  }
+  try{
+    const uid = await getUserId();
+    const dayIso = todayStr();
+    const cur = await loadIntakeToday({ user_id: uid, dayIso });
+    __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
+    updateLifestyleBars();
+  }catch(_){ /* ignore */ }
+}
+
+function bindLifestyle(){
+  const addWaterBtn = document.getElementById('ls-water-add-btn');
+  const addSaltBtn = document.getElementById('ls-salt-add-btn');
+  const addProtBtn = document.getElementById('ls-protein-add-btn');
+
+  const addWater = async ()=>{
+    const el = document.getElementById('ls-water-add');
+    const v = Number(el?.value || 0);
+    if (!(v>0)) { uiError('Bitte gültige Wassermenge eingeben.'); return; }
+    const dayIso = todayStr();
+    let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
+    if (total > 6000) total = 6000;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
+      __lsTotals.water_ml = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Wasser aktualisiert.');
+    }catch(_){ uiError('Update fehlgeschlagen.'); }
+  };
+
+  const addSalt = async ()=>{
+    const el = document.getElementById('ls-salt-add');
+    const v = toNumDE(el?.value);
+    if (!(v>0)) { uiError('Bitte gültige Salzmenge eingeben.'); return; }
+    const dayIso = todayStr();
+    let total = (__lsTotals.salt_g||0) + v;
+    if (total > 30) total = 30;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
+      __lsTotals.salt_g = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Salz aktualisiert.');
+    }catch(_){ uiError('Update fehlgeschlagen.'); }
+  };
+
+  const addProtein = async ()=>{
+    const el = document.getElementById('ls-protein-add');
+    const v = toNumDE(el?.value);
+    if (!(v>0)) { uiError('Bitte gültige Proteinmenge eingeben.'); return; }
+    const dayIso = todayStr();
+    let total = (__lsTotals.protein_g||0) + v;
+    if (total > 300) total = 300;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
+      __lsTotals.protein_g = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Protein aktualisiert.');
+    }catch(_){ uiError('Update fehlgeschlagen.'); }
+  };
+
+  if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
+  if (addSaltBtn) addSaltBtn.addEventListener('click', addSalt);
+  if (addProtBtn) addProtBtn.addEventListener('click', addProtein);
 }
 
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
@@ -2600,6 +2872,12 @@ async function setTab(name){
       name = "capture";
     }
   }
+  if (name === "lifestyle"){
+    if (!(await isLoggedIn())){
+      showLoginOverlay(true);
+      name = "capture";
+    }
+  }
   $$(".view").forEach(v => v.classList.remove("active"));
   $("#"+name).classList.add("active");
   $$(".tabs .btn").forEach(b =>
@@ -2607,6 +2885,7 @@ async function setTab(name){
   );
   if (name === "doctor") { renderDoctor(); }
   if (name === "capture") { try { await syncCaptureFlagTogglesForCurrentDate(); } catch(_){} }
+  if (name === "lifestyle") { try { await cleanupOldIntake(); await renderLifestyle(); } catch(_){} }
 }
 
 function bindTabs(){
@@ -3242,6 +3521,10 @@ if(isSave){ e.preventDefault(); saveAll(); }
   dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
 });
   
+// Lifestyle binden und initial (falls bereits angemeldet) laden
+bindLifestyle();
+try { if (await isLoggedIn()) { await cleanupOldIntake(); await renderLifestyle(); } } catch(_){ }
+
 // Initial Render
 await renderDoctor();
 setDocBadges({ visible: true });
