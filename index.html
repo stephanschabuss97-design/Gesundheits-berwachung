@@ -1172,23 +1172,24 @@ function deleteEntryLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-const key = await getConf("webhookKey");
-if (!key || isServiceRoleKey(key)) return null; // NEU: blocken
-const anonKey = key.replace(/^Bearer\s+/i, "");
+  const key = await getConf("webhookKey");
+  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(_){} return null; }
+  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(_){} return null; }
+  const anonKey = key.replace(/^Bearer\s+/i, "");
 
-const supa = await ensureSupabaseClient();
-if (!supa) return null;
+  const supa = await ensureSupabaseClient();
+  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(_){} return null; }
 
-const { data: { session } } = await supa.auth.getSession();
-const jwt = session?.access_token;
-if (!anonKey || !jwt) return null;
+  const { data: { session } } = await supa.auth.getSession();
+  const jwt = session?.access_token;
+  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
 
-return {
-"Content-Type": "application/json",
-"apikey": anonKey,
-"Authorization": `Bearer ${jwt}`,
-"Prefer": "return=representation"
-};
+  return {
+    "Content-Type": "application/json",
+    "apikey": anonKey,
+    "Authorization": `Bearer ${jwt}`,
+    "Prefer": "return=representation"
+  };
 }
 
 async function deleteRemote(remote_id){
@@ -1545,7 +1546,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Wasser aktualisiert.');
-    }catch(_){ uiError('Update fehlgeschlagen.'); }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
   };
 
   const addSalt = async ()=>{
@@ -1561,7 +1562,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Salz aktualisiert.');
-    }catch(_){ uiError('Update fehlgeschlagen.'); }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
   };
 
   const addProtein = async ()=>{
@@ -1577,7 +1578,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Protein aktualisiert.');
-    }catch(_){ uiError('Update fehlgeschlagen.'); }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
   };
 
   if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
@@ -3437,6 +3438,11 @@ bindAppLockButtons();     // 👈 Buttons der Lock-Card binden
 // Konfiguration laden
 const savedUrl = await getConf("webhookUrl");
 const savedKey = await getConf("webhookKey");
+// Diagnose: aktive REST-URL und Key-Typ
+try{
+  diag.add?.('Config URL: ' + (savedUrl || '(none)'));
+  diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
+}catch(_){ }
 if (!savedUrl || !savedKey) {
   setTab("capture"); // In Erfassung bleiben
 }
