@@ -536,6 +536,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .progress.ok   .bar{ background: var(--ok); }
 .progress.warn .bar{ background: var(--warn); }
 .progress.bad  .bar{ background: var(--danger); }
+.progress.neutral .bar{ background: var(--muted); }
 
 </style>
 </head>
@@ -1503,20 +1504,45 @@ function updateLifestyleBars(){
   if (sBar) sBar.style.width = `${sPct.toFixed(1)}%`;
   if (pBar) pBar.style.width = `${pPct.toFixed(1)}%`;
 
-  if (wLbl) wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml`;
-  if (sLbl) sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g`;
-  if (pLbl) pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g`;
+  if (wLbl) {
+    let status = '';
+    if (w >= LS_WATER_GOAL * 1.1) status = ' • Ziel erreicht';
+    else if (w >= LS_WATER_GOAL * 0.9) status = ' • Zielbereich';
+    else if (w >= LS_WATER_GOAL * 0.5) status = ' • moderate Aufnahme';
+    else status = ' • niedrig';
+    wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml${status}`;
+  }
 
-  // Farben
-  setProgState(wProg, w >= LS_WATER_GOAL ? 'ok' : 'warn');
+  if (sLbl) {
+    let status = ' • Zielbereich';
+    if (s > LS_SALT_MAX) status = ' • über Ziel';
+    else if (s >= 5) status = ' • Warnung';
+    sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
+  }
+
+  if (pLbl) {
+    let status = ' • noch offen';
+    if (p >= 78 && p <= 90) status = ' • Zielbereich';
+    else if (p > 90) status = ' • über Ziel';
+    pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
+  }
+
+  // Wasser: <50% rot, 50-89% gelb, ≥90% grün
+  let wState = 'bad';
+  if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
+  else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
+  setProgState(wProg, wState);
+
+  // Salz: 0-4.9 g grün, 5-6 gelb, >6 rot
   let sState = 'ok';
-  if (s >= 5 && s <= 6) sState = 'warn';
-  else if (s > 6) sState = 'bad';
+  if (s > LS_SALT_MAX) sState = 'bad';
+  else if (s >= 5) sState = 'warn';
   setProgState(sProg, sState);
 
-  let pState = 'warn';
-  if (p >= 78 && p < 90) pState = 'ok';
-  else if (p >= 90) pState = 'bad';
+  // Protein: <78 neutral, 78-90 grün, >90 rot
+  let pState = 'neutral';
+  if (p >= 78 && p <= 90) pState = 'ok';
+  else if (p > 90) pState = 'bad';
   setProgState(pProg, pState);
 }
 
