@@ -1239,7 +1239,14 @@ async function saveIntakeTotals({ dayIso, totals }){
   if (!url || !headers || !uid) throw new Error('saveIntakeTotals: missing config/auth');
   const nowIso = new Date().toISOString();
   const payload = [{ ts: nowIso, type: 'intake', payload: totals, user_id: uid }];
-  const res = await withRetry(()=> fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }));
+  const res = await withRetry(async ()=>{
+    const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
+    if (!r.ok && r.status === 404) {
+      const body = await r.text();
+      diag.add?.(`Lifestyle POST 404 body: ${body}`);
+    }
+    return r;
+  });
   if (res.ok) return await res.json();
 
   // Conflict → PATCH (Upsert)
