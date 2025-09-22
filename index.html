@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.0)</title>
+<title>Gesundheits-Logger (V1.4.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -546,7 +546,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.1</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -2913,6 +2913,10 @@ function flashSaveOk(){
 
 /* ===== Tabs / Segments ===== */
 async function setTab(name){
+  if (name !== "doctor" && document.body.classList.contains('app-locked')){
+    __pendingAfterUnlock = null;
+    lockUi(false);
+  }
   if (name === "doctor"){
     if (!(await isLoggedIn())){
       showLoginOverlay(true);
@@ -3324,6 +3328,26 @@ async function requireDoctorUnlock(){
   return false;
 }
 
+async function resumeAfterUnlock(intent){
+  const target = intent || __pendingAfterUnlock || 'doctor';
+  __pendingAfterUnlock = null;
+  if (target === 'chart'){
+    await setTab('doctor');
+    setDocBadges({ visible: true });
+    chartPanel.open = true;
+    if (chartPanel.el) chartPanel.el.style.display = 'block';
+    await chartPanel.draw();
+    return;
+  }
+  if (target === 'export'){
+    await setTab('doctor');
+    const all = await getAllEntries();
+    dl('gesundheitslog.json', JSON.stringify(all,null,2), 'application/json');
+    return;
+  }
+  await setTab('doctor');
+}
+
 /* Kleine Utils */
 const u8 = (len)=>{ const a=new Uint8Array(len); crypto.getRandomValues(a); return a; };
 const b64u = {
@@ -3347,7 +3371,26 @@ const LOCK_LAST_OK_KEY   = "lock_last_ok";         // timestamp
 function lockUi(on){
   document.body.classList.toggle('app-locked', !!on);
   const ov = document.getElementById('appLock');
-  if (ov) ov.style.display = on ? 'flex' : 'none';
+  if (ov){
+    ov.style.display = on ? 'flex' : 'none';
+    if (on){
+      requestAnimationFrame(()=>{
+        const pin = document.getElementById('pinInput');
+        const pass = document.getElementById('unlockPasskeyBtn');
+        if (pin && typeof pin.focus === 'function'){
+          pin.focus();
+          pin.select?.();
+          return;
+        }
+        if (pass && typeof pass.focus === 'function'){
+          pass.focus();
+        }
+      });
+    } else {
+      const pin = document.getElementById('pinInput');
+      if (pin && typeof pin.blur === 'function'){ pin.blur(); }
+    }
+  }
 }
 function setLockMsg(msg){
   const el = document.getElementById('lockMsg');
@@ -3402,8 +3445,7 @@ async function unlockWithPasskey(){
     __doctorUnlocked = true;
     lockUi(false);
     try {
-      if (__pendingAfterUnlock === 'doctor') { __pendingAfterUnlock = null; await setTab('doctor'); }
-      else { await setTab('doctor'); }
+      await resumeAfterUnlock();
     } catch(_) {}
     return true;
   }catch(e){
@@ -3434,7 +3476,7 @@ async function unlockWithPin(){
   input.value = "";
   __doctorUnlocked = true;
   lockUi(false);
-  try { await setTab('doctor'); } catch(_) {}
+  try { await resumeAfterUnlock(); } catch(_) {}
   return true;
 }
 
@@ -3449,6 +3491,10 @@ function bindAppLockButtons(){
   if (btnPin)  btnPin.addEventListener('click', unlockWithPin);
   if (btnSetPass) btnSetPass.addEventListener('click', registerPasskey);
   if (btnSetPin)  btnSetPin.addEventListener('click', setPinInteractive);
+  const overlay = document.getElementById('appLock');
+  if (overlay) overlay.addEventListener('click', (e)=>{ if (e.target === overlay){ __pendingAfterUnlock = null; lockUi(false); } });
+  const cancelBtn = document.getElementById('lockCancelBtn');
+  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ __pendingAfterUnlock = null; lockUi(false); });
 }
 
 /* ===== Main ===== */
@@ -3557,11 +3603,23 @@ setDocBadges({ visible: true });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
-  if (!(await requireDoctorUnlock())) return;
+  if (!__doctorUnlocked){
+    __pendingAfterUnlock = 'chart';
+    const ok = await requireDoctorUnlock();
+    if (!ok) return;
+    __pendingAfterUnlock = null;
+  }
   setDocBadges({ visible: true });
   chartPanel.open = true;
-  chartPanel.el.style.display = 'block';
+  if (chartPanel.el) chartPanel.el.style.display = 'block';
   await chartPanel.draw();
+});
+
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape' && document.body.classList.contains('app-locked')){
+    __pendingAfterUnlock = null;
+    lockUi(false);
+  }
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -3569,9 +3627,24 @@ const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
 if(isSave){ e.preventDefault(); saveAll(); }
 });
 
+document.addEventListener('visibilitychange', ()=>{
+  if (document.visibilityState === 'visible'){
+    const doctorActive = document.getElementById('doctor')?.classList.contains('active');
+    if (!doctorActive){
+      __pendingAfterUnlock = null;
+      lockUi(false);
+    }
+  }
+});
+
   $("#doctorExportJson").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
-  if (!(await requireDoctorUnlock())) return;
+  if (!__doctorUnlocked){
+    __pendingAfterUnlock = 'export';
+    const ok = await requireDoctorUnlock();
+    if (!ok) return;
+    __pendingAfterUnlock = null;
+  }
   const all = await getAllEntries();
   dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
 });
@@ -3667,6 +3740,10 @@ main();
         PIN setzen/ändern
       </button>
     </div>
+
+    <button class="btn ghost" id="lockCancelBtn" type="button" style="width:100%;margin-top:8px">
+      Abbrechen
+    </button>
 
     <div id="lockMsg" class="small" style="margin-top:6px;color:#6b7280"></div>
   </div>
