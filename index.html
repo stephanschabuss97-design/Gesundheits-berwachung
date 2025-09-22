@@ -1802,10 +1802,15 @@ async function renderDoctor(){
     setDocBadges({ visible: false });
     return;
   }
+  // Nur sperren, wenn die Arzt-Ansicht wirklich aktiv angezeigt wird
+  const doctorSection = document.getElementById('doctor');
+  const isActive = !!doctorSection && doctorSection.classList.contains('active');
   if (!__doctorUnlocked){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Arzt-Ansicht kurz entsperren.</div>`;
-    setDocBadges({ visible: false });
-    try { lockUi(true); setLockMsg(''); } catch(_) {}
+    if (isActive){
+      host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Arzt-Ansicht kurz entsperren.</div>`;
+      setDocBadges({ visible: false });
+      try { lockUi(true); setLockMsg(''); } catch(_) {}
+    }
     return;
   }
   host.innerHTML = "";
@@ -3692,4 +3697,3 @@ main();
 
 </body>
 </html>
-
