@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.1)</title>
+<title>Gesundheits-Logger (V1.4.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -546,7 +546,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -2922,7 +2922,12 @@ async function setTab(name){
       showLoginOverlay(true);
       return;
     }
-    if (!(await requireDoctorUnlock())) { __pendingAfterUnlock = 'doctor'; return; }
+    if (!__doctorUnlocked){
+      __pendingAfterUnlock = 'doctor';
+      const ok = await requireDoctorUnlock();
+      if (!ok) return;
+      __pendingAfterUnlock = null;
+    }
   }
   if (name === "lifestyle"){
     if (!(await isLoggedIn())){
@@ -3319,15 +3324,74 @@ async function setupRealtime(){
 
 /* ===== App-Lock (Passkey + PIN) ===== */
 /* Doctor-only Unlock (no global lock) */
-let __doctorUnlocked = false; let __pendingAfterUnlock = null;
+let __doctorUnlocked = false;
+let __pendingAfterUnlock = null;
+async function isWebAuthnAvailable(){
+  if (!window?.PublicKeyCredential) return false;
+  try{
+    return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(_){
+    return false;
+  }
+}
+
+function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, message = '', highlightSetup = false } = {}){
+  const passBtn = document.getElementById('unlockPasskeyBtn');
+  if (passBtn){
+    const enable = webAuthnAvailable && hasPasskey;
+    passBtn.disabled = !enable;
+    passBtn.title = enable ? '' : (webAuthnAvailable ? 'Bitte zuerst Passkey einrichten.' : 'Passkey/WebAuthn nicht verf�gbar.');
+  }
+  const setupBtn = document.getElementById('setupPasskeyBtn');
+  if (setupBtn){
+    setupBtn.disabled = !webAuthnAvailable;
+    setupBtn.style.display = webAuthnAvailable ? 'block' : 'none';
+    setupBtn.classList.toggle('flash', !!highlightSetup && webAuthnAvailable);
+  }
+  setLockMsg(message);
+}
+
 async function requireDoctorUnlock(){
   if (!(await isLoggedIn())) { showLoginOverlay(true); return false; }
   if (__doctorUnlocked) return true;
+
+  let credId = null;
+  try { credId = await getConf(LOCK_CRED_ID_KEY); } catch(_){ credId = null; }
+  const hasPasskey = !!credId;
+  const webAuthnAvailable = await isWebAuthnAvailable();
+
+  if (hasPasskey && webAuthnAvailable){
+    const ok = await unlockWithPasskey();
+    if (ok) return true;
+
+    configureLockOverlay({
+      hasPasskey: true,
+      webAuthnAvailable: true,
+      message: 'Entsperren abgebrochen � du kannst Passkey erneut versuchen oder PIN nutzen.'
+    });
+    lockUi(true);
+    return false;
+  }
+
+  if (!hasPasskey && webAuthnAvailable){
+    configureLockOverlay({
+      hasPasskey: false,
+      webAuthnAvailable: true,
+      message: 'Kein Passkey eingerichtet. Bitte Passkey einrichten oder PIN nutzen.',
+      highlightSetup: true
+    });
+    lockUi(true);
+    return false;
+  }
+
+  configureLockOverlay({
+    hasPasskey,
+    webAuthnAvailable: false,
+    message: 'Passkey / Windows Hello ist auf diesem Ger�t nicht verf�gbar. Bitte PIN verwenden.'
+  });
   lockUi(true);
-  setLockMsg('');
   return false;
 }
-
 async function resumeAfterUnlock(intent){
   const target = intent || __pendingAfterUnlock || 'doctor';
   __pendingAfterUnlock = null;
@@ -3382,7 +3446,7 @@ function lockUi(on){
           pin.select?.();
           return;
         }
-        if (pass && typeof pass.focus === 'function'){
+        if (pass && !pass.disabled && typeof pass.focus === 'function'){
           pass.focus();
         }
       });
@@ -3419,7 +3483,9 @@ async function registerPasskey(){
     const idB64 = b64u.enc(cred.rawId);
     await putConf(LOCK_CRED_ID_KEY, idB64);
     await putConf(LOCK_ENABLED_KEY, true);
-    setLockMsg("Passkey eingerichtet ✔︎");
+    const waAvailable = await isWebAuthnAvailable();
+    configureLockOverlay({ hasPasskey: true, webAuthnAvailable: waAvailable, message: 'Passkey eingerichtet - bitte kurz entsperren.' });
+    setLockMsg('Passkey eingerichtet.');
     return true;
   }catch(e){
     setLockMsg("Passkey-Setup fehlgeschlagen: " + (e.message||e));
@@ -3491,6 +3557,10 @@ function bindAppLockButtons(){
   if (btnPin)  btnPin.addEventListener('click', unlockWithPin);
   if (btnSetPass) btnSetPass.addEventListener('click', registerPasskey);
   if (btnSetPin)  btnSetPin.addEventListener('click', setPinInteractive);
+  const pinInput = document.getElementById('pinInput');
+  if (pinInput) pinInput.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){ e.preventDefault(); unlockWithPin(); }
+  });
   const overlay = document.getElementById('appLock');
   if (overlay) overlay.addEventListener('click', (e)=>{ if (e.target === overlay){ __pendingAfterUnlock = null; lockUi(false); } });
   const cancelBtn = document.getElementById('lockCancelBtn');
@@ -3751,3 +3821,7 @@ main();
 
 </body>
 </html>
+
+
+
+
