@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.3.0)</title>
+<title>Gesundheits-Logger (V1.4.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
@@ -1748,7 +1748,7 @@ function watchAuthState(){
 
     if (session) {
       await afterLoginBoot();
-      await ensureAppLock();
+      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)
       await setupRealtime();     // 🔹 NEU: Realtime aktivieren nach Login
       await requestUiRefresh();  // initialer Refresh
     } else {
@@ -1800,6 +1800,12 @@ async function renderDoctor(){
   if (!(await isLoggedIn())){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
     setDocBadges({ visible: false });
+    return;
+  }
+  if (!__doctorUnlocked){
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Arzt-Ansicht kurz entsperren.</div>`;
+    setDocBadges({ visible: false });
+    try { lockUi(true); setLockMsg(''); } catch(_) {}
     return;
   }
   host.innerHTML = "";
@@ -2903,7 +2909,13 @@ async function setTab(name){
   if (name === "doctor"){
     if (!(await isLoggedIn())){
       showLoginOverlay(true);
-      name = "capture";
+      return;
+    }
+    if (!__doctorUnlocked){
+      // Arzt-Ansicht nur mit lokalem Unlock (Passkey/PIN)
+      lockUi(true);
+      setLockMsg('');
+      return;
     }
   }
   if (name === "lifestyle"){
@@ -3300,6 +3312,15 @@ async function setupRealtime(){
 }
 
 /* ===== App-Lock (Passkey + PIN) ===== */
+/* Doctor-only Unlock (no global lock) */
+let __doctorUnlocked = false;
+async function requireDoctorUnlock(){
+  if (!(await isLoggedIn())) { showLoginOverlay(true); return false; }
+  if (__doctorUnlocked) return true;
+  lockUi(true);
+  setLockMsg('');
+  return false;
+}
 
 /* Kleine Utils */
 const u8 = (len)=>{ const a=new Uint8Array(len); crypto.getRandomValues(a); return a; };
@@ -3404,7 +3425,9 @@ async function unlockWithPin(){
   if (hash !== saved){ setLockMsg("PIN falsch."); return false; }
   await putConf(LOCK_LAST_OK_KEY, Date.now());
   input.value = "";
+  __doctorUnlocked = true;
   lockUi(false);
+  try { await setTab('doctor'); } catch(_) {}
   return true;
 }
 
@@ -3470,7 +3493,7 @@ if (sbClient) watchAuthState()
 const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot(); // wichtig für Reload mit persistierter Session
-  await ensureAppLock();  // 👈 App-Lock direkt nach Boot prüfen/anzeigen
+      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  // 👈 App-Lock direkt nach Boot prüfen/anzeigen
   await setupRealtime();  // 🔹 NEU: Realtime direkt aktivieren
   await requestUiRefresh();
 }
@@ -3552,6 +3575,7 @@ setDocBadges({ visible: true });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
+  if (!__doctorUnlocked){ lockUi(true); setLockMsg(''); return; }
   setDocBadges({ visible: true });
   chartPanel.open = true;
   chartPanel.el.style.display = 'block';
@@ -3564,6 +3588,8 @@ if(isSave){ e.preventDefault(); saveAll(); }
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
+  if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
+  if (!__doctorUnlocked){ lockUi(true); setLockMsg(''); return; }
   const all = await getAllEntries();
   dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
 });
