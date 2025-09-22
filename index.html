@@ -2918,7 +2918,7 @@ async function setTab(name){
       showLoginOverlay(true);
       return;
     }
-    if (!(await requireDoctorUnlock())) return;
+    if (!(await requireDoctorUnlock())) { __pendingAfterUnlock = 'doctor'; return; }
   }
   if (name === "lifestyle"){
     if (!(await isLoggedIn())){
@@ -3315,7 +3315,7 @@ async function setupRealtime(){
 
 /* ===== App-Lock (Passkey + PIN) ===== */
 /* Doctor-only Unlock (no global lock) */
-let __doctorUnlocked = false;
+let __doctorUnlocked = false; let __pendingAfterUnlock = null;
 async function requireDoctorUnlock(){
   if (!(await isLoggedIn())) { showLoginOverlay(true); return false; }
   if (__doctorUnlocked) return true;
@@ -3399,7 +3399,12 @@ async function unlockWithPasskey(){
     if (!assertion) throw new Error("Abgebrochen.");
     // Lokaler Gate: Erfolg der Challenge => entsperrt
     await putConf(LOCK_LAST_OK_KEY, Date.now());
+    __doctorUnlocked = true;
     lockUi(false);
+    try {
+      if (__pendingAfterUnlock === 'doctor') { __pendingAfterUnlock = null; await setTab('doctor'); }
+      else { await setTab('doctor'); }
+    } catch(_) {}
     return true;
   }catch(e){
     setLockMsg("Passkey fehlgeschlagen: " + (e.message||e));
