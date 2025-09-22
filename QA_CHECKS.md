@@ -1,4 +1,4 @@
-[QA_CHECKS.md](https://github.com/user-attachments/files/22440710/QA_CHECKS.md)
+[QA_CHECKS.md](https://github.com/user-attachments/files/22473900/QA_CHECKS.md)
 QA Checklist for v1.1.0 Protein Flag
 
 - UI
@@ -93,3 +93,31 @@ QA Checklist for v1.3.0 Lifestyle Intake
 - Regression
   - Capture/Doctor Tabs weiterhin funktionsfähig (kein Einfluss auf bestehende Flags/BP/Charts).
   - Default-Key/URL Initialisierung funktioniert, Logging beeinflusst keine Produktionsfunktion.
+
+QA Checklist for v1.4.0 Doctor Unlock (Arzt-Ansicht)
+
+- Login/Start
+  - Beim Laden ohne Session erscheint nur das Google-Login-Overlay (#loginOverlay), nicht das App-Lock (#appLock).
+  - Nach Google-Login bleibt die App frei bedienbar (Capture/Lifestyle); kein globaler App-Lock wird automatisch gezeigt.
+
+- Arzt-Ansicht Guard
+  - Klick auf Arzt-Tab ruft keinen Tab-Wechsel aus, solange nicht entsperrt; stattdessen erscheint das Entsperr-Overlay (#appLock).
+  - 
+enderDoctor() zeigt den Hinweis "Bitte Arzt-Ansicht kurz entsperren.", aber nur wenn die Arzt-Ansicht aktiv (#doctor.active) ist.
+  - Abbruch des Entsperrens bel�sst die App in der bisherigen Ansicht (typisch: Capture).
+
+- Entsperren
+  - "Per Passkey entsperren" f�hrt zu WebAuthn-Prompt; bei Erfolg wird __doctorUnlocked = true gesetzt, Overlay schlie�t, die Arzt-Ansicht wird aktiviert.
+  - PIN-Entsperren verh�lt sich identisch (setzt __doctorUnlocked = true, schlie�t Overlay, wechselt zur Arzt-Ansicht).
+
+- Gated Aktionen
+  - "Werte anzeigen" (Charts) ist ohne Unlock blockiert (Overlay erscheint); nach Unlock �ffnet das Chart-Panel ohne weiteren Prompt.
+  - "Export JSON" ist ohne Unlock blockiert; nach Unlock l�dt die Datei wie erwartet.
+
+- Code-Hygiene
+  - Keine Aufrufe von ensureAppLock() im Login-/Boot-Pfad (nur Definition verbleibt).
+  - Guards pr�fen __doctorUnlocked an drei Stellen: Tab-Wechsel, Charts-Button, Export-Button.
+  - Overlay-Steuerung: lockUi(true/false) toggelt ody.app-locked und #appLock sauber.
+
+- Versionierung
+  - Impact MINOR. Version: v1.4.0.
