@@ -1,4 +1,4 @@
-[CHANGELOG.md](https://github.com/user-attachments/files/22440708/CHANGELOG.md)
+[CHANGELOG.md](https://github.com/user-attachments/files/22473891/CHANGELOG.md)
 ## v1.1.0 (MINOR)
 
 - Replace sugar flag with protein flag across UI/DB/Admin.
@@ -47,3 +47,12 @@ Changed:
 
 Fixed:
 - Trigger entfernt Aufruf von `jsonb_object_length` (nicht verfügbar auf Supabase), damit Intake-Insert kein 404/42883 mehr auslöst.
+
+## v1.4.0 (MINOR)
+
+Changed:
+- Auth/UX: Biometrie/PIN-Lock nur für Arzt-Ansicht (Vault) statt global nach Login.
+- Arzt-Tab, Charts und Exporte prüfen lokal per Passkey/PIN; normale Erfassung bleibt ohne extra Schritt.
+
+Notes:
+- Keine serverseitige Step-up-Session; Entsperren ist rein clientseitig. Login weiterhin über Google (Supabase OAuth).
