@@ -1809,9 +1809,11 @@ async function renderDoctor(){
     if (isActive){
       host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Arzt-Ansicht kurz entsperren.</div>`;
       setDocBadges({ visible: false });
-      try { lockUi(true); setLockMsg(''); } catch(_) {}
+      try { await requireDoctorUnlock(); } catch(_) {}
+      if (!__doctorUnlocked) return;
+    } else {
+      return;
     }
-    return;
   }
   host.innerHTML = "";
 
@@ -2916,12 +2918,7 @@ async function setTab(name){
       showLoginOverlay(true);
       return;
     }
-    if (!__doctorUnlocked){
-      // Arzt-Ansicht nur mit lokalem Unlock (Passkey/PIN)
-      lockUi(true);
-      setLockMsg('');
-      return;
-    }
+    if (!(await requireDoctorUnlock())) return;
   }
   if (name === "lifestyle"){
     if (!(await isLoggedIn())){
@@ -3436,31 +3433,6 @@ async function unlockWithPin(){
   return true;
 }
 
-/* Ensure: Lock aktiv? Wann anzeigen? */
-async function ensureAppLock(){
-  // Nur wenn eingeloggt (sonst regelt loginOverlay)
-  if (!(await isLoggedIn())) { lockUi(false); return; }
-
-  // Ist App-Lock konfiguriert/aktiv?
-  let enabled = await getConf(LOCK_ENABLED_KEY);
-  const hasCred = !!(await getConf(LOCK_CRED_ID_KEY));
-  const hasPin  = !!(await getConf(LOCK_PIN_HASH_KEY));
-  if (!enabled && (hasCred || hasPin)) enabled = true;
-
-  // Erster Start ohne Setup: Lock optional deaktiviert bis Setup?
-  // Wir zeigen den Lock und bieten Setup im Overlay an.
-  if (!enabled) {
-    // Noch kein Setup? Dann Lock trotzdem anzeigen, aber mit Setup-Buttons.
-    lockUi(true);
-    setLockMsg(hasCred||hasPin ? "" : "Tipp: Richte Passkey oder PIN ein.");
-    return;
-  }
-
-  // Aktiv → sperren bis entsperrt
-  lockUi(true);
-  setLockMsg("");
-}
-
 /* Events binden (einmal in main()) */
 function bindAppLockButtons(){
   const btnPass = document.getElementById('unlockPasskeyBtn');
@@ -3580,7 +3552,7 @@ setDocBadges({ visible: true });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
-  if (!__doctorUnlocked){ lockUi(true); setLockMsg(''); return; }
+  if (!(await requireDoctorUnlock())) return;
   setDocBadges({ visible: true });
   chartPanel.open = true;
   chartPanel.el.style.display = 'block';
@@ -3594,7 +3566,7 @@ if(isSave){ e.preventDefault(); saveAll(); }
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
-  if (!__doctorUnlocked){ lockUi(true); setLockMsg(''); return; }
+  if (!(await requireDoctorUnlock())) return;
   const all = await getAllEntries();
   dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
 });
