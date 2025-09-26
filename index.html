@@ -1341,10 +1341,6 @@ async function syncCaptureFlagTogglesForCurrentDate(){
     setValsartanMiss(!!f.valsartan_missed);
     setForxigaMiss(!!f.forxiga_missed);
     setNsar(!!f.nsar_taken);
-    const commentM = document.getElementById("bpCommentM");
-    if (commentM) commentM.value = "";
-    const commentA = document.getElementById("bpCommentA");
-    if (commentA) commentA.value = "";
     const flagsCommentEl = document.getElementById("flagsComment");
     if (flagsCommentEl) flagsCommentEl.value = "";
   }catch(_){ /* non-blocking */ }
@@ -1651,6 +1647,56 @@ async function patchDayFlags({ user_id, dayIso, flags }){
     throw new Error(`patch day_flags failed ${res.status} - ${details}`);
   }
   return await res.json();
+}
+
+
+async function appendNoteRemote(opts){
+  const { user_id, dayIso, noteEvent } = opts || {};
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if (!url || !headers || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
+
+  const from = `${dayIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
+  const toIso = toNext.toISOString().slice(0, 10);
+  const baseQuery = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.note`
+                  + `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+
+  const resGet = await withRetry(() => fetch(baseQuery, { method: 'GET', headers }));
+  if (!resGet.ok) throw new Error(`note-get-failed-${resGet.status}`);
+  const rows = await resGet.json();
+  const existing = Array.isArray(rows) && rows[0] ? rows[0] : null;
+
+  const addition = (noteEvent?.payload?.text || '').trim();
+  if (!addition) {
+    return existing ? { id: existing.id, text: existing?.payload?.text || '' } : { id: null, text: '' };
+  }
+
+  const combineText = (prev, add) => {
+    if (!prev) return add;
+    return `${prev.trim()}
+${add}`.trim();
+  };
+
+  if (existing) {
+    const combined = combineText(existing?.payload?.text || '', addition);
+    const patchRes = await withRetry(() => fetch(`${url}?id=eq.${encodeURIComponent(existing.id)}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ payload: { text: combined } })
+    }));
+    if (!patchRes.ok) throw new Error(`note-patch-failed-${patchRes.status}`);
+    const patched = await patchRes.json().catch(() => null);
+    const patchedId = patched?.[0]?.id ?? existing.id;
+    return { id: patchedId, text: combined };
+  }
+
+  const body = [{ ...noteEvent, user_id }];
+  const postRes = await withRetry(() => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }));
+  if (!postRes.ok) throw new Error(`note-post-failed-${postRes.status}`);
+  const created = await postRes.json().catch(() => null);
+  const newId = created?.[0]?.id ?? null;
+  return { id: newId, text: addition };
 }
 
 async function pushPendingToRemote(){
@@ -2920,8 +2966,8 @@ function flashSaveOk(){
   const btn = document.getElementById('saveAllBtn');
   if(!btn) return;
   if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = ' Events gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = ' Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
+  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '&#x1F4BE; Events gespeichert';
+  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '&#x1F4BE; Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
 /* ===== Tabs / Segments ===== */
@@ -3148,22 +3194,11 @@ protein_high90: proteinHigh
 };
 }
 
-function allocateNoteTimestamp(date){
-  const base = new Date(date + "T22:30:00");
-  const now = Date.now();
-  const minuteOffset = now % 60;
-  const secondOffset = Math.floor(now / 1000) % 60;
-  base.setMinutes(base.getMinutes() + minuteOffset);
-  base.setSeconds(base.getSeconds() + secondOffset);
-  const iso = base.toISOString();
-  return { iso, ts: base.getTime(), time: iso.slice(11,16) };
-}
-
 async function appendNote(date, prefix, text){
-  const trimmed = (text || "").trim();
+  const trimmed = (text || '').trim();
   if (!trimmed) return;
   const stamp = allocateNoteTimestamp(date);
-  const entry = baseEntry(date, stamp.time, "Tag");
+  const entry = baseEntry(date, stamp.time, 'Tag');
   entry.dateTime = stamp.iso;
   entry.ts = stamp.ts;
   entry.notes = prefix + trimmed;
@@ -3179,42 +3214,21 @@ async function appendNote(date, prefix, text){
   await syncWebhook(entry, localId);
 }
 
+function allocateNoteTimestamp(date){
+  const base = new Date(date + "T22:30:00");
+  const now = Date.now();
+  const minuteOffset = now % 60;
+  const secondOffset = Math.floor(now / 1000) % 60;
+  base.setMinutes(base.getMinutes() + minuteOffset);
+  base.setSeconds(base.getSeconds() + secondOffset);
+  const iso = base.toISOString();
+  return { iso, ts: base.getTime(), time: iso.slice(11,16) };
+}
+
 async function saveFlagsCommentNote(date, text){
   const trimmed = (text || '').trim();
   if (!trimmed) return false;
-  const stamp = allocateNoteTimestamp(date);
-  const entry = {
-    date,
-    time: stamp.time,
-    dateTime: stamp.iso,
-    ts: stamp.ts,
-    context: "Tag",
-    sys: null,
-    dia: null,
-    pulse: null,
-    weight: null,
-    map: null,
-    notes: `[Flags] ${trimmed}`,
-    training: false,
-    low_intake: false,
-    sick: false,
-    valsartan_missed: false,
-    forxiga_missed: false,
-    nsar_taken: false,
-    salt_high: false,
-    protein_high90: false
-  };
-  const localId = await addEntry(entry);
-  await syncWebhook(entry, localId);
-
-  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-  const comment = (commentEl?.value || "").trim();
-  if (comment) {
-    try {
-      await appendNote(date, which === "M" ? "[Morgens] " : "[Abends] ", comment);
-      if (commentEl) commentEl.value = "";
-    } catch(_) { /* non blocking */ }
-  }
+  await appendNote(date, '[Flags] ', trimmed);
   return true;
 }
 
@@ -3318,6 +3332,17 @@ async function syncWebhook(entry, localId){
             }
             uiInfo("Flags aktualisiert.");
             diag.add("Fallback: day_flags via PATCH");
+            return;
+          }
+        } catch (_) { /* fallback failed: proceed to generic handling */ }
+        const noteEv = events.find(ev => ev.type === 'note');
+        try {
+          if (noteEv && uid) {
+            const dayIso = entry.date;
+            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent: noteEv });
+            await updateEntry(localId, { remote_id: merged?.id ?? -1 });
+            uiInfo('Kommentar aktualisiert.');
+            diag.add('Fallback: note via PATCH');
             return;
           }
         } catch (_) { /* fallback failed: proceed to generic handling */ }
@@ -3918,15 +3943,6 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
 
 
