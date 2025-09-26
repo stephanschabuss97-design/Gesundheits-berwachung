@@ -631,12 +631,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
       <h3 class="blockTitle">Morgens</h3>
-      <div class="row">
-        <div style="width:130px">
-          <label>Uhrzeit</label>
-          <input type="time" id="timeM" step="60">
-        </div>
-      </div>
       <div class="grid">
         <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
         <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
@@ -646,12 +640,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
       <h3 class="blockTitle">Abends</h3>
-      <div class="row">
-        <div style="width:130px">
-          <label>Uhrzeit</label>
-          <input type="time" id="timeA" step="60">
-        </div>
-      </div>
       <div class="grid">
         <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
         <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
@@ -3056,7 +3044,7 @@ flashSaveOk();
 
 async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
-const time = $(`#time${which}`).value || timeStr();
+const time = which === 'M' ? '07:00' : '22:00';
 
 const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : null;
 const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
@@ -3121,7 +3109,7 @@ protein_high90: proteinHigh
 
 async function saveDaySummary(){
 const date = $("#date").value || todayStr();
-const time = $("#timeA").value || "19:00";
+const time = "12:00";
 
 const entry = baseEntry(date, time, "Tag");
 
@@ -3578,7 +3566,6 @@ if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUP
 } catch (_) {}
 chartPanel.init(); bindTabs();
 $("#date").value = todayStr();
-$("#timeM").value = "07:00"; $("#timeA").value = "19:00";
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
 setTab("capture");
@@ -3733,22 +3720,6 @@ el.disabled = false;
 });
 document.body.classList.remove('auth-locked');
 
-function daySummaryActive(){
-  const w   = ($("#weightDay")?.value || "").trim();
-  const waist = ($("#input-waist-cm")?.value || "").trim();
-  const n   = ($("#notesDay")?.value || "").trim();
-  return !!(w || waist || n || trainingActive || lowIntakeActive || sickActive ||
-    valsartanMissed || forxigaMissed || nsarTaken || saltHigh || proteinHigh);
-}
-
-const disableVitals = daySummaryActive();
-["#sysM","#diaM","#pulseM","#sysA","#diaA","#pulseA"].forEach(sel=>{
-const el = $(sel);
-if (!el) return;
-el.disabled = disableVitals;
-el.style.opacity = disableVitals ? 0.6 : 1;
-});
-
 // Auto-Push Pending sobald online
 window.addEventListener('online', async ()=>{
 const resPush = await pushPendingToRemote();
@@ -3821,6 +3792,7 @@ main();
 
 </body>
 </html>
+
 
 
 
