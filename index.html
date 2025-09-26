@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.5)</title>
+<title>Gesundheits-Logger (V1.4.6)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -95,6 +95,42 @@ textarea{min-height:64px;resize:vertical}
 .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 /* Tabs: aktiver Zustand = wie Primary */
 nav.tabs .btn.primary {
+
+
+details.accordion{
+  background:#11131a;
+  border:1px solid #232735;
+  border-radius:16px;
+  margin:12px 0;
+  overflow:hidden;
+}
+details.accordion summary{
+  list-style:none;
+  cursor:pointer;
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:600;
+}
+details.accordion summary::-webkit-details-marker{display:none;}
+details.accordion .chevron{transition:transform .2s ease;}
+details.accordion[open] .chevron{transform:rotate(90deg);}
+details.accordion .accordion-body{padding:0 18px 16px;}
+.card-nested{
+  background:#11131a;
+  border:1px solid #232735;
+  border-radius:12px;
+  padding:14px;
+  margin-top:12px;
+}
+.card-nested:first-of-type{margin-top:10px;}
+.card-nested h3.blockTitle{margin-top:0;}
+@media (max-width:640px){
+  details.accordion summary{padding:12px 14px;}
+  details.accordion .accordion-body{padding:0 14px 14px;}
+}
   background: var(--accent);
   color: #fff;
   border-color: transparent;
@@ -546,7 +582,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.6</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -629,73 +665,79 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
       </div>
     </div>
 
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Morgens</h3>
-      <div class="grid">
-        <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
-        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-        <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-      </div>
-      <div class="row" style="margin-top:6px">
-        <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
-      </div>
-    </div>
 
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Abends</h3>
-      <div class="grid">
-        <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-        <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+    <details class="accordion" open>
+      <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested">
+          <h3 class="blockTitle">Morgens</h3>
+          <div class="grid">
+            <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+            <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
+          </div>
+        </div>
+        <div class="card-nested">
+          <h3 class="blockTitle">Abends</h3>
+          <div class="grid">
+            <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+            <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
+          </div>
+        </div>
       </div>
-      <div class="row" style="margin-top:6px">
-        <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
-      </div>
-    </div>
+    </details>
 
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      
-<h3 class="blockTitle">Koerper</h3>
-<div class="grid" style="grid-template-columns:1fr 1fr">
-  <div>
-    <label>Gewicht (kg)</label>
-    <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-  </div>
-  <div>
-    <label>Bauchumfang (cm)</label>
-    <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
-  </div>
-</div>
-</div>
-
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Kommentar</h3>
-      <div class="row">
-        <div style="flex:1">
+    <details class="accordion" open>
+      <summary><span>&#x2696;&#xFE0F; Koerper & Kommentar</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested">
+          <h3 class="blockTitle">Koerper</h3>
+          <div class="grid" style="grid-template-columns:1fr 1fr">
+            <div>
+              <label>Gewicht (kg)</label>
+              <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+            </div>
+            <div>
+              <label>Bauchumfang (cm)</label>
+              <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+            </div>
+          </div>
+        </div>
+        <div class="card-nested">
+          <h3 class="blockTitle">Kommentar</h3>
           <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-      <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
-      <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
-      <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
-      <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
-      <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
-      <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
-      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">&#x1F36C; &gt; 10 g Zucker</button>
-      <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
-      <div class="spacer"></div>
-    </div>
-
-    <div class="row" style="margin-top:8px">
-      <div style="flex:1">
-        <label>Kommentar zu Flags</label>
-        <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
+    <details class="accordion" open>
+      <summary><span>&#x1F6A9; Flags</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested">
+          <div class="row" style="align-items:center; gap:8px; flex-wrap:wrap; margin-top:0">
+            <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
+            <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
+            <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
+            <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
+            <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
+            <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
+            <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">&#x1F36C; &gt; 10 g Zucker</button>
+            <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
+          </div>
+        </div>
+        <div class="card-nested">
+          <label for="flagsComment" class="small" style="display:block;margin-bottom:6px">Kommentar zu Flags</label>
+          <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
+        </div>
       </div>
-    </div>
-
+    </details>
     <div class="row" style="align-items:center; gap:8px; margin-top:12px">
       <button class="btn primary" id="saveAllBtn" type="button">&#x1F4BE; Speichern</button>
       <div class="spacer"></div>
@@ -3943,6 +3985,7 @@ main();
 
 </body>
 </html>
+
 
 
 
