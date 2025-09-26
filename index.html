@@ -3133,6 +3133,8 @@ async function saveBodyEntry(){
   diag.add('Koerperwerte gespeichert');
   await renderDoctor();
   setDocBadges({ visible: true });
+  if (chartPanel.open) await chartPanel.draw();
+}
 
 async function saveFlagsEntry(){
   if (!(await isLoggedIn())) { showLoginOverlay(true); return; }
