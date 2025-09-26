@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.0)</title>
+<title>Gesundheits-Logger (V1.5.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.1</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -3179,7 +3179,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.0) === */
+/* === Panel Reset Helpers (V1.5.1) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -4116,14 +4116,20 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-document.addEventListener('visibilitychange', ()=>{
-  if (document.visibilityState === 'visible'){
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  (async () => {
+    try {
+      if (!sbClient) await ensureSupabaseClient();
+      await requireSession();
+    } catch(_) {}
+    __pendingAfterUnlock = null;
+    lockUi(false);
     const doctorActive = document.getElementById('doctor')?.classList.contains('active');
-    if (!doctorActive){
-      __pendingAfterUnlock = null;
-      lockUi(false);
+    if (doctorActive && !__doctorUnlocked) {
+      await setTab('capture');
     }
-  }
+  })();
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
