@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.6)</title>
+<title>Gesundheits-Logger (V1.4.7)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -95,8 +95,10 @@ textarea{min-height:64px;resize:vertical}
 .btn.toggle.active{ background: var(--ok); color:#06110b; border-color: transparent; }
 /* Tabs: aktiver Zustand = wie Primary */
 nav.tabs .btn.primary {
-
-
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
 details.accordion{
   background:#11131a;
   border:1px solid #232735;
@@ -118,6 +120,13 @@ details.accordion summary::-webkit-details-marker{display:none;}
 details.accordion .chevron{transition:transform .2s ease;}
 details.accordion[open] .chevron{transform:rotate(90deg);}
 details.accordion .accordion-body{padding:0 18px 16px;}
+.panel-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:12px;
+}
+
 .card-nested{
   background:#11131a;
   border:1px solid #232735;
@@ -131,10 +140,7 @@ details.accordion .accordion-body{padding:0 18px 16px;}
   details.accordion summary{padding:12px 14px;}
   details.accordion .accordion-body{padding:0 14px 14px;}
 }
-  background: var(--accent);
-  color: #fff;
-  border-color: transparent;
-}
+
 
 .btn.flash{background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;background-size:200% 100%;color:#fff!important;animation:flashGradient 1s ease forwards,flashPop .2s ease;box-shadow:0 6px 24px rgba(79,70,229,.35)}
 @keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
@@ -582,7 +588,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.6</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.7</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -692,6 +698,18 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
       </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveBpPanelBtn" type="button">&#x1F4BE; Speichern (Blutdruck)</button>
+      </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveBpPanelBtn" type="button">&#x1F4BE; Speichern (Blutdruck)</button>
+      </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveBodyPanelBtn" type="button">&#x1F4BE; Speichern (Koerper)</button>
+      </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Speichern (Flags)</button>
+      </div>
     </details>
 
     <details class="accordion" open>
@@ -715,6 +733,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
         </div>
       </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveBodyPanelBtn" type="button">&#x1F4BE; Speichern (Koerper)</button>
+      </div>
     </details>
 
     <details class="accordion" open>
@@ -736,6 +757,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           <label for="flagsComment" class="small" style="display:block;margin-bottom:6px">Kommentar zu Flags</label>
           <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
         </div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn ghost" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Speichern (Flags)</button>
       </div>
     </details>
     <div class="row" style="align-items:center; gap:8px; margin-top:12px">
@@ -3217,6 +3241,113 @@ if (hasComment){
 return hasAny || hasComment;
 }
 
+async function saveBpPanel(){
+  const hasM = blockHasData('M');
+  const hasA = blockHasData('A');
+  if (!hasM && !hasA){ uiError('Keine Blutdruckdaten oder Kommentare im Panel.'); return; }
+  let saved = false;
+  if (hasM) saved = (await saveBlock('Morgen','M', false, false)) || saved;
+  if (hasA) saved = (await saveBlock('Abend','A', false, false)) || saved;
+  if (!saved){ uiError('Keine Blutdruckdaten gespeichert.'); return; }
+  await renderDoctor();
+  if (chartPanel?.open) await chartPanel.draw();
+  setDocBadges?.({ visible: true });
+  diag.add?.('Blutdruck-Panel gespeichert');
+}
+
+async function saveBodyPanel(){
+  const date = $("#date")?.value || todayStr();
+  const weightVal = $("#weightDay")?.value?.trim();
+  const waistRaw = $("#input-waist-cm")?.value?.trim();
+  const notes = ($("#notesDay")?.value || '').trim();
+  if (!weightVal && !waistRaw && !notes){ uiError('Keine Koerperdaten oder Kommentar eingegeben.'); return; }
+  const entry = {
+    date,
+    time: '12:00',
+    dateTime: new Date(date + 'T12:00').toISOString(),
+    ts: new Date(date + 'T12:00').getTime(),
+    context: 'Tag',
+    sys: null,
+    dia: null,
+    pulse: null,
+    weight: weightVal ? Number(weightVal.replace(',', '.')) : null,
+    waist_cm: waistRaw ? toNumDE(waistRaw) : null,
+    map: null,
+    notes,
+    training: false,
+    low_intake: false,
+    sick: false,
+    valsartan_missed: false,
+    forxiga_missed: false,
+    nsar_taken: false,
+    salt_high: false,
+    protein_high90: false
+  };
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+  await renderDoctor();
+  if (chartPanel?.open) await chartPanel.draw();
+  setDocBadges?.({ visible: true });
+  diag.add?.('Koerper-Panel gespeichert');
+}
+
+async function saveFlagsPanel(){
+  const date = $("#date")?.value || todayStr();
+  const commentField = document.getElementById('flagsComment');
+  const comment = (commentField?.value || '').trim();
+  const hasFlags = !!(trainingActive || lowIntakeActive || sickActive || valsartanMissed || forxigaMissed || nsarTaken || saltHigh || proteinHigh);
+  if (!hasFlags && !comment){ uiError('Keine Flags oder Kommentar eingegeben.'); return; }
+  if (hasFlags){
+    const entry = {
+      date,
+      time: '22:30',
+      dateTime: new Date(date + 'T22:30').toISOString(),
+      ts: new Date(date + 'T22:30').getTime(),
+      context: 'Tag',
+      sys: null,
+      dia: null,
+      pulse: null,
+      weight: null,
+      waist_cm: null,
+      map: null,
+      notes: '',
+      training: trainingActive,
+      low_intake: lowIntakeActive,
+      sick: sickActive,
+      valsartan_missed: valsartanMissed,
+      forxiga_missed: forxigaMissed,
+      nsar_taken: nsarTaken,
+      salt_high: saltHigh,
+      protein_high90: proteinHigh
+    };
+    const localId = await addEntry(entry);
+    await syncWebhook(entry, localId);
+  }
+  if (comment){
+    try {
+      await appendNote(date, '[Flags] ', comment);
+      if (commentField) commentField.value = '';
+    } catch(_) { /* ignored */ }
+  }
+  await renderDoctor();
+  if (chartPanel?.open) await chartPanel.draw();
+  setDocBadges?.({ visible: true });
+  diag.add?.('Flags-Panel gespeichert');
+}
+
+function attachPanelSave(id, handler){
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('click', async ()=>{
+    withBusy(btn, true);
+    try { await handler(); }
+    catch(_) { /* Fehler werden in Handler behandelt */ }
+    finally { withBusy(btn, false); }
+  });
+}
+
+
+
 function baseEntry(date, time, contextLabel){
 const iso = new Date(date + "T" + time).toISOString();
 const ts = new Date(date + "T" + time).getTime();
@@ -3842,6 +3973,9 @@ document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
     withBusy(btn, false);
   }
 });
+attachPanelSave('saveBpPanelBtn', saveBpPanel);
+attachPanelSave('saveBodyPanelBtn', saveBodyPanel);
+attachPanelSave('saveFlagsPanelBtn', saveFlagsPanel);
 // Sync toggles when the date changes in capture view
 const __dateEl = document.getElementById('date');
 if (__dateEl) __dateEl.addEventListener('change', async ()=>{ try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}});
@@ -3985,33 +4119,3 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
