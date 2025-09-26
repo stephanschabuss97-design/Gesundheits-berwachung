@@ -3008,12 +3008,13 @@ function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMiss
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "&#x23F0; Forxiga vergessen (aktiv)", "&#x23F0; Forxiga vergessen"); }
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
 function blockHasData(which){
-return !!(
-$(`#time${which}`).value ||
-$(`#sys${which}`).value ||
-$(`#dia${which}`).value ||
-$(`#pulse${which}`).value
-);
+  const getVal = (sel) => document.querySelector(sel)?.value?.trim();
+  const sys = getVal(`#sys${which}`);
+  const dia = getVal(`#dia${which}`);
+  const pulse = getVal(`#pulse${which}`);
+  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (commentEl?.value || "").trim();
+  return !!(sys || dia || pulse || comment);
 }
 async function saveAll(){
 const __t0 = performance.now();
@@ -3917,6 +3918,8 @@ main();
 
 </body>
 </html>
+
+
 
 
 
