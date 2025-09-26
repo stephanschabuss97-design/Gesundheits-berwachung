@@ -3133,7 +3133,7 @@ function allocateNoteTimestamp(date){
 }
 
 async function saveFlagsCommentNote(date, text){
-  const trimmed = (text || ').trim();
+  const trimmed = (text || '').trim();
   if (!trimmed) return false;
   const stamp = allocateNoteTimestamp(date);
   const entry = {
@@ -3163,7 +3163,7 @@ async function saveFlagsCommentNote(date, text){
 }
 
 async function saveDaySummary(){
-const date = #date.value || todayStr();
+const date = $("#date")?.value || todayStr();
 const time = "12:00";
 
 const entry = baseEntry(date, time, "Tag");
@@ -3862,6 +3862,8 @@ main();
 
 </body>
 </html>
+
+
 
 
 
