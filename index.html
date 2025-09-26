@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.9)</title>
+<title>Gesundheits-Logger (V1.5.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.9</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1937,7 +1937,7 @@ async function afterLoginBoot(){
   if (__booted) return;
   __booted = true;
   // Keine Auto-Sync/Realtime bis Arzt-Ansicht umgestellt ist
-  await renderDoctor(); // laesst "Bitte anmelden" o. "Keine Eintraege" stehen
+  await requestUiRefresh({ reason: 'boot:afterLogin' });
 }
 
 /* ===== CSV/JSON export (Daily) ===== */
@@ -3135,7 +3135,7 @@ function bindTabs(){
 }
 
 /* ===== Save flows ===== */
-// Replace sugar toggle with protein (runtime migration)
+// Replace sugar toggle with protein (runtime migration for legacy layouts)
 (function migrateSugarToProtein(){
   const legacy = document.getElementById('sugarHighToggle');
   if (legacy) {
@@ -3160,7 +3160,7 @@ el.innerHTML = on ? activeText : baseText;
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
-/* === Panel Reset Helpers (V1.4.9) === */
+/* === Panel Reset Helpers (V1.5.0) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -3696,7 +3696,7 @@ async function resumeAfterUnlock(intent){
     setDocBadges({ visible: true });
     chartPanel.open = true;
     if (chartPanel.el) chartPanel.el.style.display = 'block';
-    await chartPanel.draw();
+    await requestUiRefresh({ reason: 'unlock:chart', chart: true });
     return;
   }
   if (target === 'export'){
@@ -4059,7 +4059,7 @@ const dateEl = document.getElementById('date');
 if (dateEl) {
   dateEl.addEventListener('change', async () => {
     try {
-      // was du beim Datum ändern haben willst:
+      // was du beim Datum aendern haben willst:
       await syncCaptureToggles();
       resetCapturePanels();
       updateBpCommentWarnings?.();
@@ -4067,7 +4067,7 @@ if (dateEl) {
   });
 }
 
-// Apply Range → Arztansicht neu rendern
+// Apply Range -> Arztansicht neu rendern
 const applyBtn = $("#applyRange");
 if (applyBtn) {
   applyBtn.addEventListener("click", async () => {
@@ -4087,7 +4087,7 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
   setDocBadges({ visible: true });
   chartPanel.open = true;
   if (chartPanel.el) chartPanel.el.style.display = 'block';
-  await chartPanel.draw();
+  await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
 });
 
 document.addEventListener('keydown', (e)=>{
@@ -4095,10 +4095,6 @@ document.addEventListener('keydown', (e)=>{
     __pendingAfterUnlock = null;
     lockUi(false);
   }
-});
-
-document.addEventListener('keydown', (e)=>{
-const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
 });
 
 document.addEventListener('visibilitychange', ()=>{
