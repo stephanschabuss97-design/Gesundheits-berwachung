@@ -566,7 +566,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <button class="btn ghost" id="helpClose" type="button">x</button>
 </header>
 <div class="content">
-<strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
+<strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
 <ul>
 <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
 <li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
@@ -672,14 +672,14 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
     <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-      <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">Training heute</button>
-      <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">Krank (Forxiga pausiert)</button>
-      <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">Valsartan vergessen</button>
-      <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">Forxiga vergessen</button>
-      <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&lt; 2 L getrunken</button>
-      <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&gt; 5 g Salz</button>
-      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">&gt; 10 g Zucker</button>
-      <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">NSAR genommen</button>
+      <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
+      <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
+      <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
+      <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
+      <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
+      <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
+      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">&#x1F36C; &gt; 10 g Zucker</button>
+      <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
       <div class="spacer"></div>
     </div>
 
@@ -691,7 +691,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
     <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-      <button class="btn primary" id="saveAllBtn" type="button">Speichern</button>
+      <button class="btn primary" id="saveAllBtn" type="button">&#x1F4BE; Speichern</button>
       <div class="spacer"></div>
     </div>
   </section>
@@ -1861,7 +1861,7 @@ async function renderDoctor(){
   <div class="col-date">
     <div class="date-top">
       <span class="date-label">${fmtDateDE(day.date)}</span>
-      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "" : ""}</span>
+      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "&#9729;&#65039;" : ""}</span>
     </div>
     <div class="date-actions">
       <button class="btn ghost btn-xs" data-del-day="${day.date}">Loeschen</button>
@@ -2968,33 +2968,35 @@ function bindTabs(){
   if (legacy) {
     legacy.id = 'proteinHighToggle';
     legacy.setAttribute('title','Protein >= 90 g');
-    legacy.textContent = 'Protein >= 90 g';
+    legacy.innerHTML = '&#x1F969; Protein >= 90 g';
   }
 })();
 function setProteinHigh(on){
   proteinHigh = !!on;
-  setToggle($("#proteinHighToggle"), proteinHigh, "Protein >= 90 g (aktiv)", "Protein >= 90 g");
+  setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
 }
 let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
 saltHigh=false, proteinHigh=false;
 function setToggle(el, on, activeText, baseText){
+el = el || null;
+if (!el) return;
 el.classList.toggle("active", !!on);
 el.setAttribute("aria-pressed", on ? "true" : "false");
-el.textContent = on ? activeText : baseText;
+el.innerHTML = on ? activeText : baseText;
 }
-function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, " Training heute (aktiv)", " Training heute"); }
-function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, " < 2 L - aktiv", " < 2 L getrunken"); }
-function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, " > 5 g Salz - aktiv", " > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, " > 10 g Zucker - aktiv", " > 10 g Zucker"); }
+function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
+function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
+function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
+function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "&#x1F36C; > 10 g Zucker (aktiv)", "&#x1F36C; > 10 g Zucker"); }
 
 function setSick(on){
-sickActive=!!on; setToggle($("#sickToggle"), sickActive, " Krank (Forxiga pausiert) - aktiv", " Krank (Forxiga pausiert)");
+sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
 if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
 else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
-function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, " Valsartan vergessen - aktiv", " Valsartan vergessen"); }
-function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, " Forxiga vergessen - aktiv", " Forxiga vergessen"); }
-function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, " NSAR genommen - aktiv", " NSAR genommen"); }
+function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "&#x1F48A; Valsartan vergessen (aktiv)", "&#x1F48A; Valsartan vergessen"); }
+function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "&#x23F0; Forxiga vergessen (aktiv)", "&#x23F0; Forxiga vergessen"); }
+function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
 function blockHasData(which){
 return !!(
 $(`#time${which}`).value ||
@@ -3862,6 +3864,15 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
 
 
 
