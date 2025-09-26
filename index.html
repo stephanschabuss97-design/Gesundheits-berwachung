@@ -712,7 +712,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </details>
 
     <details class="accordion" open>
-      <summary><span>&#x2696;&#xFE0F; Koerper & Kommentar</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
           <h3 class="blockTitle">Koerper</h3>
@@ -727,10 +727,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
             </div>
           </div>
         </div>
-        <div class="card-nested">
-          <h3 class="blockTitle">Kommentar</h3>
-          <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
-        </div>
+        
         <div class="panel-actions">
           <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
         </div>
@@ -3135,7 +3132,8 @@ function blockHasData(which){
   const sys = getVal(`#sys${which}`);
   const dia = getVal(`#dia${which}`);
   const pulse = getVal(`#pulse${which}`);
-  const comment = getBpComment(which);
+  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (commentEl?.value || "").trim();
   return !!(sys || dia || pulse || comment);
 }
 async function saveAll(){
@@ -3147,7 +3145,7 @@ const hasM = blockHasData("M");
 const hasA = blockHasData("A");
 const weightVal = $("#weightDay")?.value?.trim();
 const waistValRaw = $("#input-waist-cm")?.value?.trim();
-const notes = ($("#notesDay").value || "").trim();
+const notes = ($("#notesDay")?.value || "").trim();
 const flagsComment = ($("#flagsComment")?.value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
   valsartanMissed || forxigaMissed || nsarTaken ||
@@ -3198,7 +3196,7 @@ const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : n
 const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
 
 const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
-const comment = getBpComment(which);
+const comment = (commentEl?.value || '').trim();
 
 const hasAny = (sys != null) || (dia != null) || (pulse != null);
 const hasComment = comment.length > 0;
@@ -3259,7 +3257,7 @@ return {
 date, time, dateTime: iso, ts,
 context: contextLabel, 
 sys: null, dia: null, pulse: null, weight: null, map: null,
-notes: ($("#notesDay").value || "").trim(),
+notes: ($("#notesDay")?.value || "").trim(),
 training: trainingActive,
 low_intake: lowIntakeActive,
 sick: sickActive,
@@ -3316,7 +3314,7 @@ const time = "12:00";
 
 const entry = baseEntry(date, time, "Tag");
 
-const notesRaw = ($("#notesDay").value || "").trim();
+const notesRaw = ($("#notesDay")?.value || "").trim();
 if (includeBody){
   entry.notes = notesRaw;
   const w = $("#weightDay")?.value?.trim();
@@ -3849,14 +3847,15 @@ if (!savedUrl || !savedKey) {
 
 // Sanfte Warnung
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
-function getBpComment(which){
-  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-  return (el?.value || "").trim();
-}
 function requiresBpComment(which){
   const sys = Number($(`#sys${which}`).value);
   const dia = Number($(`#dia${which}`).value);
-  return ((sys > 130) || (dia > 90)) && !getBpComment(which);
+  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (el?.value || "").trim();
+  return ((sys > 130) || (dia > 90)) && !comment;
+}`).value);
+  const dia = Number($(`#dia${which}`).value);
+  const comment = (el?.value || '').trim(); return ((sys > 130) || (dia > 90)) && !comment;
 }
 function updateBpCommentWarnings(){
   ['M','A'].forEach(which => {
@@ -4156,6 +4155,11 @@ main();
 
 </body>
 </html>
+
+
+
+
+
 
 
 
