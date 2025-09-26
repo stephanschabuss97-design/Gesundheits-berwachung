@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.4)</title>
+<title>Gesundheits-Logger (V1.4.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -546,7 +546,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -636,6 +636,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
         <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
       </div>
+      <div class="row" style="margin-top:6px">
+        <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
+      </div>
     </div>
 
     <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
@@ -644,6 +647,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
         <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
         <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
       </div>
     </div>
 
@@ -1335,6 +1341,10 @@ async function syncCaptureFlagTogglesForCurrentDate(){
     setValsartanMiss(!!f.valsartan_missed);
     setForxigaMiss(!!f.forxiga_missed);
     setNsar(!!f.nsar_taken);
+    const commentM = document.getElementById("bpCommentM");
+    if (commentM) commentM.value = "";
+    const commentA = document.getElementById("bpCommentA");
+    if (commentA) commentA.value = "";
     const flagsCommentEl = document.getElementById("flagsComment");
     if (flagsCommentEl) flagsCommentEl.value = "";
   }catch(_){ /* non-blocking */ }
@@ -3066,42 +3076,56 @@ const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : n
 const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
 const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
 
-// Nur vitale Werte; Gewicht NICHT mehr in M/A
-const weight = null;
-// Validierung gegen DB-Trigger: bp erfordert sys UND dia
+const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+const comment = (commentEl?.value || '').trim();
+
 const hasAny = (sys != null) || (dia != null) || (pulse != null);
-if (!force && !hasAny) return false;
-if ((sys != null && dia == null) || (dia != null && sys == null)){
-  uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
-  return false;
+const hasComment = comment.length > 0;
+
+if (!force && !hasAny && !hasComment) return false;
+
+if (hasAny){
+  if ((sys != null && dia == null) || (dia != null && sys == null)){
+    uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
+    return false;
+  }
+  if (pulse != null && (sys == null || dia == null)){
+    uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
+    return false;
+  }
+
+  const currentISO = new Date(date + "T" + time).toISOString();
+  const ts = new Date(date + "T" + time).getTime();
+
+  const entry = {
+    date, time, dateTime: currentISO, ts,
+    context: contextLabel,
+    sys, dia, pulse,
+    weight: null,
+    map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+    notes: '',
+    training: false,
+    low_intake: false,
+    sick: false,
+    valsartan_missed: false,
+    forxiga_missed: false,
+    nsar_taken: false,
+    salt_high: false,
+    protein_high90: false
+  };
+
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
 }
-if (pulse != null && (sys == null || dia == null)){
-  uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
-  return false;
+
+if (hasComment){
+  try {
+    await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
+    if (commentEl) commentEl.value = '';
+  } catch(_) { /* non blocking */ }
 }
 
-const currentISO = new Date(date + "T" + time).toISOString();
-const ts = new Date(date + "T" + time).getTime();
-
-const entry = {
-date, time, dateTime: currentISO, ts,
-context: contextLabel, 
-sys, dia, pulse, weight,
-map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-notes: "",
-training: false,
-low_intake: false,
-sick: false,
-valsartan_missed: false,
-forxiga_missed: false,
-nsar_taken: false,
-salt_high: false,
-protein_high90: false
-};
-
-const localId = await addEntry(entry);
-await syncWebhook(entry, localId);
-return true;
+return hasAny || hasComment;
 }
 
 function baseEntry(date, time, contextLabel){
@@ -3134,6 +3158,26 @@ function allocateNoteTimestamp(date){
   return { iso, ts: base.getTime(), time: iso.slice(11,16) };
 }
 
+async function appendNote(date, prefix, text){
+  const trimmed = (text || "").trim();
+  if (!trimmed) return;
+  const stamp = allocateNoteTimestamp(date);
+  const entry = baseEntry(date, stamp.time, "Tag");
+  entry.dateTime = stamp.iso;
+  entry.ts = stamp.ts;
+  entry.notes = prefix + trimmed;
+  entry.training = false;
+  entry.low_intake = false;
+  entry.sick = false;
+  entry.valsartan_missed = false;
+  entry.forxiga_missed = false;
+  entry.nsar_taken = false;
+  entry.salt_high = false;
+  entry.protein_high90 = false;
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+}
+
 async function saveFlagsCommentNote(date, text){
   const trimmed = (text || '').trim();
   if (!trimmed) return false;
@@ -3161,6 +3205,15 @@ async function saveFlagsCommentNote(date, text){
   };
   const localId = await addEntry(entry);
   await syncWebhook(entry, localId);
+
+  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (commentEl?.value || "").trim();
+  if (comment) {
+    try {
+      await appendNote(date, which === "M" ? "[Morgens] " : "[Abends] ", comment);
+      if (commentEl) commentEl.value = "";
+    } catch(_) { /* non blocking */ }
+  }
   return true;
 }
 
@@ -3864,6 +3917,14 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
