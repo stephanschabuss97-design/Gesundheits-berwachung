@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.7.1)</title>
+<title>Gesundheits-Logger (V1.4.7)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -124,7 +124,6 @@ details.accordion .accordion-body{padding:0 18px 16px;}
 .bp-pane.active{display:block;}
 .panel-actions{display:flex;gap:8px;justify-content:flex-start;margin:12px 0 0;}
 .panel-actions .btn{min-width:180px;}
-
 .card-nested{
   background:#11131a;
   border:1px solid #232735;
@@ -586,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.7.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.7</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -670,7 +669,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
 
-        <details class="accordion" open>
+    <details class="accordion" open>
       <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
@@ -712,8 +711,8 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
       </div>
     </details>
 
-        <details class="accordion" open>
-      <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+    <details class="accordion" open>
+      <summary><span>&#x2696;&#xFE0F; Koerper & Kommentar</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
           <h3 class="blockTitle">Koerper</h3>
@@ -727,6 +726,10 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
               <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
             </div>
           </div>
+        </div>
+        <div class="card-nested">
+          <h3 class="blockTitle">Kommentar</h3>
+          <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
         </div>
         <div class="panel-actions">
           <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
@@ -3032,6 +3035,18 @@ function flashSaveOk(){
   saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '&#x1F4BE; Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
 }
 
+function flashButtonOk(btn, successHtml){
+  if (!btn) return;
+  const base = btn.dataset.label || btn.innerHTML;
+  btn.dataset.label = base;
+  btn.disabled = true;
+  btn.innerHTML = successHtml;
+  setTimeout(()=>{
+    btn.innerHTML = btn.dataset.label;
+    btn.disabled = false;
+  }, 1200);
+}
+
 /* ===== Tabs / Segments ===== */
 async function setTab(name){
   if (name !== "doctor" && document.body.classList.contains('app-locked')){
@@ -3128,15 +3143,17 @@ const __t0 = performance.now();
 if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
 
 // 1) Erkennen, was heute eingegeben wurde
-const hasM = blockHasData("M"); 
-const hasA = blockHasData("A"); 
+const hasM = blockHasData("M");
+const hasA = blockHasData("A");
 const weightVal = $("#weightDay")?.value?.trim();
 const waistValRaw = $("#input-waist-cm")?.value?.trim();
+const notes = ($("#notesDay").value || "").trim();
 const flagsComment = ($("#flagsComment")?.value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
   valsartanMissed || forxigaMissed || nsarTaken ||
   saltHigh || proteinHigh);
-const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || flagsComment);
+const hasBody = !!(weightVal || waistValRaw || notes);
+const hasDaySummary = !!(hasBody || hasAnyFlag || flagsComment);
 
 updateBpCommentWarnings();
 const missingMorningComment = requiresBpComment('M');
@@ -3152,7 +3169,14 @@ if (missingMorningComment || missingEveningComment) {
 let saved = false;
 if (hasM) saved = (await saveBlock("Morgen","M", /*includeWeight=*/false, /*force=*/false)) || saved;
 if (hasA) saved = (await saveBlock("Abend","A", /*includeWeight=*/false, /*force=*/false)) || saved;
-if (hasDaySummary) saved = (await saveDaySummary()) || saved;
+if (hasDaySummary) {
+  const savedSummary = await saveDaySummary({
+    includeBody: hasBody,
+    includeFlags: hasAnyFlag,
+    includeFlagsComment: !!flagsComment
+  });
+  saved = savedSummary || saved;
+}
 
 if (!saved) { alert("Keine Daten eingegeben - nichts zu speichern."); return; }
 
@@ -3165,7 +3189,6 @@ updateBpCommentWarnings();
 diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
 flashSaveOk();
 }
-
 async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
 const time = which === 'M' ? '07:00' : '22:00';
@@ -3220,22 +3243,13 @@ if (hasComment){
   try {
     await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
     if (commentEl) commentEl.value = '';
-  } catch(_) { /* non blocking */ }
+    updateBpCommentWarnings();
+  } catch(err) {
+    diag.add?.('BP-Kommentar Fehler: ' + (err?.message || err));
+  }
 }
 
 return hasAny || hasComment;
-}
-
-function flashButtonOk(btn, successHtml){
-  if (!btn) return;
-  const base = btn.dataset.label || btn.innerHTML;
-  btn.dataset.label = base;
-  btn.disabled = true;
-  btn.innerHTML = successHtml;
-  setTimeout(()=>{
-    btn.innerHTML = btn.dataset.label;
-    btn.disabled = false;
-  }, 1200);
 }
 
 function baseEntry(date, time, contextLabel){
@@ -3245,7 +3259,7 @@ return {
 date, time, dateTime: iso, ts,
 context: contextLabel, 
 sys: null, dia: null, pulse: null, weight: null, map: null,
-notes: '',
+notes: ($("#notesDay").value || "").trim(),
 training: trainingActive,
 low_intake: lowIntakeActive,
 sick: sickActive,
@@ -3296,31 +3310,54 @@ async function saveFlagsCommentNote(date, text){
 }
 
 async function saveDaySummary(options = {}){
-const { includeFlagsComment = true } = options;
+const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
 const date = $("#date")?.value || todayStr();
 const time = "12:00";
 
 const entry = baseEntry(date, time, "Tag");
 
-// Gewicht (kg)
-const w = $("#weightDay")?.value?.trim();
-entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+const notesRaw = ($("#notesDay").value || "").trim();
+if (includeBody){
+  entry.notes = notesRaw;
+  const w = $("#weightDay")?.value?.trim();
+  entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+  const waistRaw = $("#input-waist-cm")?.value?.trim();
+  entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
+} else {
+  entry.notes = '';
+  entry.weight = null;
+  entry.waist_cm = null;
+}
 
-// Bauchumfang (cm)
-const waistRaw = $("#input-waist-cm")?.value?.trim();
-entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
+if (includeFlags){
+  entry.training = trainingActive;
+  entry.low_intake = lowIntakeActive;
+  entry.sick = sickActive;
+  entry.valsartan_missed = valsartanMissed;
+  entry.forxiga_missed = forxigaMissed;
+  entry.nsar_taken = nsarTaken;
+  entry.salt_high = saltHigh;
+  entry.protein_high90 = proteinHigh;
+} else {
+  entry.training = null;
+  entry.low_intake = null;
+  entry.sick = null;
+  entry.valsartan_missed = null;
+  entry.forxiga_missed = null;
+  entry.nsar_taken = null;
+  entry.salt_high = null;
+  entry.protein_high90 = null;
+}
 
 const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
 let saved = false;
 
-const hasContent =
-(entry.weight != null) ||
-(entry.waist_cm != null) ||
-entry.training || entry.low_intake || entry.sick ||
-entry.valsartan_missed || entry.forxiga_missed ||
-entry.nsar_taken || entry.salt_high || entry.protein_high90;
+const hasBodyContent = includeBody && ((entry.weight != null) || (entry.waist_cm != null) || !!entry.notes);
+const hasFlagContent = includeFlags && !!(trainingActive || lowIntakeActive || sickActive ||
+  valsartanMissed || forxigaMissed || nsarTaken ||
+  saltHigh || proteinHigh);
 
-if (hasContent){
+if (hasBodyContent || hasFlagContent){
   const localId = await addEntry(entry);
   await syncWebhook(entry, localId);
   saved = true;
@@ -3338,7 +3375,6 @@ if (includeFlagsComment && flagsComment){
 
 return saved;
 }
-
 
 async function withRetry(fn, {tries=3, base=300}={}) {
 let lastErr;
@@ -3823,7 +3859,7 @@ function requiresBpComment(which){
   return ((sys > 130) || (dia > 90)) && !getBpComment(which);
 }
 function updateBpCommentWarnings(){
-  ["M","A"].forEach(which=>{
+  ['M','A'].forEach(which => {
     const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
     if (!el) return;
     const needs = requiresBpComment(which);
@@ -3832,10 +3868,9 @@ function updateBpCommentWarnings(){
     else el.removeAttribute("aria-invalid");
   });
 }
-// bei jeder Eingabe der relevanten Felder neu bewerten
-["#sysM","#diaM","#bpCommentM","#sysA","#diaA","#bpCommentA"].forEach(sel=>{
+['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
   const el = $(sel); if(!el) return;
-  el.addEventListener("input", updateBpCommentWarnings);
+  el.addEventListener('input', updateBpCommentWarnings);
 });
 updateBpCommentWarnings();
 
@@ -3884,7 +3919,7 @@ if (saveBpPanelBtn){
         if (chartPanel.open) await chartPanel.draw();
       }
     }catch(err){
-      console.error(err);
+      diag.add?.('Panel BP Fehler: ' + (err?.message || err));
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
     }finally{
       withBusy(btn, false);
@@ -3904,7 +3939,7 @@ if (saveBodyPanelBtn){
     withBusy(btn, true);
     let savedOk = false;
     try{
-      const saved = await saveDaySummary({ includeFlagsComment: false });
+      const saved = await saveDaySummary({ includeBody: true, includeFlags: false, includeFlagsComment: false });
       if (!saved){
         uiError('Keine Koerperdaten eingegeben.');
       } else {
@@ -3913,7 +3948,7 @@ if (saveBodyPanelBtn){
         if (chartPanel.open) await chartPanel.draw();
       }
     }catch(err){
-      console.error(err);
+      diag.add?.('Panel Koerper Fehler: ' + (err?.message || err));
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
     }finally{
       withBusy(btn, false);
@@ -3932,7 +3967,7 @@ if (saveFlagsPanelBtn){
     withBusy(btn, true);
     let savedOk = false;
     try{
-      const saved = await saveDaySummary({ includeFlagsComment: true });
+      const saved = await saveDaySummary({ includeBody: false, includeFlags: true, includeFlagsComment: true });
       if (!saved){
         uiError('Keine Flag-Daten eingegeben.');
       } else {
@@ -3941,7 +3976,7 @@ if (saveFlagsPanelBtn){
         if (chartPanel.open) await chartPanel.draw();
       }
     }catch(err){
-      console.error(err);
+      diag.add?.('Panel Flags Fehler: ' + (err?.message || err));
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
     }finally{
       withBusy(btn, false);
