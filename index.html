@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.7)</title>
+<title>Gesundheits-Logger (V1.4.8)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.7</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.8</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -758,9 +758,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
       </div>
     </details>
-    <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-      <button class="btn primary" id="saveAllBtn" type="button">&#x1F4BE; Speichern</button>
-      <div class="spacer"></div>
     </div>
   </section>
 </section>
@@ -1383,15 +1380,11 @@ async function loadFlagsFromView({ user_id, from, to }) {
 }
 
 // Sync capture toggles with existing day flags from the cloud for the selected date
-async function syncCaptureFlagTogglesForCurrentDate(){
+async function syncCaptureToggles(){
   try{
-    if (!(await isLoggedIn())) return;
-    const dateEl = document.getElementById('date');
-    const dayIso = dateEl?.value;
-    if (!dayIso) return;
-    const user_id = await getUserId();
-    if (!user_id) return;
-    const rows = await loadFlagsFromView({ user_id, from: dayIso, to: dayIso });
+    const uid = await getUserId();
+    const dayIso = document.getElementById('date')?.value || todayStr();
+    const rows = await loadFlagsFromView({ user_id: uid, from: dayIso, to: dayIso });
     const r = Array.isArray(rows) && rows.length ? rows[0] : null;
     // Apply or clear
     const f = r || { training:false, sick:false, low_intake:false, salt_high:false, protein_high90:false, valsartan_missed:false, forxiga_missed:false, nsar_taken:false };
@@ -3023,14 +3016,7 @@ const mkAlertDots = (seriesItem) => {
 };
 
 /* --- Button-Flash (nur Platzhalter, wie gehabt) --- */
-let saveFlashTimer = null;
-function flashSaveOk(){
-  const btn = document.getElementById('saveAllBtn');
-  if(!btn) return;
-  if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '&#x1F4BE; Events gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '&#x1F4BE; Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
-}
+
 
 function flashButtonOk(btn, successHtml){
   if (!btn) return;
@@ -3074,7 +3060,7 @@ async function setTab(name){
     b.classList.toggle("primary", b.dataset.tab === name)
   );
   if (name === "doctor") { renderDoctor(); }
-  if (name === "capture") { try { await syncCaptureFlagTogglesForCurrentDate(); } catch(_){} }
+  if (name === "capture") { try { resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
   if (name === "lifestyle") { try { await cleanupOldIntake(); await renderLifestyle(); } catch(_){} }
 }
 
@@ -3117,9 +3103,76 @@ el.innerHTML = on ? activeText : baseText;
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "&#x1F36C; > 10 g Zucker (aktiv)", "&#x1F36C; > 10 g Zucker"); }
-
-function setSick(on){
+/* === Panel Reset Helpers (v1.4.8) === */
+function resetBpPanel(which, opts = {}) {
+  const { focus = true } = opts;
+  const ctx = which === 'A' ? 'A' : 'M';
+  ['sys','dia','pulse','bpComment'].forEach(id => {
+    const el = document.getElementById(id + ctx);
+    if (el) el.value = '';
+  });
+  try { updateBpCommentWarnings?.(); } catch(_){}
+  if (focus) {
+    const target = document.getElementById('sys' + ctx);
+    if (target) target.focus();
+  }
+}
+function resetBodyPanel(opts = {}) {
+  const { focus = true } = opts;
+  const weightEl = document.getElementById('weightDay');
+  const waistEl = document.getElementById('input-waist-cm');
+  if (weightEl) weightEl.value = '';
+  if (waistEl) waistEl.value = '';
+  if (focus && weightEl) weightEl.focus();
+}
+function resetFlagsPanel(opts = {}) {
+  const { focus = true } = opts;
+  try {
+    setTraining(false);
+    setLowIntake(false);
+    setSick(false);
+    setValsartanMiss(false);
+    setForxigaMiss(false);
+    setNsar(false);
+    setSaltHigh(false);
+    if (typeof setSugarHigh === 'function') setSugarHigh(false);
+    if (typeof setProteinHigh === 'function') setProteinHigh(false);
+  } catch(_){ }
+  const commentEl = document.getElementById('flagsComment');
+  if (commentEl) commentEl.value = '';
+  if (focus && commentEl) commentEl.focus();
+}
+function resetCapturePanels(opts = {}) {
+  const { focus = true } = opts;
+  resetBpPanel('M', { focus: false });
+  resetBpPanel('A', { focus: false });
+  resetBodyPanel({ focus: false });
+  resetFlagsPanel({ focus: false });
+  const ctxSel = document.getElementById('bpContextSel');
+  if (ctxSel) ctxSel.value = 'M';
+  document.querySelectorAll('.bp-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.dataset.context === 'M');
+  });
+  try { updateBpCommentWarnings?.(); } catch(_){ }
+  if (focus) {
+    const first = document.getElementById('sysM');
+    if (first) first.focus();
+  }
+}
+function addCapturePanelKeys(){
+  const bind = (selectors, onEnter, onEsc) => {
+    document.querySelectorAll(selectors).forEach(el => {
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); }
+        if (e.key === 'Escape') { e.preventDefault(); onEsc?.(); }
+      });
+    });
+  };
+  bind('#sysM, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
+  bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
+  bind('#weightDay, #input-waist-cm', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
+  bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
+}function setSick(on){
 sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
 if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
 else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
@@ -3135,57 +3188,6 @@ function blockHasData(which){
   const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
   const comment = (commentEl?.value || "").trim();
   return !!(sys || dia || pulse || comment);
-}
-async function saveAll(){
-const __t0 = performance.now();
-if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
-
-// 1) Erkennen, was heute eingegeben wurde
-const hasM = blockHasData("M");
-const hasA = blockHasData("A");
-const weightVal = $("#weightDay")?.value?.trim();
-const waistValRaw = $("#input-waist-cm")?.value?.trim();
-const notes = ($("#notesDay")?.value || "").trim();
-const flagsComment = ($("#flagsComment")?.value || "").trim();
-const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
-  valsartanMissed || forxigaMissed || nsarTaken ||
-  saltHigh || proteinHigh);
-const hasBody = !!(weightVal || waistValRaw || notes);
-const hasDaySummary = !!(hasBody || hasAnyFlag || flagsComment);
-
-updateBpCommentWarnings();
-const missingMorningComment = requiresBpComment('M');
-const missingEveningComment = requiresBpComment('A');
-if (missingMorningComment || missingEveningComment) {
-  alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
-  const focusTarget = missingMorningComment ? document.getElementById('bpCommentM') : document.getElementById('bpCommentA');
-  if (focusTarget) focusTarget.focus();
-  return;
-}
-
-// 2) Speichern in drei klaren Pfaden
-let saved = false;
-if (hasM) saved = (await saveBlock("Morgen","M", /*includeWeight=*/false, /*force=*/false)) || saved;
-if (hasA) saved = (await saveBlock("Abend","A", /*includeWeight=*/false, /*force=*/false)) || saved;
-if (hasDaySummary) {
-  const savedSummary = await saveDaySummary({
-    includeBody: hasBody,
-    includeFlags: hasAnyFlag,
-    includeFlagsComment: !!flagsComment
-  });
-  saved = savedSummary || saved;
-}
-
-if (!saved) { alert("Keine Daten eingegeben - nichts zu speichern."); return; }
-
-// 3) UI aktualisieren
-await renderDoctor();
-if(chartPanel.open) await chartPanel.draw();
-updateBpCommentWarnings();
-
-{ const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
-diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
-flashSaveOk();
 }
 async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
@@ -3819,7 +3821,7 @@ $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10
 $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
-try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}
+try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
@@ -3922,7 +3924,7 @@ if (saveBpPanelBtn){
     }
     if (savedOk){
       updateBpCommentWarnings();
-      flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
+      resetBpPanel(which); flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
     }
   });
 }
@@ -3950,7 +3952,7 @@ if (saveBodyPanelBtn){
       withBusy(btn, false);
     }
     if (savedOk){
-      flashButtonOk(btn, '&#x2705; Koerper gespeichert');
+      resetBodyPanel(); flashButtonOk(btn, '&#x2705; Koerper gespeichert');
     }
   });
 }
@@ -3978,7 +3980,7 @@ if (saveFlagsPanelBtn){
       withBusy(btn, false);
     }
     if (savedOk){
-      flashButtonOk(btn, '&#x2705; Flags gespeichert');
+      resetFlagsPanel(); flashButtonOk(btn, '&#x2705; Flags gespeichert');
     }
   });
 }
@@ -3998,25 +4000,28 @@ bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
 bindToggle("#proteinHighToggle", setProteinHigh, ()=>proteinHigh);
 
-document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
-  const btn = e.currentTarget;
-  withBusy(btn, true);
-  try {
-    await saveAll();
-  } catch(_) {
-    // Fehler werden in saveAll/syncWebhook via uiError gezeigt
-  } finally {
-    withBusy(btn, false);
-  }
-});
 // Sync toggles when the date changes in capture view
-const __dateEl = document.getElementById('date');
-if (__dateEl) __dateEl.addEventListener('change', async ()=>{ try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}});
-$("#applyRange").addEventListener("click", async ()=>{
-  await renderDoctor();
-setDocBadges({ visible: true });
-  if(chartPanel.open) chartPanel.draw();
-});
+const dateEl = document.getElementById('date');
+if (dateEl) {
+  dateEl.addEventListener('change', async () => {
+    try {
+      // was du beim Datum ändern haben willst:
+      await syncCaptureToggles();
+      resetCapturePanels();
+      updateBpCommentWarnings?.();
+    } catch(_) {}
+  });
+}
+
+// Apply Range → Arztansicht neu rendern
+const applyBtn = $("#applyRange");
+if (applyBtn) {
+  applyBtn.addEventListener("click", async () => {
+    await renderDoctor();
+    setDocBadges({ visible: true });
+    if (chartPanel.open) await chartPanel.draw?.();
+  });
+}
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
   if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
@@ -4041,7 +4046,6 @@ document.addEventListener('keydown', (e)=>{
 
 document.addEventListener('keydown', (e)=>{
 const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-if(isSave){ e.preventDefault(); saveAll(); }
 });
 
 document.addEventListener('visibilitychange', ()=>{
@@ -4152,38 +4156,3 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
