@@ -3853,9 +3853,6 @@ function requiresBpComment(which){
   const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
   const comment = (el?.value || "").trim();
   return ((sys > 130) || (dia > 90)) && !comment;
-}`).value);
-  const dia = Number($(`#dia${which}`).value);
-  const comment = (el?.value || '').trim(); return ((sys > 130) || (dia > 90)) && !comment;
 }
 function updateBpCommentWarnings(){
   ['M','A'].forEach(which => {
@@ -4087,7 +4084,7 @@ document.body.classList.remove('auth-locked');
 window.addEventListener('online', async ()=>{
 const resPush = await pushPendingToRemote();
 if(resPush.pushed || resPush.failed){
-diag.add(`Online-Push: OK=${resPush.pushed}, FAIL=${resPush.failed}`);
+diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
 await reconcileFromRemote();
 }
 });
