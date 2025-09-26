@@ -31,7 +31,7 @@
     }
   }, true);
 window.addEventListener("keydown", e=>{
-  if(e.key === "F9"){   // Hotkey prüfen
+  if(e.key === "F9"){   // Hotkey pruefen
     var el = document.getElementById("touchLog");
     if(!el){
       // Falls Panel fehlt → neu erstellen
@@ -48,10 +48,10 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.2)</title>
+<title>Gesundheits-Logger (V1.5.0)</title>
 <style>
 
-/* ANKER: chart-controls styles (move to assets/app.css bei nächster Release) */
+/* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
   /* Dropdown optisch kompakter */
   #chart .controls .compact { max-width: 240px; }
 
@@ -81,6 +81,13 @@ main{padding:12px;position:relative;z-index:1}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 @media (max-width:640px){ .grid{grid-template-columns:1fr} }
+.accordion .pane{border:1px solid #232735;border-radius:16px;margin:12px 0;background:#11131a;overflow:hidden}
+.accordion .pane summary{cursor:pointer;padding:14px 16px;font-weight:600;display:flex;align-items:center;justify-content:space-between;list-style:none}
+.accordion .pane summary::-webkit-details-marker{display:none}
+.accordion .pane[open] summary{border-bottom:1px solid #232735}
+.accordion .pane-body{padding:16px}
+.accordion .action-row{justify-content:flex-end;margin-top:12px}
+.bp-grid,.body-grid{gap:12px}
 label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
 input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
 textarea{min-height:64px;resize:vertical}
@@ -160,8 +167,8 @@ break-inside:avoid;
   padding: 6px 12px;         /* etwas mehr Platz */
   border: 1.5px solid #2b2f3a;
   border-radius: 12px;       /* runder = moderner */
-  font-size: 13px;           /* +1pt größer */
-  font-weight: 600;          /* kräftiger */
+  font-size: 13px;           /* +1pt groesser */
+  font-weight: 600;          /* kraeftiger */
   margin-left: 10px;
 }
 .badge.good{border-color:var(--ok); color:var(--ok)}
@@ -231,7 +238,7 @@ gap:4px;
 .doctor-view .measure-head{ font-size:12px; opacity:.8; }
 
 
-/* Head-Zellen als Flex: rechtsbündig wie die Zahlen */
+/* Head-Zellen als Flex: rechtsbuendig wie die Zahlen */
 .doctor-view .measure-head > div{ display:flex; align-items:center; }
 .doctor-view .measure-head > div:first-child{ justify-content:flex-start; }
 .doctor-view .measure-head > div:not(:first-child){ justify-content:flex-end; }
@@ -251,7 +258,7 @@ min-width: 4ch; /* Basisschutz gegen Abschneiden */
 white-space: nowrap;
 }
   
-  /* Grenzwert-Highlight für Arzt-Ansicht */
+  /* Grenzwert-Highlight fuer Arzt-Ansicht */
 .doctor-view .num.alert{ color: var(--danger); }
 
 .doctor-view .measure-grid .num,
@@ -260,7 +267,7 @@ text-align:right; justify-content:flex-end;
 }
 
 /* Spalte C – Spezialinfos */
-/* Gewicht: Überschrift + Zahl darunter */
+/* Gewicht: Ueberschrift + Zahl darunter */
 .doctor-view .weight-line,
 .doctor-view .waist-line{
   display:flex;
@@ -353,14 +360,14 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 /* Mobile-Optimierung */
 @media (max-width: 599px){
 
-  /* Kopf & Werte: schmälere Label-Spalte + garantierte Zahlbreite */
+  /* Kopf & Werte: schmaelere Label-Spalte + garantierte Zahlbreite */
   .doctor-view .measure-head,
   .doctor-view .measure-grid{
     grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
   }
   .doctor-view .measure-head{ font-size: 11px; }
 
-  /* Zahlen dürfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
+  /* Zahlen duerfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
   .doctor-view .num{
     min-width: 4.5ch; /* ~ „96.7“ passt sicher */
     white-space: nowrap;
@@ -371,18 +378,18 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   min-width: 5ch;
 }
 
-  /* Spalten: Gewicht | Flags nebeneinander, Kommentar darunter über volle Breite */
+  /* Spalten: Gewicht | Flags nebeneinander, Kommentar darunter ueber volle Breite */
   .doctor-view .col-special{
     grid-template-columns: minmax(110px, max-content) 1fr; /* Flags bekommen flex Breite */
     column-gap: 12px;
   }
   .doctor-view .col-special > .notes{
-    grid-column: 1 / -1; /* Kommentar über beide Spalten */
+    grid-column: 1 / -1; /* Kommentar ueber beide Spalten */
   }
 
   /* Kommentar: mobil 4 Zeilen anzeigen */
   .doctor-view .notes{
-    -webkit-line-clamp: 4; /* bei Bedarf auf 5 erhöhen */
+    -webkit-line-clamp: 4; /* bei Bedarf auf 5 erhoehen */
   }
 
   /* Flags: kompakt in 2 Spalten, keine abgeschnittenen Labels */
@@ -413,24 +420,24 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
 /* Panel (Charts) — Fullscreen */
 .panel.chart{
-  inset: 0;                 /* volle Fläche (top/right/bottom/left = 0) */
+  inset: 0;                 /* volle Flaeche (top/right/bottom/left = 0) */
   width: 100vw;
-  height: 100dvh;           /* korrekt auf Mobile (sichtbare Höhe) */
+  height: 100dvh;           /* korrekt auf Mobile (sichtbare Hoehe) */
   max-width: 100vw;
   max-height: 100dvh;
   border-radius: 0;         /* keine abgerundeten Ecken im Vollbild */
 }
 
-/* Flex-Layout: Header fix oben, Inhalt füllt Rest */
+/* Flex-Layout: Header fix oben, Inhalt fuellt Rest */
 .panel.chart{
   /* Sichtbarkeit steuert JS; NICHT auf block setzen */
 }
 .panel.chart header{ 
-  /* bleibt oben, keine Änderung nötig – aber fixere Höhe ist hilfreich */
+  /* bleibt oben, keine Aenderung noetig – aber fixere Hoehe ist hilfreich */
   min-height: 44px;
 }
 .panel.chart .content{
-  /* Inhalt füllt den verfügbaren Raum */
+  /* Inhalt fuellt den verfuegbaren Raum */
   height: calc(100dvh - 44px - 2px); /* 44px Header + 1px border oben/unten */
   display: flex;
   flex-direction: column;
@@ -461,7 +468,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 #chart .controls > * {flex:1}
 #chart .controls .half{flex:0 0 calc(50% - 4px)}
   
-  /* SVG füllt verbleibende Höhe vollständig */
+  /* SVG fuellt verbleibende Hoehe vollstaendig */
 #chart svg{
   flex: 1 1 auto;
   width: 100%;
@@ -546,7 +553,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.2</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -566,11 +573,11 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <button class="btn ghost" id="helpClose" type="button">×</button>
 </header>
 <div class="content">
-<strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzündungsmedikament der Klasse NSAR genommen hast.
+<strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
 <ul>
 <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-<li><em>Kombo-Achtung:</em> Viele „Erkältungs-/Kopfweh“-Mittel enthalten NSAR.</li>
-<li><em>Bei Nierenkrankheit:</em> NSAR möglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+<li><em>Kombo-Achtung:</em> Viele „Erkaeltungs-/Kopfweh“-Mittel enthalten NSAR.</li>
+<li><em>Bei Nierenkrankheit:</em> NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
 </ul>
 </div>
 </div>
@@ -592,9 +599,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 </header>
 <div class="content">
 <div class="controls">
-<select id="metricSel" class="half compact" aria-label="Messgröße auswählen">
+<select id="metricSel" class="half compact" aria-label="Messgroesse auswaehlen">
     <option value="bp">Blutdruck (Sys/Dia)</option>
-    <option value="weight">Körper</option>
+    <option value="weight">Koerper</option>
 </select>
 
   <!-- ANKER: chart-averages (Daily) -->
@@ -629,66 +636,81 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
       </div>
     </div>
 
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Morgens</h3>
-      <div class="grid">
-        <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
-        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-        <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Abends</h3>
-      <div class="grid">
-        <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-        <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-        <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      
-<h3 class="blockTitle">Körper</h3>
-<div class="grid" style="grid-template-columns:1fr 1fr">
-  <div>
-    <label>Gewicht (kg)</label>
-    <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-  </div>
-  <div>
-    <label>Bauchumfang (cm)</label>
-    <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
-  </div>
-</div>
-</div>
-
-    <div class="card" style="margin:8px 0;background:#11131a;border-color:#232735">
-      <h3 class="blockTitle">Kommentar</h3>
-      <div class="row">
-        <div style="flex:1">
-          <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
+    <div class="accordion" id="captureAccordion">
+      <details class="pane" id="pane-bp" open>
+        <summary>Blutdruck</summary>
+        <div class="pane-body">
+          <div class="row">
+            <div style="flex:1">
+              <label for="bpContext">Messung</label>
+              <select id="bpContext">
+                <option value="Morgen">Morgens</option>
+                <option value="Abend">Abends</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid bp-grid">
+            <div><label>Systolisch (mmHg)</label><input type="number" id="bpSys" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Diastolisch (mmHg)</label><input type="number" id="bpDia" inputmode="numeric" placeholder="z. B. 82"></div>
+            <div><label>Puls (bpm)</label><input type="number" id="bpPulse" inputmode="numeric" placeholder="z. B. 66"></div>
+          </div>
+          <div class="row">
+            <div style="flex:1">
+              <label>Kommentar (optional)</label>
+              <textarea id="bpComment" placeholder="Kurze Notiz zur Messung"></textarea>
+            </div>
+          </div>
+          <div class="row action-row">
+            <button class="btn primary" id="saveBpBtn" type="button">Speichern</button>
+          </div>
         </div>
-      </div>
-    </div>
+      </details>
 
-    <div class="row" style="align-items:center; gap:8px; margin-top:4px">
-      <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">🏋️ Training heute</button>
-      <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">🤒 Krank (Forxiga pausiert)</button>
-      <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">💊 Valsartan vergessen</button>
-      <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">💊 Forxiga vergessen</button>
-      <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">🚰 &lt; 2 L getrunken</button>
-      <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">🧂 &gt; 5 g Salz</button>
-      <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">🍬 &gt; 10 g Zucker</button>
-      <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">⚠️ NSAR genommen</button>
-      <div class="spacer"></div>
-    </div>
+      <details class="pane" id="pane-body">
+        <summary>Koerper</summary>
+        <div class="pane-body">
+          <div class="grid body-grid">
+            <div>
+              <label>Gewicht (kg)</label>
+              <input type="number" step="0.1" id="bodyWeight" inputmode="decimal" placeholder="z. B. 84.2">
+            </div>
+            <div>
+              <label>Bauchumfang (cm)</label>
+              <input id="bodyWaist" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+            </div>
+          </div>
+          <div class="row action-row">
+            <button class="btn primary" id="saveBodyBtn" type="button">Speichern</button>
+          </div>
+        </div>
+      </details>
 
-    <div class="row" style="align-items:center; gap:8px; margin-top:12px">
-      <button class="btn primary" id="saveAllBtn" type="button">💾 Speichern</button>
-      <div class="spacer"></div>
+      <details class="pane" id="pane-flags">
+        <summary>Flags & Tagesinfos</summary>
+        <div class="pane-body">
+          <div class="row flags-row" style="align-items:center; gap:8px; flex-wrap:wrap">
+            <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">Training heute</button>
+            <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">Krank (Forxiga pausiert)</button>
+            <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">Valsartan vergessen</button>
+            <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">Forxiga vergessen</button>
+            <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&lt; 2 L getrunken</button>
+            <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&gt; 5 g Salz</button>
+            <button class="btn toggle" id="proteinHighToggle" type="button" aria-pressed="false" title="Protein >= 90 g">Protein >= 90 g</button>
+            <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">NSAR genommen</button>
+          </div>
+          <div class="row">
+            <div style="flex:1">
+              <label>Kommentar (optional)</label>
+              <textarea id="flagsComment" placeholder="Kurze Notiz zu Flags / Besonderheiten"></textarea>
+            </div>
+          </div>
+          <div class="row action-row">
+            <button class="btn primary" id="saveFlagsBtn" type="button">Speichern</button>
+          </div>
+        </div>
+      </details>
     </div>
   </section>
-</section>
 
 <!-- Lifestyle (Heute) -->
 <section class="view" id="lifestyle">
@@ -697,7 +719,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
     <div class="row">
       <div style="flex:1;min-width:180px">
-        <label>Wasser hinzufügen (ml)</label>
+        <label>Wasser hinzufuegen (ml)</label>
         <input type="number" id="ls-water-add" min="0" step="50" inputmode="numeric" placeholder="z. B. 250">
       </div>
       <div style="width:140px;align-self:flex-end">
@@ -711,7 +733,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
     <div class="row" style="margin-top:12px">
       <div style="flex:1;min-width:180px">
-        <label>Salz hinzufügen (g)</label>
+        <label>Salz hinzufuegen (g)</label>
         <input type="text" id="ls-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
       </div>
       <div style="width:140px;align-self:flex-end">
@@ -725,7 +747,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
     <div class="row" style="margin-top:12px">
       <div style="flex:1;min-width:180px">
-        <label>Protein hinzufügen (g)</label>
+        <label>Protein hinzufuegen (g)</label>
         <input type="text" id="ls-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
       </div>
       <div style="width:140px;align-self:flex-end">
@@ -738,7 +760,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
     <div class="small" style="opacity:.75;margin-top:10px">
-      Ziele: Wasser 2000 ml • Salz max. 6 g • Protein Ziel 90 g (grün bei 78–89 g)
+      Ziele: Wasser 2000 ml • Salz max. 6 g • Protein Ziel 90 g (gruen bei 78–89 g)
     </div>
   </section>
   <div class="small" style="margin-top:6px;opacity:.7">Hinweis: nur der heutige Intake wird gespeichert und synchronisiert.</div>
@@ -760,14 +782,14 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
       <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
       <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">⚠️ Tage mit Bad-Flag: <span class="val">0</span></span>
-    </div> <!-- 👈 Toolbar sauber schließen -->
+    </div> <!-- 👈 Toolbar sauber schliessen -->
 
     <div style="overflow:auto" id="doctorDailyWrap">
       <div class="doctor-view" id="doctorView"></div>
     </div>
 
         <div class="small" style="margin-top:6px">
-      Tipp: „Werte anzeigen“ öffnet die passende Grafik zum aktuellen Tab (Daily).
+      Tipp: „Werte anzeigen“ oeffnet die passende Grafik zum aktuellen Tab (Daily).
     </div>
   </section>
 </section>
@@ -839,7 +861,7 @@ const requestUiRefresh = debounce(async (reason = '') => {
   try{
     const doctorActive = document.getElementById('doctor')?.classList?.contains('active');
     if (doctorActive) await renderDoctor();
-    const lifestyleActive = document.getElementById('lifestyle')?.classList?.contains('active');
+  setDocBadges({ visible: true });
     if (lifestyleActive && typeof renderLifestyle === 'function') await renderLifestyle();
     if (chartPanel?.open) await chartPanel.draw();
   }catch(e){ /* still ok */ }
@@ -943,7 +965,7 @@ return !!session;
 
 /** Schaltet optisch auf „gesperrt“ – ohne Controls hart zu deaktivieren */
 function setAuthGuard(logged){
-  // Nur visuelles Dimmen; die Save-Logik prüft isLoggedIn() ohnehin.
+  // Nur visuelles Dimmen; die Save-Logik prueft isLoggedIn() ohnehin.
   document.body.classList.toggle('auth-locked', !logged);
   // Kein auto-boot mehr hier – Start erfolgt in main()/watchAuthState.
 }
@@ -981,7 +1003,7 @@ function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
-// Erzeugt pro Eingabe die nötigen Events (bp/body/day_flags/note)
+// Erzeugt pro Eingabe die noetigen Events (bp/body/day_flags/note)
 function toHealthEvents(entry){
   const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
   const out = [];
@@ -1036,7 +1058,7 @@ function toHealthEvents(entry){
   return out;
 }
 
-// „Legacy“: Measurement Eintrag, der nur Gewicht enthält
+// „Legacy“: Measurement Eintrag, der nur Gewicht enthaelt
 function isWeightOnly(e){
 const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
 return !hasVitals && (e?.weight != null);
@@ -1340,14 +1362,20 @@ async function loadNotesLastPerDay({ user_id, from, to }) {
     table: 'health_events',
     select: 'day,ts,payload',
     filters,
-    order: 'ts.desc', // letzter zuerst
+    order: 'day.asc,ts.asc',
   });
-  const out = [];
-  const seen = new Set();
+  const map = new Map();
   for (const r of rows) {
-    if (seen.has(r.day)) continue;
-    const t = (r?.payload?.text || '').trim();
-    if (t) { out.push({ day: r.day, ts: r.ts, text: t }); seen.add(r.day); }
+    const textVal = (r?.payload?.text || '').trim();
+    if (!textVal) continue;
+    const list = map.get(r.day) || [];
+    list.push({ text: textVal, ts: r.ts ?? 0 });
+    map.set(r.day, list);
+  }
+  const out = [];
+  for (const [day, arr] of map.entries()) {
+    arr.sort((a,b)=> (a.ts || 0) - (b.ts || 0));
+    out.push({ day, ts: arr[arr.length-1]?.ts ?? null, text: arr.map(x=>x.text).join(' | ') });
   }
   return out;
 }
@@ -1402,7 +1430,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     d.flags.salt_gt5   = !!r.salt_high;
     d.flags.protein_ge90 = !!r.protein_high90;
     d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || r.nsar_taken);
-    // Detail-Medikamentenflags (für Tooltip)
+    // Detail-Medikamentenflags (fuer Tooltip)
     d.flags.valsartan_missed = !!r.valsartan_missed;
     d.flags.forxiga_missed   = !!r.forxiga_missed;
     d.flags.nsar_taken       = !!r.nsar_taken;
@@ -1432,7 +1460,7 @@ async function fetchDailyOverview(fromIso, toIso){
   return joinViewsToDaily({ bp, body, flags, notes });
 }
 
-/* Server: alle Events eines Tages löschen (RLS: nur eigene Records) */
+/* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
 async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
@@ -1503,7 +1531,7 @@ function updateLifestyleBars(){
 
   if (sLbl) {
     let status = ' • Zielbereich';
-    if (s > LS_SALT_MAX) status = ' • über Ziel';
+    if (s > LS_SALT_MAX) status = ' • ueber Ziel';
     else if (s >= 5) status = ' • Warnung';
     sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
   }
@@ -1511,23 +1539,23 @@ function updateLifestyleBars(){
   if (pLbl) {
     let status = ' • noch offen';
     if (p >= 78 && p <= 90) status = ' • Zielbereich';
-    else if (p > 90) status = ' • über Ziel';
+    else if (p > 90) status = ' • ueber Ziel';
     pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
   }
 
-  // Wasser: <50% rot, 50-89% gelb, ≥90% grün
+  // Wasser: <50% rot, 50-89% gelb, ≥90% gruen
   let wState = 'bad';
   if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
   else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
   setProgState(wProg, wState);
 
-  // Salz: 0-4.9 g grün, 5-6 gelb, >6 rot
+  // Salz: 0-4.9 g gruen, 5-6 gelb, >6 rot
   let sState = 'ok';
   if (s > LS_SALT_MAX) sState = 'bad';
   else if (s >= 5) sState = 'warn';
   setProgState(sProg, sState);
 
-  // Protein: <78 neutral, 78-90 grün, >90 rot
+  // Protein: <78 neutral, 78-90 gruen, >90 rot
   let pState = 'neutral';
   if (p >= 78 && p <= 90) pState = 'ok';
   else if (p > 90) pState = 'bad';
@@ -1557,7 +1585,7 @@ function bindLifestyle(){
   const addWater = async ()=>{
     const el = document.getElementById('ls-water-add');
     const v = Number(el?.value || 0);
-    if (!(v>0)) { uiError('Bitte gültige Wassermenge eingeben.'); return; }
+    if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
     const dayIso = todayStr();
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
@@ -1573,7 +1601,7 @@ function bindLifestyle(){
   const addSalt = async ()=>{
     const el = document.getElementById('ls-salt-add');
     const v = toNumDE(el?.value);
-    if (!(v>0)) { uiError('Bitte gültige Salzmenge eingeben.'); return; }
+    if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
     const dayIso = todayStr();
     let total = (__lsTotals.salt_g||0) + v;
     if (total > 30) total = 30;
@@ -1589,7 +1617,7 @@ function bindLifestyle(){
   const addProtein = async ()=>{
     const el = document.getElementById('ls-protein-add');
     const v = toNumDE(el?.value);
-    if (!(v>0)) { uiError('Bitte gültige Proteinmenge eingeben.'); return; }
+    if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
     const dayIso = todayStr();
     let total = (__lsTotals.protein_g||0) + v;
     if (total > 300) total = 300;
@@ -1645,12 +1673,12 @@ async function pushPendingToRemote(){
       // 1) Legacy-Entry → 0..N Events
       const events = toHealthEvents(e);
       if (!events.length) { 
-        // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht hängen bleiben
+        // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht haengen bleiben
         await updateEntry(e.id, { remote_id: -1 });
         continue;
       }
 
-      // 2) user_id anhängen (RLS)
+      // 2) user_id anhaengen (RLS)
       const payload = uid ? events.map(ev => ({...ev, user_id: uid})) : events;
 
       // 3) Batch-POST (Array)
@@ -1708,7 +1736,7 @@ if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
 });
 }
 
-// Beim Start Session prüfen
+// Beim Start Session pruefen
 async function requireSession(){
 if(!sbClient){
 setUserUi('');
@@ -1725,7 +1753,7 @@ setDoctorAccess(!!session);
 return !!session;
 }
 
-// Reagiert auch auf spätere Logins (z. B. nach Redirect)
+// Reagiert auch auf spaetere Logins (z. B. nach Redirect)
 function watchAuthState(){
   sbClient.auth.onAuthStateChange(async (_event, session)=>{
     const email = session?.user?.email || '';
@@ -1740,7 +1768,7 @@ function watchAuthState(){
       await setupRealtime();     // 🔹 NEU: Realtime aktivieren nach Login
       await requestUiRefresh();  // initialer Refresh
     } else {
-      teardownRealtime();        // 🔹 NEU: Channels sauber schließen
+      teardownRealtime();        // 🔹 NEU: Channels sauber schliessen
       // UI in „abgemeldet“ lassen – renderDoctor() zeigt Info ohnehin
     }
   });
@@ -1753,8 +1781,8 @@ async function afterLoginBoot(){
   if (__booted) return;
   __booted = true;
   // Keine Auto-Sync/Realtime bis Arzt-Ansicht umgestellt ist
-  await renderDoctor(); // lässt "Bitte anmelden" o. "Keine Einträge" stehen
-}
+  await renderDoctor(); // laesst "Bitte anmelden" o. "Keine Eintraege" stehen
+  setDocBadges({ visible: true });
 
 /* ===== CSV/JSON export (Daily) ===== */
 function dl(filename, content, mime){
@@ -1817,7 +1845,7 @@ async function renderDoctor(){
   const from = $("#from").value;
   const to   = $("#to").value;
   if (!from || !to){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum wählen.</div>`;
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum waehlen.</div>`;
     setDocBadges({ visible: false });
     return;
   }
@@ -1849,7 +1877,7 @@ async function renderDoctor(){
       <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
     </div>
     <div class="date-actions">
-      <button class="btn ghost btn-xs" data-del-day="${day.date}">Löschen</button>
+      <button class="btn ghost btn-xs" data-del-day="${day.date}">Loeschen</button>
     </div>
   </div>
 
@@ -1903,27 +1931,27 @@ async function renderDoctor(){
 
   // Rendern / Leerzustand
   if (!daysArr.length){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Einträge im Zeitraum</div>`;
+    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Eintraege im Zeitraum</div>`;
   } else {
     host.innerHTML = daysArr.map(renderDoctorDay).join("");
 
-    // 🔹 Löschen: alle Server-Events des Tages entfernen
+    // 🔹 Loeschen: alle Server-Events des Tages entfernen
     host.querySelectorAll('[data-del-day]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const date = btn.getAttribute('data-del-day');
         if (!date) return;
-        if (!confirm(`Alle Einträge in der Cloud für ${date} löschen?`)) return;
+        if (!confirm(`Alle Eintraege in der Cloud fuer ${date} loeschen?`)) return;
 
         btn.disabled = true;
         const old = btn.textContent;
-        btn.textContent = 'Lösche…';
+        btn.textContent = 'Loesche…';
         try{
           const r = await deleteRemoteDay(date);
           if (!r.ok){
-            alert(`Server-Löschung fehlgeschlagen (${r.status||"?"}).`);
+            alert(`Server-Loeschung fehlgeschlagen (${r.status||"?"}).`);
           }
           await renderDoctor();           // neu laden
-          if (chartPanel.open) chartPanel.draw();
+  setDocBadges({ visible: true });
         } finally {
           btn.disabled = false; btn.textContent = old;
         }
@@ -1934,7 +1962,7 @@ async function renderDoctor(){
 
 /* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
-/* Fallbacks nur, wenn extern nicht verfügbar */
+/* Fallbacks nur, wenn extern nicht verfuegbar */
 const safeEnsureSupabaseClient = async () => {
   try { if (typeof ensureSupabaseClient === "function") return await ensureSupabaseClient(); } catch(_) {}
   return null;
@@ -1991,7 +2019,7 @@ const chartPanel = {
     contentHost.appendChild(tip);
     this.tip = tip;
 
-    // ARIA Live-Region (nur Text, für Screenreader)
+    // ARIA Live-Region (nur Text, fuer Screenreader)
     const live = document.createElement("div");
     live.id = "chartAria";
     live.setAttribute("aria-live", "polite");
@@ -2010,7 +2038,7 @@ const chartPanel = {
     contentHost.appendChild(live);
     this.live = live;
 
-    // Interaktivität
+    // Interaktivitaet
     if (this.svg) {
       this.svg.addEventListener("pointermove", (e) => {
         if (this.tipSticky) return;
@@ -2046,7 +2074,7 @@ const chartPanel = {
         this.positionTip(e);
       });
 
-      // Keyboard: Enter/Space toggelt Tooltip, ESC schließt
+      // Keyboard: Enter/Space toggelt Tooltip, ESC schliesst
       this.svg.addEventListener("keydown", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
@@ -2101,7 +2129,7 @@ async getFiltered() {
   if (await isLoggedIn()) {
     // gleiche Aggregation wie Arzt-Ansicht
     const days = await fetchDailyOverview(from, to);
-    // Für die Chart-Logik bauen wir flache "entry"-ähnliche Objekte
+    // Fuer die Chart-Logik bauen wir flache "entry"-aehnliche Objekte
     const flat = [];
     for (const d of days) {
       // Morgen
@@ -2175,7 +2203,7 @@ async getFiltered() {
         });
       }
     }
-    // Ergänze Tage mit ausschließlich Flags (ohne BP/Body), damit Flags-Overlay immer angezeigt wird
+    // Ergaenze Tage mit ausschliesslich Flags (ohne BP/Body), damit Flags-Overlay immer angezeigt wird
     for (const d of days) {
       const hasFlags = !!(d?.flags?.training || d?.flags?.sick || d?.flags?.water_lt2 || d?.flags?.salt_gt5 || d?.flags?.protein_ge90 || d?.flags?.meds);
       if (!hasFlags) continue;
@@ -2216,7 +2244,7 @@ async getFiltered() {
     .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
 },
 
-  // Höhe laden (Konfig oder Fallback 183 cm)
+  // Hoehe laden (Konfig oder Fallback 183 cm)
   async getHeightCm() {
     // 1) Supabase-Profil
     const supa = await safeEnsureSupabaseClient();
@@ -2307,17 +2335,17 @@ async getFiltered() {
     if (v == null) return "#9aa3af";        // unknown
     if (v < 18.5) return "#60a5fa";         // untergew.
     if (v < 25)   return "#10b981";         // normal
-    if (v < 30)   return "#f59e0b";         // übergew.
-    return "#ef4444";                        // adipös
+    if (v < 30)   return "#f59e0b";         // uebergew.
+    return "#ef4444";                        // adipoes
   },
   kpiColorWHtR(v) {
     if (v == null) return "#9aa3af";
     if (v < 0.5)   return "#10b981";        // ok
-    if (v <= 0.6)  return "#f59e0b";        // erhöht
+    if (v <= 0.6)  return "#f59e0b";        // erhoeht
     return "#ef4444";                        // hoch
   },
 
-  // Ein Punkt pro KPI, korrekt eingefärbt; saubere Separatoren
+  // Ein Punkt pro KPI, korrekt eingefaerbt; saubere Separatoren
   layoutKpis() {
     const box = $("#chartAverages");
     if (!box) return;
@@ -2421,7 +2449,7 @@ const metric = $("#metricSel")?.value || "bp";
       }
     }
 
-    // Für BP benötigen wir Meta je Punkt
+    // Fuer BP benoetigen wir Meta je Punkt
     let meta = null;
 
     if (metric === "bp") {
@@ -2448,7 +2476,7 @@ const metric = $("#metricSel")?.value || "bp";
       const diaM = mData.map(e => (e.context === "Morgen" && e.dia != null) ? Number(e.dia) : null);
       const diaA = mData.map(e => (e.context === "Abend"  && e.dia != null) ? Number(e.dia) : null);
 
-      // KPIs (ø über alle Messungen)
+      // KPIs (ø ueber alle Messungen)
       const avg = (arr) => {
         const v = arr.filter(x => x != null);
         return v.length ? v.reduce((p,c) => p + c, 0) / v.length : null;
@@ -2503,12 +2531,12 @@ const metric = $("#metricSel")?.value || "bp";
     {
       name: "Bauchumfang (cm)",
       values: data.map(e => e.waist_cm != null ? Number(e.waist_cm) : null),
-      color: "#10b981", // Grün
+      color: "#10b981", // Gruen
       type: "misc",
     }
   ];
 
-  // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfügbaren Wert
+  // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfuegbaren Wert
   if (avgBox) {
     // BP-KPIs ausblenden
     ["sys","dia","map"].forEach(k => {
@@ -2546,7 +2574,7 @@ const metric = $("#metricSel")?.value || "bp";
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
-    // Wenn es Flags gibt, soll das Chart nicht frühzeitig abbrechen
+    // Wenn es Flags gibt, soll das Chart nicht fruehzeitig abbrechen
     const hasAnyFlagsData = (Array.isArray(data) && data.some(e => !!(e?.training || e?.low_intake || e?.sick || e?.salt_high || e?.protein_high90 || e?.valsartan_missed || e?.forxiga_missed || e?.nsar_taken)));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasAnyFlagsData;
     if (!hasAny) {
@@ -2554,7 +2582,7 @@ const metric = $("#metricSel")?.value || "bp";
       return;
     }
 
-    // Dynamische Größe
+    // Dynamische Groesse
     const bbox = this.svg?.getBoundingClientRect?.() || { width: 640, height: 280 };
     const W = Math.max(300, Math.floor(bbox.width  || 640));
     const H = Math.max(200, Math.floor(bbox.height || 280));
@@ -2563,7 +2591,7 @@ const metric = $("#metricSel")?.value || "bp";
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
 
-    // === Flags -> X-Bereich erweitern (immer) + Lookup für Tooltip ===
+    // === Flags -> X-Bereich erweitern (immer) + Lookup fuer Tooltip ===
     let flagTs = [];
     {
       const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
@@ -2735,7 +2763,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
           const rec = dayFlags.get(d);
           let used = 0;
 
-          // Training (grün)
+          // Training (gruen)
           if (rec.training) {
             const yTop = Math.round(yBottom - (used + 1) * slotH);
             const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
@@ -2760,7 +2788,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             used++;
           }
 
-          // Interaktiver Hit-Bereich pro Tag über alle Slots
+          // Interaktiver Hit-Bereich pro Tag ueber alle Slots
           const totalSlots = used;
           if (totalSlots > 0) {
             const yTopAll = Math.round(yBottom - totalSlots * slotH);
@@ -2889,17 +2917,7 @@ const mkAlertDots = (seriesItem) => {
   },
 };
 
-/* --- Button-Flash (nur Platzhalter, wie gehabt) --- */
-let saveFlashTimer = null;
-function flashSaveOk(){
-  const btn = document.getElementById('saveAllBtn');
-  if(!btn) return;
-  if (saveFlashTimer) { clearTimeout(saveFlashTimer); saveFlashTimer = null; }
-  btn.disabled = true; btn.classList.add('flash'); btn.innerHTML = '✔️ Events gespeichert';
-  saveFlashTimer = setTimeout(()=>{ btn.classList.remove('flash'); btn.innerHTML = '💾 Speichern'; btn.disabled = false; saveFlashTimer = null; }, 1000);
-}
-
-/* ===== Tabs / Segments ===== */
+/*/* ===== Tabs / Segments ===== */
 async function setTab(name){
   if (name !== "doctor" && document.body.classList.contains('app-locked')){
     __pendingAfterUnlock = null;
@@ -2946,197 +2964,200 @@ function bindTabs(){
   );
 }
 
-/* ===== Save flows ===== */
-// Replace sugar toggle with protein (runtime migration)
-(function migrateSugarToProtein(){
-  const legacy = document.getElementById('sugarHighToggle');
-  if (legacy) {
-    legacy.id = 'proteinHighToggle';
-    legacy.setAttribute('title','Protein >= 90 g');
-    // Icon hinzufügen (🍗 Hühnerbein)
-    legacy.textContent = '🍗 Protein >= 90 g';
-  }
-})();
+/* ===== Capture panes ===== */
+let trainingActive = false;
+let lowIntakeActive = false;
+let sickActive = false;
+let valsartanMissed = false;
+let forxigaMissed = false;
+let nsarTaken = false;
+let saltHigh = false;
+let proteinHigh = false;
+
+function setToggle(el, on, activeText, baseText){
+  if (!el) return;
+  el.classList.toggle("active", !!on);
+  el.setAttribute("aria-pressed", on ? "true" : "false");
+  el.textContent = on ? activeText : baseText;
+}
+
+function setTraining(on){
+  trainingActive = !!on;
+  setToggle($("#trainingToggle"), trainingActive, "Training heute (aktiv)", "Training heute");
+}
+function setLowIntake(on){
+  lowIntakeActive = !!on;
+  setToggle($("#lowIntakeToggle"), lowIntakeActive, "< 2 L getrunken (aktiv)", "< 2 L getrunken");
+}
+function setSaltHigh(on){
+  saltHigh = !!on;
+  setToggle($("#saltHighToggle"), saltHigh, "> 5 g Salz (aktiv)", "> 5 g Salz");
+}
 function setProteinHigh(on){
   proteinHigh = !!on;
-  // Icon in Labels übernehmen, damit es beim Umschalten erhalten bleibt
-  setToggle($("#proteinHighToggle"), proteinHigh, "🍗 Protein >= 90 g - aktiv", "🍗 Protein >= 90 g");
+  setToggle($("#proteinHighToggle"), proteinHigh, "Protein >= 90 g (aktiv)", "Protein >= 90 g");
 }
-let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
-saltHigh=false, proteinHigh=false;
-function setToggle(el, on, activeText, baseText){
-el.classList.toggle("active", !!on);
-el.setAttribute("aria-pressed", on ? "true" : "false");
-el.textContent = on ? activeText : baseText;
-}
-function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "🏋️ Training heute (aktiv)", "🏋️ Training heute"); }
-function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "🚰 < 2 L – aktiv", "🚰 < 2 L getrunken"); }
-function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "🧂 > 5 g Salz – aktiv", "🧂 > 5 g Salz"); }
-function setSugarHigh(on){ sugarHigh = !!on; setToggle($("#sugarHighToggle"), sugarHigh, "🍬 > 10 g Zucker – aktiv", "🍬 > 10 g Zucker"); }
-
 function setSick(on){
-sickActive=!!on; setToggle($("#sickToggle"), sickActive, "🤒 Krank (Forxiga pausiert) – aktiv", "🤒 Krank (Forxiga pausiert)");
-if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
-else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
+  sickActive = !!on;
+  setToggle($("#sickToggle"), sickActive, "Krank (Forxiga pausiert) - aktiv", "Krank (Forxiga pausiert)");
+  const fxBtn = $("#forxigaMissToggle");
+  if (fxBtn){
+    fxBtn.disabled = !!sickActive;
+    fxBtn.style.opacity = sickActive ? 0.6 : 1;
+  }
+  if (sickActive) setForxigaMiss(true);
 }
-function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "💊 Valsartan vergessen – aktiv", "💊 Valsartan vergessen"); }
-function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "💊 Forxiga vergessen – aktiv", "💊 Forxiga vergessen"); }
-function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "⚠️ NSAR genommen – aktiv", "⚠️ NSAR genommen"); }
-function blockHasData(which){
-return !!(
-$(`#time${which}`).value ||
-$(`#sys${which}`).value ||
-$(`#dia${which}`).value ||
-$(`#pulse${which}`).value
-);
+function setValsartanMiss(on){
+  valsartanMissed = !!on;
+  setToggle($("#valsartanMissToggle"), valsartanMissed, "Valsartan vergessen (aktiv)", "Valsartan vergessen");
 }
-async function saveAll(){
-const __t0 = performance.now();
-if(!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
-
-// 1) Erkennen, was heute eingegeben wurde
-const hasM = blockHasData("M"); 
-const hasA = blockHasData("A"); 
-const weightVal = $("#weightDay")?.value?.trim();
-const waistValRaw = $("#input-waist-cm")?.value?.trim();
-const notes = ($("#notesDay").value || "").trim();
-const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
-  valsartanMissed || forxigaMissed || nsarTaken ||
-  saltHigh || proteinHigh);
-const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || notes);
-
-// 🔴 NEU: Kommentarpflicht bei Grenzwertüberschreitung
-const sysM = Number($("#sysM").value);
-const diaM = Number($("#diaM").value);
-const sysA = Number($("#sysA").value);
-const diaA = Number($("#diaA").value);
-
-const needsComment = 
-  (sysM > 130) || (diaM > 90) ||
-  (sysA > 130) || (diaA > 90);
-
-const notesEl = $("#notesDay");
-notesEl.style.outline = ""; // Reset
-
-if (needsComment && !notes) {
-  alert("Bitte Kommentar eingeben bei Grenzwertüberschreitung (Sys>130 oder Dia>90).");
-  notesEl.focus();
-  notesEl.style.outline = "2px solid var(--danger)";
-  return;
+function setForxigaMiss(on){
+  forxigaMissed = !!on;
+  setToggle($("#forxigaMissToggle"), forxigaMissed, "Forxiga vergessen (aktiv)", "Forxiga vergessen");
+}
+function setNsar(on){
+  nsarTaken = !!on;
+  setToggle($("#nsarToggle"), nsarTaken, "NSAR genommen (aktiv)", "NSAR genommen");
 }
 
-// 2) Speichern in drei klaren Pfaden
-let saved = false;
-if (hasM) saved = (await saveBlock("Morgen","M", /*includeWeight=*/false, /*force=*/false)) || saved;
-if (hasA) saved = (await saveBlock("Abend","A", /*includeWeight=*/false, /*force=*/false)) || saved;
-if (hasDaySummary) saved = (await saveDaySummary()) || saved;
-
-if (!saved) { alert("Keine Daten eingegeben – nichts zu speichern."); return; }
-
-// 3) UI aktualisieren
-await renderDoctor();
-if(chartPanel.open) await chartPanel.draw();
-
-{ const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
-diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
-flashSaveOk();
+function parseInputNumber(selector){
+  const el = $(selector);
+  if (!el) return null;
+  const raw = (el.value || '').trim();
+  if (!raw) return null;
+  const num = toNumDE(raw);
+  return Number.isFinite(num) ? num : null;
 }
 
-async function saveBlock(contextLabel, which, includeWeight=false, force=false){
-const date = $("#date").value || todayStr();
-const time = which === 'M' ? '07:00' : '22:00';
-
-const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : null;
-const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
-const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
-
-// Nur vitale Werte; Gewicht NICHT mehr in M/A
-const weight = null;
-// Validierung gegen DB-Trigger: bp erfordert sys UND dia
-const hasAny = (sys != null) || (dia != null) || (pulse != null);
-if (!force && !hasAny) return false;
-if ((sys != null && dia == null) || (dia != null && sys == null)){
-  uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
-  return false;
-}
-if (pulse != null && (sys == null || dia == null)){
-  uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
-  return false;
-}
-
-const currentISO = new Date(date + "T" + time).toISOString();
-const ts = new Date(date + "T" + time).getTime();
-
-const entry = {
-date, time, dateTime: currentISO, ts,
-context: contextLabel, 
-sys, dia, pulse, weight,
-map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-notes: "",
-training: false,
-low_intake: false,
-sick: false,
-valsartan_missed: false,
-forxiga_missed: false,
-nsar_taken: false,
-salt_high: false,
-protein_high90: false
-};
-
-const localId = await addEntry(entry);
-await syncWebhook(entry, localId);
-return true;
+function createBlankEntry(date, time, context){
+  const isoDate = new Date(date + 'T' + time);
+  const iso = isoDate.toISOString();
+  const ts = isoDate.getTime();
+  return {
+    date,
+    time,
+    dateTime: iso,
+    ts,
+    context,
+    sys: null,
+    dia: null,
+    pulse: null,
+    weight: null,
+    waist_cm: null,
+    map: null,
+    notes: '',
+    training: false,
+    low_intake: false,
+    sick: false,
+    valsartan_missed: false,
+    forxiga_missed: false,
+    nsar_taken: false,
+    salt_high: false,
+    protein_high90: false
+  };
 }
 
-function baseEntry(date, time, contextLabel){
-const iso = new Date(date + "T" + time).toISOString();
-const ts = new Date(date + "T" + time).getTime();
-return {
-date, time, dateTime: iso, ts,
-context: contextLabel, 
-sys: null, dia: null, pulse: null, weight: null, map: null,
-notes: ($("#notesDay").value || "").trim(),
-training: trainingActive,
-low_intake: lowIntakeActive,
-sick: sickActive,
-valsartan_missed: valsartanMissed,
-forxiga_missed: forxigaMissed,
-nsar_taken: nsarTaken,
-salt_high: saltHigh,
-protein_high90: proteinHigh
-};
+function allocateNoteTimestamp(date){
+  const base = new Date(date + 'T12:00:00');
+  const now = Date.now();
+  const minuteOffset = now % 60;
+  const secondOffset = Math.floor(now / 1000) % 60;
+  base.setMinutes(base.getMinutes() + minuteOffset);
+  base.setSeconds(secondOffset);
+  return {
+    dateTime: base.toISOString(),
+    ts: base.getTime(),
+    time: base.toISOString().slice(11,16)
+  };
 }
 
-async function saveDaySummary(){
-const date = $("#date").value || todayStr();
-const time = "12:00";
-
-const entry = baseEntry(date, time, "Tag");
-
-// Gewicht (kg)
-const w = $("#weightDay")?.value?.trim();
-entry.weight = w ? Number((w||"").replace(',', '.')) : null;
-
-// Bauchumfang (cm)
-const waistRaw = $("#input-waist-cm")?.value?.trim();
-entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
-
-const hasContent =
-(entry.weight != null) ||
-(entry.waist_cm != null) ||
-!!entry.notes ||
-entry.training || entry.low_intake || entry.sick ||
-entry.valsartan_missed || entry.forxiga_missed ||
-entry.nsar_taken || entry.salt_high || entry.protein_high90;
-
-if (!hasContent) return false;
-
-const localId = await addEntry(entry);
-await syncWebhook(entry, localId);
-return true;
+async function appendNote(date, prefix, text){
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+  const stamp = allocateNoteTimestamp(date);
+  const entry = createBlankEntry(date, stamp.time, 'Tag');
+  entry.dateTime = stamp.dateTime;
+  entry.ts = stamp.ts;
+  entry.notes = prefix ? `${prefix}${trimmed}` : trimmed;
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
 }
 
-async function withRetry(fn, {tries=3, base=300}={}) {
+async function saveBpEntry(){
+  if (!(await isLoggedIn())) { showLoginOverlay(true); return; }
+  const date = $("#date").value || todayStr();
+  const ctx = $("#bpContext")?.value || 'Morgen';
+  const time = ctx === 'Abend' ? '22:00' : '07:00';
+  const sys = parseInputNumber('#bpSys');
+  const dia = parseInputNumber('#bpDia');
+  const pulse = parseInputNumber('#bpPulse');
+  if (sys == null && dia == null && pulse == null){ uiError('Bitte Werte eingeben.'); return; }
+  if ((sys != null && dia == null) || (dia != null && sys == null)) { uiError('Bitte Sys und Dia gemeinsam eingeben.'); return; }
+  if (pulse != null && (sys == null || dia == null)) { uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.'); return; }
+
+  const entry = createBlankEntry(date, time, ctx);
+  entry.sys = sys;
+  entry.dia = dia;
+  entry.pulse = pulse;
+  if (sys != null && dia != null) entry.map = calcMAP(sys, dia);
+
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+
+  const comment = $("#bpComment")?.value || '';
+  if (comment.trim()){
+    await appendNote(date, ctx === 'Abend' ? '[Abends] ' : '[Morgens] ', comment);
+    $("#bpComment").value = '';
+  }
+
+  diag.add('Blutdruck gespeichert');
+  await renderDoctor();
+  setDocBadges({ visible: true });
+}
+
+async function saveBodyEntry(){
+  if (!(await isLoggedIn())) { showLoginOverlay(true); return; }
+  const date = $("#date").value || todayStr();
+  const weight = parseInputNumber('#bodyWeight');
+  const waistRaw = $("#bodyWaist")?.value?.trim() || '';
+  const waist = waistRaw ? toNumDE(waistRaw) : null;
+  if (weight == null && waist == null){ uiError('Keine Koerperdaten eingegeben.'); return; }
+  const entry = createBlankEntry(date, '12:00', 'Tag');
+  if (weight != null) entry.weight = weight;
+  if (waist != null && Number.isFinite(waist)) entry.waist_cm = waist;
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+  diag.add('Koerperwerte gespeichert');
+  await renderDoctor();
+  setDocBadges({ visible: true });
+
+async function saveFlagsEntry(){
+  if (!(await isLoggedIn())) { showLoginOverlay(true); return; }
+  const date = $("#date").value || todayStr();
+  const hasFlags = trainingActive || lowIntakeActive || sickActive || valsartanMissed || forxigaMissed || nsarTaken || saltHigh || proteinHigh;
+  const comment = $("#flagsComment")?.value || '';
+  if (!hasFlags && !comment.trim()){ uiError('Keine Flags oder Kommentar eingegeben.'); return; }
+  if (hasFlags){
+    const entry = createBlankEntry(date, '22:30', 'Tag');
+    entry.training = trainingActive;
+    entry.low_intake = lowIntakeActive;
+    entry.sick = sickActive;
+    entry.valsartan_missed = valsartanMissed;
+    entry.forxiga_missed = forxigaMissed;
+    entry.nsar_taken = nsarTaken;
+    entry.salt_high = saltHigh;
+    entry.protein_high90 = proteinHigh;
+    const localId = await addEntry(entry);
+    await syncWebhook(entry, localId);
+  }
+  if (comment.trim()){
+    await appendNote(date, '[Flags] ', comment);
+    $("#flagsComment").value = '';
+  }
+  diag.add('Flags gespeichert');
+  await renderDoctor();
+  setDocBadges({ visible: true });
+\nasync function withRetry(fn, {tries=3, base=300}={}) {
 let lastErr;
 for (let i=0;i<tries;i++){
 try { return await fn(); }
@@ -3154,7 +3175,7 @@ async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers){
-    uiError("Nicht angemeldet – bitte Google-Login ausführen.");
+    uiError("Nicht angemeldet – bitte Google-Login ausfuehren.");
     showLoginOverlay(true);
     return;
   }
@@ -3198,9 +3219,9 @@ async function syncWebhook(entry, localId){
         }
 
         if (res.status === 409 || /duplicate|unique/i.test(details)) {
-        uiError("Es gibt bereits einen Eintrag für diesen Tag/Kontext.");
+        uiError("Es gibt bereits einen Eintrag fuer diesen Tag/Kontext.");
       } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
-        uiError("Eingaben ungültig – bitte Wertebereiche/Pflichtfelder prüfen.");
+        uiError("Eingaben ungueltig – bitte Wertebereiche/Pflichtfelder pruefen.");
       } else if (res.status === 401 || res.status === 403) {
         uiError("Zugriff verweigert – bitte erneut anmelden.");
       } else {
@@ -3218,11 +3239,11 @@ async function syncWebhook(entry, localId){
       uiInfo("Gespeichert.");
       diag.add(`Webhook: OK (${events.length} Event(s))`);
     } else {
-      uiError("Unerwartete Antwort vom Server – kein Datensatz zurückgegeben.");
+      uiError("Unerwartete Antwort vom Server – kein Datensatz zurueckgegeben.");
     }
   }catch(e){
     // Netzwerkfehler, 5xx nach Exhaust, etc.
-    uiError("Netzwerkfehler beim Speichern. Bitte später erneut versuchen.");
+    uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
     diag.add("Webhook: Netzwerkfehler");
     throw e;
   }
@@ -3274,7 +3295,7 @@ return null;
 
 const supabaseUrl = baseUrlFromRest(rest);
 const anonKey = keyConf.replace(/^Bearer\s+/i,"");
-if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungültige URL/Key"); return null; }
+if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungueltige URL/Key"); return null; }
 
 sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
 auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true } // Session nur im RAM
@@ -3288,7 +3309,7 @@ async function setupRealtime(){
     const supa = await ensureSupabaseClient();
     if (!supa) return;
 
-    // Bestehende Channels schließen, um Doppelbindungen zu vermeiden
+    // Bestehende Channels schliessen, um Doppelbindungen zu vermeiden
     teardownRealtime();
 
     // Channel auf health_events – RLS begrenzt automatisch auf auth.uid()
@@ -3297,7 +3318,7 @@ async function setupRealtime(){
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'health_events' },
             (payload) => {
-              // Optional: Zeitraum grob prüfen? (einfach halten: immer refreshen)
+              // Optional: Zeitraum grob pruefen? (einfach halten: immer refreshen)
               livePulse();
               requestUiRefresh('realtime');
             })
@@ -3328,7 +3349,7 @@ function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, m
   if (passBtn){
     const enable = webAuthnAvailable && hasPasskey;
     passBtn.disabled = !enable;
-    passBtn.title = enable ? '' : (webAuthnAvailable ? 'Bitte zuerst Passkey einrichten.' : 'Passkey/WebAuthn nicht verf�gbar.');
+    passBtn.title = enable ? '' : (webAuthnAvailable ? 'Bitte zuerst Passkey einrichten.' : 'Passkey/WebAuthn nicht verfuegbar.');
   }
   const setupBtn = document.getElementById('setupPasskeyBtn');
   if (setupBtn){
@@ -3355,7 +3376,7 @@ async function requireDoctorUnlock(){
     configureLockOverlay({
       hasPasskey: true,
       webAuthnAvailable: true,
-      message: 'Entsperren abgebrochen � du kannst Passkey erneut versuchen oder PIN nutzen.'
+      message: 'Entsperren abgebrochen - du kannst Passkey erneut versuchen oder PIN nutzen.'
     });
     lockUi(true);
     return false;
@@ -3375,8 +3396,8 @@ async function requireDoctorUnlock(){
   configureLockOverlay({
     hasPasskey,
     webAuthnAvailable: false,
-    message: 'Passkey / Windows Hello ist auf diesem Ger�t nicht verf�gbar. Bitte PIN verwenden.'
-  });
+    message: 'Passkey / Windows Hello ist auf diesem Geraet nicht verfuegbar. Bitte PIN verwenden.'
+    message: 'Passkey / Windows Hello ist auf diesem Geraet nicht verfuegbar. Bitte PIN verwenden.'
   lockUi(true);
   return false;
 }
@@ -3481,7 +3502,7 @@ async function registerPasskey(){
   }
 }
 
-/* Entsperren per Passkey (nur Besitz+UV Check – lokal ausreichend für App-Lock) */
+/* Entsperren per Passkey (nur Besitz+UV Check – lokal ausreichend fuer App-Lock) */
 async function unlockWithPasskey(){
   try{
     const credId = await getConf(LOCK_CRED_ID_KEY);
@@ -3508,10 +3529,10 @@ async function unlockWithPasskey(){
   }
 }
 
-/* PIN setzen/prüfen */
+/* PIN setzen/pruefen */
 async function setPinInteractive(){
   const pin = prompt("Neue PIN (4–10 Ziffern):") || "";
-  if (!/^\d{4,10}$/.test(pin)){ alert("Ungültige PIN."); return false; }
+  if (!/^\d{4,10}$/.test(pin)){ alert("Ungueltige PIN."); return false; }
   const hash = await sha256("pin:"+pin);
   await putConf(LOCK_PIN_HASH_KEY, hash);
   await putConf(LOCK_ENABLED_KEY, true);
@@ -3577,8 +3598,8 @@ if (sbClient) watchAuthState()
 // Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
 if (hasSession) {
-  await afterLoginBoot(); // wichtig für Reload mit persistierter Session
-      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  // 👈 App-Lock direkt nach Boot prüfen/anzeigen
+  await afterLoginBoot(); // wichtig fuer Reload mit persistierter Session
+      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  // 👈 App-Lock direkt nach Boot pruefen/anzeigen
   await setupRealtime();  // 🔹 NEU: Realtime direkt aktivieren
   await requestUiRefresh();
 }
@@ -3596,35 +3617,10 @@ if (!savedUrl || !savedKey) {
   setTab("capture"); // In Erfassung bleiben
 }
 
-// Sanfte Warnung
-// === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertüberschreitung ===
-function needsCommentNow(){
-  const sysM = Number($("#sysM").value);
-  const diaM = Number($("#diaM").value);
-  const sysA = Number($("#sysA").value);
-  const diaA = Number($("#diaA").value);
-  return (sysM > 130) || (diaM > 90) || (sysA > 130) || (diaA > 90);
-}
-function updateNotesRequirementUI(){
-  const notesEl = $("#notesDay");
-  if (!notesEl) return;
-  const notes = (notesEl.value || "").trim();
-  const need = needsCommentNow();
-  const invalid = need && !notes;
-  notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
-  if (invalid) notesEl.setAttribute("aria-invalid","true"); else notesEl.removeAttribute("aria-invalid");
-}
-// bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
-["#sysM","#diaM","#sysA","#diaA","#notesDay"].forEach(sel=>{
-  const el = $(sel); if(!el) return;
-  el.addEventListener("input", updateNotesRequirementUI);
-});
-// einmal initial prüfen (falls Werte schon stehen)
-updateNotesRequirementUI();
-
 // Toggle-Handler
 const bindToggle = (id, setter, getVal)=>{
   const el = $(id);
+  if (!el) return;
   el.addEventListener("click", ()=>{
     setter(!getVal());
   });
@@ -3638,24 +3634,31 @@ bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
 bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
 bindToggle("#proteinHighToggle", setProteinHigh, ()=>proteinHigh);
 
-document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
-  const btn = e.currentTarget;
-  withBusy(btn, true);
-  try {
-    await saveAll();
-  } catch(_) {
-    // Fehler werden in saveAll/syncWebhook via uiError gezeigt
-  } finally {
-    withBusy(btn, false);
-  }
-});
+const attachSave = (selector, handler) => {
+  const btn = document.querySelector(selector);
+  if (!btn) return;
+  btn.addEventListener("click", async ()=>{
+    withBusy(btn, true);
+    try {
+      await handler();
+    } catch(_) {
+      /* Fehler bereits im Handler behandelt */
+    } finally {
+      withBusy(btn, false);
+    }
+  });
+};
+
+attachSave('#saveBpBtn', saveBpEntry);
+attachSave('#saveBodyBtn', saveBodyEntry);
+attachSave('#saveFlagsBtn', saveFlagsEntry);
 // Sync toggles when the date changes in capture view
 const __dateEl = document.getElementById('date');
 if (__dateEl) __dateEl.addEventListener('change', async ()=>{ try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}});
 $("#applyRange").addEventListener("click", async ()=>{
   await renderDoctor();
-setDocBadges({ visible: true });
-  if(chartPanel.open) chartPanel.draw();
+  setDocBadges({ visible: true });
+  if(chartPanel.open) await chartPanel.draw();
 });
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
@@ -3677,11 +3680,6 @@ document.addEventListener('keydown', (e)=>{
     __pendingAfterUnlock = null;
     lockUi(false);
   }
-});
-
-document.addEventListener('keydown', (e)=>{
-const isSave = (e.key.toLowerCase()==='s') && (e.ctrlKey || e.metaKey);
-if(isSave){ e.preventDefault(); saveAll(); }
 });
 
 document.addEventListener('visibilitychange', ()=>{
@@ -3712,9 +3710,9 @@ try { if (await isLoggedIn()) { await cleanupOldIntake(); await renderLifestyle(
 
 // Initial Render
 await renderDoctor();
-setDocBadges({ visible: true });
+  setDocBadges({ visible: true });
 
-// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" hängen blieb)
+// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
 $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
 el.disabled = false;
 });
@@ -3738,7 +3736,7 @@ main();
 }
 
 /* === Debug-Notizen
-- V1.5: Realtime über supabase-js; Projekt-URL aus REST-URL abgeleitet.
+- V1.5: Realtime ueber supabase-js; Projekt-URL aus REST-URL abgeleitet.
 - Auto-Sync: push pending ? reconcile (Entries) ohne Wipe.
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
@@ -3778,7 +3776,7 @@ main();
         Passkey einrichten
       </button>
       <button class="btn ghost" id="setPinBtn" type="button" style="width:100%;margin-top:6px">
-        PIN setzen/ändern
+        PIN setzen/aendern
       </button>
     </div>
 
@@ -3792,6 +3790,15 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
 
 
 
