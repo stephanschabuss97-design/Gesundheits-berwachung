@@ -1,3 +1,5 @@
+  if (chartPanel?.open) await chartPanel.draw();
+}
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -34,7 +36,7 @@ window.addEventListener("keydown", e=>{
   if(e.key === "F9"){   // Hotkey pruefen
     var el = document.getElementById("touchLog");
     if(!el){
-      // Falls Panel fehlt → neu erstellen
+      // Falls Panel fehlt â†’ neu erstellen
       el = document.createElement("pre");
       el.id = "touchLog";
       el.style.cssText="display:block;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000";
@@ -55,7 +57,7 @@ window.addEventListener("keydown", e=>{
   /* Dropdown optisch kompakter */
   #chart .controls .compact { max-width: 240px; }
 
-  /* KPI-Zeile: Ø-Werte neben dem Dropdown */
+  /* KPI-Zeile: Ã˜-Werte neben dem Dropdown */
   #chart .controls .kpis {
     display: inline-flex;
     gap: 16px;
@@ -195,7 +197,7 @@ grid-template-areas:
 .doctor-view .col-special{ grid-area: special; }
 }
 
-/* Spalte A – Datum */
+/* Spalte A â€“ Datum */
 .doctor-view .col-date{
 display:flex; align-items:center;
 font-weight:800;
@@ -222,11 +224,11 @@ letter-spacing:.2px;
 .doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
 .doctor-view .col-date .date-actions{
   display:flex;
-  justify-content:flex-start; /* oder center, wenn du’s mittig magst */
+  justify-content:flex-start; /* oder center, wenn duâ€™s mittig magst */
 }
 .btn-xs{ padding:6px 10px; font-size:12px; border-radius:8px; }
 
-/* Spalte B – Messungen */
+/* Spalte B â€“ Messungen */
 .doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
 /* Kopf und Werte-Spalten: gleiche Breiten wie Zahlen, Label links fix */
 .doctor-view .measure-head,
@@ -266,7 +268,7 @@ white-space: nowrap;
 text-align:right; justify-content:flex-end;
 }
 
-/* Spalte C – Spezialinfos */
+/* Spalte C â€“ Spezialinfos */
 /* Gewicht: Ueberschrift + Zahl darunter */
 .doctor-view .weight-line,
 .doctor-view .waist-line{
@@ -311,7 +313,7 @@ text-align:right; justify-content:flex-end;
 .doctor-view .col-special > .flags       { grid-column: 2; }
 .doctor-view .col-special > .notes       { grid-column: 3; }
 
-/* D: Flags – Desktop: eine Spalte untereinander */
+/* D: Flags â€“ Desktop: eine Spalte untereinander */
 .doctor-view .flags{
   display:grid;
   grid-template-columns: repeat(2, max-content); /* 2 Spalten */
@@ -355,7 +357,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   letter-spacing: .2px;
   margin-bottom: 4px;
 }
-/* NICHT ausblenden, auch wenn leer – der Renderer liefert "–" */
+/* NICHT ausblenden, auch wenn leer â€“ der Renderer liefert "â€“" */
 
 /* Mobile-Optimierung */
 @media (max-width: 599px){
@@ -367,9 +369,9 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   }
   .doctor-view .measure-head{ font-size: 11px; }
 
-  /* Zahlen duerfen nicht schrumpfen → keine abgeschnittenen Dezimalstellen */
+  /* Zahlen duerfen nicht schrumpfen â†’ keine abgeschnittenen Dezimalstellen */
   .doctor-view .num{
-    min-width: 4.5ch; /* ~ „96.7“ passt sicher */
+    min-width: 4.5ch; /* ~ â€ž96.7â€œ passt sicher */
     white-space: nowrap;
     flex: 0 0 auto;
   }
@@ -405,7 +407,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   .doctor-view .flag span:last-child{ white-space: nowrap; }
 }
 
-/* Extra-eng (≤ 390px Breite) */
+/* Extra-eng (â‰¤ 390px Breite) */
 @media (max-width: 390px){
   .doctor-view .measure-head,
   .doctor-view .measure-grid{
@@ -418,7 +420,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 /* Panels */
 .panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
-/* Panel (Charts) — Fullscreen */
+/* Panel (Charts) â€” Fullscreen */
 .panel.chart{
   inset: 0;                 /* volle Flaeche (top/right/bottom/left = 0) */
   width: 100vw;
@@ -433,7 +435,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
   /* Sichtbarkeit steuert JS; NICHT auf block setzen */
 }
 .panel.chart header{ 
-  /* bleibt oben, keine Aenderung noetig – aber fixere Hoehe ist hilfreich */
+  /* bleibt oben, keine Aenderung noetig â€“ aber fixere Hoehe ist hilfreich */
   min-height: 44px;
 }
 .panel.chart .content{
@@ -569,14 +571,14 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <!-- Hilfe-Panel -->
 <div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
 <header>
-<h4 id="helpTitle">Hilfe • Was soll ich ankreuzen?</h4>
-<button class="btn ghost" id="helpClose" type="button">×</button>
+<h4 id="helpTitle">Hilfe â€¢ Was soll ich ankreuzen?</h4>
+<button class="btn ghost" id="helpClose" type="button">Ã—</button>
 </header>
 <div class="content">
 <strong>NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
 <ul>
 <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-<li><em>Kombo-Achtung:</em> Viele „Erkaeltungs-/Kopfweh“-Mittel enthalten NSAR.</li>
+<li><em>Kombo-Achtung:</em> Viele â€žErkaeltungs-/Kopfwehâ€œ-Mittel enthalten NSAR.</li>
 <li><em>Bei Nierenkrankheit:</em> NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
 </ul>
 </div>
@@ -586,7 +588,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
 <header>
 <h4 id="diagTitle">Touch-Log</h4>
-<button class="btn ghost" id="diagClose" type="button">×</button>
+<button class="btn ghost" id="diagClose" type="button">Ã—</button>
 </header>
 <pre id="diagLog" class="content" style="margin:0"></pre>
 </div>
@@ -595,7 +597,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
 <header>
 <h4 id="chartTitle">Diagramm (Daily)</h4>
-<button class="btn ghost" id="chartClose" type="button">×</button>
+<button class="btn ghost" id="chartClose" type="button">Ã—</button>
 </header>
 <div class="content">
 <div class="controls">
@@ -606,11 +608,11 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
   <!-- ANKER: chart-averages (Daily) -->
   <div id="chartAverages" class="kpis" aria-live="polite">
-    <span data-k="sys">Durchschnitt Sys: –</span>
-    <span class="sep" aria-hidden="true">•</span>
-    <span data-k="dia">Durchschnitt Dia: –</span>
-    <span class="sep" aria-hidden="true">•</span>
-    <span data-k="map">Durchschnitt MAP: –</span>
+    <span data-k="sys">Durchschnitt Sys: â€“</span>
+    <span class="sep" aria-hidden="true">â€¢</span>
+    <span data-k="dia">Durchschnitt Dia: â€“</span>
+    <span class="sep" aria-hidden="true">â€¢</span>
+    <span data-k="map">Durchschnitt MAP: â€“</span>
   </div>
 </div>
 
@@ -621,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 </div>
 
 <div id="err" role="status" aria-live="polite"></div>
-<div id="busy"><div class="box">⏳ Bitte warten…</div></div>
+<div id="busy"><div class="box">â³ Bitte wartenâ€¦</div></div>
 
 <main>
 <!-- Capture -->
@@ -760,7 +762,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
     <div class="small" style="opacity:.75;margin-top:10px">
-      Ziele: Wasser 2000 ml • Salz max. 6 g • Protein Ziel 90 g (gruen bei 78–89 g)
+      Ziele: Wasser 2000 ml â€¢ Salz max. 6 g â€¢ Protein Ziel 90 g (gruen bei 78â€“89 g)
     </div>
   </section>
   <div class="small" style="margin-top:6px;opacity:.7">Hinweis: nur der heutige Intake wird gespeichert und synchronisiert.</div>
@@ -780,16 +782,16 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
       </div>
 
-      <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">🏋️ Trainingstage: <span class="val">0</span></span>
-      <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">⚠️ Tage mit Bad-Flag: <span class="val">0</span></span>
-    </div> <!-- 👈 Toolbar sauber schliessen -->
+      <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum">ðŸ‹ï¸ Trainingstage: <span class="val">0</span></span>
+      <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag">âš ï¸ Tage mit Bad-Flag: <span class="val">0</span></span>
+    </div> <!-- ðŸ‘ˆ Toolbar sauber schliessen -->
 
     <div style="overflow:auto" id="doctorDailyWrap">
       <div class="doctor-view" id="doctorView"></div>
     </div>
 
         <div class="small" style="margin-top:6px">
-      Tipp: „Werte anzeigen“ oeffnet die passende Grafik zum aktuellen Tab (Daily).
+      Tipp: â€žWerte anzeigenâ€œ oeffnet die passende Grafik zum aktuellen Tab (Daily).
     </div>
   </section>
 </section>
@@ -798,7 +800,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
-/* ===== Supabase Defaults (ANON only – niemals service_role!) ===== */
+/* ===== Supabase Defaults (ANON only â€“ niemals service_role!) ===== */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
@@ -856,18 +858,19 @@ function debounce(fn, wait=250){
   let t = null;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
 }
-// UI-Refresh: rendert nur, wenn Arzt-Ansicht sichtbar; Chart nur wenn offen
-const requestUiRefresh = debounce(async (reason = '') => {
+
+const requestUiRefresh = debounce(async (reason = "") => {
   try{
-    const doctorActive = document.getElementById('doctor')?.classList?.contains('active');
-    if (doctorActive) await renderDoctor();
-  setDocBadges({ visible: true });
-    if (lifestyleActive && typeof renderLifestyle === 'function') await renderLifestyle();
+    const doctorActive = document.getElementById("doctor")?.classList?.contains("active");
+    const lifestyleActive = document.getElementById("lifestyle")?.classList?.contains("active");
+    if (doctorActive){
+      await renderDoctor();
+      setDocBadges({ visible: true });
+    }
+    if (lifestyleActive && typeof renderLifestyle === "function") await renderLifestyle();
     if (chartPanel?.open) await chartPanel.draw();
   }catch(e){ /* still ok */ }
 }, 250);
-
-// kleines visuelles Ping bei Realtime
 function livePulse(){
   const el = document.getElementById('doctorLive');
   if (!el) return;
@@ -901,13 +904,13 @@ async function sbSelect({ table, select, filters = [], order = null, limit = nul
 
   // WICHTIG: mit User-JWT lesen (RLS)!
   const headers = await getHeaders();
-  if (!headers) throw new Error("Nicht angemeldet – keine Leseberechtigung.");
+  if (!headers) throw new Error("Nicht angemeldet â€“ keine Leseberechtigung.");
 
   const res = await withRetry(() => fetch(url.toString(), { headers }));
   if (!res.ok) {
     let details = '';
     try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
-    throw new Error(`REST ${table} failed ${res.status} – ${details}`);
+    throw new Error(`REST ${table} failed ${res.status} â€“ ${details}`);
   }
   return await res.json();
 }
@@ -963,11 +966,11 @@ return !!session;
 }catch{ return false; }
 }
 
-/** Schaltet optisch auf „gesperrt“ – ohne Controls hart zu deaktivieren */
+/** Schaltet optisch auf â€žgesperrtâ€œ â€“ ohne Controls hart zu deaktivieren */
 function setAuthGuard(logged){
   // Nur visuelles Dimmen; die Save-Logik prueft isLoggedIn() ohnehin.
   document.body.classList.toggle('auth-locked', !logged);
-  // Kein auto-boot mehr hier – Start erfolgt in main()/watchAuthState.
+  // Kein auto-boot mehr hier â€“ Start erfolgt in main()/watchAuthState.
 }
 
 function setDoctorAccess(enabled){
@@ -978,7 +981,7 @@ function setDoctorAccess(enabled){
     tabBtn.classList.toggle('ghost', !enabled);
     tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
   }
-  // „Werte anzeigen“-Button
+  // â€žWerte anzeigenâ€œ-Button
   const chartBtn = document.getElementById('doctorChartBtn');
   if (chartBtn){
     chartBtn.disabled = !enabled;
@@ -1058,7 +1061,7 @@ function toHealthEvents(entry){
   return out;
 }
 
-// „Legacy“: Measurement Eintrag, der nur Gewicht enthaelt
+// â€žLegacyâ€œ: Measurement Eintrag, der nur Gewicht enthaelt
 function isWeightOnly(e){
 const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
 return !hasVitals && (e?.weight != null);
@@ -1260,7 +1263,7 @@ async function saveIntakeTotals({ dayIso, totals }){
   });
   if (res.ok) return await res.json();
 
-  // Conflict → PATCH (Upsert)
+  // Conflict â†’ PATCH (Upsert)
   let details = '';
   try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
   if (res.status === 409 || /duplicate|unique/i.test(details)){
@@ -1380,7 +1383,7 @@ async function loadNotesLastPerDay({ user_id, from, to }) {
   return out;
 }
 
-/* View-Zeilen → Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
+/* View-Zeilen â†’ Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
 function joinViewsToDaily({ bp, body, flags, notes = [] }) {
   const days = new Map();
   const ensure = (day) => {
@@ -1409,7 +1412,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     if (r.cm != null) d.waist_cm = Number(r.cm);
   }
 
-  // bp (max 2x/Tag – Morgen/Abend)
+  // bp (max 2x/Tag â€“ Morgen/Abend)
   for (const r of bp) {
     const d = ensure(r.day);
     const blk = r.ctx === 'Morgen' ? d.morning : (r.ctx === 'Abend' ? d.evening : null);
@@ -1436,7 +1439,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     d.flags.nsar_taken       = !!r.nsar_taken;
   }
 
-  // notes (letzter gewinnt – wir bekommen schon "letzten" aus Loader)
+  // notes (letzter gewinnt â€“ wir bekommen schon "letzten" aus Loader)
   for (const n of notes) {
     const d = ensure(n.day);
     d.notes = n.text || "";
@@ -1522,28 +1525,28 @@ function updateLifestyleBars(){
 
   if (wLbl) {
     let status = '';
-    if (w >= LS_WATER_GOAL * 1.1) status = ' • Ziel erreicht';
-    else if (w >= LS_WATER_GOAL * 0.9) status = ' • Zielbereich';
-    else if (w >= LS_WATER_GOAL * 0.5) status = ' • moderate Aufnahme';
-    else status = ' • niedrig';
+    if (w >= LS_WATER_GOAL * 1.1) status = ' â€¢ Ziel erreicht';
+    else if (w >= LS_WATER_GOAL * 0.9) status = ' â€¢ Zielbereich';
+    else if (w >= LS_WATER_GOAL * 0.5) status = ' â€¢ moderate Aufnahme';
+    else status = ' â€¢ niedrig';
     wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml${status}`;
   }
 
   if (sLbl) {
-    let status = ' • Zielbereich';
-    if (s > LS_SALT_MAX) status = ' • ueber Ziel';
-    else if (s >= 5) status = ' • Warnung';
+    let status = ' â€¢ Zielbereich';
+    if (s > LS_SALT_MAX) status = ' â€¢ ueber Ziel';
+    else if (s >= 5) status = ' â€¢ Warnung';
     sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
   }
 
   if (pLbl) {
-    let status = ' • noch offen';
-    if (p >= 78 && p <= 90) status = ' • Zielbereich';
-    else if (p > 90) status = ' • ueber Ziel';
+    let status = ' â€¢ noch offen';
+    if (p >= 78 && p <= 90) status = ' â€¢ Zielbereich';
+    else if (p > 90) status = ' â€¢ ueber Ziel';
     pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
   }
 
-  // Wasser: <50% rot, 50-89% gelb, ≥90% gruen
+  // Wasser: <50% rot, 50-89% gelb, â‰¥90% gruen
   let wState = 'bad';
   if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
   else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
@@ -1670,7 +1673,7 @@ async function pushPendingToRemote(){
     try{
       const uid = await getUserId();
 
-      // 1) Legacy-Entry → 0..N Events
+      // 1) Legacy-Entry â†’ 0..N Events
       const events = toHealthEvents(e);
       if (!events.length) { 
         // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht haengen bleiben
@@ -1692,7 +1695,7 @@ async function pushPendingToRemote(){
       const json = await res.json();
       const firstId = json?.[0]?.id ?? null;
 
-      // 4) Lokal markieren: irgendein Remote-Event existiert → Cloud-Icon ok
+      // 4) Lokal markieren: irgendein Remote-Event existiert â†’ Cloud-Icon ok
       if (firstId != null) {
         await updateEntry(e.id, { remote_id: firstId });
         pushed++;
@@ -1725,7 +1728,7 @@ const gbtn = document.getElementById('googleLoginBtn');
 if (gbtn) gbtn.addEventListener('click', async ()=>{
 const supa = await ensureSupabaseClient();
 if (!supa) { 
-alert('Konfiguration fehlt (REST-URL und ANON-Key). Standardwerte sind gesetzt – falls entfernt, bitte App neu laden oder Konfiguration in IndexedDB hinterlegen.');
+alert('Konfiguration fehlt (REST-URL und ANON-Key). Standardwerte sind gesetzt â€“ falls entfernt, bitte App neu laden oder Konfiguration in IndexedDB hinterlegen.');
 return;
 }
 const { error } = await supa.auth.signInWithOAuth({
@@ -1765,11 +1768,11 @@ function watchAuthState(){
     if (session) {
       await afterLoginBoot();
       // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)
-      await setupRealtime();     // 🔹 NEU: Realtime aktivieren nach Login
+      await setupRealtime();     // ðŸ”¹ NEU: Realtime aktivieren nach Login
       await requestUiRefresh();  // initialer Refresh
     } else {
-      teardownRealtime();        // 🔹 NEU: Channels sauber schliessen
-      // UI in „abgemeldet“ lassen – renderDoctor() zeigt Info ohnehin
+      teardownRealtime();        // ðŸ”¹ NEU: Channels sauber schliessen
+      // UI in â€žabgemeldetâ€œ lassen â€“ renderDoctor() zeigt Info ohnehin
     }
   });
 }
@@ -1834,7 +1837,7 @@ async function renderDoctor(){
   host.innerHTML = "";
 
   // Anzeige-Helper
-  const dash = v => (v === null || v === undefined || v === "" ? "–" : String(v));
+  const dash = v => (v === null || v === undefined || v === "" ? "â€“" : String(v));
   const onClass = b => (b ? "on" : "");
   const fmtDateDE = (iso) => {
     const d = new Date(iso + "T00:00:00Z");
@@ -1850,7 +1853,7 @@ async function renderDoctor(){
     return;
   }
 
-  // 🔹 Server lesen → Tagesobjekte
+  // ðŸ”¹ Server lesen â†’ Tagesobjekte
   let daysArr = [];
   try{
     daysArr = await fetchDailyOverview(from, to);
@@ -1874,7 +1877,7 @@ async function renderDoctor(){
   <div class="col-date">
     <div class="date-top">
       <span class="date-label">${fmtDateDE(day.date)}</span>
-      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "☁️" : ""}</span>
+      <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "â˜ï¸" : ""}</span>
     </div>
     <div class="date-actions">
       <button class="btn ghost btn-xs" data-del-day="${day.date}">Loeschen</button>
@@ -1924,7 +1927,7 @@ async function renderDoctor(){
       <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
     </div>
 
-    <div class="notes">${nl2br((day.notes || "").trim() || "–")}</div>
+    <div class="notes">${nl2br((day.notes || "").trim() || "â€“")}</div>
   </div>
 </section>
 `;
@@ -1935,7 +1938,7 @@ async function renderDoctor(){
   } else {
     host.innerHTML = daysArr.map(renderDoctorDay).join("");
 
-    // 🔹 Loeschen: alle Server-Events des Tages entfernen
+    // ðŸ”¹ Loeschen: alle Server-Events des Tages entfernen
     host.querySelectorAll('[data-del-day]').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const date = btn.getAttribute('data-del-day');
@@ -1944,7 +1947,7 @@ async function renderDoctor(){
 
         btn.disabled = true;
         const old = btn.textContent;
-        btn.textContent = 'Loesche…';
+        btn.textContent = 'Loescheâ€¦';
         try{
           const r = await deleteRemoteDay(date);
           if (!r.ok){
@@ -1960,7 +1963,7 @@ async function renderDoctor(){
   }
 }
 
-/* ===== Simple SVG Chart (Daily) – final, ohne Doppel-Helper & mit WHO-Ampel ===== */
+/* ===== Simple SVG Chart (Daily) â€“ final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
 /* Fallbacks nur, wenn extern nicht verfuegbar */
 const safeEnsureSupabaseClient = async () => {
@@ -2289,7 +2292,7 @@ async getFiltered() {
       if (flags.sick)             items.push("Krank");
       if (flags.low_intake)       items.push("< 2 L Wasser");
       if (flags.salt_high)        items.push("> 5 g Salz");
-      if (flags.protein_high90)   items.push("Protein ≥ 90 g");
+      if (flags.protein_high90)   items.push("Protein â‰¥ 90 g");
       if (flags.valsartan_missed) items.push("Valsartan vergessen");
       if (flags.forxiga_missed)   items.push("Forxiga vergessen");
       if (flags.nsar_taken)       items.push("NSAR genommen");
@@ -2297,7 +2300,7 @@ async getFiltered() {
     }
 
     const parts = [];
-    const hdr = (date || ctx) ? `<div style="opacity:.85;margin-bottom:4px">${esc([date, ctx].filter(Boolean).join(" · "))}</div>` : "";
+    const hdr = (date || ctx) ? `<div style="opacity:.85;margin-bottom:4px">${esc([date, ctx].filter(Boolean).join(" Â· "))}</div>` : "";
     if (hdr) parts.push(hdr);
     if (note) parts.push(`<div style="white-space:pre-wrap;margin-bottom:${items.length? '6' : '0'}px">${esc(note)}</div>`);
     if (items.length) {
@@ -2314,11 +2317,11 @@ async getFiltered() {
     const box = $("#chartAverages");
     if (!box) return;
     const need = [
-      { k: "sys",  label: "Durchschnitt Sys: –" },
-      { k: "dia",  label: "Durchschnitt Dia: –" },
-      { k: "map",  label: "Durchschnitt MAP: –" },
-      { k: "bmi",  label: "BMI (letzter): –" },
-      { k: "whtr", label: "WHtR (letzter): –" },
+      { k: "sys",  label: "Durchschnitt Sys: â€“" },
+      { k: "dia",  label: "Durchschnitt Dia: â€“" },
+      { k: "map",  label: "Durchschnitt MAP: â€“" },
+      { k: "bmi",  label: "BMI (letzter): â€“" },
+      { k: "whtr", label: "WHtR (letzter): â€“" },
     ];
     need.forEach((n) => {
       if (!box.querySelector(`[data-k="${n.k}"]`)) {
@@ -2373,7 +2376,7 @@ async getFiltered() {
     const makeSep = () => {
       const s = document.createElement("span");
       s.className = "kpi-sep";
-      s.textContent = "•";
+      s.textContent = "â€¢";
       Object.assign(s.style, {
         color: "#6b7280",
         margin: "0 10px",
@@ -2476,7 +2479,7 @@ const metric = $("#metricSel")?.value || "bp";
       const diaM = mData.map(e => (e.context === "Morgen" && e.dia != null) ? Number(e.dia) : null);
       const diaA = mData.map(e => (e.context === "Abend"  && e.dia != null) ? Number(e.dia) : null);
 
-      // KPIs (ø ueber alle Messungen)
+      // KPIs (Ã¸ ueber alle Messungen)
       const avg = (arr) => {
         const v = arr.filter(x => x != null);
         return v.length ? v.reduce((p,c) => p + c, 0) / v.length : null;
@@ -2492,7 +2495,7 @@ const metric = $("#metricSel")?.value || "bp";
         const avgDia = avg(mData.map(e => (e.dia != null ? Number(e.dia) : null)));
         const avgMap = avg(mapArr);
 
-        const f0 = (v) => (v == null ? "–" : Math.round(v).toString());
+        const f0 = (v) => (v == null ? "â€“" : Math.round(v).toString());
 
         // Zeige BP-KPIs, blende BMI/WHtR aus
         const sEl  = avgBox.querySelector('[data-k="sys"]');
@@ -2561,8 +2564,8 @@ const metric = $("#metricSel")?.value || "bp";
     const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
     const whtrEl = avgBox.querySelector('[data-k="whtr"]');
 
-    if (bmiEl)  { bmiEl.textContent  = `BMI (letzter): ${bmi  == null ? "–" : bmi.toFixed(1)}`;  bmiEl.style.display  = ""; }
-    if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "–" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
+    if (bmiEl)  { bmiEl.textContent  = `BMI (letzter): ${bmi  == null ? "â€“" : bmi.toFixed(1)}`;  bmiEl.style.display  = ""; }
+    if (whtrEl) { whtrEl.textContent = `WHtR (letzter): ${whtr == null ? "â€“" : whtr.toFixed(2)}`; whtrEl.style.display = ""; }
 
     avgBox.style.display = "inline-flex";
     this.layoutKpis();
@@ -2810,7 +2813,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
                 if (f.sick) items.push("Krank");
                 if (f.low_intake) items.push("< 2 L Wasser");
                 if (f.salt_high) items.push("> 5 g Salz");
-                if (f.protein_high90) items.push("Protein ≥ 90 g");
+                if (f.protein_high90) items.push("Protein â‰¥ 90 g");
                 if (f.valsartan_missed) items.push("Valsartan vergessen");
                 if (f.forxiga_missed) items.push("Forxiga vergessen");
                 if (f.nsar_taken) items.push("NSAR genommen");
@@ -3157,25 +3160,27 @@ async function saveFlagsEntry(){
   diag.add('Flags gespeichert');
   await renderDoctor();
   setDocBadges({ visible: true });
-\nasync function withRetry(fn, {tries=3, base=300}={}) {
-let lastErr;
-for (let i=0;i<tries;i++){
-try { return await fn(); }
-catch (e) {
-const code = e?.status ?? e?.response?.status ?? 0;
-if (!(code >= 500 && code < 600)) throw e;
-await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
-lastErr = e;
+  if (chartPanel.open) await chartPanel.draw();
 }
-}
-throw lastErr;
+async function withRetry(fn, {tries=3, base=300}={}) {
+  let lastErr;
+  for (let i=0;i<tries;i++){
+    try { return await fn(); }
+    catch (e) {
+      const code = e?.status ?? e?.response?.status ?? 0;
+      if (!(code >= 500 && code < 600)) throw e;
+      await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
   
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   const headers = await getHeaders();
   if(!url || !headers){
-    uiError("Nicht angemeldet – bitte Google-Login ausfuehren.");
+    uiError("Nicht angemeldet â€“ bitte Google-Login ausfuehren.");
     showLoginOverlay(true);
     return;
   }
@@ -3221,14 +3226,14 @@ async function syncWebhook(entry, localId){
         if (res.status === 409 || /duplicate|unique/i.test(details)) {
         uiError("Es gibt bereits einen Eintrag fuer diesen Tag/Kontext.");
       } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
-        uiError("Eingaben ungueltig – bitte Wertebereiche/Pflichtfelder pruefen.");
+        uiError("Eingaben ungueltig â€“ bitte Wertebereiche/Pflichtfelder pruefen.");
       } else if (res.status === 401 || res.status === 403) {
-        uiError("Zugriff verweigert – bitte erneut anmelden.");
+        uiError("Zugriff verweigert â€“ bitte erneut anmelden.");
       } else {
         uiError(`Speichern fehlgeschlagen (HTTP ${res.status}).`);
       }
 
-      diag.add(`Webhook-Fehler ${res.status}: ${details || "—"}`);
+      diag.add(`Webhook-Fehler ${res.status}: ${details || "â€”"}`);
       throw new Error(`save-failed-${res.status}`);
     }
 
@@ -3239,7 +3244,7 @@ async function syncWebhook(entry, localId){
       uiInfo("Gespeichert.");
       diag.add(`Webhook: OK (${events.length} Event(s))`);
     } else {
-      uiError("Unerwartete Antwort vom Server – kein Datensatz zurueckgegeben.");
+      uiError("Unerwartete Antwort vom Server â€“ kein Datensatz zurueckgegeben.");
     }
   }catch(e){
     // Netzwerkfehler, 5xx nach Exhaust, etc.
@@ -3289,7 +3294,7 @@ if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); retu
 
 // NEU: niemals mit service_role starten
 if (isServiceRoleKey(keyConf)) {
-diag.add("Sicherheitsblock: service_role Key erkannt – Abbruch");
+diag.add("Sicherheitsblock: service_role Key erkannt â€“ Abbruch");
 return null;
 }
 
@@ -3312,7 +3317,7 @@ async function setupRealtime(){
     // Bestehende Channels schliessen, um Doppelbindungen zu vermeiden
     teardownRealtime();
 
-    // Channel auf health_events – RLS begrenzt automatisch auf auth.uid()
+    // Channel auf health_events â€“ RLS begrenzt automatisch auf auth.uid()
     const ch = trackChannel(
       supa.channel('rt-health-events')
         .on('postgres_changes',
@@ -3397,7 +3402,7 @@ async function requireDoctorUnlock(){
     hasPasskey,
     webAuthnAvailable: false,
     message: 'Passkey / Windows Hello ist auf diesem Geraet nicht verfuegbar. Bitte PIN verwenden.'
-    message: 'Passkey / Windows Hello ist auf diesem Geraet nicht verfuegbar. Bitte PIN verwenden.'
+  });
   lockUi(true);
   return false;
 }
@@ -3502,7 +3507,7 @@ async function registerPasskey(){
   }
 }
 
-/* Entsperren per Passkey (nur Besitz+UV Check – lokal ausreichend fuer App-Lock) */
+/* Entsperren per Passkey (nur Besitz+UV Check â€“ lokal ausreichend fuer App-Lock) */
 async function unlockWithPasskey(){
   try{
     const credId = await getConf(LOCK_CRED_ID_KEY);
@@ -3531,12 +3536,12 @@ async function unlockWithPasskey(){
 
 /* PIN setzen/pruefen */
 async function setPinInteractive(){
-  const pin = prompt("Neue PIN (4–10 Ziffern):") || "";
+  const pin = prompt("Neue PIN (4â€“10 Ziffern):") || "";
   if (!/^\d{4,10}$/.test(pin)){ alert("Ungueltige PIN."); return false; }
   const hash = await sha256("pin:"+pin);
   await putConf(LOCK_PIN_HASH_KEY, hash);
   await putConf(LOCK_ENABLED_KEY, true);
-  setLockMsg("PIN gesetzt ✔︎");
+  setLockMsg("PIN gesetzt âœ”ï¸Ž");
   return true;
 }
 async function unlockWithPin(){
@@ -3599,11 +3604,11 @@ if (sbClient) watchAuthState()
 const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot(); // wichtig fuer Reload mit persistierter Session
-      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  // 👈 App-Lock direkt nach Boot pruefen/anzeigen
-  await setupRealtime();  // 🔹 NEU: Realtime direkt aktivieren
+      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  // ðŸ‘ˆ App-Lock direkt nach Boot pruefen/anzeigen
+  await setupRealtime();  // ðŸ”¹ NEU: Realtime direkt aktivieren
   await requestUiRefresh();
 }
-bindAppLockButtons();     // 👈 Buttons der Lock-Card binden
+bindAppLockButtons();     // ðŸ‘ˆ Buttons der Lock-Card binden
 
 // Konfiguration laden
 const savedUrl = await getConf("webhookUrl");
@@ -3790,17 +3795,3 @@ main();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
