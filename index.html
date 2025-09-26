@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.2)</title>
+<title>Gesundheits-Logger (V1.5.3)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.2</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.3</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1064,11 +1064,8 @@ function withBusy(el, on=true){
   
 /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
-try{
-if(!sbClient) return false;
-const { data:{ session } } = await sbClient.auth.getSession();
-return !!session;
-}catch{ return false; }
+  if (!sbClient) return false;
+  return await isLoggedInFast({ timeout: 800 });
 }
 
 /** Schaltet optisch auf "gesperrt" - ohne Controls hart zu deaktivieren */
@@ -1874,6 +1871,21 @@ function setUserUi(email){
   if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
 }
 
+let __lastLoggedIn = false;
+async function isLoggedInFast({ timeout = 400 } = {}) {
+  if (!sbClient) return __lastLoggedIn;
+  try {
+    const sessionPromise = sbClient.auth.getSession();
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('session-timeout')), timeout));
+    const { data } = await Promise.race([sessionPromise, timeoutPromise]);
+    const logged = !!data?.session;
+    __lastLoggedIn = logged;
+    return logged;
+  } catch(_){
+    return __lastLoggedIn;
+  }
+}
+
 // Buttons binden (einmalig, z. B. in main())
 function bindAuthButtons(){
 const gbtn = document.getElementById('googleLoginBtn');
@@ -1906,6 +1918,7 @@ setUserUi(email);
 showLoginOverlay(!session);
 setAuthGuard(!!session);
 setDoctorAccess(!!session);
+__lastLoggedIn = !!session;
 return !!session;
 }
 
@@ -1917,6 +1930,7 @@ function watchAuthState(){
     showLoginOverlay(!session);
     setAuthGuard(!!session);
     setDoctorAccess(!!session);
+    __lastLoggedIn = !!session;
 
     if (session) {
       await afterLoginBoot();
@@ -3094,7 +3108,8 @@ async function setTab(name){
     lockUi(false);
   }
   if (name === "doctor"){
-    if (!(await isLoggedIn())){
+    const logged = await isLoggedInFast();
+    if (!logged){
       showLoginOverlay(true);
       return;
     }
@@ -3106,7 +3121,8 @@ async function setTab(name){
     }
   }
   if (name === "lifestyle"){
-    if (!(await isLoggedIn())){
+    const logged = await isLoggedInFast();
+    if (!logged){
       showLoginOverlay(true);
       name = "capture";
     }
@@ -3125,9 +3141,12 @@ function bindTabs(){
   $$(".tabs .btn").forEach(b =>
     b.addEventListener("click", async (e) => {
       const tab = e.currentTarget.dataset.tab;
-      if (tab === "doctor" && !(await isLoggedIn())){
-        showLoginOverlay(true);
-        return;
+      if (tab === "doctor") {
+        const logged = await isLoggedInFast();
+        if (!logged) {
+          showLoginOverlay(true);
+          return;
+        }
       }
       setTab(tab);
     })
@@ -3179,7 +3198,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.2) === */
+/* === Panel Reset Helpers (V1.5.3) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -3667,7 +3686,7 @@ function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, m
 }
 
 async function requireDoctorUnlock(){
-  if (!(await isLoggedIn())) { showLoginOverlay(true); return false; }
+  if (!(await isLoggedInFast())) { showLoginOverlay(true); return false; }
   if (__doctorUnlocked) return true;
 
   let credId = null;
@@ -3970,7 +3989,7 @@ if (bpContextSel){
 const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
 if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
@@ -4007,7 +4026,7 @@ if (saveBpPanelBtn){
 const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
 if (saveBodyPanelBtn){
   saveBodyPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -4034,7 +4053,7 @@ if (saveBodyPanelBtn){
 const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
 if (saveFlagsPanelBtn){
   saveFlagsPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -4096,7 +4115,7 @@ if (applyBtn) {
 }
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-  if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
+  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'chart';
     const ok = await requireDoctorUnlock();
@@ -4121,7 +4140,7 @@ document.addEventListener('visibilitychange', () => {
   (async () => {
     try {
       if (!sbClient) await ensureSupabaseClient();
-      const logged = await isLoggedIn();
+      const logged = await isLoggedInFast();
       setAuthGuard(!!logged);
       setDoctorAccess(!!logged);
       showLoginOverlay(!logged);
@@ -4136,7 +4155,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
-  if (!(await isLoggedIn())){ showLoginOverlay(true); return; }
+  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
@@ -4149,7 +4168,7 @@ document.addEventListener('visibilitychange', () => {
   
 // Lifestyle binden und initial (falls bereits angemeldet) laden
 bindLifestyle();
-try { if (await isLoggedIn()) { await cleanupOldIntake(); await renderLifestyle(); } } catch(_){ }
+try { if (await isLoggedInFast()) { await cleanupOldIntake(); await renderLifestyle(); } } catch(_){ }
 
 // Initial Render
 await requestUiRefresh({ reason: 'boot:initial' });
@@ -4232,5 +4251,6 @@ main();
 
 </body>
 </html>
+
 
 
