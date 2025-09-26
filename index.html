@@ -3,52 +3,9 @@
 <head>
 <meta charset="utf-8" />
 
-<!-- ANKER: bootstrap-logger -->
-<script>
-(function(){
-  function log(msg){
-    try{
-      var el = document.getElementById("diagLog") || document.getElementById("touchLog");
-      if(!el){
-        var fb = document.createElement("pre");
-        fb.id="touchLog";
-        fb.style.cssText="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000";
-        document.body.appendChild(fb);
-        el=fb;
-      }
-      el.textContent = (msg + "\n" + el.textContent).slice(0,5000);
-    }catch(e){ /* not fatal */ }
-  }
-  window.addEventListener("error", e=>{
-    log("[Error] "+(e.message||e)+" @"+(e.filename||"")+"#"+(e.lineno||0));
-  });
-  window.addEventListener("unhandledrejection", e=>{
-    log("[Promise] "+(e.reason?.message||e.reason||"Unknown"));
-  });
-  window.addEventListener("error", e=>{
-    if(e.target && (e.target.src||e.target.href)){
-      log("[Resource] "+(e.target.src||e.target.href)+" failed to load");
-    }
-  }, true);
-window.addEventListener("keydown", e=>{
-  if(e.key === "F9"){   // Hotkey pruefen
-    var el = document.getElementById("touchLog");
-    if(!el){
-      // Falls Panel fehlt  neu erstellen
-      el = document.createElement("pre");
-      el.id = "touchLog";
-      el.style.cssText="display:block;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000";
-      document.body.appendChild(el);
-    }
-    // Toggle Sichtbarkeit
-    el.style.display = (el.style.display==="none" ? "block" : "none");
-  }
-});
-})();
-</script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.3)</title>
+<title>Gesundheits-Logger (V1.5.4)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +542,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.3</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1059,7 +1016,6 @@ function uiInfo(msg) {
 function withBusy(el, on=true){
   if (!el) return;
   el.disabled = !!on;
-  el.classList.toggle('is-busy', !!on);
 }
   
 /* ===== Auth-Guard ===== */
@@ -1170,7 +1126,6 @@ return !hasVitals && (e?.weight != null);
 }
 
 function setBusy(on){
-document.body.classList.toggle('is-busy', !!on);
 const b = document.getElementById('busy');
 if (b) b.style.display = on ? 'flex' : 'none';
 }
@@ -1874,14 +1829,19 @@ function setUserUi(email){
 let __lastLoggedIn = false;
 async function isLoggedInFast({ timeout = 400 } = {}) {
   if (!sbClient) return __lastLoggedIn;
+  let timer = null;
   try {
     const sessionPromise = sbClient.auth.getSession();
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('session-timeout')), timeout));
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('session-timeout')), timeout);
+    });
     const { data } = await Promise.race([sessionPromise, timeoutPromise]);
+    if (timer) clearTimeout(timer);
     const logged = !!data?.session;
     __lastLoggedIn = logged;
     return logged;
   } catch(_){
+    if (timer) clearTimeout(timer);
     return __lastLoggedIn;
   }
 }
@@ -3198,7 +3158,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.3) === */
+/* === Panel Reset Helpers (V1.5.4) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -3230,7 +3190,6 @@ function resetFlagsPanel(opts = {}) {
     setForxigaMiss(false);
     setNsar(false);
     setSaltHigh(false);
-    if (typeof setSugarHigh === 'function') setSugarHigh(false);
     if (typeof setProteinHigh === 'function') setProteinHigh(false);
   } catch(_){ }
   const commentEl = document.getElementById('flagsComment');
@@ -4251,6 +4210,12 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
 
 
 
