@@ -3160,6 +3160,25 @@ el.innerHTML = on ? activeText : baseText;
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
+// Kommentar-Pflicht fuer BP: Grenzwerte markieren
+function requiresBpComment(which){
+  const sys = Number($(`#sys${which}`).value);
+  const dia = Number($(`#dia${which}`).value);
+  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (el?.value || "").trim();
+  return ((sys > 130) || (dia > 90)) && !comment;
+}
+function updateBpCommentWarnings(){
+  ['M','A'].forEach(which => {
+    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    if (!el) return;
+    const needs = requiresBpComment(which);
+    el.style.outline = needs ? "2px solid var(--danger)" : "";
+    if (needs) el.setAttribute("aria-invalid","true");
+    else el.removeAttribute("aria-invalid");
+  });
+}
+
 /* === Panel Reset Helpers (V1.5.0) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
