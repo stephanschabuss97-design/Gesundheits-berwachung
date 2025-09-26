@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.7)</title>
+<title>Gesundheits-Logger (V1.4.7.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -120,12 +120,10 @@ details.accordion summary::-webkit-details-marker{display:none;}
 details.accordion .chevron{transition:transform .2s ease;}
 details.accordion[open] .chevron{transform:rotate(90deg);}
 details.accordion .accordion-body{padding:0 18px 16px;}
-.panel-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  margin-top:12px;
-}
+.bp-pane{display:none;}
+.bp-pane.active{display:block;}
+.panel-actions{display:flex;gap:8px;justify-content:flex-start;margin:12px 0 0;}
+.panel-actions .btn{min-width:180px;}
 
 .card-nested{
   background:#11131a;
@@ -588,7 +586,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.7</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.7.1</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -672,10 +670,21 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
 
-    <details class="accordion" open>
+        <details class="accordion" open>
       <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
+          <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+            <div style="min-width:180px">
+              <label for="bpContextSel">Messzeitpunkt</label>
+              <select id="bpContextSel">
+                <option value="M">Morgens</option>
+                <option value="A">Abends</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-nested bp-pane active" data-context="M">
           <h3 class="blockTitle">Morgens</h3>
           <div class="grid">
             <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
@@ -686,7 +695,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
             <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
           </div>
         </div>
-        <div class="card-nested">
+        <div class="card-nested bp-pane" data-context="A">
           <h3 class="blockTitle">Abends</h3>
           <div class="grid">
             <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
@@ -697,23 +706,14 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
             <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
           </div>
         </div>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveBpPanelBtn" type="button">&#x1F4BE; Speichern (Blutdruck)</button>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveBpPanelBtn" type="button">&#x1F4BE; Speichern (Blutdruck)</button>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveBodyPanelBtn" type="button">&#x1F4BE; Speichern (Koerper)</button>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Speichern (Flags)</button>
+        <div class="panel-actions">
+          <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
+        </div>
       </div>
     </details>
 
-    <details class="accordion" open>
-      <summary><span>&#x2696;&#xFE0F; Koerper & Kommentar</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+        <details class="accordion" open>
+      <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
           <h3 class="blockTitle">Koerper</h3>
@@ -728,13 +728,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
             </div>
           </div>
         </div>
-        <div class="card-nested">
-          <h3 class="blockTitle">Kommentar</h3>
-          <textarea id="notesDay" placeholder="Allgemeiner Kommentar zum Tag (optional)"></textarea>
+        <div class="panel-actions">
+          <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
         </div>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveBodyPanelBtn" type="button">&#x1F4BE; Speichern (Koerper)</button>
       </div>
     </details>
 
@@ -757,9 +753,9 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           <label for="flagsComment" class="small" style="display:block;margin-bottom:6px">Kommentar zu Flags</label>
           <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
         </div>
-      </div>
-      <div class="panel-actions">
-        <button class="btn ghost" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Speichern (Flags)</button>
+        <div class="panel-actions">
+          <button class="btn primary" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Flags speichern</button>
+        </div>
       </div>
     </details>
     <div class="row" style="align-items:center; gap:8px; margin-top:12px">
@@ -3124,8 +3120,7 @@ function blockHasData(which){
   const sys = getVal(`#sys${which}`);
   const dia = getVal(`#dia${which}`);
   const pulse = getVal(`#pulse${which}`);
-  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-  const comment = (commentEl?.value || "").trim();
+  const comment = getBpComment(which);
   return !!(sys || dia || pulse || comment);
 }
 async function saveAll(){
@@ -3137,30 +3132,19 @@ const hasM = blockHasData("M");
 const hasA = blockHasData("A"); 
 const weightVal = $("#weightDay")?.value?.trim();
 const waistValRaw = $("#input-waist-cm")?.value?.trim();
-const notes = ($("#notesDay").value || "").trim();
 const flagsComment = ($("#flagsComment")?.value || "").trim();
 const hasAnyFlag = !!(trainingActive || lowIntakeActive || sickActive ||
   valsartanMissed || forxigaMissed || nsarTaken ||
   saltHigh || proteinHigh);
-const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || notes || flagsComment);
+const hasDaySummary = !!(weightVal || waistValRaw || hasAnyFlag || flagsComment);
 
-//  NEU: Kommentarpflicht bei Grenzwertueberschreitung
-const sysM = Number($("#sysM").value);
-const diaM = Number($("#diaM").value);
-const sysA = Number($("#sysA").value);
-const diaA = Number($("#diaA").value);
-
-const needsComment = 
-  (sysM > 130) || (diaM > 90) ||
-  (sysA > 130) || (diaA > 90);
-
-const notesEl = $("#notesDay");
-notesEl.style.outline = ""; // Reset
-
-if (needsComment && !notes) {
+updateBpCommentWarnings();
+const missingMorningComment = requiresBpComment('M');
+const missingEveningComment = requiresBpComment('A');
+if (missingMorningComment || missingEveningComment) {
   alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
-  notesEl.focus();
-  notesEl.style.outline = "2px solid var(--danger)";
+  const focusTarget = missingMorningComment ? document.getElementById('bpCommentM') : document.getElementById('bpCommentA');
+  if (focusTarget) focusTarget.focus();
   return;
 }
 
@@ -3175,6 +3159,7 @@ if (!saved) { alert("Keine Daten eingegeben - nichts zu speichern."); return; }
 // 3) UI aktualisieren
 await renderDoctor();
 if(chartPanel.open) await chartPanel.draw();
+updateBpCommentWarnings();
 
 { const s = (perfStats.add('saveEntry', performance.now()-__t0), perfStats.snap('saveEntry'));
 diag.add(`[perf] saveEntry p50=${s.p50|0}ms p95=${s.p95|0}ms p99=${s.p99|0}ms (n=${s.count})`); }
@@ -3190,7 +3175,7 @@ const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : n
 const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
 
 const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
-const comment = (commentEl?.value || '').trim();
+const comment = getBpComment(which);
 
 const hasAny = (sys != null) || (dia != null) || (pulse != null);
 const hasComment = comment.length > 0;
@@ -3241,112 +3226,17 @@ if (hasComment){
 return hasAny || hasComment;
 }
 
-async function saveBpPanel(){
-  const hasM = blockHasData('M');
-  const hasA = blockHasData('A');
-  if (!hasM && !hasA){ uiError('Keine Blutdruckdaten oder Kommentare im Panel.'); return; }
-  let saved = false;
-  if (hasM) saved = (await saveBlock('Morgen','M', false, false)) || saved;
-  if (hasA) saved = (await saveBlock('Abend','A', false, false)) || saved;
-  if (!saved){ uiError('Keine Blutdruckdaten gespeichert.'); return; }
-  await renderDoctor();
-  if (chartPanel?.open) await chartPanel.draw();
-  setDocBadges?.({ visible: true });
-  diag.add?.('Blutdruck-Panel gespeichert');
-}
-
-async function saveBodyPanel(){
-  const date = $("#date")?.value || todayStr();
-  const weightVal = $("#weightDay")?.value?.trim();
-  const waistRaw = $("#input-waist-cm")?.value?.trim();
-  const notes = ($("#notesDay")?.value || '').trim();
-  if (!weightVal && !waistRaw && !notes){ uiError('Keine Koerperdaten oder Kommentar eingegeben.'); return; }
-  const entry = {
-    date,
-    time: '12:00',
-    dateTime: new Date(date + 'T12:00').toISOString(),
-    ts: new Date(date + 'T12:00').getTime(),
-    context: 'Tag',
-    sys: null,
-    dia: null,
-    pulse: null,
-    weight: weightVal ? Number(weightVal.replace(',', '.')) : null,
-    waist_cm: waistRaw ? toNumDE(waistRaw) : null,
-    map: null,
-    notes,
-    training: false,
-    low_intake: false,
-    sick: false,
-    valsartan_missed: false,
-    forxiga_missed: false,
-    nsar_taken: false,
-    salt_high: false,
-    protein_high90: false
-  };
-  const localId = await addEntry(entry);
-  await syncWebhook(entry, localId);
-  await renderDoctor();
-  if (chartPanel?.open) await chartPanel.draw();
-  setDocBadges?.({ visible: true });
-  diag.add?.('Koerper-Panel gespeichert');
-}
-
-async function saveFlagsPanel(){
-  const date = $("#date")?.value || todayStr();
-  const commentField = document.getElementById('flagsComment');
-  const comment = (commentField?.value || '').trim();
-  const hasFlags = !!(trainingActive || lowIntakeActive || sickActive || valsartanMissed || forxigaMissed || nsarTaken || saltHigh || proteinHigh);
-  if (!hasFlags && !comment){ uiError('Keine Flags oder Kommentar eingegeben.'); return; }
-  if (hasFlags){
-    const entry = {
-      date,
-      time: '22:30',
-      dateTime: new Date(date + 'T22:30').toISOString(),
-      ts: new Date(date + 'T22:30').getTime(),
-      context: 'Tag',
-      sys: null,
-      dia: null,
-      pulse: null,
-      weight: null,
-      waist_cm: null,
-      map: null,
-      notes: '',
-      training: trainingActive,
-      low_intake: lowIntakeActive,
-      sick: sickActive,
-      valsartan_missed: valsartanMissed,
-      forxiga_missed: forxigaMissed,
-      nsar_taken: nsarTaken,
-      salt_high: saltHigh,
-      protein_high90: proteinHigh
-    };
-    const localId = await addEntry(entry);
-    await syncWebhook(entry, localId);
-  }
-  if (comment){
-    try {
-      await appendNote(date, '[Flags] ', comment);
-      if (commentField) commentField.value = '';
-    } catch(_) { /* ignored */ }
-  }
-  await renderDoctor();
-  if (chartPanel?.open) await chartPanel.draw();
-  setDocBadges?.({ visible: true });
-  diag.add?.('Flags-Panel gespeichert');
-}
-
-function attachPanelSave(id, handler){
-  const btn = document.getElementById(id);
+function flashButtonOk(btn, successHtml){
   if (!btn) return;
-  btn.addEventListener('click', async ()=>{
-    withBusy(btn, true);
-    try { await handler(); }
-    catch(_) { /* Fehler werden in Handler behandelt */ }
-    finally { withBusy(btn, false); }
-  });
+  const base = btn.dataset.label || btn.innerHTML;
+  btn.dataset.label = base;
+  btn.disabled = true;
+  btn.innerHTML = successHtml;
+  setTimeout(()=>{
+    btn.innerHTML = btn.dataset.label;
+    btn.disabled = false;
+  }, 1200);
 }
-
-
 
 function baseEntry(date, time, contextLabel){
 const iso = new Date(date + "T" + time).toISOString();
@@ -3355,7 +3245,7 @@ return {
 date, time, dateTime: iso, ts,
 context: contextLabel, 
 sys: null, dia: null, pulse: null, weight: null, map: null,
-notes: ($("#notesDay").value || "").trim(),
+notes: '',
 training: trainingActive,
 low_intake: lowIntakeActive,
 sick: sickActive,
@@ -3405,7 +3295,8 @@ async function saveFlagsCommentNote(date, text){
   return true;
 }
 
-async function saveDaySummary(){
+async function saveDaySummary(options = {}){
+const { includeFlagsComment = true } = options;
 const date = $("#date")?.value || todayStr();
 const time = "12:00";
 
@@ -3419,13 +3310,12 @@ entry.weight = w ? Number((w||"").replace(',', '.')) : null;
 const waistRaw = $("#input-waist-cm")?.value?.trim();
 entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
-const flagsComment = ($("#flagsComment")?.value || "").trim();
+const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
 let saved = false;
 
 const hasContent =
 (entry.weight != null) ||
 (entry.waist_cm != null) ||
-!!entry.notes ||
 entry.training || entry.low_intake || entry.sick ||
 entry.valsartan_missed || entry.forxiga_missed ||
 entry.nsar_taken || entry.salt_high || entry.protein_high90;
@@ -3436,7 +3326,7 @@ if (hasContent){
   saved = true;
 }
 
-if (flagsComment){
+if (includeFlagsComment && flagsComment){
   const savedNote = await saveFlagsCommentNote(date, flagsComment);
   if (savedNote){
     const el = document.getElementById('flagsComment');
@@ -3448,6 +3338,7 @@ if (flagsComment){
 
 return saved;
 }
+
 
 async function withRetry(fn, {tries=3, base=300}={}) {
 let lastErr;
@@ -3922,31 +3813,145 @@ if (!savedUrl || !savedKey) {
 
 // Sanfte Warnung
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
-function needsCommentNow(){
-  const sysM = Number($("#sysM").value);
-  const diaM = Number($("#diaM").value);
-  const sysA = Number($("#sysA").value);
-  const diaA = Number($("#diaA").value);
-  return (sysM > 130) || (diaM > 90) || (sysA > 130) || (diaA > 90);
+function getBpComment(which){
+  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  return (el?.value || "").trim();
 }
-function updateNotesRequirementUI(){
-  const notesEl = $("#notesDay");
-  if (!notesEl) return;
-  const notes = (notesEl.value || "").trim();
-  const need = needsCommentNow();
-  const invalid = need && !notes;
-  notesEl.style.outline = invalid ? "2px solid var(--danger)" : "";
-  if (invalid) notesEl.setAttribute("aria-invalid","true"); else notesEl.removeAttribute("aria-invalid");
+function requiresBpComment(which){
+  const sys = Number($(`#sys${which}`).value);
+  const dia = Number($(`#dia${which}`).value);
+  return ((sys > 130) || (dia > 90)) && !getBpComment(which);
 }
-// bei jeder Eingabe der vier BP-Felder + Kommentar selbst neu bewerten
-["#sysM","#diaM","#sysA","#diaA","#notesDay"].forEach(sel=>{
+function updateBpCommentWarnings(){
+  ["M","A"].forEach(which=>{
+    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    if (!el) return;
+    const needs = requiresBpComment(which);
+    el.style.outline = needs ? "2px solid var(--danger)" : "";
+    if (needs) el.setAttribute("aria-invalid","true");
+    else el.removeAttribute("aria-invalid");
+  });
+}
+// bei jeder Eingabe der relevanten Felder neu bewerten
+["#sysM","#diaM","#bpCommentM","#sysA","#diaA","#bpCommentA"].forEach(sel=>{
   const el = $(sel); if(!el) return;
-  el.addEventListener("input", updateNotesRequirementUI);
+  el.addEventListener("input", updateBpCommentWarnings);
 });
-// einmal initial pruefen (falls Werte schon stehen)
-updateNotesRequirementUI();
+updateBpCommentWarnings();
+
 
 // Toggle-Handler
+const bpContextSel = document.getElementById('bpContextSel');
+const bpPanes = Array.from(document.querySelectorAll('.bp-pane'));
+const applyBpContext = (value)=>{
+  const ctx = value === 'A' ? 'A' : 'M';
+  bpPanes.forEach(pane=>{
+    const match = pane.getAttribute('data-context') === ctx;
+    pane.classList.toggle('active', match);
+  });
+};
+if (bpContextSel){
+  applyBpContext(bpContextSel.value || 'M');
+  bpContextSel.addEventListener('change', (e)=>{
+    applyBpContext(e.target.value);
+    updateBpCommentWarnings();
+  });
+}
+
+const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
+if (saveBpPanelBtn){
+  saveBpPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    const ctxSel = document.getElementById('bpContextSel');
+    const which = (ctxSel?.value === 'A') ? 'A' : 'M';
+    updateBpCommentWarnings();
+    if (requiresBpComment(which)){
+      alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
+      const target = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+      if (target) target.focus();
+      return;
+    }
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveBlock(which === 'M' ? 'Morgen' : 'Abend', which, false, false);
+      if (!saved){
+        uiError('Keine Daten fuer diesen Messzeitpunkt eingegeben.');
+      } else {
+        savedOk = true;
+        await renderDoctor();
+        if (chartPanel.open) await chartPanel.draw();
+      }
+    }catch(err){
+      console.error(err);
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+    if (savedOk){
+      updateBpCommentWarnings();
+      flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
+    }
+  });
+}
+
+const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
+if (saveBodyPanelBtn){
+  saveBodyPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveDaySummary({ includeFlagsComment: false });
+      if (!saved){
+        uiError('Keine Koerperdaten eingegeben.');
+      } else {
+        savedOk = true;
+        await renderDoctor();
+        if (chartPanel.open) await chartPanel.draw();
+      }
+    }catch(err){
+      console.error(err);
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+    if (savedOk){
+      flashButtonOk(btn, '&#x2705; Koerper gespeichert');
+    }
+  });
+}
+
+const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
+if (saveFlagsPanelBtn){
+  saveFlagsPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedIn())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveDaySummary({ includeFlagsComment: true });
+      if (!saved){
+        uiError('Keine Flag-Daten eingegeben.');
+      } else {
+        savedOk = true;
+        await renderDoctor();
+        if (chartPanel.open) await chartPanel.draw();
+      }
+    }catch(err){
+      console.error(err);
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+    if (savedOk){
+      flashButtonOk(btn, '&#x2705; Flags gespeichert');
+    }
+  });
+}
+
 const bindToggle = (id, setter, getVal)=>{
   const el = $(id);
   el.addEventListener("click", ()=>{
@@ -3973,9 +3978,6 @@ document.getElementById("saveAllBtn").addEventListener("click", async (e)=>{
     withBusy(btn, false);
   }
 });
-attachPanelSave('saveBpPanelBtn', saveBpPanel);
-attachPanelSave('saveBodyPanelBtn', saveBodyPanel);
-attachPanelSave('saveFlagsPanelBtn', saveFlagsPanel);
 // Sync toggles when the date changes in capture view
 const __dateEl = document.getElementById('date');
 if (__dateEl) __dateEl.addEventListener('change', async ()=>{ try{ await syncCaptureFlagTogglesForCurrentDate(); }catch(_){}});
@@ -4119,3 +4121,33 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
