@@ -48,7 +48,7 @@ window.addEventListener("keydown", e=>{
 </script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.4.8)</title>
+<title>Gesundheits-Logger (V1.4.9)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -585,7 +585,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.4.8</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.4.9</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -901,22 +901,80 @@ close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='no
 };
 
 /* ===== Helpers ===== */
-  // --- Debounce ---
-function debounce(fn, wait=250){
-  let t = null;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
-}
-// UI-Refresh: rendert nur, wenn Arzt-Ansicht sichtbar; Chart nur wenn offen
-const requestUiRefresh = debounce(async (reason = '') => {
-  try{
-    const doctorActive = document.getElementById('doctor')?.classList?.contains('active');
-    if (doctorActive) await renderDoctor();
-    const lifestyleActive = document.getElementById('lifestyle')?.classList?.contains('active');
-    if (lifestyleActive && typeof renderLifestyle === 'function') await renderLifestyle();
-    if (chartPanel?.open) await chartPanel.draw();
-  }catch(e){ /* still ok */ }
-}, 250);
+const uiRefreshState = {
+  timer: null,
+  running: false,
+  docNeeded: false,
+  chartNeeded: false,
+  lifestyleNeeded: false,
+  resolvers: [],
+  lastReason: ''
+};
 
+function requestUiRefresh(opts = {}){
+  if (typeof opts === "string") {
+    opts = { reason: opts };
+  }
+  const reason = opts.reason || '';
+  const doctor = opts.doctor !== undefined ? !!opts.doctor : true;
+
+  let chartDefault = false;
+  try { chartDefault = !!(chartPanel?.open); } catch(_) {}
+  const chart = opts.chart !== undefined ? !!opts.chart : chartDefault;
+
+  let lifestyleDefault = false;
+  try {
+    const lifestyleEl = document.getElementById('lifestyle');
+    lifestyleDefault = !!(lifestyleEl?.classList?.contains('active'));
+  } catch(_) {}
+  const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
+
+  uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
+  uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
+  uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
+  uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
+
+  const promise = new Promise(resolve => uiRefreshState.resolvers.push(resolve));
+
+  if (!uiRefreshState.running && !uiRefreshState.timer) {
+    uiRefreshState.timer = setTimeout(runUiRefresh, 60);
+  }
+  return promise;
+}
+
+async function runUiRefresh(){
+  const state = uiRefreshState;
+  if (state.timer){
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
+  state.running = true;
+  try {
+    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded) {
+      const doc = state.docNeeded;
+      const chart = state.chartNeeded;
+      const lifestyle = state.lifestyleNeeded;
+      state.docNeeded = false;
+      state.chartNeeded = false;
+      state.lifestyleNeeded = false;
+      try {
+        if (doc) await renderDoctor();
+        if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
+        if (chart) await chartPanel.draw?.();
+      } catch (e) {
+        try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch(_){}
+      }
+    }
+  } finally {
+    state.running = false;
+    const resolvers = state.resolvers;
+    state.resolvers = [];
+    resolvers.forEach(resolve => { try { resolve(); } catch(_){} });
+    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded) && !state.timer){
+      state.timer = setTimeout(runUiRefresh, 60);
+    }
+  }
+}
 // kleines visuelles Ping bei Realtime
 function livePulse(){
   const el = document.getElementById('doctorLive');
@@ -2048,8 +2106,7 @@ async function renderDoctor(){
           if (!r.ok){
             alert(`Server-Loeschung fehlgeschlagen (${r.status||"?"}).`);
           }
-          await renderDoctor();           // neu laden
-          if (chartPanel.open) chartPanel.draw();
+          await requestUiRefresh({ reason: 'doctor:delete' });
         } finally {
           btn.disabled = false; btn.textContent = old;
         }
@@ -3059,7 +3116,7 @@ async function setTab(name){
   $$(".tabs .btn").forEach(b =>
     b.classList.toggle("primary", b.dataset.tab === name)
   );
-  if (name === "doctor") { renderDoctor(); }
+  if (name === "doctor") { await requestUiRefresh({ reason: 'tab:doctor' }); }
   if (name === "capture") { try { resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
   if (name === "lifestyle") { try { await cleanupOldIntake(); await renderLifestyle(); } catch(_){} }
 }
@@ -3103,7 +3160,7 @@ el.innerHTML = on ? activeText : baseText;
 function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
-/* === Panel Reset Helpers (v1.4.8) === */
+/* === Panel Reset Helpers (V1.4.9) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -3550,7 +3607,7 @@ async function setupRealtime(){
             (payload) => {
               // Optional: Zeitraum grob pruefen? (einfach halten: immer refreshen)
               livePulse();
-              requestUiRefresh('realtime');
+              requestUiRefresh({ reason: 'realtime' });
             })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') { diag.add?.('Realtime: subscribed'); }
@@ -3913,8 +3970,7 @@ if (saveBpPanelBtn){
         uiError('Keine Daten fuer diesen Messzeitpunkt eingegeben.');
       } else {
         savedOk = true;
-        await renderDoctor();
-        if (chartPanel.open) await chartPanel.draw();
+        await requestUiRefresh({ reason: 'panel:bp' });
       }
     }catch(err){
       diag.add?.('Panel BP Fehler: ' + (err?.message || err));
@@ -3942,8 +3998,7 @@ if (saveBodyPanelBtn){
         uiError('Keine Koerperdaten eingegeben.');
       } else {
         savedOk = true;
-        await renderDoctor();
-        if (chartPanel.open) await chartPanel.draw();
+        await requestUiRefresh({ reason: 'panel:body' });
       }
     }catch(err){
       diag.add?.('Panel Koerper Fehler: ' + (err?.message || err));
@@ -3970,8 +4025,7 @@ if (saveFlagsPanelBtn){
         uiError('Keine Flag-Daten eingegeben.');
       } else {
         savedOk = true;
-        await renderDoctor();
-        if (chartPanel.open) await chartPanel.draw();
+        await requestUiRefresh({ reason: 'panel:flags' });
       }
     }catch(err){
       diag.add?.('Panel Flags Fehler: ' + (err?.message || err));
@@ -4017,9 +4071,8 @@ if (dateEl) {
 const applyBtn = $("#applyRange");
 if (applyBtn) {
   applyBtn.addEventListener("click", async () => {
-    await renderDoctor();
+    await requestUiRefresh({ reason: 'doctor:range' });
     setDocBadges({ visible: true });
-    if (chartPanel.open) await chartPanel.draw?.();
   });
 }
 
@@ -4075,8 +4128,7 @@ bindLifestyle();
 try { if (await isLoggedIn()) { await cleanupOldIntake(); await renderLifestyle(); } } catch(_){ }
 
 // Initial Render
-await renderDoctor();
-setDocBadges({ visible: true });
+await requestUiRefresh({ reason: 'boot:initial' });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
 $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
@@ -4156,3 +4208,4 @@ main();
 
 </body>
 </html>
+
