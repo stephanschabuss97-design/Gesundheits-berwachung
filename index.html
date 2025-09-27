@@ -1606,30 +1606,62 @@ async function refreshIntakeChips({ totals = null, dayIso = null } = {}){
   const proteinChip = document.getElementById('chip-protein');
   const dateIso = dayIso || captureDate();
 
-  const applyTotals = (tot) => {
-    const water = Number(tot.water_ml || 0);
-    const salt = Number(tot.salt_g || 0);
-    const protein = Number(tot.protein_g || 0);
+const applyTotals = (tot) => {
+  const water = Number(tot.water_ml || 0);
+  const salt = Number(tot.salt_g || 0);
+  const protein = Number(tot.protein_g || 0);
 
-    let waterState = '';
-    let waterMeta = 'niedrig';
-    if (water >= LS_WATER_GOAL * 1.1) { waterState = 'ok'; waterMeta = 'Ziel erreicht'; }
-    else if (water >= LS_WATER_GOAL * 0.9) { waterState = 'ok'; waterMeta = 'Zielbereich'; }
-    else if (water >= LS_WATER_GOAL * 0.5) { waterMeta = 'moderate Aufnahme'; }
-    if (waterChip) setChipState(waterChip, ${Math.round(water)} /  ml, waterMeta, waterState);
+  // Wasser
+  let waterState = '';
+  let waterMeta = 'niedrig';
+  if (water >= LS_WATER_GOAL * 1.1) { 
+    waterState = 'ok'; 
+    waterMeta = 'Ziel erreicht'; 
+  } else if (water >= LS_WATER_GOAL * 0.9) { 
+    waterState = 'ok'; 
+    waterMeta = 'Zielbereich'; 
+  } else if (water >= LS_WATER_GOAL * 0.5) { 
+    waterMeta = 'moderate Aufnahme'; 
+  }
+  if (waterChip) setChipState(
+    waterChip, 
+    `${Math.round(water)} / ${LS_WATER_GOAL} ml`, 
+    waterMeta, 
+    waterState
+  );
 
-    let saltState = '';
-    let saltMeta = 'Zielbereich';
-    if (salt > LS_SALT_MAX) { saltState = 'bad'; saltMeta = 'ueber Ziel'; }
-    else if (salt >= 5) { saltState = 'warn'; saltMeta = 'Warnung'; }
-    if (saltChip) setChipState(saltChip, ${fmtDE(salt,1)} /  g, saltMeta, saltState);
+  // Salz
+  let saltState = '';
+  let saltMeta = 'Zielbereich';
+  if (salt > LS_SALT_MAX) { 
+    saltState = 'bad'; 
+    saltMeta = 'ueber Ziel'; 
+  } else if (salt >= 5) { 
+    saltState = 'warn'; 
+    saltMeta = 'Warnung'; 
+  }
+  if (saltChip) {
+    const saltText = `${fmtDE(salt,1)} / ${fmtDE(LS_SALT_MAX,1)} g`;
+    setChipState(saltChip, saltText, saltMeta, saltState || '');
+  }
 
-    let protState = '';
-    let protMeta = 'noch offen';
-    if (protein >= 78 && protein <= 90) { protState = 'ok'; protMeta = 'Zielbereich'; }
-    else if (protein > 90) { protState = 'bad'; protMeta = 'ueber Ziel'; }
-    if (proteinChip) setChipState(proteinChip, ${fmtDE(protein,1)} g, protMeta, protState);
-  };
+  // Protein
+  let protState = '';
+  let protMeta = 'noch offen';
+  if (protein >= 78 && protein <= 90) { 
+    protState = 'ok'; 
+    protMeta = 'Zielbereich'; 
+  } else if (protein > 90) { 
+    protState = 'bad'; 
+    protMeta = 'ueber Ziel'; 
+  }
+  if (proteinChip) setChipState(
+    proteinChip, 
+    `${fmtDE(protein,1)} g`, 
+    protMeta, 
+    protState
+  );
+};
 
   try {
     if (!totals) {
@@ -4311,6 +4343,7 @@ main();
 
 </body>
 </html>
+
 
 
 
