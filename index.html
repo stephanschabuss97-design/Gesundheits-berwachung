@@ -2558,7 +2558,7 @@ const metric = $("#metricSel")?.value || "bp";
 
     // Schwellen (nur BP)
     const TH_SYS = 130;
-    const TH_DIA = 90;
+    const TH_DIA = 80;
 
     // Tagesstempel (UTC, 00:00)
     const toDayTs = (isoDate /* "YYYY-MM-DD" */) => {
@@ -2840,7 +2840,7 @@ const metric = $("#metricSel")?.value || "bp";
       grid += line(PL, ySys, W - PR, ySys, "#ef4444", "6 4");
       grid += line(PL, yDia, W - PR, yDia, "#ef4444", "6 4");
 grid += text(W - PR - 2, ySys + 4, "Sys 130", "end");
-grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
+grid += text(W - PR - 2, yDia  + 4, "Dia 80",  "end");
     }
 
     if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
@@ -3145,7 +3145,7 @@ function requiresBpComment(which){
   const dia = Number($(`#dia${which}`).value);
   const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
   const comment = (el?.value || "").trim();
-  return ((sys > 130) || (dia > 90)) && !comment;
+  return ((sys > 130) || (dia > 80)) && !comment;
 }
 function updateBpCommentWarnings(){
   ['M','A'].forEach(which => {
@@ -3908,7 +3908,7 @@ function requiresBpComment(which){
   const dia = Number($(`#dia${which}`).value);
   const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
   const comment = (el?.value || "").trim();
-  return ((sys > 130) || (dia > 90)) && !comment;
+  return ((sys > 130) || (dia > 80)) && !comment;
 }
 function updateBpCommentWarnings(){
   ['M','A'].forEach(which => {
@@ -3954,7 +3954,7 @@ if (saveBpPanelBtn){
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
     updateBpCommentWarnings();
     if (requiresBpComment(which)){
-      alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
+      alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>80).");
       const target = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
       if (target) target.focus();
       return;
@@ -4210,6 +4210,7 @@ main();
 
 </body>
 </html>
+
 
 
 
