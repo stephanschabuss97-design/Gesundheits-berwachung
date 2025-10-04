@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.6)</title>
+<title>Gesundheits-Logger (V1.5.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -525,15 +525,15 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   #loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
   
 /* Lifestyle progress: modern look */
-#lifestyle .progress { position: relative; width:100%; height:18px; background:#0f1116; border:1px solid #2b2f3a; border-radius:999px; overflow:hidden; margin-top:8px; }
-#lifestyle .progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),#7c3aed); transition: width .35s ease, filter .2s ease; box-shadow: inset 0 0 0 1px rgba(79,70,229,.25); }
-#lifestyle .progress .label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:rgba(255,255,255,.9); text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
-#lifestyle .progress.ok   .bar { background:linear-gradient(90deg,#10b981,#34d399); box-shadow: inset 0 0 0 1px rgba(16,185,129,.25), 0 8px 20px rgba(16,185,129,.18); }
-#lifestyle .progress.warn .bar { background:linear-gradient(90deg,#f59e0b,#fbbf24); box-shadow: inset 0 0 0 1px rgba(245,158,11,.25), 0 8px 20px rgba(245,158,11,.18); }
-#lifestyle .progress.bad  .bar { background:linear-gradient(90deg,#ef4444,#f87171); box-shadow: inset 0 0 0 1px rgba(239,68,68,.25), 0 8px 20px rgba(239,68,68,.18); }
-#lifestyle .progress.neutral .bar { background:linear-gradient(90deg,#6b7280,#9ca3af); box-shadow: inset 0 0 0 1px rgba(107,114,128,.25); }
+#lifestyle .progress, #cap-intake-wrap .progress { position: relative; width:100%; height:18px; background:#0f1116; border:1px solid #2b2f3a; border-radius:999px; overflow:hidden; margin-top:8px; }
+#lifestyle .progress .bar, #cap-intake-wrap .progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),#7c3aed); transition: width .35s ease, filter .2s ease; box-shadow: inset 0 0 0 1px rgba(79,70,229,.25); }
+#lifestyle .progress .label, #cap-intake-wrap .progress .label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:rgba(255,255,255,.9); text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
+#lifestyle .progress.ok   .bar, #cap-intake-wrap .progress.ok   .bar { background:linear-gradient(90deg,#10b981,#34d399); box-shadow: inset 0 0 0 1px rgba(16,185,129,.25), 0 8px 20px rgba(16,185,129,.18); }
+#lifestyle .progress.warn .bar, #cap-intake-wrap .progress.warn .bar { background:linear-gradient(90deg,#f59e0b,#fbbf24); box-shadow: inset 0 0 0 1px rgba(245,158,11,.25), 0 8px 20px rgba(245,158,11,.18); }
+#lifestyle .progress.bad  .bar, #cap-intake-wrap .progress.bad  .bar { background:linear-gradient(90deg,#ef4444,#f87171); box-shadow: inset 0 0 0 1px rgba(239,68,68,.25), 0 8px 20px rgba(239,68,68,.18); }
+#lifestyle .progress.neutral .bar, #cap-intake-wrap .progress.neutral .bar { background:linear-gradient(90deg,#6b7280,#9ca3af); box-shadow: inset 0 0 0 1px rgba(107,114,128,.25); }
 @media (hover:hover){
-  #lifestyle .progress:hover .bar { filter:brightness(1.05); }
+  #lifestyle .progress:hover .bar, #cap-intake-wrap .progress:hover .bar { filter:brightness(1.05); }
 }
 
 /* Intake status pills (Capture) */
@@ -553,7 +553,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.6</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -563,7 +563,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <nav class="tabs">
 <button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
 <button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
-<button class="btn ghost" data-tab="lifestyle" id="tab-lifestyle" type="button">Lifestyle</button>
 </nav>
 
 <!-- Hilfe-Panel -->
@@ -775,58 +774,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 </section>
 
 <!-- Lifestyle (Heute) -->
-<section class="view" id="lifestyle">
-  <section class="card" id="lifestyleCard">
-    <strong style="display:block;margin-bottom:8px">Lifestyle Intake (heute)</strong>
 
-    <div class="row">
-      <div style="flex:1;min-width:180px">
-        <label>Wasser hinzufuegen (ml)</label>
-        <input type="number" id="ls-water-add" min="0" step="50" inputmode="numeric" placeholder="z. B. 250">
-      </div>
-      <div style="width:140px;align-self:flex-end">
-        <button class="btn primary" id="ls-water-add-btn" type="button">+ Menge</button>
-      </div>
-    </div>
-    <div class="progress" id="ls-water-prog" aria-label="Wasser Fortschritt">
-      <div class="bar" id="ls-water-bar"></div>
-      <div class="label" id="ls-water-label">0 / 2000 ml</div>
-    </div>
-
-    <div class="row" style="margin-top:12px">
-      <div style="flex:1;min-width:180px">
-        <label>Salz hinzufuegen (g)</label>
-        <input type="text" id="ls-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
-      </div>
-      <div style="width:140px;align-self:flex-end">
-        <button class="btn primary" id="ls-salt-add-btn" type="button">+ Menge</button>
-      </div>
-    </div>
-    <div class="progress" id="ls-salt-prog" aria-label="Salz Fortschritt">
-      <div class="bar" id="ls-salt-bar"></div>
-      <div class="label" id="ls-salt-label">0,0 / 6,0 g</div>
-    </div>
-
-    <div class="row" style="margin-top:12px">
-      <div style="flex:1;min-width:180px">
-        <label>Protein hinzufuegen (g)</label>
-        <input type="text" id="ls-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
-      </div>
-      <div style="width:140px;align-self:flex-end">
-        <button class="btn primary" id="ls-protein-add-btn" type="button">+ Menge</button>
-      </div>
-    </div>
-    <div class="progress" id="ls-protein-prog" aria-label="Protein Fortschritt">
-      <div class="bar" id="ls-protein-bar"></div>
-      <div class="label" id="ls-protein-label">0,0 / 90,0 g</div>
-    </div>
-
-    <div class="small" style="opacity:.75;margin-top:10px">
-      Ziele: Wasser 2000 ml * Salz max. 6 g * Protein Ziel 90 g (gruen bei 78-89 g)
-    </div>
-  </section>
-  <div class="small" style="margin-top:6px;opacity:.7">Hinweis: nur der heutige Intake wird gespeichert und synchronisiert.</div>
-</section>
 
 <!-- Doctor -->
 <section class="view" id="doctor">
@@ -971,7 +919,7 @@ async function runUiRefresh(){
       state.lifestyleNeeded = false;
       try {
         if (doc) await renderDoctor();
-        if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
+        if (lifestyle && typeof renderLifestyle === 'function') 
         if (chart) await chartPanel.draw?.();
       } catch (e) {
         try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch(_){}
@@ -1101,12 +1049,7 @@ function setDoctorAccess(enabled){
     chartBtn.title = enabled ? 'Werte als Grafik' : 'Bitte zuerst anmelden';
   }
   // Lifestyle-Tab mitsteuern
-  const lifeBtn = document.getElementById('tab-lifestyle');
-  if (lifeBtn){
-    lifeBtn.disabled = !enabled;
-    lifeBtn.classList.toggle('ghost', !enabled);
-    lifeBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
-  }
+  
 }
   
 const $ = sel => document.querySelector(sel);
@@ -1668,6 +1611,7 @@ async function refreshCaptureIntake(){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
     setCaptureIntakeDisabled(true);
     updateCaptureIntakeStatus();
+    try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
     return;
   }
 
@@ -1682,10 +1626,13 @@ async function refreshCaptureIntake(){
       const totals = await loadIntakeToday({ user_id: uid, dayIso });
       captureIntakeState.totals = totals || { water_ml: 0, salt_g: 0, protein_g: 0 };
       captureIntakeState.logged = true;
+      try{ __lsTotals = captureIntakeState.totals; updateLifestyleBars(); }catch(_){ }
     }
   }catch(e){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
     try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
+
+  try{ updateLifestyleBars(); }catch(_){ }
   }
 
   updateCaptureIntakeStatus();
@@ -1739,7 +1686,7 @@ async function handleCaptureIntake(kind){
     input.value = '';
     updateCaptureIntakeStatus();
     const needsLifestyle = dayIso === todayStr();
-    await requestUiRefresh({ reason: 'capture:intake', lifestyle: needsLifestyle });
+    await requestUiRefresh({ reason: 'capture:intake' });
     uiInfo(message);
   }catch(e){
     uiError('Update fehlgeschlagen: ' + (e?.message || e));
@@ -3298,13 +3245,7 @@ async function setTab(name){
       __pendingAfterUnlock = null;
     }
   }
-  if (name === "lifestyle"){
-    const logged = await isLoggedInFast();
-    if (!logged){
-      showLoginOverlay(true);
-      name = "capture";
-    }
-  }
+  
   $$(".view").forEach(v => v.classList.remove("active"));
   $("#"+name).classList.add("active");
   $$(".tabs .btn").forEach(b =>
@@ -3312,7 +3253,7 @@ async function setTab(name){
   );
   if (name === "doctor") { await requestUiRefresh({ reason: 'tab:doctor' }); }
   if (name === "capture") { try { await refreshCaptureIntake(); resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
-  if (name === "lifestyle") { try { await cleanupOldIntake(); await renderLifestyle(); } catch(_){} }
+  
 }
 
 function bindTabs(){
@@ -3376,7 +3317,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.6) === */
+/* === Panel Reset Helpers (V1.5.5) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -4346,9 +4287,9 @@ document.addEventListener('visibilitychange', () => {
 });
   
 // Lifestyle binden und initial (falls bereits angemeldet) laden
-bindLifestyle();
+
 bindIntakeCapture();
-try { if (await isLoggedInFast()) { await cleanupOldIntake(); await renderLifestyle(); } } catch(_){ }
+try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 
 // Initial Render
 await requestUiRefresh({ reason: 'boot:initial' });
@@ -4433,3 +4374,5 @@ main();
 
 </body>
 </html>
+
+
