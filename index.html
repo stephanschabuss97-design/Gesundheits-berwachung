@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.5)</title>
+<title>Gesundheits-Logger (V1.5.6)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -524,14 +524,26 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 #loginOverlay .login-card h3{ margin: 0 0 6px; }
   #loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
   
-/* Lifestyle: Progress Bars */
-.progress{ position: relative; height:16px; background:#0f1116; border:1px solid #2b2f3a; border-radius:10px; overflow:hidden; margin-top:6px }
-.progress .bar{ position:absolute; inset:0 auto 0 0; width:0%; background:var(--accent); transition: width .25s ease; }
-.progress .label{ position:relative; z-index:1; text-align:center; font-size:12px; color:var(--muted); line-height:16px }
-.progress.ok   .bar{ background: var(--ok); }
-.progress.warn .bar{ background: var(--warn); }
-.progress.bad  .bar{ background: var(--danger); }
-.progress.neutral .bar{ background: var(--muted); }
+/* Lifestyle progress: modern look */
+#lifestyle .progress { position: relative; width:100%; height:18px; background:#0f1116; border:1px solid #2b2f3a; border-radius:999px; overflow:hidden; margin-top:8px; }
+#lifestyle .progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),#7c3aed); transition: width .35s ease, filter .2s ease; box-shadow: inset 0 0 0 1px rgba(79,70,229,.25); }
+#lifestyle .progress .label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:rgba(255,255,255,.9); text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
+#lifestyle .progress.ok   .bar { background:linear-gradient(90deg,#10b981,#34d399); box-shadow: inset 0 0 0 1px rgba(16,185,129,.25), 0 8px 20px rgba(16,185,129,.18); }
+#lifestyle .progress.warn .bar { background:linear-gradient(90deg,#f59e0b,#fbbf24); box-shadow: inset 0 0 0 1px rgba(245,158,11,.25), 0 8px 20px rgba(245,158,11,.18); }
+#lifestyle .progress.bad  .bar { background:linear-gradient(90deg,#ef4444,#f87171); box-shadow: inset 0 0 0 1px rgba(239,68,68,.25), 0 8px 20px rgba(239,68,68,.18); }
+#lifestyle .progress.neutral .bar { background:linear-gradient(90deg,#6b7280,#9ca3af); box-shadow: inset 0 0 0 1px rgba(107,114,128,.25); }
+@media (hover:hover){
+  #lifestyle .progress:hover .bar { filter:brightness(1.05); }
+}
+
+/* Intake status pills (Capture) */
+#cap-intake-status { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; background:#0f1116; border:1px solid #2b2f3a; color:#e5e7eb; }
+.pill .dot { width:8px; height:8px; border-radius:50%; background:#6b7280; box-shadow:0 0 0 1px rgba(15,17,22,.6); }
+.pill.ok .dot { background:#10b981; }
+.pill.warn .dot { background:#f59e0b; }
+.pill.bad .dot { background:#ef4444; }
+.pill.neutral .dot { background:#7c3aed; }
 
 </style>
 </head>
@@ -541,7 +553,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.6</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1622,10 +1634,25 @@ function updateCaptureIntakeStatus(){
     return;
   }
   const t = captureIntakeState.totals || {};
-  const water = Math.round(t.water_ml || 0);
-  const salt = fmtDE(Number(t.salt_g || 0), 1);
-  const protein = fmtDE(Number(t.protein_g || 0), 1);
-  statusEl.textContent = `Stand fuer ${dayIso}: Wasser ${water} ml * Salz ${salt} g * Protein ${protein} g`;
+  const waterVal = Math.round(t.water_ml || 0);
+  const saltVal = Number(t.salt_g || 0);
+  const proteinVal = Number(t.protein_g || 0);
+
+  const waterRatio = LS_WATER_GOAL ? waterVal / LS_WATER_GOAL : 0;
+  const waterCls = waterRatio >= 0.9 ? 'ok' : (waterRatio >= 0.5 ? 'warn' : 'bad');
+  const saltCls = saltVal > LS_SALT_MAX ? 'bad' : (saltVal >= 5 ? 'warn' : 'ok');
+  const proteinCls = (proteinVal >= 78 && proteinVal <= LS_PROTEIN_GOAL) ? 'ok' : (proteinVal > LS_PROTEIN_GOAL ? 'bad' : 'warn');
+
+  const pills = [
+    { cls: 'neutral', label: 'Tag', value: dayIso },
+    { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
+    { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
+    { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` },
+  ];
+
+  statusEl.innerHTML = pills.map(p =>
+    `<span class="pill ${p.cls}"><span class="dot"></span>${p.label}: ${p.value}</span>`
+  ).join(' ');
 }
 
 async function refreshCaptureIntake(){
@@ -3349,7 +3376,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.5) === */
+/* === Panel Reset Helpers (V1.5.6) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
