@@ -5,7 +5,7 @@
 
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.5)</title>
+<title>Gesundheits-Logger (V1.5.4)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -507,20 +507,6 @@ body.app-locked main, body.app-locked nav, body.app-locked header{
   filter: blur(0); /* bewusst ohne Blur, nur visuelles Dimmen optional */
 }
 body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
-.intake-chips{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;}
-.intake-chip{background:#15171c;border:1px solid #2b2f3a;border-radius:12px;padding:8px 12px;min-width:160px;display:flex;flex-direction:column;gap:4px;}
-.intake-chip .chip-title{font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px;}
-.intake-chip .chip-value{font-weight:600;color:var(--fg);font-size:.95rem;}
-.intake-chip .chip-meta{font-size:.72rem;color:var(--muted);}
-.intake-chip.ok{border-color:var(--ok);}
-.intake-chip.ok .chip-value{color:var(--ok);}
-.intake-chip.warn{border-color:var(--warn);}
-.intake-chip.warn .chip-value{color:var(--warn);}
-.intake-chip.bad{border-color:var(--danger);}
-.intake-chip.bad .chip-value{color:var(--danger);}
-.intake-chip.warn .chip-meta{color:var(--warn);}
-.intake-chip.bad .chip-meta{color:var(--danger);}
-
 
 /* Login-Overlay */
 #loginOverlay{
@@ -556,7 +542,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.5.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -640,25 +626,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     </div>
 
 
-    <div class="intake-chips" id="intakeChips">
-      <div class="intake-chip" id="chip-water">
-        <span class="chip-title">&#x1F4A7; Wasser</span>
-        <span class="chip-value">0 / 2000 ml</span>
-        <span class="chip-meta">-</span>
-      </div>
-      <div class="intake-chip" id="chip-salt">
-        <span class="chip-title">&#x1F9C2; Salz</span>
-        <span class="chip-value">0,0 / 6,0 g</span>
-        <span class="chip-meta">-</span>
-      </div>
-      <div class="intake-chip" id="chip-protein">
-        <span class="chip-title">&#x1F969; Protein</span>
-        <span class="chip-value">0,0 g</span>
-        <span class="chip-meta">-</span>
-      </div>
-    </div>
-
-    <details class="accordion">    <details class="accordion">
+    <details class="accordion">
       <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
@@ -1052,11 +1020,8 @@ function withBusy(el, on=true){
   
 /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
-try{
-if(!sbClient) return false;
-const { data:{ session } } = await sbClient.auth.getSession();
-return !!session;
-}catch{ return false; }
+  if (!sbClient) return false;
+  return await isLoggedInFast({ timeout: 800 });
 }
 
 /** Schaltet optisch auf "gesperrt" - ohne Controls hart zu deaktivieren */
@@ -1095,7 +1060,6 @@ const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).
 const pad2 = n => n.toString().padStart(2,'0');
 const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
-const captureDate = () => document.getElementById('date')?.value || todayStr();
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
@@ -1591,68 +1555,6 @@ function fmtDE(n, digits){
   return n.toFixed(digits).replace('.', ',');
 }
 
-function setChipState(chip, valueText, metaText, state){
-  if (!chip) return;
-  chip.classList.remove('ok','warn','bad');
-  if (state) chip.classList.add(state);
-  const valueEl = chip.querySelector('.chip-value');
-  const metaEl = chip.querySelector('.chip-meta');
-  if (valueEl) valueEl.textContent = valueText;
-  if (metaEl) metaEl.textContent = metaText || '';
-}
-
-async function refreshIntakeChips({ totals = null, dayIso = null } = {}){
-  const wrap = document.getElementById('intakeChips');
-  if (!wrap) return;
-  const waterChip = document.getElementById('chip-water');
-  const saltChip = document.getElementById('chip-salt');
-  const proteinChip = document.getElementById('chip-protein');
-  const dateIso = dayIso || captureDate();
-
-  const applyTotals = (totalsObj) => {
-    const water = Number(totalsObj.water_ml || 0);
-    const salt = Number(totalsObj.salt_g || 0);
-    const protein = Number(totalsObj.protein_g || 0);
-
-    let waterState = '';
-    let waterMeta = 'niedrig';
-    if (water >= LS_WATER_GOAL * 1.1) { waterState = 'ok'; waterMeta = 'Ziel erreicht'; }
-    else if (water >= LS_WATER_GOAL * 0.9) { waterState = 'ok'; waterMeta = 'Zielbereich'; }
-    else if (water >= LS_WATER_GOAL * 0.5) { waterMeta = 'moderate Aufnahme'; }
-    setChipState(waterChip, `${Math.round(water)} / ${LS_WATER_GOAL} ml`, waterMeta, waterState);
-
-    let saltState = '';
-    let saltMeta = 'Zielbereich';
-    if (salt > LS_SALT_MAX) { saltState = 'bad'; saltMeta = 'ueber Ziel'; }
-    else if (salt >= 5) { saltState = 'warn'; saltMeta = 'Warnung'; }
-    setChipState(saltChip, `${fmtDE(salt,1)} / ${fmtDE(LS_SALT_MAX,1)} g`, saltMeta, saltState);
-
-    let protState = '';
-    let protMeta = 'noch offen';
-    if (protein >= 78 && protein <= 90) { protState = 'ok'; protMeta = 'Zielbereich'; }
-    else if (protein > 90) { protState = 'bad'; protMeta = 'ueber Ziel'; }
-    setChipState(proteinChip, `${fmtDE(protein,1)} g`, protMeta, protState);
-  };
-
-  try {
-    if (!totals) {
-      const uid = await getUserId();
-      if (!uid) {
-        setChipState(waterChip, '--', 'Bitte anmelden', '');
-        setChipState(saltChip, '--', 'Bitte anmelden', '');
-        setChipState(proteinChip, '--', 'Bitte anmelden', '');
-        return;
-      }
-      totals = await loadIntakeToday({ user_id: uid, dayIso: dateIso });
-    }
-    applyTotals(totals || {});
-  } catch (_) {
-    setChipState(waterChip, '--', 'keine Daten', '');
-    setChipState(saltChip, '--', 'keine Daten', '');
-    setChipState(proteinChip, '--', 'keine Daten', '');
-  }
-}
-
 function updateLifestyleBars(){
   const wBar = document.getElementById('ls-water-bar');
   const wProg = document.getElementById('ls-water-prog');
@@ -1726,11 +1628,10 @@ async function renderLifestyle(){
   }
   try{
     const uid = await getUserId();
-    const dayIso = captureDate();
+    const dayIso = todayStr();
     const cur = await loadIntakeToday({ user_id: uid, dayIso });
     __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
     updateLifestyleBars();
-    await refreshIntakeChips({ totals: __lsTotals, dayIso });
   }catch(_){ /* ignore */ }
 }
 
@@ -1743,14 +1644,13 @@ function bindLifestyle(){
     const el = document.getElementById('ls-water-add');
     const v = Number(el?.value || 0);
     if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
-    const dayIso = captureDate();
+    const dayIso = todayStr();
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
     try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.water_ml = total;
       updateLifestyleBars();
-      await refreshIntakeChips({ totals: __lsTotals, dayIso });
       el.value = '';
       uiInfo('Wasser aktualisiert.');
     }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
@@ -1760,14 +1660,13 @@ function bindLifestyle(){
     const el = document.getElementById('ls-salt-add');
     const v = toNumDE(el?.value);
     if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
-    const dayIso = captureDate();
+    const dayIso = todayStr();
     let total = (__lsTotals.salt_g||0) + v;
     if (total > 30) total = 30;
     try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.salt_g = total;
       updateLifestyleBars();
-      await refreshIntakeChips({ totals: __lsTotals, dayIso });
       el.value = '';
       uiInfo('Salz aktualisiert.');
     }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
@@ -1777,14 +1676,13 @@ function bindLifestyle(){
     const el = document.getElementById('ls-protein-add');
     const v = toNumDE(el?.value);
     if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
-    const dayIso = captureDate();
+    const dayIso = todayStr();
     let total = (__lsTotals.protein_g||0) + v;
     if (total > 300) total = 300;
     try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
       __lsTotals.protein_g = total;
       updateLifestyleBars();
-      await refreshIntakeChips({ totals: __lsTotals, dayIso });
       el.value = '';
       uiInfo('Protein aktualisiert.');
     }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
@@ -1993,7 +1891,6 @@ function watchAuthState(){
     setAuthGuard(!!session);
     setDoctorAccess(!!session);
     __lastLoggedIn = !!session;
-    await refreshIntakeChips();
 
     if (session) {
       await afterLoginBoot();
@@ -3196,7 +3093,7 @@ async function setTab(name){
     b.classList.toggle("primary", b.dataset.tab === name)
   );
   if (name === "doctor") { await requestUiRefresh({ reason: 'tab:doctor' }); }
-  if (name === "capture") { try { resetCapturePanels(); updateBpCommentWarnings?.(); await refreshIntakeChips(); } catch(_){} }
+  if (name === "capture") { try { resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
   if (name === "lifestyle") { try { await cleanupOldIntake(); await renderLifestyle(); } catch(_){} }
 }
 
@@ -3261,7 +3158,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.5) === */
+/* === Panel Reset Helpers (V1.5.4) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -3978,11 +3875,7 @@ $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10
 $("#to").value = todayStr();
 setTab("capture");
 await ensureSupabaseClient();
-try {
-  resetCapturePanels();
-  updateBpCommentWarnings?.();
-  await refreshIntakeChips();
-} catch(_) { }
+try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
@@ -4167,7 +4060,6 @@ if (dateEl) {
       await syncCaptureToggles();
       resetCapturePanels();
       updateBpCommentWarnings?.();
-      await refreshIntakeChips();
     } catch(_) {}
   });
 }
@@ -4318,8 +4210,6 @@ main();
 
 </body>
 </html>
-
-
 
 
 
