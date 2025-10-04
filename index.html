@@ -1378,7 +1378,7 @@ async function saveIntakeTotals({ dayIso, totals }){
     const toIso = toNext.toISOString().slice(0,10);
     const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
               `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-    const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: totals }) }));
+    const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }));
     if (!res2.ok){
       let d2='';
       try{ const e2 = await res2.json(); d2 = e2?.message || e2?.details || ''; }catch{}
