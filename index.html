@@ -1327,7 +1327,11 @@ async function saveIntakeTotals({ dayIso, totals }){
   // Conflict  PATCH (Upsert)
   let details = '';
   try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
-  try { diag.add?.(`[intake] POST failed ${res.status} ${details||''}`); } catch {}
+  if (!(res.status === 409 || /duplicate|unique/i.test(details))) {
+
+    try { diag.add?.(`[intake] POST failed ${res.status} ${details||''}`); } catch {}
+
+  }
   if (res.status === 409 || /duplicate|unique/i.test(details)){
     const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
     const toIso = toNext.toISOString().slice(0,10);
