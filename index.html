@@ -1351,8 +1351,14 @@ async function saveIntakeTotals({ dayIso, totals }){
   const headers = await getHeaders();
   const uid = await getUserId();
   if (!url || !headers || !uid) throw new Error('saveIntakeTotals: missing config/auth');
-  const ts = `${dayIso}T12:00:00Z`;
-  const payload = [{ ts, type: 'intake', payload: totals, user_id: uid }];
+  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||'')) ? dayIso : todayStr();
+  const ts = new Date(`${dayIsoNorm}T12:00:00Z`).toISOString();
+  const payloadTotals = {
+    water_ml: Number(totals?.water_ml || 0),
+    salt_g: Number(totals?.salt_g || 0),
+    protein_g: Number(totals?.protein_g || 0),
+  };
+  const payload = [{ ts, type: 'intake', payload: payloadTotals, user_id: uid }];
   const res = await withRetry(async ()=>{
     const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
     if (!r.ok && r.status === 404) {
@@ -1366,11 +1372,12 @@ async function saveIntakeTotals({ dayIso, totals }){
   // Conflict  PATCH (Upsert)
   let details = '';
   try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
+  try { diag.add?.(`[intake] POST failed ${res.status} ${details||''}`); } catch {}
   if (res.status === 409 || /duplicate|unique/i.test(details)){
-    const toNext = new Date(`${dayIso}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
+    const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
     const toIso = toNext.toISOString().slice(0,10);
     const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
-              `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+              `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
     const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: totals }) }));
     if (!res2.ok){
       let d2='';
