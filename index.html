@@ -1588,108 +1588,6 @@ const LS_PROTEIN_GOAL = 90;
 let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
 const captureIntakeState = { dayIso: null, totals: { water_ml: 0, salt_g: 0, protein_g: 0 }, logged: false };
 
-function setProgState(el, state){
-  if (!el) return;
-  el.classList.remove('ok','warn','bad');
-  if (state) el.classList.add(state);
-}
-
-function fmtDE(n, digits){
-  if (!Number.isFinite(n)) return '0';
-  return n.toFixed(digits).replace('.', ',');
-}
-
-function updateLifestyleBars(){
-  const wBar = document.getElementById('ls-water-bar');
-  const wProg = document.getElementById('ls-water-prog');
-  const wLbl = document.getElementById('ls-water-label');
-  const sBar = document.getElementById('ls-salt-bar');
-  const sProg = document.getElementById('ls-salt-prog');
-  const sLbl = document.getElementById('ls-salt-label');
-  const pBar = document.getElementById('ls-protein-bar');
-  const pProg = document.getElementById('ls-protein-prog');
-  const pLbl = document.getElementById('ls-protein-label');
-
-  const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, 6000));
-  const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, 30));
-  const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, 300));
-
-  const wPct = Math.min(1, w / LS_WATER_GOAL) * 100;
-  const sPct = Math.min(1, s / LS_SALT_MAX) * 100;
-  const pPct = Math.min(1, p / LS_PROTEIN_GOAL) * 100;
-
-  if (wBar) wBar.style.width = `${wPct.toFixed(1)}%`;
-  if (sBar) sBar.style.width = `${sPct.toFixed(1)}%`;
-  if (pBar) pBar.style.width = `${pPct.toFixed(1)}%`;
-
-  if (wLbl) {
-    let status = '';
-    if (w >= LS_WATER_GOAL * 1.1) status = ' * Ziel erreicht';
-    else if (w >= LS_WATER_GOAL * 0.9) status = ' * Zielbereich';
-    else if (w >= LS_WATER_GOAL * 0.5) status = ' * moderate Aufnahme';
-    else status = ' * niedrig';
-    wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml${status}`;
-  }
-
-  if (sLbl) {
-    let status = ' * Zielbereich';
-    if (s > LS_SALT_MAX) status = ' * ueber Ziel';
-    else if (s >= 5) status = ' * Warnung';
-    sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
-  }
-
-  if (pLbl) {
-    let status = ' * noch offen';
-    if (p >= 78 && p <= 90) status = ' * Zielbereich';
-    else if (p > 90) status = ' * ueber Ziel';
-    pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
-  }
-
-  // Wasser: <50% rot, 50-89% gelb, 90% gruen
-  let wState = 'bad';
-  if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
-  else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
-  setProgState(wProg, wState);
-
-  // Salz: 0-4.9 g gruen, 5-6 gelb, >6 rot
-  let sState = 'ok';
-  if (s > LS_SALT_MAX) sState = 'bad';
-  else if (s >= 5) sState = 'warn';
-  setProgState(sProg, sState);
-
-  // Protein: <78 neutral, 78-90 gruen, >90 rot
-  let pState = 'neutral';
-  if (p >= 78 && p <= 90) pState = 'ok';
-  else if (p > 90) pState = 'bad';
-  setProgState(pProg, pState);
-}
-
-async function renderLifestyle(){
-  const logged = await isLoggedIn();
-  if (!logged){
-    // Nichts anzeigen, Tab ist ohnehin gesperrt
-    return;
-  }
-  try{
-    const uid = await getUserId();
-    const dayIso = todayStr();
-    const cur = await loadIntakeToday({ user_id: uid, dayIso });
-    __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
-    updateLifestyleBars();
-  }catch(_){ /* ignore */ }
-}
-
-function bindLifestyle(){
-  const addWaterBtn = document.getElementById('ls-water-add-btn');
-  const addSaltBtn = document.getElementById('ls-salt-add-btn');
-  const addProtBtn = document.getElementById('ls-protein-add-btn');
-
-  const addWater = async ()=>{
-    const el = document.getElementById('ls-water-add');
-    const v = Number(el?.value || 0);
-    if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
-
-
 function clearCaptureIntakeInputs(){
   ['cap-water-add','cap-salt-add','cap-protein-add'].forEach(id => {
     const el = document.getElementById(id);
@@ -1826,6 +1724,108 @@ function bindIntakeCapture(){
   if (proteinBtn) proteinBtn.addEventListener('click', ()=> handleCaptureIntake('protein'));
   refreshCaptureIntake();
 }
+
+function setProgState(el, state){
+  if (!el) return;
+  el.classList.remove('ok','warn','bad');
+  if (state) el.classList.add(state);
+}
+
+function fmtDE(n, digits){
+  if (!Number.isFinite(n)) return '0';
+  return n.toFixed(digits).replace('.', ',');
+}
+
+function updateLifestyleBars(){
+  const wBar = document.getElementById('ls-water-bar');
+  const wProg = document.getElementById('ls-water-prog');
+  const wLbl = document.getElementById('ls-water-label');
+  const sBar = document.getElementById('ls-salt-bar');
+  const sProg = document.getElementById('ls-salt-prog');
+  const sLbl = document.getElementById('ls-salt-label');
+  const pBar = document.getElementById('ls-protein-bar');
+  const pProg = document.getElementById('ls-protein-prog');
+  const pLbl = document.getElementById('ls-protein-label');
+
+  const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, 6000));
+  const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, 30));
+  const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, 300));
+
+  const wPct = Math.min(1, w / LS_WATER_GOAL) * 100;
+  const sPct = Math.min(1, s / LS_SALT_MAX) * 100;
+  const pPct = Math.min(1, p / LS_PROTEIN_GOAL) * 100;
+
+  if (wBar) wBar.style.width = `${wPct.toFixed(1)}%`;
+  if (sBar) sBar.style.width = `${sPct.toFixed(1)}%`;
+  if (pBar) pBar.style.width = `${pPct.toFixed(1)}%`;
+
+  if (wLbl) {
+    let status = '';
+    if (w >= LS_WATER_GOAL * 1.1) status = ' * Ziel erreicht';
+    else if (w >= LS_WATER_GOAL * 0.9) status = ' * Zielbereich';
+    else if (w >= LS_WATER_GOAL * 0.5) status = ' * moderate Aufnahme';
+    else status = ' * niedrig';
+    wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml${status}`;
+  }
+
+  if (sLbl) {
+    let status = ' * Zielbereich';
+    if (s > LS_SALT_MAX) status = ' * ueber Ziel';
+    else if (s >= 5) status = ' * Warnung';
+    sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
+  }
+
+  if (pLbl) {
+    let status = ' * noch offen';
+    if (p >= 78 && p <= 90) status = ' * Zielbereich';
+    else if (p > 90) status = ' * ueber Ziel';
+    pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
+  }
+
+  // Wasser: <50% rot, 50-89% gelb, 90% gruen
+  let wState = 'bad';
+  if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
+  else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
+  setProgState(wProg, wState);
+
+  // Salz: 0-4.9 g gruen, 5-6 gelb, >6 rot
+  let sState = 'ok';
+  if (s > LS_SALT_MAX) sState = 'bad';
+  else if (s >= 5) sState = 'warn';
+  setProgState(sProg, sState);
+
+  // Protein: <78 neutral, 78-90 gruen, >90 rot
+  let pState = 'neutral';
+  if (p >= 78 && p <= 90) pState = 'ok';
+  else if (p > 90) pState = 'bad';
+  setProgState(pProg, pState);
+}
+
+async function renderLifestyle(){
+  const logged = await isLoggedIn();
+  if (!logged){
+    // Nichts anzeigen, Tab ist ohnehin gesperrt
+    return;
+  }
+  try{
+    const uid = await getUserId();
+    const dayIso = todayStr();
+    const cur = await loadIntakeToday({ user_id: uid, dayIso });
+    __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
+    updateLifestyleBars();
+  }catch(_){ /* ignore */ }
+}
+
+function bindLifestyle(){
+  const addWaterBtn = document.getElementById('ls-water-add-btn');
+  const addSaltBtn = document.getElementById('ls-salt-add-btn');
+  const addProtBtn = document.getElementById('ls-protein-add-btn');
+
+  const addWater = async ()=>{
+    const el = document.getElementById('ls-water-add');
+    const v = Number(el?.value || 0);
+    if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
+
     const dayIso = todayStr();
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
