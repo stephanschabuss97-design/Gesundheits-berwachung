@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8" />
 
-
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Gesundheits-Logger (V1.5.5)</title>
 <style>
@@ -1052,8 +1051,11 @@ function withBusy(el, on=true){
   
 /* ===== Auth-Guard ===== */
 async function isLoggedIn(){
-  if (!sbClient) return false;
-  return await isLoggedInFast({ timeout: 800 });
+try{
+if(!sbClient) return false;
+const { data:{ session } } = await sbClient.auth.getSession();
+return !!session;
+}catch{ return false; }
 }
 
 /** Schaltet optisch auf "gesperrt" - ohne Controls hart zu deaktivieren */
