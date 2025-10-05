@@ -858,7 +858,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-nephro-next">—</span>
           <button class="btn ghost btn-xs" id="appt-nephro-done" type="button" disabled>Done</button>
         </div>
@@ -884,7 +884,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-internal-next">—</span>
           <button class="btn ghost btn-xs" id="appt-internal-done" type="button" disabled>Done</button>
         </div>
@@ -910,7 +910,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-urology-next">—</span>
           <button class="btn ghost btn-xs" id="appt-urology-done" type="button" disabled>Done</button>
         </div>
@@ -936,7 +936,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-dentist-next">—</span>
           <button class="btn ghost btn-xs" id="appt-dentist-done" type="button" disabled>Done</button>
         </div>
@@ -962,7 +962,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-ophtha-next">—</span>
           <button class="btn ghost btn-xs" id="appt-ophtha-done" type="button" disabled>Done</button>
         </div>
@@ -988,7 +988,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           </div>
         </div>
         <div class="appointment-line">
-          <span class="label">Nächster Termin:</span>
+          <span class="label">Naechster Termin:</span>
           <span class="value" id="appt-physio-next">—</span>
           <button class="btn ghost btn-xs" id="appt-physio-done" type="button" disabled>Done</button>
         </div>
@@ -998,7 +998,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
       </div>
 
-      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den nächsten Phasen – aktuell nur UI-Skelett.</div>
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen – aktuell nur UI-Skelett.</div>
     </div>
   </div>
 </details>
@@ -1047,6 +1047,21 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
+const APPOINTMENT_ROLES = [
+  { code: 'nephro', label: 'Nephrologe' },
+  { code: 'internal', label: 'Internist' },
+  { code: 'urology', label: 'Urologe' },
+  { code: 'dentist', label: 'Zahnarzt' },
+  { code: 'ophtha', label: 'Augenarzt' },
+  { code: 'physio', label: 'Physiotherapie' },
+];
+
+const appointmentsState = {
+  data: Object.create(null),
+  loading: false,
+  loaded: false,
+};
+
 
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
@@ -1102,6 +1117,7 @@ const uiRefreshState = {
   docNeeded: false,
   chartNeeded: false,
   lifestyleNeeded: false,
+  appointmentsNeeded: false,
   resolvers: [],
   lastReason: ''
 };
@@ -1124,9 +1140,12 @@ function requestUiRefresh(opts = {}){
   } catch(_) {}
   const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
 
+  const appointments = opts.appointments !== undefined ? !!opts.appointments : false;
+
   uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
   uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
   uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
+  uiRefreshState.appointmentsNeeded = uiRefreshState.appointmentsNeeded || appointments;
   uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
 
   const promise = new Promise(resolve => uiRefreshState.resolvers.push(resolve));
@@ -1145,16 +1164,19 @@ async function runUiRefresh(){
   }
   state.running = true;
   try {
-    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded) {
+    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) {
       const doc = state.docNeeded;
       const chart = state.chartNeeded;
       const lifestyle = state.lifestyleNeeded;
+      const appointments = state.appointmentsNeeded;
       state.docNeeded = false;
       state.chartNeeded = false;
       state.lifestyleNeeded = false;
+      state.appointmentsNeeded = false;
       try {
         if (doc) await renderDoctor();
-        if (lifestyle && typeof renderLifestyle === 'function') 
+        if (appointments) await refreshAppointments();
+        if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
         if (chart) await chartPanel.draw?.();
       } catch (e) {
         try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch(_){}
@@ -1295,6 +1317,17 @@ const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+function formatDateTimeDE(iso){
+  if (!iso) return '—';
+  try {
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '—';
+    return dt.toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+  } catch(_) {
+    return '—';
+  }
+}
+
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
 // Erzeugt pro Eingabe die noetigen Events (bp/body/day_flags/note)
@@ -1837,6 +1870,139 @@ function updateCaptureIntakeStatus(){
   ).join(' ');
 }
 
+
+function resetAppointmentsUi(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = '—';
+    if (lastEl) lastEl.textContent = '—';
+    if (doneBtn){
+      doneBtn.disabled = true;
+      doneBtn.dataset.hasNext = '0';
+    }
+  });
+}
+
+function applyAppointmentsUi(summary){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const record = summary && summary[code] ? summary[code] : { next: null, last: null };
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = formatDateTimeDE(record.next);
+    if (lastEl) lastEl.textContent = formatDateTimeDE(record.last);
+    if (doneBtn){
+      doneBtn.disabled = true; // Phase 4: aktivieren, sobald Done-Logik implementiert ist
+      doneBtn.dataset.hasNext = record.next ? '1' : '0';
+    }
+  });
+}
+
+async function fetchAppointmentsSummary(){
+  const rest = await getConf('webhookUrl');
+  const headers = await getHeaders();
+  if (!rest || !headers) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) return null;
+
+  const fetchJson = async (url) => {
+    const res = await withRetry(() => fetch(url.toString(), { headers }));
+    if (res.status === 404) return [];
+    if (!res.ok) {
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){}
+      throw new Error(`appointments fetch failed ${res.status} ${details}`);
+    }
+    return await res.json();
+  };
+
+  const scheduledUrl = new URL(`${base}/appointments`);
+  scheduledUrl.searchParams.set('select', 'role,dt');
+  scheduledUrl.searchParams.set('status', 'eq.scheduled');
+  scheduledUrl.searchParams.set('order', 'dt.asc');
+
+  const doneUrl = new URL(`${base}/appointments`);
+  doneUrl.searchParams.set('select', 'role,dt');
+  doneUrl.searchParams.set('status', 'eq.done');
+  doneUrl.searchParams.set('order', 'dt.desc');
+
+  const [scheduled, done] = await Promise.all([
+    fetchJson(scheduledUrl),
+    fetchJson(doneUrl)
+  ]);
+  return { scheduled, done };
+}
+
+async function refreshAppointments(){
+  const wrap = document.getElementById('appointmentsWrap');
+  if (!wrap) return;
+  if (appointmentsState.loading) return;
+  appointmentsState.loading = true;
+  try {
+    const summaryRaw = await fetchAppointmentsSummary();
+    if (!summaryRaw) {
+      appointmentsState.data = Object.create(null);
+      appointmentsState.loaded = false;
+      resetAppointmentsUi();
+      return;
+    }
+
+    const scheduledList = Array.isArray(summaryRaw.scheduled) ? summaryRaw.scheduled : [];
+    const doneList = Array.isArray(summaryRaw.done) ? summaryRaw.done : [];
+
+    const scheduledMap = new Map();
+    for (const item of scheduledList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!scheduledMap.has(role) || Date.parse(dt) < Date.parse(scheduledMap.get(role).dt)) {
+        scheduledMap.set(role, item);
+      }
+    }
+
+    const doneMap = new Map();
+    for (const item of doneList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!doneMap.has(role)) {
+        doneMap.set(role, item);
+      }
+    }
+
+    const summary = Object.create(null);
+    const now = Date.now();
+
+    APPOINTMENT_ROLES.forEach(({ code }) => {
+      const nextEntry = scheduledMap.get(code);
+      const nextIso = nextEntry?.dt ?? null;
+
+      let lastIso = doneMap.get(code)?.dt ?? null;
+      if (!lastIso && nextIso) {
+        const ts = Date.parse(nextIso);
+        if (!Number.isNaN(ts) && ts < now) {
+          lastIso = nextIso;
+        }
+      }
+
+      summary[code] = { next: nextIso, last: lastIso };
+    });
+
+    appointmentsState.data = summary;
+    appointmentsState.loaded = true;
+    applyAppointmentsUi(summary);
+  } catch (e) {
+    try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
+    appointmentsState.data = Object.create(null);
+    appointmentsState.loaded = false;
+    resetAppointmentsUi();
+  } finally {
+    appointmentsState.loading = false;
+  }
+}
+
 async function refreshCaptureIntake(){
   const wrap = document.getElementById('cap-intake-wrap');
   if (!wrap) return;
@@ -2300,9 +2466,11 @@ function watchAuthState(){
       await setupRealtime();     //  NEU: Realtime aktivieren nach Login
       await requestUiRefresh();  // initialer Refresh
       await refreshCaptureIntake();
+      await refreshAppointments();
     } else {
       teardownRealtime();        //  NEU: Channels sauber schliessen
       await refreshCaptureIntake();
+      await refreshAppointments();
       // UI in "abgemeldet" lassen - renderDoctor() zeigt Info ohnehin
     }
   });
@@ -3556,7 +3724,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.6.0) === */
+/* === Panel Reset Helpers (V1.5.7) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -4286,6 +4454,7 @@ if (hasSession) {
   await requestUiRefresh();
 }
 await refreshCaptureIntake();
+await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
 
 // Konfiguration laden
@@ -4531,7 +4700,7 @@ bindIntakeCapture();
 try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 
 // Initial Render
-await requestUiRefresh({ reason: 'boot:initial' });
+await requestUiRefresh({ reason: 'boot:initial', appointments: true });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
 $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
@@ -4550,6 +4719,8 @@ if (typeof reconcileFromRemote === 'function') {
 }
 });
 }
+
+resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
