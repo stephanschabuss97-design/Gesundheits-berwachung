@@ -859,12 +859,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-nephro-next">—</span>
+          <span class="value" id="appt-nephro-next">�</span>
           <button class="btn ghost btn-xs" id="appt-nephro-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-nephro-last">—</span>
+          <span class="value" id="appt-nephro-last">�</span>
         </div>
       </div>
 
@@ -885,12 +885,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-internal-next">—</span>
+          <span class="value" id="appt-internal-next">�</span>
           <button class="btn ghost btn-xs" id="appt-internal-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-internal-last">—</span>
+          <span class="value" id="appt-internal-last">�</span>
         </div>
       </div>
 
@@ -911,12 +911,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-urology-next">—</span>
+          <span class="value" id="appt-urology-next">�</span>
           <button class="btn ghost btn-xs" id="appt-urology-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-urology-last">—</span>
+          <span class="value" id="appt-urology-last">�</span>
         </div>
       </div>
 
@@ -937,12 +937,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-dentist-next">—</span>
+          <span class="value" id="appt-dentist-next">�</span>
           <button class="btn ghost btn-xs" id="appt-dentist-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-dentist-last">—</span>
+          <span class="value" id="appt-dentist-last">�</span>
         </div>
       </div>
 
@@ -963,12 +963,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-ophtha-next">—</span>
+          <span class="value" id="appt-ophtha-next">�</span>
           <button class="btn ghost btn-xs" id="appt-ophtha-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-ophtha-last">—</span>
+          <span class="value" id="appt-ophtha-last">�</span>
         </div>
       </div>
 
@@ -989,16 +989,16 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-physio-next">—</span>
+          <span class="value" id="appt-physio-next">�</span>
           <button class="btn ghost btn-xs" id="appt-physio-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-physio-last">—</span>
+          <span class="value" id="appt-physio-last">�</span>
         </div>
       </div>
 
-      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen – aktuell nur UI-Skelett.</div>
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen � aktuell nur UI-Skelett.</div>
     </div>
   </div>
 </details>
@@ -1318,13 +1318,13 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function formatDateTimeDE(iso){
-  if (!iso) return '—';
+  if (!iso) return '�';
   try {
     const dt = new Date(iso);
-    if (Number.isNaN(dt.getTime())) return '—';
+    if (Number.isNaN(dt.getTime())) return '�';
     return dt.toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
   } catch(_) {
-    return '—';
+    return '�';
   }
 }
 
@@ -1899,8 +1899,8 @@ function resetAppointmentsUi(){
     const nextEl = document.getElementById(`appt-${code}-next`);
     const lastEl = document.getElementById(`appt-${code}-last`);
     const doneBtn = document.getElementById(`appt-${code}-done`);
-    if (nextEl) nextEl.textContent = '—';
-    if (lastEl) lastEl.textContent = '—';
+    if (nextEl) nextEl.textContent = '�';
+    if (lastEl) lastEl.textContent = '�';
     if (doneBtn){
       doneBtn.disabled = true;
       doneBtn.dataset.hasNext = '0';
