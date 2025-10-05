@@ -1871,6 +1871,29 @@ function updateCaptureIntakeStatus(){
 }
 
 
+async function getAppointmentsEndpoint(){
+  const rest = await getConf('webhookUrl');
+  const headers = await getHeaders();
+  if (!rest || !headers) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) return null;
+  return { base, headers } ;
+}
+
+function validateAppointmentInput({ date, time }){
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { ok: false, error: 'date' };
+  }
+  if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    return { ok: false, error: 'time' };
+  }
+  const dt = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(dt.getTime())) {
+    return { ok: false, error: 'invalid' };
+  }
+  return { ok: true, iso: dt.toISOString() };
+}
+
 function resetAppointmentsUi(){
   APPOINTMENT_ROLES.forEach(({ code }) => {
     const nextEl = document.getElementById(`appt-${code}-next`);
@@ -1894,7 +1917,7 @@ function applyAppointmentsUi(summary){
     if (nextEl) nextEl.textContent = formatDateTimeDE(record.next);
     if (lastEl) lastEl.textContent = formatDateTimeDE(record.last);
     if (doneBtn){
-      doneBtn.disabled = true; // Phase 4: aktivieren, sobald Done-Logik implementiert ist
+      doneBtn.disabled = !record.next;
       doneBtn.dataset.hasNext = record.next ? '1' : '0';
     }
   });
@@ -2001,6 +2024,176 @@ async function refreshAppointments(){
   } finally {
     appointmentsState.loading = false;
   }
+}
+
+
+async function handleAppointmentSave(role){
+  const dateEl = document.getElementById(`appt-${role}-date`);
+  const timeEl = document.getElementById(`appt-${role}-time`);
+  const saveBtn = document.getElementById(`appt-${role}-save`);
+  if (!dateEl || !timeEl || !saveBtn) return;
+
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
+
+  const date = (dateEl.value || '').trim();
+  const time = (timeEl.value || '').trim();
+  const validation = validateAppointmentInput({ date, time });
+  if (!validation.ok){
+    if (validation.error === 'date'){
+      uiError('Bitte Datum waehlen.');
+      dateEl.focus();
+    } else if (validation.error === 'time'){
+      uiError('Bitte Uhrzeit im Format HH:MM angeben.');
+      timeEl.focus();
+    } else {
+      uiError('Bitte Datum/Uhrzeit pruefen.');
+      timeEl.focus();
+    }
+    return;
+  }
+  const iso = validation.iso;
+  const endpoint = await getAppointmentsEndpoint();
+  if (!endpoint){
+    uiError('Bitte zuerst anmelden.');
+    showLoginOverlay(true);
+    return;
+  }
+  const { base, headers } = endpoint;
+
+  const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
+  const patchUrl = new URL(`${base}/appointments`);
+  patchUrl.searchParams.set('status', 'eq.scheduled');
+  patchUrl.searchParams.set('role', `eq.${role}`);
+
+  const body = JSON.stringify({ dt: iso });
+  withBusy(saveBtn, true);
+  try {
+    let saved = false;
+    if (hasScheduled){
+      const res = await withRetry(() => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }));
+      if (res.status === 401 || res.status === 403){
+        uiError('Bitte erneut anmelden.');
+        showLoginOverlay(true);
+        return;
+      }
+      if (!res.ok){
+        let details = '';
+        try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (res.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        if (res.status === 404){
+          // kein vorhandener Termin -> POST im Anschluss
+        } else {
+          throw new Error(`appointments-patch-failed ${res.status} ${details}`);
+        }
+      } else {
+        saved = true;
+      }
+    }
+
+    if (!saved){
+      const postUrl = new URL(`${base}/appointments`);
+      const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled' }]);
+      const resPost = await withRetry(() => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }));
+      if (resPost.status === 401 || resPost.status === 403){
+        uiError('Bitte erneut anmelden.');
+        showLoginOverlay(true);
+        return;
+      }
+      if (resPost.status === 409){
+        uiError('Es existiert bereits ein geplanter Termin. Bitte aktualisieren.');
+        return;
+      }
+      if (!resPost.ok){
+        let details = '';
+        try { const err = await resPost.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (resPost.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        throw new Error(`appointments-post-failed ${resPost.status} ${details}`);
+      }
+    }
+
+    dateEl.value = '';
+    timeEl.value = '';
+    await refreshAppointments();
+    uiInfo('Termin gespeichert.');
+  } catch (e){
+    const msg = e?.message || e;
+    if (typeof msg === 'string' && msg.includes('400')){
+      uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+      timeEl.focus();
+    } else {
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+      try { diag.add?.('appointments save error (' + role + '): ' + msg); } catch(_){ }
+    }
+  } finally {
+    withBusy(saveBtn, false);
+  }
+}
+
+async function handleAppointmentDone(role){
+  const btn = document.getElementById(`appt-${role}-done`);
+  if (!btn || btn.disabled || btn.dataset.hasNext !== '1') return;
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
+  const endpoint = await getAppointmentsEndpoint();
+  if (!endpoint){
+    uiError('Bitte zuerst anmelden.');
+    showLoginOverlay(true);
+    return;
+  }
+  const { base, headers } = endpoint;
+  const url = new URL(`${base}/appointments`);
+  url.searchParams.set('status', 'eq.scheduled');
+  url.searchParams.set('role', `eq.${role}`);
+  const body = JSON.stringify({ status: 'done' });
+  withBusy(btn, true);
+  try {
+    const res = await withRetry(() => fetch(url.toString(), { method: 'PATCH', headers, body }));
+    if (res.status === 401 || res.status === 403){
+      uiError('Bitte erneut anmelden.');
+      showLoginOverlay(true);
+      return;
+    }
+    if (!res.ok){
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+      if (res.status === 404){
+        uiError('Kein geplanter Termin vorhanden.');
+        await refreshAppointments();
+        return;
+      }
+      throw new Error(`appointments-done-failed ${res.status} ${details}`);
+    }
+    await refreshAppointments();
+    uiInfo('Termin abgeschlossen.');
+  } catch (e){
+    const msg = e?.message || e;
+    uiError('Termin konnte nicht abgeschlossen werden.');
+    try { diag.add?.('appointments done error (' + role + '): ' + msg); } catch(_){ }
+  } finally {
+    withBusy(btn, false);
+  }
+}
+
+function bindAppointmentsPanel(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const saveBtn = document.getElementById(`appt-${code}-save`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (saveBtn) saveBtn.addEventListener('click', () => handleAppointmentSave(code));
+    if (doneBtn) doneBtn.addEventListener('click', () => handleAppointmentDone(code));
+  });
 }
 
 async function refreshCaptureIntake(){
@@ -4697,6 +4890,7 @@ document.addEventListener('visibilitychange', () => {
 // Lifestyle binden und initial (falls bereits angemeldet) laden
 
 bindIntakeCapture();
+bindAppointmentsPanel();
 try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 
 // Initial Render
