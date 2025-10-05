@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.5.7)</title>
+<title>Gesundheits-Logger (V1.6.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -545,6 +545,71 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .pill.bad .dot { background:#ef4444; }
 .pill.neutral .dot { background:#7c3aed; }
 
+
+/* Arzttermine Skeleton */
+#appointmentsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.appointment-card {
+  background: #11131a;
+  border: 1px solid #232735;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.appointment-card h3 {
+  margin: 0;
+}
+.appointment-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.appointment-inputs > div {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+.appointment-inputs .btn-wrap {
+  flex: 0 0 auto;
+}
+.appointment-inputs .btn-wrap button {
+  min-width: 140px;
+}
+.appointment-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.appointment-line .label {
+  opacity: .75;
+}
+.appointment-line .value {
+  font-weight: 600;
+}
+.appointment-line button {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .appointment-inputs > div {
+    flex: 1 1 100%;
+  }
+  .appointment-inputs .btn-wrap button {
+    width: 100%;
+  }
+  .appointment-line {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .appointment-line button {
+    margin-left: 0;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -553,7 +618,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.5.7</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -768,6 +833,176 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           <button class="btn primary" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Flags speichern</button>
         </div>
       </div>
+
+</details>
+
+<details class="accordion" id="appointments">
+  <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+  <div class="accordion-body">
+    <div class="card-nested" id="appointmentsWrap">
+      <div class="small" style="margin-bottom:12px;opacity:.8">Pro Rolle gibt es genau einen geplanten Termin.</div>
+
+      <div class="appointment-card" data-role="nephro">
+        <h3 class="blockTitle">Nephrologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-nephro-date">Datum</label>
+            <input type="date" id="appt-nephro-date">
+          </div>
+          <div>
+            <label for="appt-nephro-time">Zeit</label>
+            <input type="time" id="appt-nephro-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-nephro-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-nephro-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-nephro-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-nephro-last">—</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="internal">
+        <h3 class="blockTitle">Internist</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-internal-date">Datum</label>
+            <input type="date" id="appt-internal-date">
+          </div>
+          <div>
+            <label for="appt-internal-time">Zeit</label>
+            <input type="time" id="appt-internal-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-internal-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-internal-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-internal-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-internal-last">—</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="urology">
+        <h3 class="blockTitle">Urologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-urology-date">Datum</label>
+            <input type="date" id="appt-urology-date">
+          </div>
+          <div>
+            <label for="appt-urology-time">Zeit</label>
+            <input type="time" id="appt-urology-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-urology-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-urology-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-urology-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-urology-last">—</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="dentist">
+        <h3 class="blockTitle">Zahnarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-dentist-date">Datum</label>
+            <input type="date" id="appt-dentist-date">
+          </div>
+          <div>
+            <label for="appt-dentist-time">Zeit</label>
+            <input type="time" id="appt-dentist-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-dentist-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-dentist-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-dentist-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-dentist-last">—</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="ophtha">
+        <h3 class="blockTitle">Augenarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-ophtha-date">Datum</label>
+            <input type="date" id="appt-ophtha-date">
+          </div>
+          <div>
+            <label for="appt-ophtha-time">Zeit</label>
+            <input type="time" id="appt-ophtha-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-ophtha-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-ophtha-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-ophtha-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-ophtha-last">—</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="physio">
+        <h3 class="blockTitle">Physiotherapie</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-physio-date">Datum</label>
+            <input type="date" id="appt-physio-date">
+          </div>
+          <div>
+            <label for="appt-physio-time">Zeit</label>
+            <input type="time" id="appt-physio-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-physio-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Nächster Termin:</span>
+          <span class="value" id="appt-physio-next">—</span>
+          <button class="btn ghost btn-xs" id="appt-physio-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-physio-last">—</span>
+        </div>
+      </div>
+
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den nächsten Phasen – aktuell nur UI-Skelett.</div>
+    </div>
+  </div>
+</details>
+
     </details>
     </div>
   </section>
@@ -3321,7 +3556,7 @@ function updateBpCommentWarnings(){
   });
 }
 
-/* === Panel Reset Helpers (V1.5.7) === */
+/* === Panel Reset Helpers (V1.6.0) === */
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
