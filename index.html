@@ -1941,12 +1941,12 @@ async function fetchAppointmentsSummary(){
     return await res.json();
   };
 
-  const scheduledUrl = new URL(`${base}/appointments`);
+  const scheduledUrl = new URL(`${base}/rest/v1/appointments`);
   scheduledUrl.searchParams.set('select', 'role,dt');
   scheduledUrl.searchParams.set('status', 'eq.scheduled');
   scheduledUrl.searchParams.set('order', 'dt.asc');
 
-  const doneUrl = new URL(`${base}/appointments`);
+  const doneUrl = new URL(`${base}/rest/v1/appointments`);
   doneUrl.searchParams.set('select', 'role,dt');
   doneUrl.searchParams.set('status', 'eq.done');
   doneUrl.searchParams.set('order', 'dt.desc');
@@ -2064,7 +2064,7 @@ async function handleAppointmentSave(role){
   const { base, headers } = endpoint;
 
   const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
-  const patchUrl = new URL(`${base}/appointments`);
+  const patchUrl = new URL(`${base}/rest/v1/appointments`);
   patchUrl.searchParams.set('status', 'eq.scheduled');
   patchUrl.searchParams.set('role', `eq.${role}`);
 
@@ -2098,7 +2098,7 @@ async function handleAppointmentSave(role){
     }
 
     if (!saved){
-      const postUrl = new URL(`${base}/appointments`);
+      const postUrl = new URL(`${base}/rest/v1/appointments`);
       const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled' }]);
       const resPost = await withRetry(() => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }));
       if (resPost.status === 401 || resPost.status === 403){
@@ -2154,7 +2154,7 @@ async function handleAppointmentDone(role){
     return;
   }
   const { base, headers } = endpoint;
-  const url = new URL(`${base}/appointments`);
+  const url = new URL(`${base}/rest/v1/appointments`);
   url.searchParams.set('status', 'eq.scheduled');
   url.searchParams.set('role', `eq.${role}`);
   const body = JSON.stringify({ status: 'done' });
@@ -4978,3 +4978,4 @@ main();
 
 </body>
 </html>
+
