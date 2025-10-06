@@ -2100,8 +2100,14 @@ async function handleAppointmentSave(role){
     }
 
     if (!saved){
+      const uid = await getUserId();
+      if (!uid){
+        uiError('Bitte erneut anmelden.');
+        showLoginOverlay(true);
+        return;
+      }
       const postUrl = new URL(`${base}/rest/v1/appointments`);
-      const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled' }]);
+      const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled', user_id: uid }]);
       const resPost = await withRetry(() => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }));
       if (resPost.status === 401 || resPost.status === 403){
         uiError('Bitte erneut anmelden.');
