@@ -132,18 +132,6 @@ section.view.active{display:block}
 #doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
 
 #err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
-#announceStatus{
-  position:absolute;
-  width:1px;
-  height:1px;
-  padding:0;
-  margin:-1px;
-  overflow:hidden;
-  clip:rect(0 0 0 0);
-  clip-path: inset(50%);
-  border:0;
-  white-space:nowrap;
-}
 
 /* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
 .doctor-view .doctor-day{
@@ -557,6 +545,71 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .pill.bad .dot { background:#ef4444; }
 .pill.neutral .dot { background:#7c3aed; }
 
+
+/* Arzttermine Skeleton */
+#appointmentsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.appointment-card {
+  background: #11131a;
+  border: 1px solid #232735;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.appointment-card h3 {
+  margin: 0;
+}
+.appointment-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.appointment-inputs > div {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+.appointment-inputs .btn-wrap {
+  flex: 0 0 auto;
+}
+.appointment-inputs .btn-wrap button {
+  min-width: 140px;
+}
+.appointment-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.appointment-line .label {
+  opacity: .75;
+}
+.appointment-line .value {
+  font-weight: 600;
+}
+.appointment-line button {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .appointment-inputs > div {
+    flex: 1 1 100%;
+  }
+  .appointment-inputs .btn-wrap button {
+    width: 100%;
+  }
+  .appointment-line {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .appointment-line button {
+    margin-left: 0;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -632,7 +685,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 </div>
 
 <div id="err" role="status" aria-live="polite"></div>
-<div id="announceStatus" role="status" aria-live="polite"></div>
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
 <main>
@@ -781,6 +833,176 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
           <button class="btn primary" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Flags speichern</button>
         </div>
       </div>
+
+</details>
+
+<details class="accordion" id="appointments">
+  <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+  <div class="accordion-body">
+    <div class="card-nested" id="appointmentsWrap">
+      <div class="small" style="margin-bottom:12px;opacity:.8">Pro Rolle gibt es genau einen geplanten Termin.</div>
+
+      <div class="appointment-card" data-role="nephro">
+        <h3 class="blockTitle">Nephrologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-nephro-date">Datum</label>
+            <input type="date" id="appt-nephro-date">
+          </div>
+          <div>
+            <label for="appt-nephro-time">Zeit</label>
+            <input type="time" id="appt-nephro-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-nephro-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-nephro-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-nephro-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-nephro-last">�</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="internal">
+        <h3 class="blockTitle">Internist</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-internal-date">Datum</label>
+            <input type="date" id="appt-internal-date">
+          </div>
+          <div>
+            <label for="appt-internal-time">Zeit</label>
+            <input type="time" id="appt-internal-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-internal-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-internal-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-internal-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-internal-last">�</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="urology">
+        <h3 class="blockTitle">Urologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-urology-date">Datum</label>
+            <input type="date" id="appt-urology-date">
+          </div>
+          <div>
+            <label for="appt-urology-time">Zeit</label>
+            <input type="time" id="appt-urology-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-urology-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-urology-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-urology-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-urology-last">�</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="dentist">
+        <h3 class="blockTitle">Zahnarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-dentist-date">Datum</label>
+            <input type="date" id="appt-dentist-date">
+          </div>
+          <div>
+            <label for="appt-dentist-time">Zeit</label>
+            <input type="time" id="appt-dentist-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-dentist-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-dentist-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-dentist-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-dentist-last">�</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="ophtha">
+        <h3 class="blockTitle">Augenarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-ophtha-date">Datum</label>
+            <input type="date" id="appt-ophtha-date">
+          </div>
+          <div>
+            <label for="appt-ophtha-time">Zeit</label>
+            <input type="time" id="appt-ophtha-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-ophtha-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-ophtha-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-ophtha-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-ophtha-last">�</span>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="physio">
+        <h3 class="blockTitle">Physiotherapie</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-physio-date">Datum</label>
+            <input type="date" id="appt-physio-date">
+          </div>
+          <div>
+            <label for="appt-physio-time">Zeit</label>
+            <input type="time" id="appt-physio-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-physio-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Naechster Termin:</span>
+          <span class="value" id="appt-physio-next">�</span>
+          <button class="btn ghost btn-xs" id="appt-physio-done" type="button" disabled>Done</button>
+        </div>
+        <div class="appointment-line">
+          <span class="label">Letzter Termin:</span>
+          <span class="value" id="appt-physio-last">�</span>
+        </div>
+      </div>
+
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen � aktuell nur UI-Skelett.</div>
+    </div>
+  </div>
+</details>
+
     </details>
     </div>
   </section>
@@ -825,6 +1047,21 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
+const APPOINTMENT_ROLES = [
+  { code: 'nephro', label: 'Nephrologe' },
+  { code: 'internal', label: 'Internist' },
+  { code: 'urology', label: 'Urologe' },
+  { code: 'dentist', label: 'Zahnarzt' },
+  { code: 'ophtha', label: 'Augenarzt' },
+  { code: 'physio', label: 'Physiotherapie' },
+];
+
+const appointmentsState = {
+  data: Object.create(null),
+  loading: false,
+  loaded: false,
+};
+
 
 /* ===== Fehlerbox ===== */
 window.addEventListener('unhandledrejection', (e)=>{
@@ -880,6 +1117,7 @@ const uiRefreshState = {
   docNeeded: false,
   chartNeeded: false,
   lifestyleNeeded: false,
+  appointmentsNeeded: false,
   resolvers: [],
   lastReason: ''
 };
@@ -902,9 +1140,12 @@ function requestUiRefresh(opts = {}){
   } catch(_) {}
   const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
 
+  const appointments = opts.appointments !== undefined ? !!opts.appointments : false;
+
   uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
   uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
   uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
+  uiRefreshState.appointmentsNeeded = uiRefreshState.appointmentsNeeded || appointments;
   uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
 
   const promise = new Promise(resolve => uiRefreshState.resolvers.push(resolve));
@@ -923,16 +1164,19 @@ async function runUiRefresh(){
   }
   state.running = true;
   try {
-    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded) {
+    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) {
       const doc = state.docNeeded;
       const chart = state.chartNeeded;
       const lifestyle = state.lifestyleNeeded;
+      const appointments = state.appointmentsNeeded;
       state.docNeeded = false;
       state.chartNeeded = false;
       state.lifestyleNeeded = false;
+      state.appointmentsNeeded = false;
       try {
         if (doc) await renderDoctor();
-        if (lifestyle && typeof renderLifestyle === 'function') 
+        if (appointments) await refreshAppointments();
+        if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
         if (chart) await chartPanel.draw?.();
       } catch (e) {
         try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch(_){}
@@ -1027,15 +1271,6 @@ function uiInfo(msg) {
   } else {
     console.log(msg);
   }
-  announceStatus(msg || 'OK');
-}
-
-function announceStatus(message){
-  const live = document.getElementById('announceStatus');
-  if (!live) return;
-  const text = message == null ? '' : String(message).trim();
-  live.textContent = '';
-  if (text) live.textContent = text;
 }
 
 function withBusy(el, on=true){
@@ -1082,6 +1317,17 @@ const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+function formatDateTimeDE(iso){
+  if (!iso) return '�';
+  try {
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '�';
+    return dt.toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+  } catch(_) {
+    return '�';
+  }
+}
+
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
 // Erzeugt pro Eingabe die noetigen Events (bp/body/day_flags/note)
@@ -1624,6 +1870,332 @@ function updateCaptureIntakeStatus(){
   ).join(' ');
 }
 
+
+async function getAppointmentsEndpoint(){
+  const rest = await getConf('webhookUrl');
+  const headers = await getHeaders();
+  if (!rest || !headers) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) return null;
+  return { base, headers } ;
+}
+
+function validateAppointmentInput({ date, time }){
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { ok: false, error: 'date' };
+  }
+  if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    return { ok: false, error: 'time' };
+  }
+  const dt = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(dt.getTime())) {
+    return { ok: false, error: 'invalid' };
+  }
+  return { ok: true, iso: dt.toISOString() };
+}
+
+function resetAppointmentsUi(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = '�';
+    if (lastEl) lastEl.textContent = '�';
+    if (doneBtn){
+      doneBtn.disabled = true;
+      doneBtn.dataset.hasNext = '0';
+    }
+  });
+}
+
+function applyAppointmentsUi(summary){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const record = summary && summary[code] ? summary[code] : { next: null, last: null };
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = formatDateTimeDE(record.next);
+    if (lastEl) lastEl.textContent = formatDateTimeDE(record.last);
+    if (doneBtn){
+      doneBtn.disabled = !record.next;
+      doneBtn.dataset.hasNext = record.next ? '1' : '0';
+    }
+  });
+}
+
+async function fetchAppointmentsSummary(){
+  const rest = await getConf('webhookUrl');
+  const headers = await getHeaders();
+  if (!rest || !headers) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) return null;
+
+  const fetchJson = async (url) => {
+    const res = await withRetry(() => fetch(url.toString(), { headers }));
+    if (res.status === 404) return [];
+    if (!res.ok) {
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){}
+      throw new Error(`appointments fetch failed ${res.status} ${details}`);
+    }
+    return await res.json();
+  };
+
+  const scheduledUrl = new URL(`${base}/rest/v1/appointments`);
+  scheduledUrl.searchParams.set('select', 'role,dt');
+  scheduledUrl.searchParams.set('status', 'eq.scheduled');
+  scheduledUrl.searchParams.set('order', 'dt.asc');
+
+  const doneUrl = new URL(`${base}/rest/v1/appointments`);
+  doneUrl.searchParams.set('select', 'role,dt');
+  doneUrl.searchParams.set('status', 'eq.done');
+  doneUrl.searchParams.set('order', 'dt.desc');
+
+  const [scheduled, done] = await Promise.all([
+    fetchJson(scheduledUrl),
+    fetchJson(doneUrl)
+  ]);
+  return { scheduled, done };
+}
+
+async function refreshAppointments(){
+  const wrap = document.getElementById('appointmentsWrap');
+  if (!wrap) return;
+  if (appointmentsState.loading) return;
+  appointmentsState.loading = true;
+  try {
+    const summaryRaw = await fetchAppointmentsSummary();
+    if (!summaryRaw) {
+      appointmentsState.data = Object.create(null);
+      appointmentsState.loaded = false;
+      resetAppointmentsUi();
+      return;
+    }
+
+    const scheduledList = Array.isArray(summaryRaw.scheduled) ? summaryRaw.scheduled : [];
+    const doneList = Array.isArray(summaryRaw.done) ? summaryRaw.done : [];
+
+    const scheduledMap = new Map();
+    for (const item of scheduledList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!scheduledMap.has(role) || Date.parse(dt) < Date.parse(scheduledMap.get(role).dt)) {
+        scheduledMap.set(role, item);
+      }
+    }
+
+    const doneMap = new Map();
+    for (const item of doneList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!doneMap.has(role)) {
+        doneMap.set(role, item);
+      }
+    }
+
+    const summary = Object.create(null);
+    const now = Date.now();
+
+    APPOINTMENT_ROLES.forEach(({ code }) => {
+      const nextEntry = scheduledMap.get(code);
+      const nextIso = nextEntry?.dt ?? null;
+
+      let lastIso = doneMap.get(code)?.dt ?? null;
+      if (!lastIso && nextIso) {
+        const ts = Date.parse(nextIso);
+        if (!Number.isNaN(ts) && ts < now) {
+          lastIso = nextIso;
+        }
+      }
+
+      summary[code] = { next: nextIso, last: lastIso };
+    });
+
+    appointmentsState.data = summary;
+    appointmentsState.loaded = true;
+    applyAppointmentsUi(summary);
+  } catch (e) {
+    try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
+    appointmentsState.data = Object.create(null);
+    appointmentsState.loaded = false;
+    resetAppointmentsUi();
+  } finally {
+    appointmentsState.loading = false;
+  }
+}
+
+
+async function handleAppointmentSave(role){
+  const dateEl = document.getElementById(`appt-${role}-date`);
+  const timeEl = document.getElementById(`appt-${role}-time`);
+  const saveBtn = document.getElementById(`appt-${role}-save`);
+  if (!dateEl || !timeEl || !saveBtn) return;
+
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
+
+  const date = (dateEl.value || '').trim();
+  const time = (timeEl.value || '').trim();
+  const validation = validateAppointmentInput({ date, time });
+  if (!validation.ok){
+    if (validation.error === 'date'){
+      uiError('Bitte Datum waehlen.');
+      dateEl.focus();
+    } else if (validation.error === 'time'){
+      uiError('Bitte Uhrzeit im Format HH:MM angeben.');
+      timeEl.focus();
+    } else {
+      uiError('Bitte Datum/Uhrzeit pruefen.');
+      timeEl.focus();
+    }
+    return;
+  }
+  const iso = validation.iso;
+  const endpoint = await getAppointmentsEndpoint();
+  if (!endpoint){
+    uiError('Bitte zuerst anmelden.');
+    showLoginOverlay(true);
+    return;
+  }
+  const { base, headers } = endpoint;
+
+  const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
+  const patchUrl = new URL(`${base}/rest/v1/appointments`);
+  patchUrl.searchParams.set('status', 'eq.scheduled');
+  patchUrl.searchParams.set('role', `eq.${role}`);
+
+  const body = JSON.stringify({ dt: iso });
+  withBusy(saveBtn, true);
+  try {
+    let saved = false;
+    if (hasScheduled){
+      const res = await withRetry(() => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }));
+      if (res.status === 401 || res.status === 403){
+        uiError('Bitte erneut anmelden.');
+        showLoginOverlay(true);
+        return;
+      }
+      if (!res.ok){
+        let details = '';
+        try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (res.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        if (res.status === 404){
+          // kein vorhandener Termin -> POST im Anschluss
+        } else {
+          throw new Error(`appointments-patch-failed ${res.status} ${details}`);
+        }
+      } else {
+        saved = true;
+      }
+    }
+
+    if (!saved){
+      const postUrl = new URL(`${base}/rest/v1/appointments`);
+      const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled' }]);
+      const resPost = await withRetry(() => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }));
+      if (resPost.status === 401 || resPost.status === 403){
+        uiError('Bitte erneut anmelden.');
+        showLoginOverlay(true);
+        return;
+      }
+      if (resPost.status === 409){
+        uiError('Es existiert bereits ein geplanter Termin. Bitte aktualisieren.');
+        return;
+      }
+      if (!resPost.ok){
+        let details = '';
+        try { const err = await resPost.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (resPost.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        throw new Error(`appointments-post-failed ${resPost.status} ${details}`);
+      }
+    }
+
+    dateEl.value = '';
+    timeEl.value = '';
+    await refreshAppointments();
+    uiInfo('Termin gespeichert.');
+  } catch (e){
+    const msg = e?.message || e;
+    if (typeof msg === 'string' && msg.includes('400')){
+      uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+      timeEl.focus();
+    } else {
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+      try { diag.add?.('appointments save error (' + role + '): ' + msg); } catch(_){ }
+    }
+  } finally {
+    withBusy(saveBtn, false);
+  }
+}
+
+async function handleAppointmentDone(role){
+  const btn = document.getElementById(`appt-${role}-done`);
+  if (!btn || btn.disabled || btn.dataset.hasNext !== '1') return;
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
+  const endpoint = await getAppointmentsEndpoint();
+  if (!endpoint){
+    uiError('Bitte zuerst anmelden.');
+    showLoginOverlay(true);
+    return;
+  }
+  const { base, headers } = endpoint;
+  const url = new URL(`${base}/rest/v1/appointments`);
+  url.searchParams.set('status', 'eq.scheduled');
+  url.searchParams.set('role', `eq.${role}`);
+  const body = JSON.stringify({ status: 'done' });
+  withBusy(btn, true);
+  try {
+    const res = await withRetry(() => fetch(url.toString(), { method: 'PATCH', headers, body }));
+    if (res.status === 401 || res.status === 403){
+      uiError('Bitte erneut anmelden.');
+      showLoginOverlay(true);
+      return;
+    }
+    if (!res.ok){
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+      if (res.status === 404){
+        uiError('Kein geplanter Termin vorhanden.');
+        await refreshAppointments();
+        return;
+      }
+      throw new Error(`appointments-done-failed ${res.status} ${details}`);
+    }
+    await refreshAppointments();
+    uiInfo('Termin abgeschlossen.');
+  } catch (e){
+    const msg = e?.message || e;
+    uiError('Termin konnte nicht abgeschlossen werden.');
+    try { diag.add?.('appointments done error (' + role + '): ' + msg); } catch(_){ }
+  } finally {
+    withBusy(btn, false);
+  }
+}
+
+function bindAppointmentsPanel(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const saveBtn = document.getElementById(`appt-${code}-save`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (saveBtn) saveBtn.addEventListener('click', () => handleAppointmentSave(code));
+    if (doneBtn) doneBtn.addEventListener('click', () => handleAppointmentDone(code));
+  });
+}
+
 async function refreshCaptureIntake(){
   const wrap = document.getElementById('cap-intake-wrap');
   if (!wrap) return;
@@ -2087,9 +2659,11 @@ function watchAuthState(){
       await setupRealtime();     //  NEU: Realtime aktivieren nach Login
       await requestUiRefresh();  // initialer Refresh
       await refreshCaptureIntake();
+      await refreshAppointments();
     } else {
       teardownRealtime();        //  NEU: Channels sauber schliessen
       await refreshCaptureIntake();
+      await refreshAppointments();
       // UI in "abgemeldet" lassen - renderDoctor() zeigt Info ohnehin
     }
   });
@@ -3242,12 +3816,6 @@ const mkAlertDots = (seriesItem) => {
 
 function flashButtonOk(btn, successHtml){
   if (!btn) return;
-  if (successHtml){
-    const tmp = document.createElement('div');
-    tmp.innerHTML = successHtml;
-    const statusText = (tmp.textContent || "").trim();
-    if (statusText) announceStatus(statusText);
-  }
   const base = btn.dataset.label || btn.innerHTML;
   btn.dataset.label = base;
   btn.disabled = true;
@@ -4079,6 +4647,7 @@ if (hasSession) {
   await requestUiRefresh();
 }
 await refreshCaptureIntake();
+await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
 
 // Konfiguration laden
@@ -4321,10 +4890,11 @@ document.addEventListener('visibilitychange', () => {
 // Lifestyle binden und initial (falls bereits angemeldet) laden
 
 bindIntakeCapture();
+bindAppointmentsPanel();
 try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 
 // Initial Render
-await requestUiRefresh({ reason: 'boot:initial' });
+await requestUiRefresh({ reason: 'boot:initial', appointments: true });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
 $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
@@ -4343,6 +4913,8 @@ if (typeof reconcileFromRemote === 'function') {
 }
 });
 }
+
+resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
@@ -4406,7 +4978,3 @@ main();
 
 </body>
 </html>
-
-
-
-
