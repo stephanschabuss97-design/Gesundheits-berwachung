@@ -693,7 +693,16 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
  
   <!-- Daily-Capture -->
   <section class="card" id="entry">
-    <div class="row" style="align-items:center; gap:12px"><div style="flex:0 0 220px"><label>Datum</label><input class="compact" type="date" id="date"></div><div class="next-appt-wrap" style="flex:1; display:flex; justify-content:flex-end; align-items:center"><span id="nextApptBadge" class="pill neutral" title="Naechster Arzttermin" aria-live="polite">Nchster Termin: F</span></div></div>
+        <div class="row" style="align-items:center; gap:12px">
+      <div style="flex:0 0 220px">
+        <label>Datum</label>
+        <input class="compact" type="date" id="date">
+      </div>
+      <div class="next-appt-wrap" style="flex:1; display:flex; justify-content:flex-end; align-items:center; gap:8px; flex-wrap:wrap">
+        <div id="cap-intake-status-top" class="small" style="opacity:.8; display:flex; gap:8px; flex-wrap:wrap"></div>
+        <span id="nextApptBadge" class="pill neutral" title="Naechster Arzttermin" aria-live="polite">Naechster Termin: &mdash;</span>
+      </div>
+    </div>
 
 
     <details class="accordion">
@@ -1839,18 +1848,32 @@ function prepareIntakeStatusHeader(){
   try {
     const wrap = document.querySelector('.next-appt-wrap');
     const nab = wrap ? wrap.querySelector('#nextApptBadge') : document.getElementById('nextApptBadge');
-    if (nab) nab.textContent = 'Nächster Termin: —';
+    if (nab) nab.textContent = 'Naechster Termin: \u2014';
     if (!wrap) return;
+
     wrap.style.gap = '8px';
     wrap.style.flexWrap = 'wrap';
-    if (!document.getElementById('cap-intake-status-top')) {
-      const top = document.createElement('div');
+    wrap.style.justifyContent = 'flex-end';
+    wrap.style.alignItems = 'center';
+
+    let top = document.getElementById('cap-intake-status-top');
+    if (!top) {
+      top = document.createElement('div');
       top.id = 'cap-intake-status-top';
       top.className = 'small';
       top.style.opacity = '.8';
+    }
+
+    if (top) {
       top.style.display = 'flex';
       top.style.gap = '8px';
       top.style.flexWrap = 'wrap';
+      top.style.alignItems = 'center';
+    }
+
+    if (wrap && nab && top) {
+      wrap.insertBefore(top, nab);
+    } else if (wrap && top && !top.parentElement) {
       wrap.appendChild(top);
     }
   } catch(_) {}
@@ -1871,7 +1894,10 @@ function updateCaptureIntakeStatus(){
       statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
       statusEl.style.display = '';
     }
-    if (statusTop) statusTop.innerHTML = '';
+    if (statusTop) {
+      statusTop.innerHTML = '';
+      statusTop.style.display = 'none';
+    }
     return;
   }
 
@@ -1899,7 +1925,10 @@ function updateCaptureIntakeStatus(){
     statusEl.innerHTML = '';
     statusEl.style.display = 'none';
   }
-  if (statusTop) statusTop.innerHTML = html;
+  if (statusTop) {
+    statusTop.innerHTML = html;
+    statusTop.style.display = 'flex';
+  }
 }
 
 
@@ -4682,11 +4711,6 @@ if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUP
 } catch (_) {}
 chartPanel.init(); bindTabs();
 $("#date").value = todayStr();
-// Fix initial badge text (encoding-safe)
-try {
-  const nab = document.getElementById('nextApptBadge');
-  if (nab) nab.textContent = 'Nächster Termin: —';
-} catch(_) {}
 prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
@@ -5019,6 +5043,8 @@ main();
 
 </body>
 </html>
+
+
 
 
 
