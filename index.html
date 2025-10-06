@@ -859,12 +859,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-nephro-next">�</span>
+          <span class="value" id="appt-nephro-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-nephro-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-nephro-last">�</span>
+          <span class="value" id="appt-nephro-last">&mdash;</span>
         </div>
       </div>
 
@@ -885,12 +885,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-internal-next">�</span>
+          <span class="value" id="appt-internal-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-internal-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-internal-last">�</span>
+          <span class="value" id="appt-internal-last">&mdash;</span>
         </div>
       </div>
 
@@ -911,12 +911,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-urology-next">�</span>
+          <span class="value" id="appt-urology-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-urology-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-urology-last">�</span>
+          <span class="value" id="appt-urology-last">&mdash;</span>
         </div>
       </div>
 
@@ -937,12 +937,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-dentist-next">�</span>
+          <span class="value" id="appt-dentist-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-dentist-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-dentist-last">�</span>
+          <span class="value" id="appt-dentist-last">&mdash;</span>
         </div>
       </div>
 
@@ -963,12 +963,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-ophtha-next">�</span>
+          <span class="value" id="appt-ophtha-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-ophtha-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-ophtha-last">�</span>
+          <span class="value" id="appt-ophtha-last">&mdash;</span>
         </div>
       </div>
 
@@ -989,12 +989,12 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
         <div class="appointment-line">
           <span class="label">Naechster Termin:</span>
-          <span class="value" id="appt-physio-next">�</span>
+          <span class="value" id="appt-physio-next">&mdash;</span>
           <button class="btn ghost btn-xs" id="appt-physio-done" type="button" disabled>Done</button>
         </div>
         <div class="appointment-line">
           <span class="label">Letzter Termin:</span>
-          <span class="value" id="appt-physio-last">�</span>
+          <span class="value" id="appt-physio-last">&mdash;</span>
         </div>
       </div>
 
@@ -1318,13 +1318,13 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 function formatDateTimeDE(iso){
-  if (!iso) return '�';
+  if (!iso) return '\u2014';
   try {
     const dt = new Date(iso);
-    if (Number.isNaN(dt.getTime())) return '�';
+    if (Number.isNaN(dt.getTime())) return '\u2014';
     return dt.toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
   } catch(_) {
-    return '�';
+    return '\u2014';
   }
 }
 
@@ -1899,11 +1899,12 @@ function resetAppointmentsUi(){
     const nextEl = document.getElementById(`appt-${code}-next`);
     const lastEl = document.getElementById(`appt-${code}-last`);
     const doneBtn = document.getElementById(`appt-${code}-done`);
-    if (nextEl) nextEl.textContent = '�';
-    if (lastEl) lastEl.textContent = '�';
+    if (nextEl) nextEl.textContent = '\u2014';
+    if (lastEl) lastEl.textContent = '\u2014';
     if (doneBtn){
       doneBtn.disabled = true;
       doneBtn.dataset.hasNext = '0';
+      doneBtn.hidden = true;
     }
   });
 }
@@ -1919,6 +1920,7 @@ function applyAppointmentsUi(summary){
     if (doneBtn){
       doneBtn.disabled = !record.next;
       doneBtn.dataset.hasNext = record.next ? '1' : '0';
+      doneBtn.hidden = !record.next;
     }
   });
 }
@@ -2142,7 +2144,7 @@ async function handleAppointmentSave(role){
 
 async function handleAppointmentDone(role){
   const btn = document.getElementById(`appt-${role}-done`);
-  if (!btn || btn.disabled || btn.dataset.hasNext !== '1') return;
+  if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
   if (!(await isLoggedInFast())){
     showLoginOverlay(true);
     return;
@@ -4356,7 +4358,7 @@ async function setupRealtime(){
     teardownRealtime();
 
     // Channel auf health_events - RLS begrenzt automatisch auf auth.uid()
-    const ch = trackChannel(
+    trackChannel(
       supa.channel('rt-health-events')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'health_events' },
@@ -4367,6 +4369,18 @@ async function setupRealtime(){
             })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') { diag.add?.('Realtime: subscribed'); }
+        })
+    );
+    trackChannel(
+      supa.channel('rt-appointments')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'appointments' },
+            (payload) => {
+              livePulse();
+              requestUiRefresh({ reason: 'realtime:appointments', appointments: true });
+            })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: appointments subscribed'); }
         })
     );
   }catch(e){
@@ -4978,3 +4992,7 @@ main();
 
 </body>
 </html>
+
+
+
+
