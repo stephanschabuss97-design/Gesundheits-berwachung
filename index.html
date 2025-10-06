@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.1)</title>
+<title>Gesundheits-Logger (V1.6.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -187,7 +187,7 @@ grid-template-areas:
 .doctor-view .col-date{
 display:flex; align-items:center;
 font-weight:800;
-font-size:clamp(16px,vw,20px);
+font-size:clamp(16px,1.6vw,20px);
 letter-spacing:.2px;
 }
   /* Datumsspalte mit Cloud + Delete untereinander */
@@ -204,7 +204,7 @@ letter-spacing:.2px;
 }
 .doctor-view .col-date .date-label{
   font-weight:800;
-  font-size:clamp(16px,vw,20px);
+  font-size:clamp(16px,1.6vw,20px);
   letter-spacing:.2px;
 }
 .doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
@@ -278,7 +278,7 @@ text-align:right; justify-content:flex-end;
 
 .doctor-view .weight-line .num,
 .doctor-view .waist-line .num{
-  font-size:clamp(16px,vw,20px);
+  font-size:clamp(16px,1.6vw,20px);
   font-weight:700;
   line-height:1.1;
   text-align:center;
@@ -618,7 +618,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1835,14 +1835,46 @@ function setCaptureIntakeDisabled(disabled){
   });
 }
 
+function prepareIntakeStatusHeader(){
+  try {
+    const wrap = document.querySelector('.next-appt-wrap');
+    const nab = wrap ? wrap.querySelector('#nextApptBadge') : document.getElementById('nextApptBadge');
+    if (nab) nab.textContent = 'Nächster Termin: —';
+    if (!wrap) return;
+    wrap.style.gap = '8px';
+    wrap.style.flexWrap = 'wrap';
+    if (!document.getElementById('cap-intake-status-top')) {
+      const top = document.createElement('div');
+      top.id = 'cap-intake-status-top';
+      top.className = 'small';
+      top.style.opacity = '.8';
+      top.style.display = 'flex';
+      top.style.gap = '8px';
+      top.style.flexWrap = 'wrap';
+      wrap.appendChild(top);
+    }
+  } catch(_) {}
+}
+
 function updateCaptureIntakeStatus(){
   const statusEl = document.getElementById('cap-intake-status');
-  if (!statusEl) return;
-  const dayIso = captureIntakeState.dayIso || todayStr();
+  let statusTop = document.getElementById('cap-intake-status-top');
+  if (!statusEl && !statusTop) return;
+
+  if (!statusTop) {
+    prepareIntakeStatusHeader();
+    statusTop = document.getElementById('cap-intake-status-top');
+  }
+
   if (!captureIntakeState.logged){
-    statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
+    if (statusEl) {
+      statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
+      statusEl.style.display = '';
+    }
+    if (statusTop) statusTop.innerHTML = '';
     return;
   }
+
   const t = captureIntakeState.totals || {};
   const waterVal = Math.round(t.water_ml || 0);
   const saltVal = Number(t.salt_g || 0);
@@ -1854,15 +1886,20 @@ function updateCaptureIntakeStatus(){
   const proteinCls = (proteinVal >= 78 && proteinVal <= LS_PROTEIN_GOAL) ? 'ok' : (proteinVal > LS_PROTEIN_GOAL ? 'bad' : 'warn');
 
   const pills = [
-    { cls: 'neutral', label: 'Tag', value: dayIso },
     { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
     { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
     { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` },
   ];
 
-  statusEl.innerHTML = pills.map(p =>
+  const html = pills.map(p =>
     `<span class="pill ${p.cls}"><span class="dot"></span>${p.label}: ${p.value}</span>`
   ).join(' ');
+
+  if (statusEl) {
+    statusEl.innerHTML = '';
+    statusEl.style.display = 'none';
+  }
+  if (statusTop) statusTop.innerHTML = html;
 }
 
 
@@ -4650,6 +4687,7 @@ try {
   const nab = document.getElementById('nextApptBadge');
   if (nab) nab.textContent = 'Nächster Termin: —';
 } catch(_) {}
+prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
 setTab("capture");
