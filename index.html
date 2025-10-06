@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.0)</title>
+<title>Gesundheits-Logger (V1.6.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -187,7 +187,7 @@ grid-template-areas:
 .doctor-view .col-date{
 display:flex; align-items:center;
 font-weight:800;
-font-size:clamp(16px,1.6vw,20px);
+font-size:clamp(16px,vw,20px);
 letter-spacing:.2px;
 }
   /* Datumsspalte mit Cloud + Delete untereinander */
@@ -204,7 +204,7 @@ letter-spacing:.2px;
 }
 .doctor-view .col-date .date-label{
   font-weight:800;
-  font-size:clamp(16px,1.6vw,20px);
+  font-size:clamp(16px,vw,20px);
   letter-spacing:.2px;
 }
 .doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
@@ -278,7 +278,7 @@ text-align:right; justify-content:flex-end;
 
 .doctor-view .weight-line .num,
 .doctor-view .waist-line .num{
-  font-size:clamp(16px,1.6vw,20px);
+  font-size:clamp(16px,vw,20px);
   font-weight:700;
   line-height:1.1;
   text-align:center;
@@ -618,7 +618,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.1</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -693,12 +693,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
  
   <!-- Daily-Capture -->
   <section class="card" id="entry">
-    <div class="row">
-      <div style="flex:1">
-        <label>Datum</label>
-        <input type="date" id="date">
-      </div>
-    </div>
+    <div class="row" style="align-items:center; gap:12px"><div style="flex:0 0 220px"><label>Datum</label><input class="compact" type="date" id="date"></div><div class="next-appt-wrap" style="flex:1; display:flex; justify-content:flex-end; align-items:center"><span id="nextApptBadge" class="pill neutral" title="Naechster Arzttermin" aria-live="polite">Nchster Termin: F</span></div></div>
 
 
     <details class="accordion">
@@ -4650,6 +4645,11 @@ if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUP
 } catch (_) {}
 chartPanel.init(); bindTabs();
 $("#date").value = todayStr();
+// Fix initial badge text (encoding-safe)
+try {
+  const nab = document.getElementById('nextApptBadge');
+  if (nab) nab.textContent = 'Nächster Termin: —';
+} catch(_) {}
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayStr();
 setTab("capture");
@@ -4684,23 +4684,6 @@ if (!savedUrl || !savedKey) {
 
 // Sanfte Warnung
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
-function requiresBpComment(which){
-  const sys = Number($(`#sys${which}`).value);
-  const dia = Number($(`#dia${which}`).value);
-  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-  const comment = (el?.value || "").trim();
-  return ((sys > 130) || (dia > 90)) && !comment;
-}
-function updateBpCommentWarnings(){
-  ['M','A'].forEach(which => {
-    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-    if (!el) return;
-    const needs = requiresBpComment(which);
-    el.style.outline = needs ? "2px solid var(--danger)" : "";
-    if (needs) el.setAttribute("aria-invalid","true");
-    else el.removeAttribute("aria-invalid");
-  });
-}
 ['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
   const el = $(sel); if(!el) return;
   el.addEventListener('input', updateBpCommentWarnings);
@@ -4998,6 +4981,8 @@ main();
 
 </body>
 </html>
+
+
 
 
 
