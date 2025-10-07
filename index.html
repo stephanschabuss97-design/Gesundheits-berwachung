@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.2)</title>
+<title>Gesundheits-Logger (V1.6.3)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -618,7 +618,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.2</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.3</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1824,6 +1824,9 @@ const LS_SALT_MAX = 6;
 const LS_PROTEIN_GOAL = 90;
 
 let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
+let __midnightTimer = null;
+let __lastKnownToday = null;
+let __dateUserSelected = false;
 const captureIntakeState = { dayIso: null, totals: { water_ml: 0, salt_g: 0, protein_g: 0 }, logged: false };
 
 function clearCaptureIntakeInputs(){
@@ -1929,6 +1932,58 @@ function updateCaptureIntakeStatus(){
     statusTop.innerHTML = html;
     statusTop.style.display = 'flex';
   }
+}
+
+function millisUntilNextMidnight(){
+  try {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(0, 0, 10, 0);
+    next.setDate(next.getDate() + 1);
+    const diff = next.getTime() - now.getTime();
+    return isNaN(diff) ? 3600_000 : Math.max(1000, diff);
+  } catch { return 3600_000; }
+}
+
+async function handleMidnightRefresh(){
+  __midnightTimer = null;
+  try {
+    await maybeRefreshForTodayChange({ force: true, source: 'midnight' });
+  } finally {
+    scheduleMidnightRefresh();
+  }
+}
+
+function scheduleMidnightRefresh(){
+  try {
+    if (__midnightTimer) clearTimeout(__midnightTimer);
+    const delay = millisUntilNextMidnight();
+    __midnightTimer = setTimeout(handleMidnightRefresh, delay);
+  } catch { /* noop */ }
+}
+
+async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
+  const todayIso = todayStr();
+  const dateEl = document.getElementById('date');
+  const selected = dateEl?.value || '';
+  const todayChanged = __lastKnownToday !== todayIso;
+  if (!force && !todayChanged) return;
+
+  const userPinnedOtherDay = __dateUserSelected && selected && selected !== todayIso;
+  if (!userPinnedOtherDay && dateEl) {
+    if (selected !== todayIso) {
+      dateEl.value = todayIso;
+    }
+    __dateUserSelected = false;
+  }
+
+  try {
+    await refreshCaptureIntake();
+  } catch(_) {}
+
+  __lastKnownToday = todayIso;
+  if (!__midnightTimer) scheduleMidnightRefresh();
+  try { diag.add?.(`intake: day refresh (${source || 'auto'})`); } catch(_) {}
 }
 
 
@@ -2302,6 +2357,7 @@ async function refreshCaptureIntake(){
   try{ updateLifestyleBars(); }catch(_){ }
   }
 
+  __lastKnownToday = todayStr();
   updateCaptureIntakeStatus();
 }
 
@@ -4374,7 +4430,13 @@ diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
 __channels = [];
 }
 
-window.addEventListener('beforeunload', teardownRealtime);
+window.addEventListener('beforeunload', () => {
+  teardownRealtime();
+  if (__midnightTimer) {
+    clearTimeout(__midnightTimer);
+    __midnightTimer = null;
+  }
+});
 
 
 function baseUrlFromRest(restUrl){
@@ -4710,10 +4772,13 @@ if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOO
 if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
 } catch (_) {}
 chartPanel.init(); bindTabs();
-$("#date").value = todayStr();
+const todayIso = todayStr();
+$("#date").value = todayIso;
+__lastKnownToday = todayIso;
+__dateUserSelected = false;
 prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
-$("#to").value = todayStr();
+$("#to").value = todayIso;
 setTab("capture");
 await ensureSupabaseClient();
 try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
@@ -4728,7 +4793,11 @@ if (hasSession) {
   await setupRealtime();  //  NEU: Realtime direkt aktivieren
   await requestUiRefresh();
 }
-await refreshCaptureIntake();
+try {
+  await refreshCaptureIntake();
+} catch(_) {}
+__lastKnownToday = todayStr();
+scheduleMidnightRefresh();
 await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
 
@@ -4882,6 +4951,8 @@ const dateEl = document.getElementById('date');
 if (dateEl) {
   dateEl.addEventListener('change', async () => {
     try {
+      const todayIso = todayStr();
+      __dateUserSelected = (dateEl.value || '') !== todayIso;
       // was du beim Datum aendern haben willst:
       await refreshCaptureIntake();
       await syncCaptureToggles();
@@ -4933,6 +5004,7 @@ document.addEventListener('visibilitychange', () => {
     } catch(_) {}
     __pendingAfterUnlock = null;
     lockUi(false);
+    try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
     const doctorActive = document.getElementById('doctor')?.classList.contains('active');
     if (doctorActive && !__doctorUnlocked) {
       await setTab('capture');
