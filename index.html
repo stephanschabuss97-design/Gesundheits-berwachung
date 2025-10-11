@@ -3994,8 +3994,8 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
 
-    // === Flags Overlay (immer) ===
-    if (this.svg) {
+    // === Flags Overlay (nur fuer BP) ===
+    if (this.svg && metric !== "weight") {
       const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
       for (const e of data) {
         if (!e?.date) continue;
