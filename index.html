@@ -1840,6 +1840,7 @@ let __noonTimer = null;
 let __lastKnownToday = null;
 let __dateUserSelected = false;
 let __bpUserOverride = false;
+let __bpPanesCache = null;
 const captureIntakeState = { dayIso: null, totals: { water_ml: 0, salt_g: 0, protein_g: 0 }, logged: false };
 
 function clearCaptureIntakeInputs(){
@@ -2035,6 +2036,21 @@ function handleNoonSwitch(){
   } finally {
     scheduleNoonSwitch();
   }
+}
+
+function getBpPanes(){
+  if (!__bpPanesCache || __bpPanesCache.length === 0) {
+    __bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
+  }
+  return __bpPanesCache;
+}
+
+function applyBpContext(value){
+  const ctx = value === 'A' ? 'A' : 'M';
+  getBpPanes().forEach(pane => {
+    const match = pane.getAttribute('data-context') === ctx;
+    pane.classList.toggle('active', match);
+  });
 }
 
 async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
@@ -4984,14 +5000,7 @@ updateBpCommentWarnings();
 
 // Toggle-Handler
 const bpContextSel = document.getElementById('bpContextSel');
-const bpPanes = Array.from(document.querySelectorAll('.bp-pane'));
-const applyBpContext = (value)=>{
-  const ctx = value === 'A' ? 'A' : 'M';
-  bpPanes.forEach(pane=>{
-    const match = pane.getAttribute('data-context') === ctx;
-    pane.classList.toggle('active', match);
-  });
-};
+__bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
 if (bpContextSel){
   applyBpContext(bpContextSel.value || 'M');
   maybeAutoApplyBpContext({ force: true, source: 'boot' });
