@@ -2435,8 +2435,6 @@ async function refreshCaptureIntake(){
 }
 
 async function handleCaptureIntake(kind){
-  const dayIso = captureIntakeState.dayIso || document.getElementById('date')?.value || todayStr();
-  captureIntakeState.dayIso = dayIso;
   const btn = document.getElementById(`cap-${kind}-add-btn`);
   const input = document.getElementById(`cap-${kind}-add`);
   if (!btn || !input) return;
@@ -2445,6 +2443,21 @@ async function handleCaptureIntake(kind){
     showLoginOverlay(true);
     return;
   }
+
+  try {
+    if (!__dateUserSelected) {
+      const todayIso = todayStr();
+      const dateEl = document.getElementById('date');
+      const selected = dateEl?.value || '';
+      const stateDay = captureIntakeState.dayIso || '';
+      if (stateDay !== todayIso || (selected && selected !== todayIso)) {
+        await maybeRefreshForTodayChange({ force: true, source: 'capture:intake-click' });
+      }
+    }
+  } catch(_){ }
+
+  const dayIso = document.getElementById('date')?.value || todayStr();
+  captureIntakeState.dayIso = dayIso;
 
   let value;
   if (kind === 'water'){
