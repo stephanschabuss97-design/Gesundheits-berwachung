@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.9)</title>
+<title>Gesundheits-Logger (V1.7.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.9</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1092,19 +1092,19 @@ box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fe
 
 /* ===== Diagnostics ===== */
 const perfStats = (() => {
-const buckets = Object.create(null);
-const add = (k, ms) => (buckets[k] ??= []).push(ms);
-const pct = (arr, p) => {
-if (!arr.length) return 0;
-const a = [...arr].sort((x,y)=>x-y);
-const i = Math.ceil((p/100)*a.length)-1;
-return a[Math.max(0, Math.min(i, a.length-1))];
-};
-const snap = (k) => {
-const arr = buckets[k] || [];
-return { count: arr.length, p50: pct(arr,50), p95: pct(arr,95), p99: pct(arr,99) };
-};
-return { add, snap };
+  const buckets = Object.create(null);
+  const add = (k, ms) => (buckets[k] ??= []).push(ms);
+  const pct = (arr, p) => {
+    if (!arr.length) return 0;
+    const a = [...arr].sort((x,y)=>x-y);
+    const i = Math.ceil((p/100)*a.length)-1;
+    return a[Math.max(0, Math.min(i, a.length-1))];
+  };
+  const snap = (k) => {
+    const arr = buckets[k] || [];
+    return { count: arr.length, p50: pct(arr,50), p90: pct(arr,90), p95: pct(arr,95), p99: pct(arr,99) };
+  };
+  return { add, snap };
 })();
 
 function recordPerfStat(key, startedAt){
@@ -1116,7 +1116,7 @@ function recordPerfStat(key, startedAt){
     const snap = perfStats?.snap?.(key);
     if (snap && snap.count % 25 === 0) {
       try {
-        diag.add?.(`[perf] ${key} p95=${snap.p95|0}ms p50=${snap.p50|0}ms`);
+        diag.add?.(`[perf] ${key} p50=${snap.p50|0}ms p90=${snap.p90|0}ms p95=${snap.p95|0}ms`);
       } catch(_){}
     }
   } catch(_){}
@@ -3285,6 +3285,7 @@ const chartPanel = {
   open: false,
   tip: null,
   tipSticky: false,
+  SHOW_BODY_COMP_BARS: true,
 
   init() {
     this.el = $("#chart");
@@ -4159,7 +4160,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
     }
 
     // Koerper: Kompositionsbalken (Muskel/Fett) als hinterer Layer
-    if (metric === "weight" && this.svg) {
+    if (metric === "weight" && this.SHOW_BODY_COMP_BARS && this.svg) {
       const baseline = y(0);
       const muscleSeries = barSeries[0] || { values: [] };
       const fatSeries    = barSeries[1] || { values: [] };
@@ -4328,8 +4329,8 @@ const mkAlertDots = (seriesItem) => {
 
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
-    const sPerf = (perfStats.add?.("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap?.("drawChart")) || {p50:0,p95:0,p99:0,count:0};
-    diag.add?.(`[perf] drawChart p50=${sPerf.p50|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+    const sPerf = (perfStats.add?.("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap?.("drawChart")) || {p50:0,p90:0,p95:0,p99:0,count:0};
+    diag.add?.(`[perf] drawChart p50=${sPerf.p50|0}ms p90=${sPerf.p90|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
   },
 };
 
