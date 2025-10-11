@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.3)</title>
+<title>Gesundheits-Logger (V1.6.4)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -544,6 +544,10 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .pill.warn .dot { background:#f59e0b; }
 .pill.bad .dot { background:#ef4444; }
 .pill.neutral .dot { background:#7c3aed; }
+.capture-header{ display:flex; flex-direction:column; gap:8px; }
+.capture-header .capture-date{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.capture-header .capture-pills{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.capture-header .capture-pills .pill{ margin:0; }
 
 
 /* Arzttermine Skeleton */
@@ -618,7 +622,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.3</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -693,14 +697,16 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
  
   <!-- Daily-Capture -->
   <section class="card" id="entry">
-        <div class="row" style="align-items:center; gap:12px">
-      <div style="flex:0 0 220px">
-        <label>Datum</label>
-        <input class="compact" type="date" id="date">
+    <div class="capture-header">
+      <div class="capture-date">
+        <div style="flex:0 0 220px">
+          <label>Datum</label>
+          <input class="compact" type="date" id="date">
+        </div>
       </div>
-      <div class="next-appt-wrap" style="flex:1; display:flex; justify-content:flex-end; align-items:center; gap:8px; flex-wrap:wrap">
+      <div class="capture-pills" id="capturePillsRow">
         <div id="cap-intake-status-top" class="small" style="opacity:.8; display:flex; gap:8px; flex-wrap:wrap"></div>
-        <span id="nextApptBadge" class="pill neutral" title="Naechster Arzttermin" aria-live="polite">Naechster Termin: &mdash;</span>
+        <span id="nextApptBadge" class="pill neutral" title="Kein Termin geplant" aria-live="polite">Kein Termin geplant</span>
       </div>
     </div>
 
@@ -1064,6 +1070,7 @@ const appointmentsState = {
   data: Object.create(null),
   loading: false,
   loaded: false,
+  next: null,
 };
 
 
@@ -1326,7 +1333,11 @@ function formatDateTimeDE(iso){
   try {
     const dt = new Date(iso);
     if (Number.isNaN(dt.getTime())) return '\u2014';
-    return dt.toLocaleString('de-AT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    return new Intl.DateTimeFormat('de-AT', {
+      day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit', hour12:false,
+      timeZone:'Europe/Vienna'
+    }).format(dt);
   } catch(_) {
     return '\u2014';
   }
@@ -1849,14 +1860,16 @@ function setCaptureIntakeDisabled(disabled){
 
 function prepareIntakeStatusHeader(){
   try {
-    const wrap = document.querySelector('.next-appt-wrap');
+    const wrap = document.getElementById('capturePillsRow');
     const nab = wrap ? wrap.querySelector('#nextApptBadge') : document.getElementById('nextApptBadge');
-    if (nab) nab.textContent = 'Naechster Termin: \u2014';
+    if (nab) {
+      nab.textContent = 'Kein Termin geplant';
+      nab.title = 'Kein Termin geplant';
+    }
     if (!wrap) return;
 
     wrap.style.gap = '8px';
     wrap.style.flexWrap = 'wrap';
-    wrap.style.justifyContent = 'flex-end';
     wrap.style.alignItems = 'center';
 
     let top = document.getElementById('cap-intake-status-top');
@@ -1996,6 +2009,61 @@ async function getAppointmentsEndpoint(){
   return { base, headers } ;
 }
 
+function getAppointmentRoleLabel(code){
+  const role = APPOINTMENT_ROLES.find(r => r.code === code);
+  return role ? role.label : (code || '');
+}
+
+function setAppointmentBadge(details){
+  const badge = document.getElementById('nextApptBadge');
+  if (!badge) return;
+
+  const role = details?.role || null;
+  const dtIso = details?.dt || null;
+
+  if (!role || !dtIso) {
+    badge.textContent = 'Kein Termin geplant';
+    badge.title = 'Kein Termin geplant';
+    badge.setAttribute('aria-label', 'Kein Termin geplant');
+    badge.dataset.role = '';
+    badge.dataset.dt = '';
+    return;
+  }
+
+  const label = getAppointmentRoleLabel(role);
+  const formatted = formatDateTimeDE(dtIso);
+  const text = `N\u00e4chster Arzttermin bei: ${label} am: ${formatted}`;
+  badge.textContent = text;
+  badge.title = `Arzttermin bei ${label} am ${formatted}`;
+  badge.setAttribute('aria-label', text);
+  badge.dataset.role = role;
+  badge.dataset.dt = dtIso;
+}
+
+function computeNextAppointment(summary){
+  if (!summary) return null;
+  let nextRole = null;
+  let nextIso = null;
+  let nextTs = Number.POSITIVE_INFINITY;
+  const nowTs = Date.now();
+
+  for (const { code } of APPOINTMENT_ROLES) {
+    const nextCandidate = summary[code]?.next;
+    if (!nextCandidate) continue;
+    const ts = Date.parse(nextCandidate);
+    if (!Number.isFinite(ts)) continue;
+    if (ts < nowTs - 60_000) continue;
+    if (ts < nextTs) {
+      nextTs = ts;
+      nextRole = code;
+      nextIso = nextCandidate;
+    }
+  }
+
+  if (!nextRole || !nextIso) return null;
+  return { role: nextRole, dt: nextIso };
+}
+
 function validateAppointmentInput({ date, time }){
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { ok: false, error: 'date' };
@@ -2023,6 +2091,8 @@ function resetAppointmentsUi(){
       doneBtn.hidden = true;
     }
   });
+  appointmentsState.next = null;
+  setAppointmentBadge();
 }
 
 function applyAppointmentsUi(summary){
@@ -2131,9 +2201,12 @@ async function refreshAppointments(){
       summary[code] = { next: nextIso, last: lastIso };
     });
 
-    appointmentsState.data = summary;
-    appointmentsState.loaded = true;
-    applyAppointmentsUi(summary);
+      appointmentsState.data = summary;
+      appointmentsState.loaded = true;
+      applyAppointmentsUi(summary);
+      const nextAppt = computeNextAppointment(summary);
+      appointmentsState.next = nextAppt;
+      setAppointmentBadge(nextAppt);
   } catch (e) {
     try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
     appointmentsState.data = Object.create(null);
