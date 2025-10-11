@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.5)</title>
+<title>Gesundheits-Logger (V1.6.7)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -544,6 +544,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .pill.warn .dot { background:#f59e0b; }
 .pill.bad .dot { background:#ef4444; }
 .pill.neutral .dot { background:#7c3aed; }
+.body-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
 .capture-header{ display:flex; flex-direction:column; gap:8px; }
 .capture-header .capture-date{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
 .capture-header .capture-pills{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
@@ -622,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.7</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -756,19 +757,27 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     <details class="accordion">
       <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
-        <div class="card-nested">
-          <h3 class="blockTitle">Koerper</h3>
-          <div class="grid" style="grid-template-columns:1fr 1fr">
-            <div>
-              <label>Gewicht (kg)</label>
-              <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-            </div>
-            <div>
-              <label>Bauchumfang (cm)</label>
-              <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+          <div class="card-nested">
+            <h3 class="blockTitle">Koerper</h3>
+            <div class="body-grid">
+              <div>
+                <label>Gewicht (kg)</label>
+                <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+              </div>
+              <div>
+                <label>Bauchumfang (cm)</label>
+                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+              </div>
+              <div>
+                <label>Fett (%)</label>
+                <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
+              </div>
+              <div>
+                <label>Muskel (%)</label>
+                <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
+              </div>
             </div>
           </div>
-        </div>
         
         <div class="panel-actions">
           <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
@@ -1371,6 +1380,8 @@ function toHealthEvents(entry){
       const payload = {};
       if (entry.weight   != null) payload.kg = Number(entry.weight);
       if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
+      if (entry.fat_pct != null) payload.fat_pct = Number(entry.fat_pct);
+      if (entry.muscle_pct != null) payload.muscle_pct = Number(entry.muscle_pct);
       out.push({ ts: tsIso, type: "body", payload });
     }
 
@@ -1663,7 +1674,7 @@ async function loadBodyFromView({ user_id, from, to }) {
   if (to)   filters.push(['day', `lte.${to}`]);
   return await sbSelect({
     table: 'v_events_body',
-    select: 'day,kg,cm',
+    select: 'day,kg,cm,fat_pct,muscle_pct,fat_kg,muscle_kg',
     filters,
     order: 'day.asc'
   });
@@ -1701,6 +1712,40 @@ async function syncCaptureToggles(){
     const flagsCommentEl = document.getElementById("flagsComment");
     if (flagsCommentEl) flagsCommentEl.value = "";
   }catch(_){ /* non-blocking */ }
+}
+
+async function prefillBodyInputs(){
+  const weightEl = document.getElementById('weightDay');
+  const waistEl = document.getElementById('input-waist-cm');
+  const fatEl = document.getElementById('fatPctDay');
+  const muscleEl = document.getElementById('musclePctDay');
+  const applyValues = (row) => {
+    if (weightEl) weightEl.value = row?.kg != null ? fmtNum(row.kg, 1) : '';
+    if (waistEl) waistEl.value = row?.cm != null ? fmtNum(row.cm, 1).replace('.', ',') : '';
+    if (fatEl) {
+      clearFieldError(fatEl);
+      fatEl.value = row?.fat_pct != null ? fmtNum(row.fat_pct, 1).replace('.', ',') : '';
+    }
+    if (muscleEl) {
+      clearFieldError(muscleEl);
+      muscleEl.value = row?.muscle_pct != null ? fmtNum(row.muscle_pct, 1).replace('.', ',') : '';
+    }
+  };
+
+  const dateEl = document.getElementById('date');
+  const dayIso = dateEl?.value || todayStr();
+  try {
+    const uid = await getUserId();
+    if (!uid) {
+      applyValues(null);
+      return;
+    }
+    const rows = await loadBodyFromView({ user_id: uid, from: dayIso, to: dayIso });
+    const row = Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
+    applyValues(row);
+  } catch(_) {
+    applyValues(null);
+  }
 }
 
 /* Optional: Notes (aus health_events, falls keine View v_events_note existiert) */
@@ -1742,6 +1787,10 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
         evening: { sys:null, dia:null, pulse:null, map:null },
         weight: null,
         waist_cm: null,
+        fat_pct: null,
+        muscle_pct: null,
+        fat_kg: null,
+        muscle_kg: null,
         notes: "",
         flags: { water_lt2:false, salt_gt5:false, protein_ge90:false, sick:false, meds:false, training:false },
         remoteIds: [],
@@ -1757,6 +1806,10 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     const d = ensure(r.day);
     if (r.kg != null) d.weight   = Number(r.kg);
     if (r.cm != null) d.waist_cm = Number(r.cm);
+    if (r.fat_pct != null) d.fat_pct = Number(r.fat_pct);
+    if (r.muscle_pct != null) d.muscle_pct = Number(r.muscle_pct);
+    if (r.fat_kg != null) d.fat_kg = Number(r.fat_kg);
+    if (r.muscle_kg != null) d.muscle_kg = Number(r.muscle_kg);
   }
 
   // bp (max 2x/Tag - Morgen/Abend)
@@ -1859,6 +1912,18 @@ function setCaptureIntakeDisabled(disabled){
     const el = document.getElementById(id);
     if (el) el.disabled = !!disabled;
   });
+}
+
+function clearFieldError(el){
+  if (!el) return;
+  el.style.outline = '';
+  el.removeAttribute('aria-invalid');
+}
+
+function setFieldError(el){
+  if (!el) return;
+  el.style.outline = '2px solid var(--danger)';
+  el.setAttribute('aria-invalid','true');
 }
 
 function prepareIntakeStatusHeader(){
@@ -2515,6 +2580,7 @@ async function refreshCaptureIntake(){
 
   __lastKnownToday = todayStr();
   updateCaptureIntakeStatus();
+  try { await prefillBodyInputs(); } catch(_){}
 }
 
 async function handleCaptureIntake(kind){
@@ -4229,8 +4295,12 @@ function resetBodyPanel(opts = {}) {
   const { focus = true } = opts;
   const weightEl = document.getElementById('weightDay');
   const waistEl = document.getElementById('input-waist-cm');
+  const fatEl = document.getElementById('fatPctDay');
+  const muscleEl = document.getElementById('musclePctDay');
   if (weightEl) weightEl.value = '';
   if (waistEl) waistEl.value = '';
+  if (fatEl) { fatEl.value = ''; clearFieldError(fatEl); }
+  if (muscleEl) { muscleEl.value = ''; clearFieldError(muscleEl); }
   if (focus && weightEl) weightEl.focus();
 }
 function resetFlagsPanel(opts = {}) {
@@ -4277,7 +4347,7 @@ function addCapturePanelKeys(){
   };
   bind('#sysM, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
   bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
-  bind('#weightDay, #input-waist-cm', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
+  bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
   bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
 }function setSick(on){
 sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
@@ -4417,28 +4487,61 @@ async function saveFlagsCommentNote(date, text){
 }
 
 async function saveDaySummary(options = {}){
-const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
-const date = $("#date")?.value || todayStr();
-const time = "12:00";
+  const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
+  const date = $("#date")?.value || todayStr();
+  const time = "12:00";
 
-const entry = baseEntry(date, time, "Tag");
+  const entry = baseEntry(date, time, "Tag");
+  let validationFailed = false;
 
-const notesRaw = ($("#notesDay")?.value || "").trim();
-if (includeBody){
-  entry.notes = notesRaw;
-  const w = $("#weightDay")?.value?.trim();
-  entry.weight = w ? Number((w||"").replace(',', '.')) : null;
-  const waistRaw = $("#input-waist-cm")?.value?.trim();
-  entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
-} else {
-  entry.notes = '';
-  entry.weight = null;
-  entry.waist_cm = null;
-}
+  const notesRaw = ($("#notesDay")?.value || "").trim();
+  if (includeBody){
+    entry.notes = notesRaw;
+    const w = $("#weightDay")?.value?.trim();
+    entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+    const waistRaw = $("#input-waist-cm")?.value?.trim();
+    entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
 
-if (includeFlags){
-  entry.training = trainingActive;
-  entry.low_intake = lowIntakeActive;
+    const fatPctEl = document.getElementById('fatPctDay');
+    const musclePctEl = document.getElementById('musclePctDay');
+    const parsePct = (el, label) => {
+      if (!el) return null;
+      const raw = (el.value || '').trim();
+      if (!raw){
+        clearFieldError(el);
+        return null;
+      }
+      const pct = toNumDE(raw);
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100){
+        setFieldError(el);
+        uiError(`Bitte gültigen Wert für ${label} (0–100 %) eingeben.`);
+        if (!validationFailed) el.focus();
+        validationFailed = true;
+        return null;
+      }
+      clearFieldError(el);
+      return pct;
+    };
+
+    const fatPct = parsePct(fatPctEl, 'Fett');
+    const musclePct = parsePct(musclePctEl, 'Muskel');
+    entry.fat_pct = fatPct;
+    entry.muscle_pct = musclePct;
+  } else {
+    entry.notes = '';
+    entry.weight = null;
+    entry.waist_cm = null;
+    entry.fat_pct = null;
+    entry.muscle_pct = null;
+    clearFieldError(document.getElementById('fatPctDay'));
+    clearFieldError(document.getElementById('musclePctDay'));
+  }
+
+  if (validationFailed) return false;
+
+  if (includeFlags){
+    entry.training = trainingActive;
+    entry.low_intake = lowIntakeActive;
   entry.sick = sickActive;
   entry.valsartan_missed = valsartanMissed;
   entry.forxiga_missed = forxigaMissed;
@@ -4456,7 +4559,7 @@ if (includeFlags){
   entry.protein_high90 = null;
 }
 
-const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
+  const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
 let saved = false;
 
 const hasBodyContent = includeBody && ((entry.weight != null) || (entry.waist_cm != null) || !!entry.notes);
@@ -5119,19 +5222,20 @@ bindToggle("#proteinHighToggle", setProteinHigh, ()=>proteinHigh);
 
 // Sync toggles when the date changes in capture view
 const dateEl = document.getElementById('date');
-if (dateEl) {
-  dateEl.addEventListener('change', async () => {
-    try {
-      const todayIso = todayStr();
-      __dateUserSelected = (dateEl.value || '') !== todayIso;
-      // was du beim Datum aendern haben willst:
-      await refreshCaptureIntake();
-      await syncCaptureToggles();
-      resetCapturePanels();
-      updateBpCommentWarnings?.();
-    } catch(_) {}
-  });
-}
+  if (dateEl) {
+    dateEl.addEventListener('change', async () => {
+      try {
+        const todayIso = todayStr();
+        __dateUserSelected = (dateEl.value || '') !== todayIso;
+        // was du beim Datum aendern haben willst:
+        await refreshCaptureIntake();
+        await syncCaptureToggles();
+        resetCapturePanels();
+        updateBpCommentWarnings?.();
+        await prefillBodyInputs();
+      } catch(_) {}
+    });
+  }
 
 // Apply Range -> Arztansicht neu rendern
 const applyBtn = $("#applyRange");
