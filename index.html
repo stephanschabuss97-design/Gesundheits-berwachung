@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.7)</title>
+<title>Gesundheits-Logger (V1.6.8)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.7</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.8</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -3292,7 +3292,7 @@ const chartPanel = {
     this.live = live;
 
     // Interaktivitaet
-    if (this.svg) {
+    if (this.svg && metric !== "weight") {
       this.svg.addEventListener("pointermove", (e) => {
         if (this.tipSticky) return;
         const tgt = e.target;
@@ -3406,7 +3406,9 @@ async getFiltered() {
           forxiga_missed:   !!d.flags.forxiga_missed,
           nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90
+          protein_high90: d.flags.protein_ge90,
+          fat_kg: null,
+          muscle_kg: null
         });
       }
       // Abend
@@ -3430,7 +3432,9 @@ async getFiltered() {
           forxiga_missed:   !!d.flags.forxiga_missed,
           nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90
+          protein_high90: d.flags.protein_ge90,
+          fat_kg: null,
+          muscle_kg: null
         });
       }
       // Body (Gewicht/Bauch)
@@ -3452,7 +3456,9 @@ async getFiltered() {
           forxiga_missed:   !!d.flags.forxiga_missed,
           nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90
+          protein_high90: d.flags.protein_ge90,
+          fat_kg: d.fat_kg,
+          muscle_kg: d.muscle_kg
         });
       }
     }
@@ -3479,7 +3485,9 @@ async getFiltered() {
           forxiga_missed:   !!d.flags.forxiga_missed,
           nsar_taken:       !!d.flags.nsar_taken,
           salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90
+          protein_high90: d.flags.protein_ge90,
+          fat_kg: null,
+          muscle_kg: null
         });
       }
     }
@@ -3675,6 +3683,7 @@ const metric = $("#metricSel")?.value || "bp";
     // X-Basis
     const xsAll = data.map(e => e.ts ?? Date.parse(e.dateTime));
     let series = [];
+    let barSeries = [];
     let X = xsAll;
 
     // KPI-Box
@@ -3820,6 +3829,13 @@ const metric = $("#metricSel")?.value || "bp";
     avgBox.style.display = "inline-flex";
     this.layoutKpis();
   }
+
+  const muscleKg = data.map(e => e.muscle_kg != null ? Number(e.muscle_kg) : null);
+  const fatKg    = data.map(e => e.fat_kg    != null ? Number(e.fat_kg)    : null);
+  barSeries = [
+    { name: "Muskelmasse (kg)", values: muscleKg, color: "#4DA8FF" },
+    { name: "Fettmasse (kg)",   values: fatKg,    color: "#D2A85F" },
+  ];
 }
 
   // --- Render-Prep ---
@@ -3828,8 +3844,9 @@ const metric = $("#metricSel")?.value || "bp";
     if (!this.tipSticky) this.hideTip();
 
     // Wenn es Flags gibt, soll das Chart nicht fruehzeitig abbrechen
-    const hasAnyFlagsData = (Array.isArray(data) && data.some(e => !!(e?.training || e?.low_intake || e?.sick || e?.salt_high || e?.protein_high90 || e?.valsartan_missed || e?.forxiga_missed || e?.nsar_taken)));
-    const hasAny = series.some(s => s.values.some(v => v != null)) || hasAnyFlagsData;
+    const hasBarData = barSeries.some(s => s.values.some(v => v != null));
+    const hasAnyFlagsData = (metric !== "weight") && Array.isArray(data) && data.some(e => !!(e?.training || e?.low_intake || e?.sick || e?.salt_high || e?.protein_high90 || e?.valsartan_missed || e?.forxiga_missed || e?.nsar_taken));
+    const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData || hasAnyFlagsData;
     if (!hasAny) {
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
@@ -3846,8 +3863,11 @@ const metric = $("#metricSel")?.value || "bp";
 
     // === Flags -> X-Bereich erweitern (immer) + Lookup fuer Tooltip ===
     let flagTs = [];
-    {
-      const dayFlagsTmp = new Map(); // date -> { training:bool, bad:int, seen:{} }
+    if (metric === "weight") {
+      this.flagsByDate = new Map();
+      this.hasFlagsForDate = () => false;
+    } else {
+      const dayFlagsTmp = new Map(); // date -> { training:bool, badCount:int, seen:{} }
       const flagsByDate = new Map(); // date -> detailed flags for tooltip
       for (const e of data) {
         if (!e?.date) continue;
@@ -3855,8 +3875,8 @@ const metric = $("#metricSel")?.value || "bp";
         if (!rec) {
           rec = {
             training: false,
-            bad: 0,
-            seen: { water: false, salt: false, protein: false, sick: false, meds: false },
+            badCount: 0,
+            seen: { water:false, salt:false, protein:false, sick:false, meds:false },
           };
           dayFlagsTmp.set(e.date, rec);
         }
@@ -3870,7 +3890,7 @@ const metric = $("#metricSel")?.value || "bp";
           meds,
         };
         for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.bad++; }
+          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
         }
 
         // Tooltip-Detailflags sammeln
@@ -3918,7 +3938,12 @@ const metric = $("#metricSel")?.value || "bp";
     const pad = xmax > xmin ? (xmax - xmin) * 0.02 : 0;
     xmin -= pad; xmax += pad;
 
-    const allY   = series.flatMap(s => s.values.filter(v => v != null));
+    let allY = [
+      ...series.flatMap(s => s.values.filter(v => v != null)),
+      ...barSeries.flatMap(s => s.values.filter(v => v != null)),
+    ];
+    if (metric === "weight") allY.push(0);
+    if (!allY.length) allY = [0];
     const yminRaw = Math.min(...allY);
     const ymaxRaw = Math.max(...allY);
     const range   = Math.max(1, ymaxRaw - yminRaw);
@@ -4078,6 +4103,70 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
       }
     }
 
+    // Koerper: Kompositionsbalken (Muskel/Fett) als hinterer Layer
+    if (metric === "weight" && this.svg) {
+      const baseline = y(0);
+      const muscleSeries = barSeries[0] || { values: [] };
+      const fatSeries    = barSeries[1] || { values: [] };
+      const entries = data.map((entry, idx) => {
+        const ts = X[idx];
+        if (!Number.isFinite(ts)) return null;
+        const muscle = muscleSeries.values[idx];
+        const fat = fatSeries.values[idx];
+        if (muscle == null && fat == null) return null;
+        return { ts, muscle, fat };
+      }).filter(Boolean);
+
+      if (entries.length) {
+        const uniqTs = [...new Set(entries.map(e => e.ts))].sort((a,b)=>a-b);
+        const dayXs = uniqTs.map(t => x(t));
+        const baseStep = dayXs.length > 1
+          ? Math.min(...dayXs.slice(1).map((v,i) => v - dayXs[i]))
+          : innerW / Math.max(1, uniqTs.length);
+        const groupWidth = Math.max(12, Math.min(36, Math.floor(baseStep * 0.5)));
+        const gap = Math.max(2, Math.floor(groupWidth * 0.12));
+        const barWidth = Math.max(4, Math.floor((groupWidth - gap) / 2));
+
+        if (barWidth > 0 && Number.isFinite(baseline)) {
+          let barsSvg = '<g class="body-bars" aria-hidden="true">';
+          for (const { ts, muscle, fat } of entries) {
+            const center = x(ts);
+            const start = center - groupWidth / 2;
+            const hasMuscle = muscle != null;
+            const hasFat = fat != null;
+            let muscleX = start;
+            let fatX = start + barWidth + gap;
+            if (hasMuscle && !hasFat) {
+              muscleX = center - barWidth / 2;
+            }
+            if (!hasMuscle && hasFat) {
+              fatX = center - barWidth / 2;
+            }
+
+            if (hasMuscle) {
+              const yVal = y(muscle);
+              const h = Math.abs(baseline - yVal);
+              if (Number.isFinite(yVal) && h > 0.5) {
+                const top = Math.min(baseline, yVal);
+                barsSvg += `<rect x="${muscleX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#4DA8FF" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+              }
+            }
+
+            if (hasFat) {
+              const yVal = y(fat);
+              const h = Math.abs(baseline - yVal);
+              if (Number.isFinite(yVal) && h > 0.5) {
+                const top = Math.min(baseline, yVal);
+                barsSvg += `<rect x="${fatX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#D2A85F" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+              }
+            }
+          }
+          barsSvg += '</g>';
+          this.svg.insertAdjacentHTML("beforeend", barsSvg);
+        }
+      }
+    }
+
     // Linien + Punkte
 const isFiniteTs = (t) => Number.isFinite(t);
 
@@ -4162,6 +4251,25 @@ const mkAlertDots = (seriesItem) => {
         this.legend.appendChild(wrap);
       }
     });
+
+    if (metric === "weight" && this.legend) {
+      barSeries.forEach((s) => {
+        if (!s.values.some(v => v != null)) return;
+        const wrap = document.createElement("span");
+        wrap.style.display = "inline-flex";
+        wrap.style.alignItems = "center";
+        wrap.style.gap = "6px";
+        const dot = Object.assign(document.createElement("span"), { className: "dot" });
+        dot.style.background = s.color;
+        dot.style.width = "10px";
+        dot.style.height = "10px";
+        dot.style.borderRadius = "50%";
+        const label = document.createElement("span");
+        label.textContent = s.name;
+        wrap.append(dot, label);
+        this.legend.appendChild(wrap);
+      });
+    }
 
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
