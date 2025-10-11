@@ -2580,7 +2580,6 @@ async function refreshCaptureIntake(){
 
   __lastKnownToday = todayStr();
   updateCaptureIntakeStatus();
-  try { await prefillBodyInputs(); } catch(_){}
 }
 
 async function handleCaptureIntake(kind){
@@ -5172,9 +5171,11 @@ if (saveBodyPanelBtn){
     }finally{
       withBusy(btn, false);
     }
-    if (savedOk){
-      resetBodyPanel(); flashButtonOk(btn, '&#x2705; Koerper gespeichert');
-    }
+      if (savedOk){
+        resetBodyPanel();
+        await prefillBodyInputs();
+        flashButtonOk(btn, '&#x2705; Koerper gespeichert');
+      }
   });
 }
 
