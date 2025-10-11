@@ -3292,7 +3292,7 @@ const chartPanel = {
     this.live = live;
 
     // Interaktivitaet
-    if (this.svg && metric !== "weight") {
+    if (this.svg) {
       this.svg.addEventListener("pointermove", (e) => {
         if (this.tipSticky) return;
         const tgt = e.target;
