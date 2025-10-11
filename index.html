@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.4)</title>
+<title>Gesundheits-Logger (V1.6.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -622,7 +622,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1836,8 +1836,10 @@ const LS_PROTEIN_GOAL = 90;
 
 let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
 let __midnightTimer = null;
+let __noonTimer = null;
 let __lastKnownToday = null;
 let __dateUserSelected = false;
+let __bpUserOverride = false;
 const captureIntakeState = { dayIso: null, totals: { water_ml: 0, salt_g: 0, protein_g: 0 }, logged: false };
 
 function clearCaptureIntakeInputs(){
@@ -1975,6 +1977,66 @@ function scheduleMidnightRefresh(){
   } catch { /* noop */ }
 }
 
+function millisUntilNoonGrace(){
+  try {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(12, 5, 0, 0);
+    if (next.getTime() <= now.getTime()) {
+      next.setDate(next.getDate() + 1);
+    }
+    const diff = next.getTime() - now.getTime();
+    return Number.isFinite(diff) ? Math.max(1000, diff) : 3600_000;
+  } catch {
+    return 3600_000;
+  }
+}
+
+function scheduleNoonSwitch(){
+  try {
+    if (__noonTimer) clearTimeout(__noonTimer);
+    const delay = millisUntilNoonGrace();
+    __noonTimer = setTimeout(handleNoonSwitch, delay);
+  } catch { /* noop */ }
+}
+
+function isAfterNoonGrace(){
+  try {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    return minutes >= (12 * 60 + 5);
+  } catch {
+    return false;
+  }
+}
+
+function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
+  if (!force && __bpUserOverride) return;
+  const select = document.getElementById('bpContextSel');
+  if (!select) return;
+  const dateEl = document.getElementById('date');
+  const todayIso = todayStr();
+  const selected = dateEl?.value || '';
+  if (selected && selected !== todayIso) return;
+
+  const desired = isAfterNoonGrace() ? 'A' : 'M';
+  if (select.value === desired) return;
+
+  select.value = desired;
+  applyBpContext(desired);
+  updateBpCommentWarnings?.();
+  try { diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`); } catch(_){ }
+}
+
+function handleNoonSwitch(){
+  __noonTimer = null;
+  try {
+    maybeAutoApplyBpContext({ source: 'noon-timer' });
+  } finally {
+    scheduleNoonSwitch();
+  }
+}
+
 async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
   const todayIso = todayStr();
   const dateEl = document.getElementById('date');
@@ -1996,6 +2058,11 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
   __lastKnownToday = todayIso;
   if (!__midnightTimer) scheduleMidnightRefresh();
+  scheduleNoonSwitch();
+  if (!userPinnedOtherDay) {
+    __bpUserOverride = false;
+    maybeAutoApplyBpContext({ force: true, source: source || 'day-change' });
+  }
   try { diag.add?.(`intake: day refresh (${source || 'auto'})`); } catch(_) {}
 }
 
@@ -4522,6 +4589,10 @@ window.addEventListener('beforeunload', () => {
     clearTimeout(__midnightTimer);
     __midnightTimer = null;
   }
+  if (__noonTimer) {
+    clearTimeout(__noonTimer);
+    __noonTimer = null;
+  }
 });
 
 
@@ -4862,6 +4933,7 @@ const todayIso = todayStr();
 $("#date").value = todayIso;
 __lastKnownToday = todayIso;
 __dateUserSelected = false;
+__bpUserOverride = false;
 prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
@@ -4879,11 +4951,13 @@ if (hasSession) {
   await setupRealtime();  //  NEU: Realtime direkt aktivieren
   await requestUiRefresh();
 }
-try {
-  await refreshCaptureIntake();
-} catch(_) {}
-__lastKnownToday = todayStr();
-scheduleMidnightRefresh();
+  try {
+    await refreshCaptureIntake();
+  } catch(_) {}
+  __lastKnownToday = todayStr();
+  scheduleMidnightRefresh();
+  scheduleNoonSwitch();
+  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
 await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
 
@@ -4920,7 +4994,9 @@ const applyBpContext = (value)=>{
 };
 if (bpContextSel){
   applyBpContext(bpContextSel.value || 'M');
+  maybeAutoApplyBpContext({ force: true, source: 'boot' });
   bpContextSel.addEventListener('change', (e)=>{
+    __bpUserOverride = true;
     applyBpContext(e.target.value);
     updateBpCommentWarnings();
   });
@@ -5090,11 +5166,13 @@ document.addEventListener('visibilitychange', () => {
     } catch(_) {}
     __pendingAfterUnlock = null;
     lockUi(false);
-    try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
-    const doctorActive = document.getElementById('doctor')?.classList.contains('active');
-    if (doctorActive && !__doctorUnlocked) {
-      await setTab('capture');
-    }
+      try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
+      scheduleNoonSwitch();
+      maybeAutoApplyBpContext({ source: 'visibility' });
+      const doctorActive = document.getElementById('doctor')?.classList.contains('active');
+      if (doctorActive && !__doctorUnlocked) {
+        await setTab('capture');
+      }
   })();
 });
 
