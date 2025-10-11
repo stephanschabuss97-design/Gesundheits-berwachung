@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.6.8)</title>
+<title>Gesundheits-Logger (V1.6.9)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.6.8</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.6.9</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1106,6 +1106,21 @@ return { count: arr.length, p50: pct(arr,50), p95: pct(arr,95), p99: pct(arr,99)
 };
 return { add, snap };
 })();
+
+function recordPerfStat(key, startedAt){
+  if (startedAt == null) return;
+  const hasPerf = typeof performance !== "undefined" && typeof performance.now === "function";
+  if (!hasPerf) return;
+  try {
+    perfStats?.add?.(key, Math.max(0, performance.now() - startedAt));
+    const snap = perfStats?.snap?.(key);
+    if (snap && snap.count % 25 === 0) {
+      try {
+        diag.add?.(`[perf] ${key} p95=${snap.p95|0}ms p50=${snap.p50|0}ms`);
+      } catch(_){}
+    }
+  } catch(_){}
+}
 
 const diag = { el:null, logEl:null, open:false, lines:[],
 add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
@@ -1946,9 +1961,15 @@ function prepareIntakeStatusHeader(){
       top.id = 'cap-intake-status-top';
       top.className = 'small';
       top.style.opacity = '.8';
+      top.setAttribute('role','group');
+      top.setAttribute('aria-live','polite');
+      top.setAttribute('tabindex','0');
     }
 
     if (top) {
+      top.setAttribute('role','group');
+      top.setAttribute('aria-live','polite');
+      top.setAttribute('tabindex','0');
       top.style.display = 'flex';
       top.style.gap = '8px';
       top.style.flexWrap = 'wrap';
@@ -1964,54 +1985,77 @@ function prepareIntakeStatusHeader(){
 }
 
 function updateCaptureIntakeStatus(){
-  const statusEl = document.getElementById('cap-intake-status');
-  let statusTop = document.getElementById('cap-intake-status-top');
-  if (!statusEl && !statusTop) return;
+  const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
+  try {
+    const statusEl = document.getElementById('cap-intake-status');
+    let statusTop = document.getElementById('cap-intake-status-top');
+    if (!statusEl && !statusTop) return;
 
-  if (!statusTop) {
-    prepareIntakeStatusHeader();
-    statusTop = document.getElementById('cap-intake-status-top');
-  }
+    if (!statusTop) {
+      prepareIntakeStatusHeader();
+      statusTop = document.getElementById('cap-intake-status-top');
+    }
 
-  if (!captureIntakeState.logged){
+    if (statusTop) {
+      statusTop.setAttribute('role','group');
+      statusTop.setAttribute('aria-live','polite');
+      statusTop.setAttribute('tabindex','0');
+    }
+
+    if (!captureIntakeState.logged){
+      if (statusEl) {
+        statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
+        statusEl.style.display = '';
+      }
+      if (statusTop) {
+        statusTop.innerHTML = '';
+        statusTop.style.display = 'none';
+        statusTop.setAttribute('aria-label', 'Tagesaufnahme: Bitte anmelden, um Intake zu erfassen.');
+      }
+      return;
+    }
+
+    const t = captureIntakeState.totals || {};
+    const waterVal = Math.round(t.water_ml || 0);
+    const saltVal = Number(t.salt_g || 0);
+    const proteinVal = Number(t.protein_g || 0);
+
+    const waterRatio = LS_WATER_GOAL ? waterVal / LS_WATER_GOAL : 0;
+    const waterCls = waterRatio >= 0.9 ? 'ok' : (waterRatio >= 0.5 ? 'warn' : 'bad');
+    const saltCls = saltVal > LS_SALT_MAX ? 'bad' : (saltVal >= 5 ? 'warn' : 'ok');
+    const proteinCls = (proteinVal >= 78 && proteinVal <= LS_PROTEIN_GOAL) ? 'ok' : (proteinVal > LS_PROTEIN_GOAL ? 'bad' : 'warn');
+
+    const describe = (cls) => ({
+      ok: 'Zielbereich',
+      warn: 'Warnung',
+      bad: 'kritisch',
+      neutral: 'neutral'
+    }[cls] || 'unbekannt');
+
+    const pills = [
+      { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
+      { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
+      { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` },
+    ];
+
+    const summary = pills.map(p => `${p.label} ${p.value} (${describe(p.cls)})`).join(', ');
+    const html = pills.map(p => {
+      const statusText = describe(p.cls);
+      const aria = `${p.label}: ${p.value}, Status: ${statusText}`;
+      return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"><span class="dot" aria-hidden="true"></span>${p.label}: ${p.value}</span>`;
+    }).join(' ');
+
     if (statusEl) {
-      statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
-      statusEl.style.display = '';
+      statusEl.innerHTML = '';
+      statusEl.style.display = 'none';
     }
     if (statusTop) {
-      statusTop.innerHTML = '';
-      statusTop.style.display = 'none';
+      statusTop.innerHTML = html;
+      statusTop.style.display = 'flex';
+      statusTop.setAttribute('aria-label', `Tagesaufnahme: ${summary}`);
     }
-    return;
-  }
-
-  const t = captureIntakeState.totals || {};
-  const waterVal = Math.round(t.water_ml || 0);
-  const saltVal = Number(t.salt_g || 0);
-  const proteinVal = Number(t.protein_g || 0);
-
-  const waterRatio = LS_WATER_GOAL ? waterVal / LS_WATER_GOAL : 0;
-  const waterCls = waterRatio >= 0.9 ? 'ok' : (waterRatio >= 0.5 ? 'warn' : 'bad');
-  const saltCls = saltVal > LS_SALT_MAX ? 'bad' : (saltVal >= 5 ? 'warn' : 'ok');
-  const proteinCls = (proteinVal >= 78 && proteinVal <= LS_PROTEIN_GOAL) ? 'ok' : (proteinVal > LS_PROTEIN_GOAL ? 'bad' : 'warn');
-
-  const pills = [
-    { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
-    { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
-    { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` },
-  ];
-
-  const html = pills.map(p =>
-    `<span class="pill ${p.cls}"><span class="dot"></span>${p.label}: ${p.value}</span>`
-  ).join(' ');
-
-  if (statusEl) {
-    statusEl.innerHTML = '';
-    statusEl.style.display = 'none';
-  }
-  if (statusTop) {
-    statusTop.innerHTML = html;
-    statusTop.style.display = 'flex';
+  } finally {
+    recordPerfStat('header_intake', startedAt);
   }
 }
 
@@ -2166,26 +2210,35 @@ function setAppointmentBadge(details){
   const badge = document.getElementById('nextApptBadge');
   if (!badge) return;
 
-  const role = details?.role || null;
-  const dtIso = details?.dt || null;
+  const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
+  try {
+    badge.setAttribute('role','status');
+    badge.setAttribute('aria-live','polite');
+    badge.setAttribute('tabindex','0');
 
-  if (!role || !dtIso) {
-    badge.textContent = 'Kein Termin geplant';
-    badge.title = 'Kein Termin geplant';
-    badge.setAttribute('aria-label', 'Kein Termin geplant');
-    badge.dataset.role = '';
-    badge.dataset.dt = '';
-    return;
+    const role = details?.role || null;
+    const dtIso = details?.dt || null;
+
+    if (!role || !dtIso) {
+      badge.textContent = 'Kein Termin geplant';
+      badge.title = 'Kein Termin geplant';
+      badge.setAttribute('aria-label', 'Kein Termin geplant');
+      badge.dataset.role = '';
+      badge.dataset.dt = '';
+      return;
+    }
+
+    const label = getAppointmentRoleLabel(role);
+    const formatted = formatDateTimeDE(dtIso);
+    const text = `N\u00e4chster Arzttermin bei: ${label} am: ${formatted}`;
+    badge.textContent = text;
+    badge.title = `Arzttermin bei ${label} am ${formatted}`;
+    badge.setAttribute('aria-label', text);
+    badge.dataset.role = role;
+    badge.dataset.dt = dtIso;
+  } finally {
+    recordPerfStat('header_appt', startedAt);
   }
-
-  const label = getAppointmentRoleLabel(role);
-  const formatted = formatDateTimeDE(dtIso);
-  const text = `N\u00e4chster Arzttermin bei: ${label} am: ${formatted}`;
-  badge.textContent = text;
-  badge.title = `Arzttermin bei ${label} am ${formatted}`;
-  badge.setAttribute('aria-label', text);
-  badge.dataset.role = role;
-  badge.dataset.dt = dtIso;
 }
 
 function computeNextAppointment(summary){
@@ -3257,8 +3310,8 @@ const chartPanel = {
       display: "none",
       pointerEvents: "none",
       zIndex: 2,
-      background: "#10131a",
-      border: "1px solid #2b2f3a",
+      background: "rgba(16,19,26,.98)",
+      border: "1px solid rgba(60,68,90,.6)",
       borderRadius: "8px",
       padding: "8px 10px",
       fontSize: "12px",
@@ -3266,6 +3319,7 @@ const chartPanel = {
       maxWidth: "280px",
       boxShadow: "0 6px 18px rgba(0,0,0,.35)",
       color: "var(--fg)",
+      textShadow: "0 1px 1px rgba(0,0,0,.35)",
     });
     tip.id = "chartTip";
     contentHost.style.position = "relative";
@@ -3623,11 +3677,12 @@ async getFiltered() {
       d.className = "kpi-dot";
       Object.assign(d.style, {
         display: "inline-block",
-        width: "8px", height: "8px",
+        width: "9px", height: "9px",
         borderRadius: "50%",
         margin: "0 8px 0 12px",
         background: color,
-        verticalAlign: "middle"
+        verticalAlign: "middle",
+        boxShadow: "0 0 4px rgba(0,0,0,.35)"
       });
       return d;
     };
