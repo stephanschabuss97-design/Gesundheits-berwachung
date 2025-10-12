@@ -2069,6 +2069,7 @@ const LS_PROTEIN_GOAL = 90;
 let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
 let __midnightTimer = null;
 let __noonTimer = null;
+let __dayHeartbeat = null;
 let __lastKnownToday = null;
 let __dateUserSelected = false;
 let __bpUserOverride = false;
@@ -2271,6 +2272,16 @@ function scheduleNoonSwitch(){
     if (__noonTimer) clearTimeout(__noonTimer);
     const delay = millisUntilNoonGrace();
     __noonTimer = setTimeout(handleNoonSwitch, delay);
+  } catch { /* noop */ }
+}
+
+function startDayHeartbeat({ intervalMs = 60000 } = {}){
+  try {
+    if (__dayHeartbeat) clearInterval(__dayHeartbeat);
+    const delay = Math.max(15000, Number(intervalMs) || 60000);
+    __dayHeartbeat = setInterval(() => {
+      try { maybeRefreshForTodayChange({ source: 'heartbeat' }); } catch(_){ }
+    }, delay);
   } catch { /* noop */ }
 }
 
@@ -3841,7 +3852,7 @@ async getFiltered() {
       if (from && e.date < from) return false;
       if (to   && e.date > to)   return false;
       return true;
-    })
+  })
     .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
 },
 
@@ -5155,6 +5166,10 @@ window.addEventListener('beforeunload', () => {
     clearTimeout(__noonTimer);
     __noonTimer = null;
   }
+  if (__dayHeartbeat) {
+    clearInterval(__dayHeartbeat);
+    __dayHeartbeat = null;
+  }
 });
 
 
@@ -5540,6 +5555,7 @@ if (hasSession) {
   __lastKnownToday = todayStr();
   scheduleMidnightRefresh();
   scheduleNoonSwitch();
+  startDayHeartbeat();
   maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
 await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
@@ -5829,6 +5845,10 @@ resetAppointmentsUi();
 /* boot */
 if (document.readyState === "loading") {
 window.addEventListener("DOMContentLoaded", main);
+
+window.addEventListener('focus', () => {
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+});
 } else {
 main();
 }
