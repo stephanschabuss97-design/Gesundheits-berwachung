@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.3.1)</title>
+<title>Gesundheits-Logger (V1.7.3)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1704,47 +1704,6 @@ function deleteEntryLocal(id){
     tx.oncomplete = ()=> res();
     tx.onerror    = (e)=> rej(e);
   });
-}
-
-let sbClient = null;
-
-async function ensureSupabaseClient(){
-  if (sbClient) return sbClient;
-
-  const rest = await getConf("webhookUrl");
-  const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
-  if (!rest || !keyConf) {
-    setConfigStatus('Bitte REST-Endpoint und ANON-Key speichern.', 'error');
-    diag.add("Supabase Auth: fehlende Konfiguration");
-    return null;
-  }
-
-  const trimmedKey = String(keyConf || '').trim();
-  if (isServiceRoleKey(trimmedKey)) {
-    setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
-    diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
-    return null;
-  }
-
-  const supabaseUrl = baseUrlFromRest(rest);
-  const anonKey = trimmedKey.replace(/^Bearer\s+/i,"");
-  if (!supabaseUrl) {
-    setConfigStatus('REST-Endpoint ist ungueltig.', 'error');
-    diag.add("Supabase Auth: ungueltige URL");
-    return null;
-  }
-  if (!anonKey) {
-    setConfigStatus('ANON-Key ist ungueltig.', 'error');
-    diag.add("Supabase Auth: ungueltiger Key");
-    return null;
-  }
-
-  sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
-    auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true }
-  });
-  diag.add("Supabase: Client (Auth) initialisiert");
-  setConfigStatus('', 'info');
-  return sbClient;
 }
 
 /* ===== Remote (Supabase REST) ===== */
@@ -4707,28 +4666,20 @@ async function setTab(name){
       __pendingAfterUnlock = null;
     }
   }
-
+  
   $$(".view").forEach(v => v.classList.remove("active"));
-  const target = $("#"+name);
-  if (target) target.classList.add("active");
-  $$(".tabs .btn").forEach(b => {
-    b.classList.toggle("primary", b.dataset.tab === name);
-  });
-
-  if (name === "doctor") {
-    await requestUiRefresh({ reason: 'tab:doctor' });
-  } else if (name === "capture") {
-    try {
-      await refreshCaptureIntake();
-      resetCapturePanels();
-      updateBpCommentWarnings?.();
-    } catch(_){}
-  }
+  $("#"+name).classList.add("active");
+  $$(".tabs .btn").forEach(b =>
+    b.classList.toggle("primary", b.dataset.tab === name)
+  );
+  if (name === "doctor") { await requestUiRefresh({ reason: 'tab:doctor' }); }
+  if (name === "capture") { try { await refreshCaptureIntake(); resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
+  
 }
 
 function bindTabs(){
-  $$(".tabs .btn").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
+  $$(".tabs .btn").forEach(b =>
+    b.addEventListener("click", async (e) => {
       const tab = e.currentTarget.dataset.tab;
       if (tab === "doctor") {
         const logged = await isLoggedInFast();
@@ -4738,9 +4689,1095 @@ function bindTabs(){
         }
       }
       setTab(tab);
-    });
+    })
+  );
+}
+
+/* ===== Save flows ===== */
+// Replace sugar toggle with protein (runtime migration for legacy layouts)
+// Migration entfernt: Markup nutzt direkt #proteinHighToggle
+function setProteinHigh(on){
+  proteinHigh = !!on;
+  setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
+}
+let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
+saltHigh=false, proteinHigh=false;
+function setToggle(el, on, activeText, baseText){
+el = el || null;
+if (!el) return;
+el.classList.toggle("active", !!on);
+el.setAttribute("aria-pressed", on ? "true" : "false");
+el.innerHTML = on ? activeText : baseText;
+}
+function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
+function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
+function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
+// Kommentar-Pflicht fuer BP: Grenzwerte markieren
+function requiresBpComment(which){
+  const sys = Number($(`#sys${which}`).value);
+  const dia = Number($(`#dia${which}`).value);
+  const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (el?.value || "").trim();
+  return ((sys > 130) || (dia > 90)) && !comment;
+}
+function updateBpCommentWarnings(){
+  ['M','A'].forEach(which => {
+    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    if (!el) return;
+    const needs = requiresBpComment(which);
+    el.style.outline = needs ? "2px solid var(--danger)" : "";
+    if (needs) el.setAttribute("aria-invalid","true");
+    else el.removeAttribute("aria-invalid");
   });
 }
+
+/* === Panel Reset Helpers (V1.5.7) === */
+function resetBpPanel(which, opts = {}) {
+  const { focus = true } = opts;
+  const ctx = which === 'A' ? 'A' : 'M';
+  ['sys','dia','pulse','bpComment'].forEach(id => {
+    const el = document.getElementById(id + ctx);
+    if (el) el.value = '';
+  });
+  try { updateBpCommentWarnings?.(); } catch(_){}
+  if (focus) {
+    const target = document.getElementById('sys' + ctx);
+    if (target) target.focus();
+  }
+}
+function resetBodyPanel(opts = {}) {
+  const { focus = true } = opts;
+  const weightEl = document.getElementById('weightDay');
+  const waistEl = document.getElementById('input-waist-cm');
+  const fatEl = document.getElementById('fatPctDay');
+  const muscleEl = document.getElementById('musclePctDay');
+  if (weightEl) weightEl.value = '';
+  if (waistEl) waistEl.value = '';
+  if (fatEl) { fatEl.value = ''; clearFieldError(fatEl); }
+  if (muscleEl) { muscleEl.value = ''; clearFieldError(muscleEl); }
+  if (focus && weightEl) weightEl.focus();
+}
+function resetFlagsPanel(opts = {}) {
+  const { focus = true } = opts;
+  try {
+    setTraining(false);
+    setLowIntake(false);
+    setSick(false);
+    setValsartanMiss(false);
+    setForxigaMiss(false);
+    setNsar(false);
+    setSaltHigh(false);
+    if (typeof setProteinHigh === 'function') setProteinHigh(false);
+  } catch(_){ }
+  const commentEl = document.getElementById('flagsComment');
+  if (commentEl) commentEl.value = '';
+  if (focus && commentEl) commentEl.focus();
+}
+function resetCapturePanels(opts = {}) {
+  const { focus = true } = opts;
+  resetBpPanel('M', { focus: false });
+  resetBpPanel('A', { focus: false });
+  resetBodyPanel({ focus: false });
+  resetFlagsPanel({ focus: false });
+  const ctxSel = document.getElementById('bpContextSel');
+  if (ctxSel) ctxSel.value = 'M';
+  document.querySelectorAll('.bp-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.dataset.context === 'M');
+  });
+  try { updateBpCommentWarnings?.(); } catch(_){ }
+  if (focus) {
+    const first = document.getElementById('sysM');
+    if (first) first.focus();
+  }
+}
+function addCapturePanelKeys(){
+  const bind = (selectors, onEnter, onEsc) => {
+    document.querySelectorAll(selectors).forEach(el => {
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); }
+        if (e.key === 'Escape') { e.preventDefault(); onEsc?.(); }
+      });
+    });
+  };
+  bind('#sysM, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
+  bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
+  bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
+  bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
+}function setSick(on){
+sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
+if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
+else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
+}
+function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "&#x1F48A; Valsartan vergessen (aktiv)", "&#x1F48A; Valsartan vergessen"); }
+function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "&#x23F0; Forxiga vergessen (aktiv)", "&#x23F0; Forxiga vergessen"); }
+function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
+function blockHasData(which){
+  const getVal = (sel) => document.querySelector(sel)?.value?.trim();
+  const sys = getVal(`#sys${which}`);
+  const dia = getVal(`#dia${which}`);
+  const pulse = getVal(`#pulse${which}`);
+  const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+  const comment = (commentEl?.value || "").trim();
+  return !!(sys || dia || pulse || comment);
+}
+async function saveBlock(contextLabel, which, includeWeight=false, force=false){
+const date = $("#date").value || todayStr();
+const time = which === 'M' ? '07:00' : '22:00';
+
+const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : null;
+const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
+const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
+
+const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+const comment = (commentEl?.value || '').trim();
+
+const hasAny = (sys != null) || (dia != null) || (pulse != null);
+const hasComment = comment.length > 0;
+
+if (!force && !hasAny && !hasComment) return false;
+
+if (hasAny){
+  if ((sys != null && dia == null) || (dia != null && sys == null)){
+    uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
+    return false;
+  }
+  if (pulse != null && (sys == null || dia == null)){
+    uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
+    return false;
+  }
+
+  const currentISO = new Date(date + "T" + time).toISOString();
+  const ts = new Date(date + "T" + time).getTime();
+
+  const entry = {
+    date, time, dateTime: currentISO, ts,
+    context: contextLabel,
+    sys, dia, pulse,
+    weight: null,
+    map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+    notes: '',
+    training: false,
+    low_intake: false,
+    sick: false,
+    valsartan_missed: false,
+    forxiga_missed: false,
+    nsar_taken: false,
+    salt_high: false,
+    protein_high90: false
+  };
+
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+}
+
+if (hasComment){
+  try {
+    await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
+    if (commentEl) commentEl.value = '';
+    updateBpCommentWarnings();
+  } catch(err) {
+    diag.add?.('BP-Kommentar Fehler: ' + (err?.message || err));
+  }
+}
+
+return hasAny || hasComment;
+}
+
+function baseEntry(date, time, contextLabel){
+const iso = new Date(date + "T" + time).toISOString();
+const ts = new Date(date + "T" + time).getTime();
+return {
+date, time, dateTime: iso, ts,
+context: contextLabel, 
+sys: null, dia: null, pulse: null, weight: null, map: null,
+notes: ($("#notesDay")?.value || "").trim(),
+training: trainingActive,
+low_intake: lowIntakeActive,
+sick: sickActive,
+valsartan_missed: valsartanMissed,
+forxiga_missed: forxigaMissed,
+nsar_taken: nsarTaken,
+salt_high: saltHigh,
+protein_high90: proteinHigh
+};
+}
+
+async function appendNote(date, prefix, text){
+  const trimmed = (text || '').trim();
+  if (!trimmed) return;
+  const stamp = allocateNoteTimestamp(date);
+  const entry = baseEntry(date, stamp.time, 'Tag');
+  entry.dateTime = stamp.iso;
+  entry.ts = stamp.ts;
+  entry.notes = prefix + trimmed;
+  entry.training = false;
+  entry.low_intake = false;
+  entry.sick = false;
+  entry.valsartan_missed = false;
+  entry.forxiga_missed = false;
+  entry.nsar_taken = false;
+  entry.salt_high = false;
+  entry.protein_high90 = false;
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+}
+
+function allocateNoteTimestamp(date){
+  const base = new Date(date + "T22:30:00");
+  const now = Date.now();
+  const minuteOffset = now % 60;
+  const secondOffset = Math.floor(now / 1000) % 60;
+  base.setMinutes(base.getMinutes() + minuteOffset);
+  base.setSeconds(base.getSeconds() + secondOffset);
+  const iso = base.toISOString();
+  return { iso, ts: base.getTime(), time: iso.slice(11,16) };
+}
+
+async function saveFlagsCommentNote(date, text){
+  const trimmed = (text || '').trim();
+  if (!trimmed) return false;
+  await appendNote(date, '[Flags] ', trimmed);
+  return true;
+}
+
+async function saveDaySummary(options = {}){
+  const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
+  const date = $("#date")?.value || todayStr();
+  const time = "12:00";
+
+  const entry = baseEntry(date, time, "Tag");
+  let validationFailed = false;
+
+  const notesRaw = ($("#notesDay")?.value || "").trim();
+  if (includeBody){
+    entry.notes = notesRaw;
+    const w = $("#weightDay")?.value?.trim();
+    entry.weight = w ? Number((w||"").replace(',', '.')) : null;
+    const waistRaw = $("#input-waist-cm")?.value?.trim();
+    entry.waist_cm = waistRaw ? toNumDE(waistRaw) : null;
+
+    const fatPctEl = document.getElementById('fatPctDay');
+    const musclePctEl = document.getElementById('musclePctDay');
+    const parsePct = (el, label) => {
+      if (!el) return null;
+      const raw = (el.value || '').trim();
+      if (!raw){
+        clearFieldError(el);
+        return null;
+      }
+      const pct = toNumDE(raw);
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100){
+        setFieldError(el);
+        uiError(`Bitte gültigen Wert für ${label} (0–100 %) eingeben.`);
+        if (!validationFailed) el.focus();
+        validationFailed = true;
+        return null;
+      }
+      clearFieldError(el);
+      return pct;
+    };
+
+    const fatPct = parsePct(fatPctEl, 'Fett');
+    const musclePct = parsePct(musclePctEl, 'Muskel');
+    entry.fat_pct = fatPct;
+    entry.muscle_pct = musclePct;
+  } else {
+    entry.notes = '';
+    entry.weight = null;
+    entry.waist_cm = null;
+    entry.fat_pct = null;
+    entry.muscle_pct = null;
+    clearFieldError(document.getElementById('fatPctDay'));
+    clearFieldError(document.getElementById('musclePctDay'));
+  }
+
+  if (validationFailed) return false;
+
+  if (includeFlags){
+    entry.training = trainingActive;
+    entry.low_intake = lowIntakeActive;
+  entry.sick = sickActive;
+  entry.valsartan_missed = valsartanMissed;
+  entry.forxiga_missed = forxigaMissed;
+  entry.nsar_taken = nsarTaken;
+  entry.salt_high = saltHigh;
+  entry.protein_high90 = proteinHigh;
+} else {
+  entry.training = null;
+  entry.low_intake = null;
+  entry.sick = null;
+  entry.valsartan_missed = null;
+  entry.forxiga_missed = null;
+  entry.nsar_taken = null;
+  entry.salt_high = null;
+  entry.protein_high90 = null;
+}
+
+  const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
+let saved = false;
+
+const hasBodyContent = includeBody && ((entry.weight != null) || (entry.waist_cm != null) || !!entry.notes);
+const hasFlagContent = includeFlags && !!(trainingActive || lowIntakeActive || sickActive ||
+  valsartanMissed || forxigaMissed || nsarTaken ||
+  saltHigh || proteinHigh);
+
+if (hasBodyContent || hasFlagContent){
+  const localId = await addEntry(entry);
+  await syncWebhook(entry, localId);
+  saved = true;
+}
+
+if (includeFlagsComment && flagsComment){
+  const savedNote = await saveFlagsCommentNote(date, flagsComment);
+  if (savedNote){
+    const el = document.getElementById('flagsComment');
+    if (el) el.value = '';
+    diag.add('Flags-Kommentar gespeichert');
+    saved = true;
+  }
+}
+
+return saved;
+}
+
+async function withRetry(fn, {tries=3, base=300}={}) {
+let lastErr;
+for (let i=0;i<tries;i++){
+try { return await fn(); }
+catch (e) {
+const code = e?.status ?? e?.response?.status ?? 0;
+if (!(code >= 500 && code < 600)) throw e;
+await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
+lastErr = e;
+}
+}
+throw lastErr;
+}
+  
+async function syncWebhook(entry, localId){
+  const url = await getConf("webhookUrl");
+  const headers = await getHeaders();
+  if(!url || !headers){
+    uiError("Nicht angemeldet - bitte Google-Login ausfuehren.");
+    showLoginOverlay(true);
+    return;
+  }
+
+  try{
+    const uid = await getUserId();
+    const events = toHealthEvents(entry);
+    if (!events.length){
+      diag.add("Webhook: keine Events zu senden");
+      return;
+    }
+
+    const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
+    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+
+    if(!res.ok){
+      // Details ziehen (falls PostgREST JSON liefert)
+      let details = "";
+      try {
+        const e = await res.json();
+        details = (e?.message || e?.details || "");
+      } catch { /* plain text? */ }
+
+      // v1.2.1: Fallback for duplicate day_flags (upsert via PATCH)
+      if (res.status === 409 || /duplicate|unique/i.test(details)) {
+        const flagsEv = events.find(ev => ev.type === 'day_flags');
+        try {
+          if (flagsEv && uid) {
+            const dayIso = entry.date;
+            await patchDayFlags({ user_id: uid, dayIso, flags: flagsEv.payload });
+            const others = events.filter(ev => ev.type !== 'day_flags');
+            if (others.length) {
+              const res2 = await withRetry(() => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }));
+              if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
+            }
+            uiInfo("Flags aktualisiert.");
+            diag.add("Fallback: day_flags via PATCH");
+            return;
+          }
+        } catch (_) { /* fallback failed: proceed to generic handling */ }
+        const noteEv = events.find(ev => ev.type === 'note');
+        try {
+          if (noteEv && uid) {
+            const dayIso = entry.date;
+            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent: noteEv });
+            await updateEntry(localId, { remote_id: merged?.id ?? -1 });
+            uiInfo('Kommentar aktualisiert.');
+            diag.add('Fallback: note via PATCH');
+            return;
+          }
+        } catch (_) { /* fallback failed: proceed to generic handling */ }
+        }
+
+        if (res.status === 409 || /duplicate|unique/i.test(details)) {
+        uiError("Es gibt bereits einen Eintrag fuer diesen Tag/Kontext.");
+      } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
+        uiError("Eingaben ungueltig - bitte Wertebereiche/Pflichtfelder pruefen.");
+      } else if (res.status === 401 || res.status === 403) {
+        uiError("Zugriff verweigert - bitte erneut anmelden.");
+      } else {
+        uiError(`Speichern fehlgeschlagen (HTTP ${res.status}).`);
+      }
+
+      diag.add(`Webhook-Fehler ${res.status}: ${details || "-"}`);
+      throw new Error(`save-failed-${res.status}`);
+    }
+
+    const json = await res.json();
+    const firstId = json?.[0]?.id ?? null;
+    if(firstId != null){
+      await updateEntry(localId, { remote_id: firstId });
+      uiInfo("Gespeichert.");
+      diag.add(`Webhook: OK (${events.length} Event(s))`);
+    } else {
+      uiError("Unerwartete Antwort vom Server - kein Datensatz zurueckgegeben.");
+    }
+  }catch(e){
+    // Netzwerkfehler, 5xx nach Exhaust, etc.
+    uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
+    diag.add("Webhook: Netzwerkfehler");
+    throw e;
+  }
+}
+
+/* ===== Realtime / Auto-Sync ===== */
+let sbClient = null;
+
+let __channels = [];
+function trackChannel(ch){ __channels.push(ch); return ch; }
+function teardownRealtime(){
+try{
+__channels.forEach(ch => ch.unsubscribe?.());
+diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
+}catch(e){ diag.add("Realtime: unsubscribe error"); }
+__channels = [];
+}
+
+window.addEventListener('beforeunload', () => {
+  teardownRealtime();
+  if (__midnightTimer) {
+    clearTimeout(__midnightTimer);
+    __midnightTimer = null;
+  }
+  if (__noonTimer) {
+    clearTimeout(__noonTimer);
+    __noonTimer = null;
+  }
+  if (__dayHeartbeat) {
+    clearInterval(__dayHeartbeat);
+    __dayHeartbeat = null;
+  }
+});
+
+
+function baseUrlFromRest(restUrl){
+if(!restUrl) return null;
+const i = restUrl.indexOf("/rest/");
+return i>0 ? restUrl.slice(0, i) : null;
+}
+
+async function getUserId(){
+try{
+const supa = await ensureSupabaseClient();
+if(!supa) return null;
+const { data: { user } } = await supa.auth.getUser();
+return user?.id ?? null;
+}catch{ return null; }
+}
+
+async function ensureSupabaseClient(){
+if (sbClient) return sbClient;
+
+const rest = await getConf("webhookUrl");
+const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
+if (!rest || !keyConf) {
+  setConfigStatus('Bitte REST-Endpoint und ANON-Key speichern.', 'error');
+  diag.add("Supabase Auth: fehlende Konfiguration");
+  return null;
+}
+
+// NEU: niemals mit service_role starten
+const trimmedKey = String(keyConf || '').trim();
+if (isServiceRoleKey(trimmedKey)) {
+  setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
+  diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
+  return null;
+}
+
+const supabaseUrl = baseUrlFromRest(rest);
+const anonKey = trimmedKey.replace(/^Bearer\s+/i,"");
+if (!supabaseUrl) {
+  setConfigStatus('REST-Endpoint ist ungueltig.', 'error');
+  diag.add("Supabase Auth: ungueltige URL");
+  return null;
+}
+if (!anonKey) {
+  setConfigStatus('ANON-Key ist ungueltig.', 'error');
+  diag.add("Supabase Auth: ungueltiger Key");
+  return null;
+}
+
+sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
+auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true } // Session nur im RAM
+});
+diag.add("Supabase: Client (Auth) initialisiert");
+setConfigStatus('', 'info');
+return sbClient;
+}
+
+async function setupRealtime(){
+  try{
+    const supa = await ensureSupabaseClient();
+    if (!supa) return;
+
+    // Bestehende Channels schliessen, um Doppelbindungen zu vermeiden
+    teardownRealtime();
+
+    // Channel auf health_events - RLS begrenzt automatisch auf auth.uid()
+    trackChannel(
+      supa.channel('rt-health-events')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'health_events' },
+            (payload) => {
+              // Optional: Zeitraum grob pruefen? (einfach halten: immer refreshen)
+              livePulse();
+              requestUiRefresh({ reason: 'realtime' });
+            })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: subscribed'); }
+        })
+    );
+    trackChannel(
+      supa.channel('rt-appointments')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'appointments' },
+            (payload) => {
+              livePulse();
+              requestUiRefresh({ reason: 'realtime:appointments', appointments: true });
+            })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: appointments subscribed'); }
+        })
+    );
+  }catch(e){
+    diag.add?.('Realtime: setup failed');
+  }
+}
+
+/* ===== App-Lock (Passkey + PIN) ===== */
+/* Doctor-only Unlock (no global lock) */
+let __doctorUnlocked = false;
+let __pendingAfterUnlock = null;
+async function isWebAuthnAvailable(){
+  if (!window?.PublicKeyCredential) return false;
+  try{
+    return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(_){
+    return false;
+  }
+}
+
+function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, message = '', highlightSetup = false } = {}){
+  const passBtn = document.getElementById('unlockPasskeyBtn');
+  if (passBtn){
+    const enable = webAuthnAvailable && hasPasskey;
+    passBtn.disabled = !enable;
+    passBtn.title = enable ? '' : (webAuthnAvailable ? 'Bitte zuerst Passkey einrichten.' : 'Passkey/WebAuthn nicht verfgbar.');
+  }
+  const setupBtn = document.getElementById('setupPasskeyBtn');
+  if (setupBtn){
+    setupBtn.disabled = !webAuthnAvailable;
+    setupBtn.style.display = webAuthnAvailable ? 'block' : 'none';
+    setupBtn.classList.toggle('flash', !!highlightSetup && webAuthnAvailable);
+  }
+  setLockMsg(message);
+}
+
+async function requireDoctorUnlock(){
+  if (!(await isLoggedInFast())) { showLoginOverlay(true); return false; }
+  if (__doctorUnlocked) return true;
+
+  let credId = null;
+  try { credId = await getConf(LOCK_CRED_ID_KEY); } catch(_){ credId = null; }
+  const hasPasskey = !!credId;
+  const webAuthnAvailable = await isWebAuthnAvailable();
+
+  if (hasPasskey && webAuthnAvailable){
+    const ok = await unlockWithPasskey();
+    if (ok) return true;
+
+    configureLockOverlay({
+      hasPasskey: true,
+      webAuthnAvailable: true,
+      message: 'Entsperren abgebrochen  du kannst Passkey erneut versuchen oder PIN nutzen.'
+    });
+    lockUi(true);
+    return false;
+  }
+
+  if (!hasPasskey && webAuthnAvailable){
+    configureLockOverlay({
+      hasPasskey: false,
+      webAuthnAvailable: true,
+      message: 'Kein Passkey eingerichtet. Bitte Passkey einrichten oder PIN nutzen.',
+      highlightSetup: true
+    });
+    lockUi(true);
+    return false;
+  }
+
+  configureLockOverlay({
+    hasPasskey,
+    webAuthnAvailable: false,
+    message: 'Passkey / Windows Hello ist auf diesem Gert nicht verfgbar. Bitte PIN verwenden.'
+  });
+  lockUi(true);
+  return false;
+}
+async function resumeAfterUnlock(intent){
+  const target = intent || __pendingAfterUnlock || 'doctor';
+  __pendingAfterUnlock = null;
+  if (target === 'chart'){
+    await setTab('doctor');
+    setDocBadges({ visible: true });
+    chartPanel.show();
+    await requestUiRefresh({ reason: 'unlock:chart', chart: true });
+    return;
+  }
+  if (target === 'export'){
+    await setTab('doctor');
+    const all = await getAllEntries();
+    dl('gesundheitslog.json', JSON.stringify(all,null,2), 'application/json');
+    return;
+  }
+  await setTab('doctor');
+}
+
+/* Kleine Utils */
+const u8 = (len)=>{ const a=new Uint8Array(len); crypto.getRandomValues(a); return a; };
+const b64u = {
+  enc: (buf)=> btoa(String.fromCharCode(...new Uint8Array(buf)))
+                .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+  dec: (str)=> Uint8Array.from(atob(str.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0))
+};
+async function sha256(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return b64u.enc(buf);
+}
+
+/* Config-Keys in IndexedDB.CONF */
+const LOCK_ENABLED_KEY   = "app_lock_enabled";     // bool
+const LOCK_CRED_ID_KEY   = "lock_cred_id";         // base64url
+const LOCK_PIN_HASH_KEY  = "lock_pin_hash";        // SHA-256 b64url
+const LOCK_LAST_OK_KEY   = "lock_last_ok";         // timestamp
+
+/* UI Helpers */
+function lockUi(on){
+  document.body.classList.toggle('app-locked', !!on);
+  const ov = document.getElementById('appLock');
+  if (ov){
+    const dialog = ov.querySelector('[role="dialog"]') || ov;
+    ov.style.display = on ? 'flex' : 'none';
+    if (on){
+      focusTrap.activate(dialog);
+      requestAnimationFrame(()=>{
+        const pin = document.getElementById('pinInput');
+        const pass = document.getElementById('unlockPasskeyBtn');
+        if (pin && typeof pin.focus === 'function'){
+          pin.focus();
+          pin.select?.();
+          return;
+        }
+        if (pass && !pass.disabled && typeof pass.focus === 'function'){
+          pass.focus();
+        }
+      });
+    } else {
+      if (focusTrap.current === dialog) focusTrap.deactivate();
+      const pin = document.getElementById('pinInput');
+      if (pin && typeof pin.blur === 'function'){ pin.blur(); }
+    }
+  }
+}
+function setLockMsg(msg){
+  const el = document.getElementById('lockMsg');
+  if (el) el.textContent = msg || '';
+}
+
+/* Setup: Passkey registrieren (platform) */
+async function registerPasskey(){
+  try{
+    const rpId = location.hostname;
+    const userId = u8(16);
+    const challenge = u8(32);
+    const pubKeyOpts = {
+      publicKey: {
+        challenge,
+        rp: { name: "Gesundheits-Logger", id: rpId },
+        user: { id: userId, name: "local-user", displayName: "Local User" },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        timeout: 60000,
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'preferred', residentKey: 'preferred' },
+        attestation: 'none'
+      }
+    };
+    const cred = await navigator.credentials.create(pubKeyOpts);
+    if (!cred) throw new Error("Keine Antwort vom Authenticator.");
+    const idB64 = b64u.enc(cred.rawId);
+    await putConf(LOCK_CRED_ID_KEY, idB64);
+    await putConf(LOCK_ENABLED_KEY, true);
+    const waAvailable = await isWebAuthnAvailable();
+    configureLockOverlay({ hasPasskey: true, webAuthnAvailable: waAvailable, message: 'Passkey eingerichtet - bitte kurz entsperren.' });
+    setLockMsg('Passkey eingerichtet.');
+    return true;
+  }catch(e){
+    setLockMsg("Passkey-Setup fehlgeschlagen: " + (e.message||e));
+    return false;
+  }
+}
+
+/* Entsperren per Passkey (nur Besitz+UV Check - lokal ausreichend fuer App-Lock) */
+async function unlockWithPasskey(){
+  try{
+    const credId = await getConf(LOCK_CRED_ID_KEY);
+    if (!credId){
+      setLockMsg("Noch kein Passkey eingerichtet.");
+      return false;
+    }
+    const allow = [{ type:'public-key', id: b64u.dec(credId) }];
+    const challenge = u8(32);
+    const opts = { publicKey: { challenge, rpId: location.hostname, timeout: 60000, allowCredentials: allow, userVerification:'preferred' } };
+    const assertion = await navigator.credentials.get(opts);
+    if (!assertion) throw new Error("Abgebrochen.");
+    // Lokaler Gate: Erfolg der Challenge => entsperrt
+    await putConf(LOCK_LAST_OK_KEY, Date.now());
+    __doctorUnlocked = true;
+    lockUi(false);
+    try {
+      await resumeAfterUnlock();
+    } catch(_) {}
+    return true;
+  }catch(e){
+    setLockMsg("Passkey fehlgeschlagen: " + (e.message||e));
+    return false;
+  }
+}
+
+/* PIN setzen/pruefen */
+async function setPinInteractive(){
+  const pin = prompt("Neue PIN (4-10 Ziffern):") || "";
+  if (!/^\d{4,10}$/.test(pin)){ alert("Ungueltige PIN."); return false; }
+  const hash = await sha256("pin:"+pin);
+  await putConf(LOCK_PIN_HASH_KEY, hash);
+  await putConf(LOCK_ENABLED_KEY, true);
+  setLockMsg("PIN gesetzt ");
+  return true;
+}
+async function unlockWithPin(){
+  const input = document.getElementById('pinInput');
+  const pin = (input?.value||"").trim();
+  if (!pin){ setLockMsg("PIN eingeben."); return false; }
+  const saved = await getConf(LOCK_PIN_HASH_KEY);
+  if (!saved){ setLockMsg("Keine PIN hinterlegt."); return false; }
+  const hash = await sha256("pin:"+pin);
+  if (hash !== saved){ setLockMsg("PIN falsch."); return false; }
+  await putConf(LOCK_LAST_OK_KEY, Date.now());
+  input.value = "";
+  __doctorUnlocked = true;
+  lockUi(false);
+  try { await resumeAfterUnlock(); } catch(_) {}
+  return true;
+}
+
+/* Events binden (einmal in main()) */
+function bindAppLockButtons(){
+  const btnPass = document.getElementById('unlockPasskeyBtn');
+  const btnPin  = document.getElementById('unlockPinBtn');
+  const btnSetPass = document.getElementById('setupPasskeyBtn');
+  const btnSetPin  = document.getElementById('setPinBtn');
+
+  if (btnPass) btnPass.addEventListener('click', unlockWithPasskey);
+  if (btnPin)  btnPin.addEventListener('click', unlockWithPin);
+  if (btnSetPass) btnSetPass.addEventListener('click', registerPasskey);
+  if (btnSetPin)  btnSetPin.addEventListener('click', setPinInteractive);
+  const pinInput = document.getElementById('pinInput');
+  if (pinInput) pinInput.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){ e.preventDefault(); unlockWithPin(); }
+  });
+  const overlay = document.getElementById('appLock');
+  if (overlay) overlay.addEventListener('click', (e)=>{ if (e.target === overlay){ __pendingAfterUnlock = null; lockUi(false); } });
+  const cancelBtn = document.getElementById('lockCancelBtn');
+  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ __pendingAfterUnlock = null; lockUi(false); });
+}
+
+/* ===== Main ===== */
+async function main(){
+diag.init(); helpPanel.init(); await initDB();
+try {
+const haveUrl = await getConf("webhookUrl");
+const haveKey = await getConf("webhookKey");
+if (DEV_ALLOW_DEFAULTS) {
+  if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+  if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
+}
+} catch (_) {}
+chartPanel.init(); bindTabs();
+const todayIso = todayStr();
+$("#date").value = todayIso;
+__lastKnownToday = todayIso;
+__dateUserSelected = false;
+__bpUserOverride = false;
+prepareIntakeStatusHeader();
+$("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
+$("#to").value = todayIso;
+setTab("capture");
+await ensureSupabaseClient();
+try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
+try { addCapturePanelKeys?.(); } catch(_){ }
+bindAuthButtons();
+if (sbClient) watchAuthState()
+
+// Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
+const hasSession = await requireSession();
+if (hasSession) {
+  await afterLoginBoot(); // wichtig fuer Reload mit persistierter Session
+      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  //  App-Lock direkt nach Boot pruefen/anzeigen
+  await setupRealtime();  //  NEU: Realtime direkt aktivieren
+  await requestUiRefresh();
+}
+  try {
+    await refreshCaptureIntake();
+  } catch(_) {}
+  __lastKnownToday = todayStr();
+  scheduleMidnightRefresh();
+  scheduleNoonSwitch();
+  startDayHeartbeat();
+  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
+await refreshAppointments();
+bindAppLockButtons();     //  Buttons der Lock-Card binden
+
+// Konfiguration laden
+const savedUrl = await getConf("webhookUrl");
+const savedKey = await getConf("webhookKey");
+// Diagnose: aktive REST-URL und Key-Typ
+try{
+  diag.add?.('Config URL: ' + (savedUrl || '(none)'));
+  diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
+}catch(_){ }
+if (!savedUrl || !savedKey) {
+  setTab("capture"); // In Erfassung bleiben
+}
+
+// Sanfte Warnung
+// === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
+['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
+  const el = $(sel); if(!el) return;
+  el.addEventListener('input', updateBpCommentWarnings);
+});
+updateBpCommentWarnings();
+
+
+// Toggle-Handler
+const bpContextSel = document.getElementById('bpContextSel');
+__bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
+if (bpContextSel){
+  applyBpContext(bpContextSel.value || 'M');
+  maybeAutoApplyBpContext({ force: true, source: 'boot' });
+  bpContextSel.addEventListener('change', (e)=>{
+    __bpUserOverride = true;
+    applyBpContext(e.target.value);
+    updateBpCommentWarnings();
+  });
+}
+
+const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
+if (saveBpPanelBtn){
+  saveBpPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    const ctxSel = document.getElementById('bpContextSel');
+    const which = (ctxSel?.value === 'A') ? 'A' : 'M';
+    updateBpCommentWarnings();
+    if (requiresBpComment(which)){
+      alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
+      const target = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+      if (target) target.focus();
+      return;
+    }
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveBlock(which === 'M' ? 'Morgen' : 'Abend', which, false, false);
+      if (!saved){
+        uiError('Keine Daten fuer diesen Messzeitpunkt eingegeben.');
+      } else {
+        savedOk = true;
+        await requestUiRefresh({ reason: 'panel:bp' });
+      }
+    }catch(err){
+      diag.add?.('Panel BP Fehler: ' + (err?.message || err));
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+    if (savedOk){
+      updateBpCommentWarnings();
+      resetBpPanel(which); flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
+    }
+  });
+}
+
+const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
+if (saveBodyPanelBtn){
+  saveBodyPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveDaySummary({ includeBody: true, includeFlags: false, includeFlagsComment: false });
+      if (!saved){
+        uiError('Keine Koerperdaten eingegeben.');
+      } else {
+        savedOk = true;
+        await requestUiRefresh({ reason: 'panel:body' });
+      }
+    }catch(err){
+      diag.add?.('Panel Koerper Fehler: ' + (err?.message || err));
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+      if (savedOk){
+        resetBodyPanel();
+        await prefillBodyInputs();
+        flashButtonOk(btn, '&#x2705; Koerper gespeichert');
+      }
+  });
+}
+
+const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
+if (saveFlagsPanelBtn){
+  saveFlagsPanelBtn.addEventListener('click', async (e)=>{
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    const btn = e.currentTarget;
+    withBusy(btn, true);
+    let savedOk = false;
+    try{
+      const saved = await saveDaySummary({ includeBody: false, includeFlags: true, includeFlagsComment: true });
+      if (!saved){
+        uiError('Keine Flag-Daten eingegeben.');
+      } else {
+        savedOk = true;
+        await requestUiRefresh({ reason: 'panel:flags' });
+      }
+    }catch(err){
+      diag.add?.('Panel Flags Fehler: ' + (err?.message || err));
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+    }finally{
+      withBusy(btn, false);
+    }
+    if (savedOk){
+      resetFlagsPanel(); flashButtonOk(btn, '&#x2705; Flags gespeichert');
+    }
+  });
+}
+
+const bindToggle = (id, setter, getVal)=>{
+  const el = $(id);
+  el.addEventListener("click", ()=>{
+    setter(!getVal());
+  });
+};
+bindToggle("#trainingToggle", setTraining, ()=>trainingActive);
+bindToggle("#lowIntakeToggle", setLowIntake, ()=>lowIntakeActive);
+bindToggle("#sickToggle", setSick, ()=>sickActive);
+bindToggle("#valsartanMissToggle", setValsartanMiss, ()=>valsartanMissed);
+bindToggle("#forxigaMissToggle", setForxigaMiss, ()=>forxigaMissed);
+bindToggle("#nsarToggle", setNsar, ()=>nsarTaken);
+bindToggle("#saltHighToggle", setSaltHigh, ()=>saltHigh);
+bindToggle("#proteinHighToggle", setProteinHigh, ()=>proteinHigh);
+
+// Sync toggles when the date changes in capture view
+const dateEl = document.getElementById('date');
+  if (dateEl) {
+    dateEl.addEventListener('change', async () => {
+      try {
+        const todayIso = todayStr();
+        __dateUserSelected = (dateEl.value || '') !== todayIso;
+        // was du beim Datum aendern haben willst:
+        await refreshCaptureIntake();
+        await syncCaptureToggles();
+        resetCapturePanels();
+        updateBpCommentWarnings?.();
+        await prefillBodyInputs();
+      } catch(_) {}
+    });
+  }
+
+// Apply Range -> Arztansicht neu rendern
+const applyBtn = $("#applyRange");
+if (applyBtn) {
+  applyBtn.addEventListener("click", async () => {
+    await requestUiRefresh({ reason: 'doctor:range' });
+    setDocBadges({ visible: true });
+  });
+}
+
+$("#doctorChartBtn").addEventListener("click", async ()=>{
+  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
+  if (!__doctorUnlocked){
+    __pendingAfterUnlock = 'chart';
+    const ok = await requireDoctorUnlock();
+    if (!ok) return;
+    __pendingAfterUnlock = null;
+  }
+  setDocBadges({ visible: true });
+  chartPanel.show();
+  await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
+});
+
+document.addEventListener('keydown', (e)=>{
+  if (e.key !== 'Escape') return;
+
+  try {
+    if (chartPanel?.open) {
+      chartPanel.hide();
+      e.preventDefault();
+      return;
+    }
+    if (helpPanel?.open) {
+      helpPanel.hide();
+      e.preventDefault();
+      return;
+    }
+    if (diag?.open) {
+      diag.hide();
+      e.preventDefault();
+      return;
+    }
+  } catch(_){ }
+
+  try {
+    const appLock = document.getElementById('appLock');
+    if (appLock && appLock.style.display !== 'none') {
+      __pendingAfterUnlock = null;
+      lockUi(false);
+      e.preventDefault();
+      return;
+    }
+    const login = document.getElementById('loginOverlay');
+    if (login && login.style.display !== 'none') {
+      showLoginOverlay(false);
+      e.preventDefault();
+      return;
+    }
+  } catch(_){ }
+});
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
@@ -4751,20 +5788,16 @@ document.addEventListener('visibilitychange', () => {
       setAuthGuard(!!logged);
       setDoctorAccess(!!logged);
       showLoginOverlay(!logged);
-    } catch(_){}
+    } catch(_) {}
     __pendingAfterUnlock = null;
     lockUi(false);
-    try { setUnderlayInert(false); } catch(_){}
-    try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_){}
-    // Failsafe: alle Controls reaktivieren (Sichtbarkeitswechsel)
-    try { $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{ el.disabled = false; }); } catch(_){}
-    try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_){}
-    scheduleNoonSwitch();
-    maybeAutoApplyBpContext({ source: 'visibility' });
-    const doctorActive = document.getElementById('doctor')?.classList.contains('active');
-    if (doctorActive && !__doctorUnlocked) {
-      await setTab('capture');
-    }
+      try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
+      scheduleNoonSwitch();
+      maybeAutoApplyBpContext({ source: 'visibility' });
+      const doctorActive = document.getElementById('doctor')?.classList.contains('active');
+      if (doctorActive && !__doctorUnlocked) {
+        await setTab('capture');
+      }
   })();
 });
 
@@ -4782,124 +5815,43 @@ document.addEventListener('visibilitychange', () => {
   
 // Lifestyle binden und initial (falls bereits angemeldet) laden
 
-/* ===== Main ===== */
-async function main(){
-  diag.init(); helpPanel.init(); await initDB();
-  try {
-    const haveUrl = await getConf("webhookUrl");
-    const haveKey = await getConf("webhookKey");
-    if (DEV_ALLOW_DEFAULTS) {
-      if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
-      if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
-    }
-  } catch (_) {}
+bindIntakeCapture();
+bindAppointmentsPanel();
+try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 
-  chartPanel.init();
-  bindTabs();
+// Initial Render
+await requestUiRefresh({ reason: 'boot:initial', appointments: true });
 
-  const todayIso = todayStr();
-  $("#date").value = todayIso;
-  __lastKnownToday = todayIso;
-  __dateUserSelected = false;
-  __bpUserOverride = false;
-  prepareIntakeStatusHeader();
-  $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
-  $("#to").value = todayIso;
-  setTab("capture");
+// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
+$$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
+el.disabled = false;
+});
+document.body.classList.remove('auth-locked');
 
-  await ensureSupabaseClient();
-  try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
-  try { addCapturePanelKeys?.(); } catch(_){ }
-
-  bindAuthButtons();
-  bindLifestyle();
-  bindIntakeCapture();
-  bindAppointmentsPanel();
-  bindAppLockButtons();
-
-  if (sbClient) watchAuthState();
-
-  const hasSession = await requireSession();
-  if (hasSession) {
-    await afterLoginBoot();
-    await setupRealtime();
-    await requestUiRefresh();
-  }
-
-  try {
-    await refreshCaptureIntake();
-  } catch(_) {}
-
-  __lastKnownToday = todayStr();
-  scheduleMidnightRefresh();
-  scheduleNoonSwitch();
-  startDayHeartbeat();
-  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
-  await refreshAppointments();
-
-  try { if (await isLoggedInFast()) { await cleanupOldIntake(); } } catch(_){ }
-
-  const savedUrl = await getConf("webhookUrl");
-  const savedKey = await getConf("webhookKey");
-  try{
-    diag.add?.('Config URL: ' + (savedUrl || '(none)'));
-    diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
-  }catch(_){ }
-  if (!savedUrl || !savedKey) {
-    setTab("capture");
-  }
-
-  ['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
-    const el = $(sel); if(!el) return;
-    el.addEventListener('input', updateBpCommentWarnings);
-  });
-  updateBpCommentWarnings();
-
-  const bpContextSel = document.getElementById('bpContextSel');
-  __bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
-  if (bpContextSel){
-    applyBpContext(bpContextSel.value || 'M');
-    maybeAutoApplyBpContext({ force: true, source: 'boot' });
-    bpContextSel.addEventListener('change', (e)=>{
-      __bpUserOverride = true;
-      applyBpContext(e.target.value);
-      updateBpCommentWarnings();
-    });
-  }
-
-  resetAppointmentsUi();
-
-  await requestUiRefresh({ reason: 'boot:initial', appointments: true });
-
-  $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
-    el.disabled = false;
-  });
-  document.body.classList.remove('auth-locked');
-
-  window.addEventListener('online', async ()=>{
-    const resPush = await pushPendingToRemote();
-    if(resPush.pushed || resPush.failed){
-      diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
-      if (typeof reconcileFromRemote === 'function') {
-        await reconcileFromRemote();
-      }
-    }
-  });
+// Auto-Push Pending sobald online
+window.addEventListener('online', async ()=>{
+const resPush = await pushPendingToRemote();
+if(resPush.pushed || resPush.failed){
+diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
+if (typeof reconcileFromRemote === 'function') {
+  await reconcileFromRemote();
 }
+}
+});
+}
+
+resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
-  window.addEventListener("DOMContentLoaded", main);
-} else {
-  main();
-}
+window.addEventListener("DOMContentLoaded", main);
 
 window.addEventListener('focus', () => {
-  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){}
-  try { setUnderlayInert(false); } catch(_){}
-  try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_){}
-  try { $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{ el.disabled = false; }); } catch(_){}
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
 });
+} else {
+main();
+}
 
 /* === Debug-Notizen
 - V1.5: Realtime ueber supabase-js; Projekt-URL aus REST-URL abgeleitet.
@@ -4967,14 +5919,6 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
 
 
 
