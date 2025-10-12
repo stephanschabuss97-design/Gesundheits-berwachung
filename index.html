@@ -3181,12 +3181,19 @@ async function prefillSupabaseConfigForm(){
     setConfigStatus('', 'info');
     const restInput = document.getElementById('configRestUrl');
     const keyInput = document.getElementById('configAnonKey');
+    const adv = document.getElementById('configAdv');
+    const rest = await getConf('webhookUrl');
+    const keyStored = await getConf('webhookKey');
     if (restInput) {
-      restInput.value = (await getConf('webhookUrl')) || '';
+      restInput.value = rest || '';
     }
     if (keyInput) {
-      const key = await getConf('webhookKey');
-      keyInput.value = key ? key.replace(/^Bearer\s+/i, '') : '';
+      keyInput.value = keyStored ? keyStored.replace(/^Bearer\s+/i, '') : '';
+    }
+    if (adv) {
+      const hasRest = !!(rest && String(rest).trim());
+      const hasKey = !!(keyStored && String(keyStored).trim());
+      adv.open = !(hasRest && hasKey) && !DEV_ALLOW_DEFAULTS;
     }
   } catch(_){ }
 }
@@ -3284,6 +3291,13 @@ if (gbtn) gbtn.addEventListener('click', async ()=>{
   const supa = await ensureSupabaseClient();
   if (!supa) {
     setConfigStatus('Konfiguration fehlt - bitte REST-Endpoint und ANON-Key speichern.', 'error');
+    const adv = document.getElementById('configAdv');
+    if (adv) adv.open = true;
+    const restField = document.getElementById('configRestUrl');
+    if (restField){
+      restField.focus();
+      restField.select?.();
+    }
     return;
   }
   const { error } = await supa.auth.signInWithOAuth({
@@ -5831,15 +5845,18 @@ main();
   <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <h3 id="loginTitle">Willkommen</h3>
     <p class="small" style="margin:0 0 8px">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
-    <div class="config-box" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-      <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
-      <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db" />
-      <label class="small" for="configAnonKey" style="margin-top:4px">Supabase ANON-Key</label>
-      <textarea id="configAnonKey" rows="3" placeholder="ANON-Key (kein service_role)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;resize:vertical"></textarea>
-      <button class="btn ghost" id="configSaveBtn" type="button" style="width:100%;margin-top:4px">Konfiguration speichern</button>
-      <div id="configStatus" class="small" style="min-height:16px;color:#9aa3af"></div>
-    </div>
-    <button class="btn primary" id="googleLoginBtn" type="button" style="width:100%;height:48px">Mit Google anmelden</button>
+    <button class="btn primary" id="googleLoginBtn" type="button" style="width:100%;height:48px;margin-bottom:12px">Mit Google anmelden</button>
+    <details id="configAdv" class="config-box" style="margin-bottom:12px">
+      <summary class="small" style="cursor:pointer;list-style:none;padding:8px 0">Erweiterte Einstellungen</summary>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+        <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
+        <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db" />
+        <label class="small" for="configAnonKey" style="margin-top:4px">Supabase ANON-Key</label>
+        <textarea id="configAnonKey" rows="3" placeholder="ANON-Key (kein service_role)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;resize:vertical"></textarea>
+        <button class="btn ghost" id="configSaveBtn" type="button" style="width:100%;margin-top:4px">Konfiguration speichern</button>
+        <div id="configStatus" class="small" style="min-height:16px;color:#9aa3af"></div>
+      </div>
+    </details>
     <div id="whoAmI" class="small" style="text-align:center;margin-top:6px"></div>
   </div>
 </div>
@@ -5882,7 +5899,6 @@ main();
 
 </body>
 </html>
-
 
 
 
