@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.0)</title>
+<title>Gesundheits-Logger (V1.7.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1404,6 +1404,7 @@ function formatDateTimeDE(iso){
     current: null,
     lastFocus: null,
     _handler: null,
+    _prevTabIndex: null,
     getFocusable(root){
       return Array.from(root.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])'))
         .filter(el => !el.hasAttribute('disabled') && el.tabIndex >= 0);
@@ -1422,6 +1423,10 @@ function formatDateTimeDE(iso){
         this.deactivate();
         this.current = root;
         this.lastFocus = document.activeElement;
+        this._prevTabIndex = root.hasAttribute('tabindex') ? root.getAttribute('tabindex') : null;
+        if (this._prevTabIndex === null) {
+          root.setAttribute('tabindex','-1');
+        }
         root.setAttribute('aria-modal','true');
         this._handler = this.onKeydown.bind(this);
         document.addEventListener('keydown', this._handler, true);
@@ -1433,11 +1438,14 @@ function formatDateTimeDE(iso){
     deactivate(){
       try{
         if (!this.current) return;
-        this.current.setAttribute('aria-modal','false');
+        const root = this.current;
+        root.setAttribute('aria-modal','false');
         if (this._handler) document.removeEventListener('keydown', this._handler, true);
-        setUnderlayInert(false, this.current);
+        setUnderlayInert(false, root);
+        if (this._prevTabIndex === null) root.removeAttribute('tabindex');
+        else root.setAttribute('tabindex', this._prevTabIndex);
         const prev = this.lastFocus;
-        this.current = null; this.lastFocus = null; this._handler = null;
+        this.current = null; this.lastFocus = null; this._handler = null; this._prevTabIndex = null;
         if (prev && typeof prev.focus === 'function') prev.focus();
       } catch(_){}
     }
@@ -3073,7 +3081,15 @@ async function pushPendingToRemote(){
 
 function showLoginOverlay(show){
   const ov = document.getElementById('loginOverlay');
-  if (ov) ov.style.display = show ? 'flex' : 'none';
+  if (!ov) return;
+  const dialog = ov.querySelector('[role="dialog"]') || ov;
+  if (show){
+    ov.style.display = 'flex';
+    focusTrap.activate(dialog);
+  } else {
+    if (focusTrap.current === dialog) focusTrap.deactivate();
+    ov.style.display = 'none';
+  }
 }
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
@@ -5148,8 +5164,10 @@ function lockUi(on){
   document.body.classList.toggle('app-locked', !!on);
   const ov = document.getElementById('appLock');
   if (ov){
+    const dialog = ov.querySelector('[role="dialog"]') || ov;
     ov.style.display = on ? 'flex' : 'none';
     if (on){
+      focusTrap.activate(dialog);
       requestAnimationFrame(()=>{
         const pin = document.getElementById('pinInput');
         const pass = document.getElementById('unlockPasskeyBtn');
@@ -5163,6 +5181,7 @@ function lockUi(on){
         }
       });
     } else {
+      if (focusTrap.current === dialog) focusTrap.deactivate();
       const pin = document.getElementById('pinInput');
       if (pin && typeof pin.blur === 'function'){ pin.blur(); }
     }
