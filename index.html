@@ -1337,7 +1337,7 @@ function setUnderlayInert(active, exceptEl = null) {
     targets.forEach(el => {
       if (!el) return;
       if (active) {
-        if (exceptEl && (el === exceptEl || exceptEl.contains(el))) return;
+        if (exceptEl && (el === exceptEl || el.contains(exceptEl) || exceptEl.contains(el))) return;
         if (!el.hasAttribute('data-prev-aria-hidden')) {
           const prev = el.getAttribute('aria-hidden');
           el.setAttribute('data-prev-aria-hidden', prev == null ? '' : prev);
