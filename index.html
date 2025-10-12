@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.3.1)</title>
+<title>Gesundheits-Logger (V1.7.3.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -24,15 +24,26 @@
   #chart .controls .kpis .sep { opacity: .6; }
   
 body.auth-locked main{ opacity:.6; }
-:root { --bg:#0b0c10; --card:#15171c; --fg:#e8e8e8; --muted:#9aa3af; --accent:#4f46e5; --warn:#f59e0b; --ok:#10b981; --danger:#ef4444; }
+:root {
+  --bg:#0b0c10;
+  --card:#15171c;
+  --fg:#e8e8e8;
+  --muted:#9aa3af;
+  --accent:#4f46e5;
+  --warn:#f59e0b;
+  --ok:#10b981;
+  --danger:#ef4444;
+  --header-h:56px;
+  --tabs-h:48px;
+}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
 header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.7));backdrop-filter:blur(6px);z-index:10;padding:10px 12px;border-bottom:1px solid #1f232b}
 h1{margin:0;font-size:20px}
-nav.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:54px;background:rgba(11,12,16,.9);backdrop-filter:blur(6px);z-index:11}
+nav.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:var(--header-h,56px);background:rgba(11,12,16,.9);backdrop-filter:blur(6px);z-index:11}
 nav.tabs button{flex:1;min-width:100px;touch-action:manipulation}
-main{padding:12px;position:relative;z-index:1}
+main{padding:12px;position:relative;z-index:1;padding-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px)}
 .card{background:var(--card);border:1px solid #242833;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -623,7 +634,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1383,6 +1394,24 @@ function setUnderlayInert(active, exceptEl = null) {
     });
   } catch(_) { /* noop */ }
 }
+
+function updateStickyOffsets(){
+  try{
+    const headerEl = document.querySelector('header');
+    const tabsEl = document.querySelector('nav.tabs');
+    const headerH = Math.max(headerEl?.offsetHeight || 0, 48);
+    const tabsH = Math.max(tabsEl?.offsetHeight || 0, 40);
+    document.documentElement.style.setProperty('--header-h', `${headerH}px`);
+    document.documentElement.style.setProperty('--tabs-h', `${tabsH}px`);
+    const mainEl = document.querySelector('main');
+    if (mainEl){
+      mainEl.style.paddingTop = `calc(${headerH}px + ${tabsH}px + 8px)`;
+    }
+  }catch(_){ /* noop */ }
+}
+
+window.addEventListener('resize', updateStickyOffsets);
+window.addEventListener('orientationchange', updateStickyOffsets);
 
 // Simple focus trap for modal overlays
 const focusTrap = {
@@ -5517,6 +5546,7 @@ function bindAppLockButtons(){
 /* ===== Main ===== */
 async function main(){
 diag.init(); helpPanel.init(); await initDB();
+updateStickyOffsets();
 try {
 const haveUrl = await getConf("webhookUrl");
 const haveKey = await getConf("webhookKey");
@@ -5779,29 +5809,65 @@ document.addEventListener('keydown', (e)=>{
   } catch(_){ }
 });
 
+async function resumeFromBackground({ source = 'visibility' } = {}) {
+  updateStickyOffsets();
+  try {
+    if (!sbClient) await ensureSupabaseClient();
+    const logged = await isLoggedInFast();
+    setAuthGuard(!!logged);
+    setDoctorAccess(!!logged);
+    showLoginOverlay(!logged);
+  } catch(_) {}
+
+  __pendingAfterUnlock = null;
+  lockUi(false);
+
+  try { document.body.classList.remove('app-locked'); } catch(_) {}
+  try { setUnderlayInert(false); } catch(_) {}
+  try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_) {}
+  try {
+    ['header','nav.tabs','main','.fab-wrap'].forEach(sel => {
+      const el = document.querySelector(sel);
+      if (el){
+        el.removeAttribute('inert');
+        el.removeAttribute('data-inert-applied');
+        el.removeAttribute('aria-hidden');
+      }
+    });
+  } catch(_) {}
+  try {
+    $$('main input, main select, main textarea, main button, nav.tabs button, fieldset')
+      .forEach(el => {
+        el.disabled = false;
+        el.removeAttribute('disabled');
+      });
+  } catch(_) {}
+
+  try {
+    if (document.getElementById('capture')?.classList.contains('active')) {
+      document.getElementById('sysM')?.focus?.();
+    }
+  } catch(_) {}
+
+  try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
+  scheduleNoonSwitch();
+  maybeAutoApplyBpContext({ source });
+
+  const doctorActive = document.getElementById('doctor')?.classList.contains('active');
+  if (doctorActive && !__doctorUnlocked) {
+    await setTab('capture');
+  }
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
-  (async () => {
-    try {
-      if (!sbClient) await ensureSupabaseClient();
-      const logged = await isLoggedInFast();
-      setAuthGuard(!!logged);
-      setDoctorAccess(!!logged);
-      showLoginOverlay(!logged);
-    } catch(_) {}
-    __pendingAfterUnlock = null;
-    lockUi(false);
-    try { setUnderlayInert(false); } catch(_) {}
-    try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_) {}
-    try { $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el => { el.disabled = false; }); } catch(_) {}
-      try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
-      scheduleNoonSwitch();
-      maybeAutoApplyBpContext({ source: 'visibility' });
-      const doctorActive = document.getElementById('doctor')?.classList.contains('active');
-      if (doctorActive && !__doctorUnlocked) {
-        await setTab('capture');
-      }
-  })();
+  (async () => { await resumeFromBackground({ source: 'visibility' }); })();
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted || document.visibilityState === 'visible') {
+    (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
+  }
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
@@ -5922,7 +5988,6 @@ main();
 
 </body>
 </html>
-
 
 
 
