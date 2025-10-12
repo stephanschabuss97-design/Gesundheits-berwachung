@@ -1377,7 +1377,6 @@ function debounce(fn, ms = 150) {
     if (t) clearTimeout(t);
     t = setTimeout(() => { t = null; fn(...lastArgs); }, ms);
   };
-}
 
 // Inert background + focus trap for dialogs/panels
 function setUnderlayInert(on, exceptEl) {
@@ -1451,7 +1450,6 @@ function setUnderlayInert(on, exceptEl) {
       } catch(_){}
     }
   };
-}
 
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
