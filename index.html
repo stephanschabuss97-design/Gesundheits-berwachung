@@ -1367,19 +1367,20 @@ function formatDateTimeDE(iso){
   } catch(_) {
     return '\u2014';
   }
+}
 
-  // Small utility: debounce to reduce live-region spam and frequent updates
-  function debounce(fn, ms = 150) {
-    let t = null, lastArgs = null;
-    return (...args) => {
-      lastArgs = args;
-      if (t) clearTimeout(t);
-      t = setTimeout(() => { t = null; fn(...lastArgs); }, ms);
-    };
-  }
+// Small utility: debounce to reduce live-region spam and frequent updates
+function debounce(fn, ms = 150) {
+  let t = null, lastArgs = null;
+  return (...args) => {
+    lastArgs = args;
+    if (t) clearTimeout(t);
+    t = setTimeout(() => { t = null; fn(...lastArgs); }, ms);
+  };
+}
 
-  // Inert background + focus trap for dialogs/panels
-  function setUnderlayInert(on, exceptEl) {
+// Inert background + focus trap for dialogs/panels
+function setUnderlayInert(on, exceptEl) {
     try {
       const targets = [
         document.querySelector('header'),
