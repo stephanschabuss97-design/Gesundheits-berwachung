@@ -49,7 +49,7 @@ main{padding:12px;position:relative;z-index:1;padding-top:calc(var(--header-h,56
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 @media (max-width:640px){ .grid{grid-template-columns:1fr} }
 label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px}
+input, select, textarea {width:100%;padding:12px;border-radius:12px;border:1px solid #2b2f3a;background:#0f1116;color:var(--fg);font-size:16px;scroll-margin-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px)}
 textarea{min-height:64px;resize:vertical}
 
 .small{font-size:12px;color:var(--muted)}
@@ -1412,6 +1412,28 @@ function updateStickyOffsets(){
 
 window.addEventListener('resize', updateStickyOffsets);
 window.addEventListener('orientationchange', updateStickyOffsets);
+
+function ensureNotObscured(el){
+  try{
+    if (!el) return;
+    const headerBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+    const tabsHeight = document.querySelector('nav.tabs')?.getBoundingClientRect().height ?? 0;
+    const requiredTop = headerBottom + tabsHeight + 8;
+    const rect = el.getBoundingClientRect();
+    if (rect.top < requiredTop){
+      window.scrollBy({ top: rect.top - requiredTop, left: 0, behavior: 'auto' });
+    }
+  }catch(_){ /* noop */ }
+}
+
+document.addEventListener('focusin', (e)=>{
+  try{
+    if (!e.target?.matches?.('input, select, textarea, button')){
+      return;
+    }
+    ensureNotObscured(e.target);
+  }catch(_){ /* noop */ }
+}, true);
 
 // Simple focus trap for modal overlays
 const focusTrap = {
@@ -5810,6 +5832,9 @@ document.addEventListener('keydown', (e)=>{
 });
 
 async function resumeFromBackground({ source = 'visibility' } = {}) {
+  try{
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }catch(_){}
   updateStickyOffsets();
   try {
     if (!sbClient) await ensureSupabaseClient();
@@ -5843,11 +5868,18 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
       });
   } catch(_) {}
 
+  let focusTarget = null;
   try {
-    if (document.getElementById('capture')?.classList.contains('active')) {
-      document.getElementById('sysM')?.focus?.();
+    if (document.activeElement?.matches?.('input, select, textarea')) {
+      focusTarget = document.activeElement;
+    } else if (document.getElementById('capture')?.classList.contains('active')) {
+      focusTarget = document.getElementById('sysM');
     }
   } catch(_) {}
+  if (focusTarget) {
+    ensureNotObscured(focusTarget);
+    try { focusTarget.focus?.(); } catch(_) {}
+  }
 
   try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
   scheduleNoonSwitch();
