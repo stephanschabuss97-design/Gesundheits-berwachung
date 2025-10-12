@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.3)</title>
+<title>Gesundheits-Logger (V1.7.3.1)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3</span>
+<h1>Gesundheits-Logger</h1><span class="small">V</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1705,6 +1705,8 @@ function deleteEntryLocal(id){
     tx.onerror    = (e)=> rej(e);
   });
 }
+
+let sbClient = null;
 
 async function ensureSupabaseClient(){
   if (sbClient) return sbClient;
@@ -4965,7 +4967,6 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
-
 
 
 
