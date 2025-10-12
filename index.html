@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.2)</title>
+<title>Gesundheits-Logger (V1.7.0)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.2</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.0</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1127,24 +1127,22 @@ add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${
 init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
 const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
 const close=document.getElementById('diagClose');
-const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; if(this.open){ focusTrap.activate(this.el);} else { if(focusTrap.current===this.el) focusTrap.deactivate(); } };
+const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
-close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; if(focusTrap.current===this.el) focusTrap.deactivate(); });
-},
-close(){ this.open=false; if (this.el) { this.el.style.display='none'; if(focusTrap.current===this.el) focusTrap.deactivate(); } }
+close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
+}
 };
 
 /* ===== Help panel ===== */
 const helpPanel={ el:null, open:false,
 init(){ this.el=document.getElementById('help');
 const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
-const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; if(this.open){ focusTrap.activate(this.el);} else { if(focusTrap.current===this.el) focusTrap.deactivate(); } };
+const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
-close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; if(focusTrap.current===this.el) focusTrap.deactivate(); });
-},
-close(){ this.open=false; if (this.el) { this.el.style.display='none'; if(focusTrap.current===this.el) focusTrap.deactivate(); } }
+close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
+}
 };
 
 /* ===== Helpers ===== */
@@ -1297,7 +1295,7 @@ function uiError(msg) {
   }
 }
 
-  function uiInfo(msg) {
+function uiInfo(msg) {
   const box = document.getElementById('err');
   if (box) {
     box.setAttribute('role','status');
@@ -1368,88 +1366,6 @@ function formatDateTimeDE(iso){
     return '\u2014';
   }
 }
-
-// Small utility: debounce to reduce live-region spam and frequent updates
-function debounce(fn, ms = 150) {
-  let t = null, lastArgs = null;
-  return (...args) => {
-    lastArgs = args;
-    if (t) clearTimeout(t);
-    t = setTimeout(() => { t = null; fn(...lastArgs); }, ms);
-  };
-
-// Inert background + focus trap for dialogs/panels
-function setUnderlayInert(on, exceptEl) {
-    try {
-      const targets = [
-        document.querySelector('header'),
-        document.querySelector('nav.tabs'),
-        document.querySelector('main'),
-        document.querySelector('.fab-wrap')
-      ].filter(Boolean);
-      targets.forEach(el => {
-        if (on) {
-          if (exceptEl && exceptEl.contains(el)) return;
-          el.setAttribute('inert', '');
-          el.setAttribute('aria-hidden', 'true');
-        } else {
-          el.removeAttribute('inert');
-          el.removeAttribute('aria-hidden');
-        }
-      });
-    } catch(_){}
-  }
-
-  const focusTrap = {
-    current: null,
-    lastFocus: null,
-    _handler: null,
-    _prevTabIndex: null,
-    getFocusable(root){
-      return Array.from(root.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])'))
-        .filter(el => !el.hasAttribute('disabled') && el.tabIndex >= 0);
-    },
-    onKeydown(e){
-      if (e.key !== 'Tab') return;
-      const root = focusTrap.current; if (!root) return;
-      const f = focusTrap.getFocusable(root);
-      if (!f.length){ e.preventDefault(); return; }
-      const first = f[0], last = f[f.length-1];
-      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-    },
-    activate(root){
-      try {
-        this.deactivate();
-        this.current = root;
-        this.lastFocus = document.activeElement;
-        this._prevTabIndex = root.hasAttribute('tabindex') ? root.getAttribute('tabindex') : null;
-        if (this._prevTabIndex === null) {
-          root.setAttribute('tabindex','-1');
-        }
-        root.setAttribute('aria-modal','true');
-        this._handler = this.onKeydown.bind(this);
-        document.addEventListener('keydown', this._handler, true);
-        const f = this.getFocusable(root);
-        (f[0] || root).focus();
-        setUnderlayInert(true, root);
-      } catch(_){}
-    },
-    deactivate(){
-      try{
-        if (!this.current) return;
-        const root = this.current;
-        root.setAttribute('aria-modal','false');
-        if (this._handler) document.removeEventListener('keydown', this._handler, true);
-        setUnderlayInert(false, root);
-        if (this._prevTabIndex === null) root.removeAttribute('tabindex');
-        else root.setAttribute('tabindex', this._prevTabIndex);
-        const prev = this.lastFocus;
-        this.current = null; this.lastFocus = null; this._handler = null; this._prevTabIndex = null;
-        if (prev && typeof prev.focus === 'function') prev.focus();
-      } catch(_){}
-    }
-  };
 
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
@@ -2068,7 +1984,7 @@ function prepareIntakeStatusHeader(){
   } catch(_) {}
 }
 
-function _updateCaptureIntakeStatus(){
+function updateCaptureIntakeStatus(){
   const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
   try {
     const statusEl = document.getElementById('cap-intake-status');
@@ -2142,8 +2058,6 @@ function _updateCaptureIntakeStatus(){
     recordPerfStat('header_intake', startedAt);
   }
 }
-// Debounced public updater to reduce live-region announcements
-const updateCaptureIntakeStatus = debounce(_updateCaptureIntakeStatus, 150);
 
 function millisUntilNextMidnight(){
   try {
@@ -2292,7 +2206,7 @@ function getAppointmentRoleLabel(code){
   return role ? role.label : (code || '');
 }
 
-function _setAppointmentBadge(details){
+function setAppointmentBadge(details){
   const badge = document.getElementById('nextApptBadge');
   if (!badge) return;
 
@@ -2326,8 +2240,6 @@ function _setAppointmentBadge(details){
     recordPerfStat('header_appt', startedAt);
   }
 }
-// Debounced badge setter to avoid repeated announcements
-const setAppointmentBadge = debounce(_setAppointmentBadge, 160);
 
 function computeNextAppointment(summary){
   if (!summary) return null;
@@ -3080,15 +2992,7 @@ async function pushPendingToRemote(){
 
 function showLoginOverlay(show){
   const ov = document.getElementById('loginOverlay');
-  if (!ov) return;
-  const dialog = ov.querySelector('[role="dialog"]') || ov;
-  if (show){
-    ov.style.display = 'flex';
-    focusTrap.activate(dialog);
-  } else {
-    if (focusTrap.current === dialog) focusTrap.deactivate();
-    ov.style.display = 'none';
-  }
+  if (ov) ov.style.display = show ? 'flex' : 'none';
 }
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
@@ -3515,7 +3419,6 @@ const chartPanel = {
   toggle() {
     this.open = !this.open;
     if (this.el) this.el.style.display = this.open ? "block" : "none";
-    if (this.open) { try { focusTrap.activate(this.el); } catch(_){} } else { if (focusTrap.current===this.el) focusTrap.deactivate(); }
   },
 
   hide() {
@@ -3523,7 +3426,6 @@ const chartPanel = {
     if (this.el) this.el.style.display = "none";
     this.tipSticky = false;
     this.hideTip();
-    if (focusTrap.current===this.el) focusTrap.deactivate();
   },
 
   // ----- Helpers -----
@@ -5163,10 +5065,8 @@ function lockUi(on){
   document.body.classList.toggle('app-locked', !!on);
   const ov = document.getElementById('appLock');
   if (ov){
-    const dialog = ov.querySelector('[role="dialog"]') || ov;
     ov.style.display = on ? 'flex' : 'none';
     if (on){
-      focusTrap.activate(dialog);
       requestAnimationFrame(()=>{
         const pin = document.getElementById('pinInput');
         const pass = document.getElementById('unlockPasskeyBtn');
@@ -5180,7 +5080,6 @@ function lockUi(on){
         }
       });
     } else {
-      if (focusTrap.current === dialog) focusTrap.deactivate();
       const pin = document.getElementById('pinInput');
       if (pin && typeof pin.blur === 'function'){ pin.blur(); }
     }
@@ -5523,24 +5422,10 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
 });
 
 document.addEventListener('keydown', (e)=>{
-  if (e.key !== 'Escape') return;
-  // Priority: close open dialogs/panels first
-  try {
-    if (chartPanel?.open) { chartPanel.hide(); e.preventDefault(); return; }
-    if (helpPanel?.open)  { helpPanel.close(); e.preventDefault(); return; }
-    if (diag?.open)       { diag.close(); e.preventDefault(); return; }
-  } catch(_){}
-  // Then overlays
-  try {
-    const appLock = document.getElementById('appLock');
-    if (appLock && appLock.style.display !== 'none') {
-      __pendingAfterUnlock = null; lockUi(false); e.preventDefault(); return;
-    }
-    const login = document.getElementById('loginOverlay');
-    if (login && login.style.display !== 'none') {
-      showLoginOverlay(false); e.preventDefault(); return;
-    }
-  } catch(_){}
+  if (e.key === 'Escape' && document.body.classList.contains('app-locked')){
+    __pendingAfterUnlock = null;
+    lockUi(false);
+  }
 });
 
 document.addEventListener('visibilitychange', () => {
