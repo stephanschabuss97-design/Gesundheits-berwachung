@@ -1706,6 +1706,45 @@ function deleteEntryLocal(id){
   });
 }
 
+async function ensureSupabaseClient(){
+  if (sbClient) return sbClient;
+
+  const rest = await getConf("webhookUrl");
+  const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
+  if (!rest || !keyConf) {
+    setConfigStatus('Bitte REST-Endpoint und ANON-Key speichern.', 'error');
+    diag.add("Supabase Auth: fehlende Konfiguration");
+    return null;
+  }
+
+  const trimmedKey = String(keyConf || '').trim();
+  if (isServiceRoleKey(trimmedKey)) {
+    setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
+    diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
+    return null;
+  }
+
+  const supabaseUrl = baseUrlFromRest(rest);
+  const anonKey = trimmedKey.replace(/^Bearer\s+/i,"");
+  if (!supabaseUrl) {
+    setConfigStatus('REST-Endpoint ist ungueltig.', 'error');
+    diag.add("Supabase Auth: ungueltige URL");
+    return null;
+  }
+  if (!anonKey) {
+    setConfigStatus('ANON-Key ist ungueltig.', 'error');
+    diag.add("Supabase Auth: ungueltiger Key");
+    return null;
+  }
+
+  sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
+    auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true }
+  });
+  diag.add("Supabase: Client (Auth) initialisiert");
+  setConfigStatus('', 'info');
+  return sbClient;
+}
+
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
   const key = await getConf("webhookKey");
@@ -4771,6 +4810,7 @@ async function main(){
   try { addCapturePanelKeys?.(); } catch(_){ }
 
   bindAuthButtons();
+  bindLifestyle();
   bindIntakeCapture();
   bindAppointmentsPanel();
   bindAppLockButtons();
@@ -4925,6 +4965,7 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
+
 
 
 
