@@ -840,7 +840,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
             <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
             <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
             <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
-            <button class="btn toggle" id="sugarHighToggle" type="button" aria-pressed="false" title="> 10 g Zucker">&#x1F36C; &gt; 10 g Zucker</button>
+            <button class="btn toggle" id="proteinHighToggle" type="button" aria-pressed="false" title="Protein >= 90 g">&#x1F969; Protein >= 90 g</button>
             <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
           </div>
         </div>
@@ -4330,7 +4330,9 @@ const mkAlertDots = (seriesItem) => {
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
 
     const sPerf = (perfStats.add?.("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap?.("drawChart")) || {p50:0,p90:0,p95:0,p99:0,count:0};
-    diag.add?.(`[perf] drawChart p50=${sPerf.p50|0}ms p90=${sPerf.p90|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+    if (sPerf && typeof sPerf.count === 'number' && (sPerf.count % 25 === 0)) {
+      diag.add?.(`[perf] drawChart p50=${sPerf.p50|0}ms p90=${sPerf.p90|0}ms p95=${sPerf.p95|0}ms p99=${sPerf.p99|0}ms (n=${sPerf.count})`);
+    }
   },
 };
 
@@ -4397,14 +4399,7 @@ function bindTabs(){
 
 /* ===== Save flows ===== */
 // Replace sugar toggle with protein (runtime migration for legacy layouts)
-(function migrateSugarToProtein(){
-  const legacy = document.getElementById('sugarHighToggle');
-  if (legacy) {
-    legacy.id = 'proteinHighToggle';
-    legacy.setAttribute('title','Protein >= 90 g');
-    legacy.innerHTML = '&#x1F969; Protein >= 90 g';
-  }
-})();
+// Migration entfernt: Markup nutzt direkt #proteinHighToggle
 function setProteinHigh(on){
   proteinHigh = !!on;
   setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
@@ -5222,6 +5217,7 @@ $("#to").value = todayIso;
 setTab("capture");
 await ensureSupabaseClient();
 try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
+try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
