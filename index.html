@@ -5791,6 +5791,9 @@ document.addEventListener('visibilitychange', () => {
     } catch(_) {}
     __pendingAfterUnlock = null;
     lockUi(false);
+    try { setUnderlayInert(false); } catch(_) {}
+    try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_) {}
+    try { $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el => { el.disabled = false; }); } catch(_) {}
       try { await maybeRefreshForTodayChange({ source: 'visibility' }); } catch(_) {}
       scheduleNoonSwitch();
       maybeAutoApplyBpContext({ source: 'visibility' });
