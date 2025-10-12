@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.0)</title>
+<title>Gesundheits-Logger (V1.7.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.0</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1127,22 +1127,26 @@ add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${
 init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
 const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
 const close=document.getElementById('diagClose');
-const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+const toggle=()=>{ this.open=!this.open; if (this.open){ this.show(); } else { this.hide(); } };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
-close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
-}
+close.addEventListener('click', ()=>{ this.hide(); });
+},
+show(){ if (!this.el) return; this.el.style.display='block'; focusTrap.activate(this.el); this.open=true; },
+hide(){ if (!this.el) return; this.el.style.display='none'; if (focusTrap.current===this.el) focusTrap.deactivate(); this.open=false; }
 };
 
 /* ===== Help panel ===== */
 const helpPanel={ el:null, open:false,
 init(){ this.el=document.getElementById('help');
 const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
-const toggle=()=>{ this.open=!this.open; this.el.style.display=this.open?'block':'none'; };
+const toggle=()=>{ this.open=!this.open; if (this.open){ this.show(); } else { this.hide(); } };
 t1.addEventListener('click', toggle);
 if (t2) t2.addEventListener('click', toggle);
-close.addEventListener('click', ()=>{ this.open=false; this.el.style.display='none'; });
-}
+close.addEventListener('click', ()=>{ this.hide(); });
+},
+show(){ if (!this.el) return; this.el.style.display='block'; focusTrap.activate(this.el); this.open=true; },
+hide(){ if (!this.el) return; this.el.style.display='none'; if (focusTrap.current===this.el) focusTrap.deactivate(); this.open=false; }
 };
 
 /* ===== Helpers ===== */
@@ -1307,6 +1311,125 @@ function uiInfo(msg) {
     console.log(msg);
   }
 }
+
+// Utility: debounce to avoid rapid-fire updates (e.g. live regions)
+function debounce(fn, ms = 150) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(...args);
+    }, ms);
+  };
+}
+
+// Utility: disable background when modal dialog is active
+function setUnderlayInert(active, exceptEl = null) {
+  try {
+    const targets = [
+      document.querySelector('header'),
+      document.querySelector('nav.tabs'),
+      document.querySelector('main'),
+      document.querySelector('.fab-wrap')
+    ].filter(Boolean);
+
+    targets.forEach(el => {
+      if (!el) return;
+      if (active) {
+        if (exceptEl && (el === exceptEl || exceptEl.contains(el))) return;
+        if (!el.hasAttribute('data-prev-aria-hidden')) {
+          const prev = el.getAttribute('aria-hidden');
+          el.setAttribute('data-prev-aria-hidden', prev == null ? '' : prev);
+        }
+        el.setAttribute('aria-hidden', 'true');
+        if (!el.hasAttribute('data-inert-applied')) {
+          el.setAttribute('data-inert-applied', '1');
+        }
+        el.setAttribute('inert', '');
+      } else {
+        if (el.hasAttribute('data-prev-aria-hidden')) {
+          const prev = el.getAttribute('data-prev-aria-hidden');
+          if (prev === '') el.removeAttribute('aria-hidden');
+          else el.setAttribute('aria-hidden', prev);
+          el.removeAttribute('data-prev-aria-hidden');
+        } else {
+          el.removeAttribute('aria-hidden');
+        }
+        if (el.hasAttribute('data-inert-applied')) {
+          el.removeAttribute('inert');
+          el.removeAttribute('data-inert-applied');
+        }
+      }
+    });
+  } catch(_) { /* noop */ }
+}
+
+// Simple focus trap for modal overlays
+const focusTrap = {
+  current: null,
+  lastFocus: null,
+  handler: null,
+  prevTabIndex: null,
+  getFocusable(root) {
+    return Array.from(root.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      .filter(el => {
+        const style = window.getComputedStyle(el);
+        if (style.visibility === 'hidden' || style.display === 'none') return false;
+        return el.getClientRects().length > 0;
+      });
+  },
+  onKeyDown(e) {
+    if (e.key !== 'Tab') return;
+    const root = focusTrap.current;
+    if (!root) return;
+    const items = focusTrap.getFocusable(root);
+    if (!items.length) {
+      e.preventDefault();
+      (root.focus ? root.focus() : null);
+      return;
+    }
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  },
+  activate(root) {
+    if (!root) return;
+    if (this.current === root) return;
+    this.deactivate();
+    this.current = root;
+    this.lastFocus = document.activeElement || null;
+    this.prevTabIndex = root.hasAttribute('tabindex') ? root.getAttribute('tabindex') : null;
+    if (this.prevTabIndex === null) root.setAttribute('tabindex', '-1');
+    root.setAttribute('aria-modal', 'true');
+    this.handler = this.onKeyDown.bind(this);
+    document.addEventListener('keydown', this.handler, true);
+    const items = this.getFocusable(root);
+    (items[0] || root).focus();
+    setUnderlayInert(true, root);
+  },
+  deactivate() {
+    const root = this.current;
+    if (!root) return;
+    root.setAttribute('aria-modal', 'false');
+    if (this.handler) document.removeEventListener('keydown', this.handler, true);
+    setUnderlayInert(false);
+    if (this.prevTabIndex === null) root.removeAttribute('tabindex');
+    else root.setAttribute('tabindex', this.prevTabIndex);
+    const last = this.lastFocus;
+    this.current = null;
+    this.lastFocus = null;
+    this.handler = null;
+    this.prevTabIndex = null;
+    if (last && typeof last.focus === 'function') last.focus();
+  }
+};
 
 function withBusy(el, on=true){
   if (!el) return;
@@ -1984,7 +2107,7 @@ function prepareIntakeStatusHeader(){
   } catch(_) {}
 }
 
-function updateCaptureIntakeStatus(){
+const updateCaptureIntakeStatus = debounce(function(){
   const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
   try {
     const statusEl = document.getElementById('cap-intake-status');
@@ -2057,7 +2180,7 @@ function updateCaptureIntakeStatus(){
   } finally {
     recordPerfStat('header_intake', startedAt);
   }
-}
+}, 150);
 
 function millisUntilNextMidnight(){
   try {
@@ -2206,7 +2329,7 @@ function getAppointmentRoleLabel(code){
   return role ? role.label : (code || '');
 }
 
-function setAppointmentBadge(details){
+const setAppointmentBadge = debounce(function(details){
   const badge = document.getElementById('nextApptBadge');
   if (!badge) return;
 
@@ -2239,7 +2362,7 @@ function setAppointmentBadge(details){
   } finally {
     recordPerfStat('header_appt', startedAt);
   }
-}
+}, 160);
 
 function computeNextAppointment(summary){
   if (!summary) return null;
@@ -2992,7 +3115,15 @@ async function pushPendingToRemote(){
 
 function showLoginOverlay(show){
   const ov = document.getElementById('loginOverlay');
-  if (ov) ov.style.display = show ? 'flex' : 'none';
+  if (!ov) return;
+  const dialog = ov.querySelector('[role="dialog"]') || ov;
+  if (show){
+    ov.style.display = 'flex';
+    focusTrap.activate(dialog);
+  } else {
+    ov.style.display = 'none';
+    if (focusTrap.current === dialog) focusTrap.deactivate();
+  }
 }
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
@@ -3417,13 +3548,27 @@ const chartPanel = {
   },
 
   toggle() {
-    this.open = !this.open;
-    if (this.el) this.el.style.display = this.open ? "block" : "none";
+    if (this.open) {
+      this.hide();
+    } else {
+      this.show();
+    }
+  },
+
+  show() {
+    this.open = true;
+    if (this.el) {
+      this.el.style.display = "block";
+      focusTrap.activate(this.el);
+    }
   },
 
   hide() {
     this.open = false;
-    if (this.el) this.el.style.display = "none";
+    if (this.el) {
+      this.el.style.display = "none";
+      if (focusTrap.current === this.el) focusTrap.deactivate();
+    }
     this.tipSticky = false;
     this.hideTip();
   },
@@ -5027,8 +5172,7 @@ async function resumeAfterUnlock(intent){
   if (target === 'chart'){
     await setTab('doctor');
     setDocBadges({ visible: true });
-    chartPanel.open = true;
-    if (chartPanel.el) chartPanel.el.style.display = 'block';
+    chartPanel.show();
     await requestUiRefresh({ reason: 'unlock:chart', chart: true });
     return;
   }
@@ -5065,8 +5209,10 @@ function lockUi(on){
   document.body.classList.toggle('app-locked', !!on);
   const ov = document.getElementById('appLock');
   if (ov){
+    const dialog = ov.querySelector('[role="dialog"]') || ov;
     ov.style.display = on ? 'flex' : 'none';
     if (on){
+      focusTrap.activate(dialog);
       requestAnimationFrame(()=>{
         const pin = document.getElementById('pinInput');
         const pass = document.getElementById('unlockPasskeyBtn');
@@ -5080,6 +5226,7 @@ function lockUi(on){
         }
       });
     } else {
+      if (focusTrap.current === dialog) focusTrap.deactivate();
       const pin = document.getElementById('pinInput');
       if (pin && typeof pin.blur === 'function'){ pin.blur(); }
     }
@@ -5416,16 +5563,46 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
     __pendingAfterUnlock = null;
   }
   setDocBadges({ visible: true });
-  chartPanel.open = true;
-  if (chartPanel.el) chartPanel.el.style.display = 'block';
+  chartPanel.show();
   await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
 });
 
 document.addEventListener('keydown', (e)=>{
-  if (e.key === 'Escape' && document.body.classList.contains('app-locked')){
-    __pendingAfterUnlock = null;
-    lockUi(false);
-  }
+  if (e.key !== 'Escape') return;
+
+  try {
+    if (chartPanel?.open) {
+      chartPanel.hide();
+      e.preventDefault();
+      return;
+    }
+    if (helpPanel?.open) {
+      helpPanel.hide();
+      e.preventDefault();
+      return;
+    }
+    if (diag?.open) {
+      diag.hide();
+      e.preventDefault();
+      return;
+    }
+  } catch(_){ }
+
+  try {
+    const appLock = document.getElementById('appLock');
+    if (appLock && appLock.style.display !== 'none') {
+      __pendingAfterUnlock = null;
+      lockUi(false);
+      e.preventDefault();
+      return;
+    }
+    const login = document.getElementById('loginOverlay');
+    if (login && login.style.display !== 'none') {
+      showLoginOverlay(false);
+      e.preventDefault();
+      return;
+    }
+  } catch(_){ }
 });
 
 document.addEventListener('visibilitychange', () => {
