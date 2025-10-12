@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.2)</title>
+<title>Gesundheits-Logger (V1.7.3)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.2</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1017,7 +1017,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         </div>
       </div>
 
-      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen � aktuell nur UI-Skelett.</div>
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen ? aktuell nur UI-Skelett.</div>
     </div>
   </div>
 </details>
@@ -1066,6 +1066,20 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
 const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
+const DEV_ALLOW_DEFAULTS = (() => {
+  try {
+    const host = window?.location?.hostname || "";
+    if (/^(localhost|127\.0\.0\.1)$/i.test(host) || /\.local$/i.test(host)) return true;
+    const params = new URLSearchParams(window?.location?.search || "");
+    if (params.get('devDefaults') === '1') {
+      window?.localStorage?.setItem('healthlog_dev_defaults', '1');
+      return true;
+    }
+    if (window?.localStorage?.getItem('healthlog_dev_defaults') === '1') return true;
+  } catch(_){ }
+  return false;
+})();
+const APPOINTMENT_GRACE_MS = 5 * 60 * 1000;
 const APPOINTMENT_ROLES = [
   { code: 'nephro', label: 'Nephrologe' },
   { code: 'internal', label: 'Internist' },
@@ -1254,8 +1268,13 @@ function isServiceRoleKey(raw){
 async function sbSelect({ table, select, filters = [], order = null, limit = null }) {
   // Basis-URL aus gespeicherter REST-URL ableiten (z. B. .../rest/v1/health_events)
   const restUrl = await getConf("webhookUrl");
-  const base    = baseUrlFromRest(restUrl) || SUPABASE_URL_DEFAULT;
-  if (!base) throw new Error("REST-Basis fehlt");
+  const base    = baseUrlFromRest(restUrl) || (DEV_ALLOW_DEFAULTS ? SUPABASE_URL_DEFAULT : null);
+  if (!base) {
+    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
+    const err = new Error("REST-Basis fehlt");
+    err.status = 0;
+    throw err;
+  }
 
   const url = new URL(`${base}/rest/v1/${table}`);
   if (select) url.searchParams.set('select', select);
@@ -1430,6 +1449,22 @@ const focusTrap = {
     if (last && typeof last.focus === 'function') last.focus();
   }
 };
+
+function restErrorMessage(status, details = '') {
+  const norm = String(details || '').trim();
+  if (status === 0) return 'Netzwerkfehler - bitte Verbindung pruefen.';
+  if (status === 401 || status === 403) return 'Bitte erneut anmelden.';
+  if (status === 404) return 'Eintrag nicht gefunden.';
+  if (status === 409) return 'Konflikt: Ein Eintrag existiert bereits.';
+  if (status === 400 || status === 422) return 'Eingaben bitte pruefen.';
+  if (status === 429) return 'Zu viele Anfragen - bitte kurz warten.';
+  if (status >= 500) return 'Serverfehler - bitte spaeter erneut versuchen.';
+  return norm || `Fehler (${status})`;
+}
+
+function uiRestError(status, details, fallback){
+  uiError(fallback || restErrorMessage(status, details));
+}
 
 function withBusy(el, on=true){
   if (!el) return;
@@ -1737,7 +1772,11 @@ async function saveIntakeTotals({ dayIso, totals }){
   const url = await getConf('webhookUrl');
   const headers = await getHeaders();
   const uid = await getUserId();
-  if (!url || !headers || !uid) throw new Error('saveIntakeTotals: missing config/auth');
+  if (!url || !headers || !uid) {
+    const errMissing = new Error('saveIntakeTotals: missing config/auth');
+    errMissing.status = 0;
+    throw errMissing;
+  }
   const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||'')) ? dayIso : todayStr();
   const ts = new Date(`${dayIsoNorm}T12:00:00Z`).toISOString();
   const payloadTotals = {
@@ -1756,28 +1795,30 @@ async function saveIntakeTotals({ dayIso, totals }){
   });
   if (res.ok) return await res.json();
 
-  // Conflict  PATCH (Upsert)
   let details = '';
   try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
   if (!(res.status === 409 || /duplicate|unique/i.test(details))) {
-
     try { diag.add?.(`[intake] POST failed ${res.status} ${details||''}`); } catch {}
+    const errRes = new Error('intake-post-failed');
+    errRes.status = res.status;
+    errRes.details = details;
+    throw errRes;
+  }
 
+  const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+  const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
+            `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+  const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }));
+  if (!res2.ok){
+    let d2='';
+    try{ const e2 = await res2.json(); d2 = e2?.message || e2?.details || ''; }catch{}
+    const errPatch = new Error('intake-patch-failed');
+    errPatch.status = res2.status;
+    errPatch.details = d2;
+    throw errPatch;
   }
-  if (res.status === 409 || /duplicate|unique/i.test(details)){
-    const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
-    const toIso = toNext.toISOString().slice(0,10);
-    const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
-              `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-    const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }));
-    if (!res2.ok){
-      let d2='';
-      try{ const e2 = await res2.json(); d2 = e2?.message || e2?.details || ''; }catch{}
-      throw new Error(`intake-patch-failed ${res2.status} ${d2}`);
-    }
-    return await res2.json();
-  }
-  throw new Error(`intake-post-failed ${res.status}`);
+  return await res2.json();
 }
 
 async function cleanupOldIntake(){
@@ -2320,7 +2361,10 @@ async function getAppointmentsEndpoint(){
   const headers = await getHeaders();
   if (!rest || !headers) return null;
   const base = baseUrlFromRest(rest);
-  if (!base) return null;
+  if (!base) {
+    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
+    return null;
+  }
   return { base, headers } ;
 }
 
@@ -2376,7 +2420,7 @@ function computeNextAppointment(summary){
     if (!nextCandidate) continue;
     const ts = Date.parse(nextCandidate);
     if (!Number.isFinite(ts)) continue;
-    if (ts < nowTs - 60_000) continue;
+    if (ts < nowTs - APPOINTMENT_GRACE_MS) continue;
     if (ts < nextTs) {
       nextTs = ts;
       nextRole = code;
@@ -2511,14 +2555,18 @@ async function refreshAppointments(){
     const now = Date.now();
 
     APPOINTMENT_ROLES.forEach(({ code }) => {
-      const nextEntry = scheduledMap.get(code);
-      const nextIso = nextEntry?.dt ?? null;
-
+      let nextIso = null;
       let lastIso = doneMap.get(code)?.dt ?? null;
-      if (!lastIso && nextIso) {
-        const ts = Date.parse(nextIso);
-        if (!Number.isNaN(ts) && ts < now) {
-          lastIso = nextIso;
+
+      const scheduled = scheduledMap.get(code);
+      if (scheduled?.dt) {
+        const ts = Date.parse(scheduled.dt);
+        if (Number.isFinite(ts)) {
+          if (ts >= now - APPOINTMENT_GRACE_MS) {
+            nextIso = scheduled.dt;
+          } else if (!lastIso) {
+            lastIso = scheduled.dt;
+          }
         }
       }
 
@@ -2605,7 +2653,10 @@ async function handleAppointmentSave(role){
         if (res.status === 404){
           // kein vorhandener Termin -> POST im Anschluss
         } else {
-          throw new Error(`appointments-patch-failed ${res.status} ${details}`);
+          const errPatch = new Error('appointments-patch-failed');
+          errPatch.status = res.status;
+          errPatch.details = details;
+          throw errPatch;
         }
       } else {
         saved = true;
@@ -2639,7 +2690,10 @@ async function handleAppointmentSave(role){
           timeEl.focus();
           return;
         }
-        throw new Error(`appointments-post-failed ${resPost.status} ${details}`);
+        const errPost = new Error('appointments-post-failed');
+        errPost.status = resPost.status;
+        errPost.details = details;
+        throw errPost;
       }
     }
 
@@ -2648,13 +2702,15 @@ async function handleAppointmentSave(role){
     await refreshAppointments();
     uiInfo('Termin gespeichert.');
   } catch (e){
-    const msg = e?.message || e;
-    if (typeof msg === 'string' && msg.includes('400')){
+    if (e?.status === 400){
       uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
       timeEl.focus();
+    } else if (e?.status) {
+      uiRestError(e.status, e.details || e.message);
+      try { diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
     } else {
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
-      try { diag.add?.('appointments save error (' + role + '): ' + msg); } catch(_){ }
+      try { diag.add?.('appointments save error (' + role + '): ' + (e?.message || e)); } catch(_){ }
     }
   } finally {
     withBusy(saveBtn, false);
@@ -2695,14 +2751,21 @@ async function handleAppointmentDone(role){
         await refreshAppointments();
         return;
       }
-      throw new Error(`appointments-done-failed ${res.status} ${details}`);
+      const errDone = new Error('appointments-done-failed');
+      errDone.status = res.status;
+      errDone.details = details;
+      throw errDone;
     }
     await refreshAppointments();
     uiInfo('Termin abgeschlossen.');
   } catch (e){
-    const msg = e?.message || e;
-    uiError('Termin konnte nicht abgeschlossen werden.');
-    try { diag.add?.('appointments done error (' + role + '): ' + msg); } catch(_){ }
+    if (e?.status) {
+      uiRestError(e.status, e.details || e.message, 'Termin konnte nicht abgeschlossen werden.');
+      try { diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
+    } else {
+      uiError('Termin konnte nicht abgeschlossen werden.');
+      try { diag.add?.('appointments done error (' + role + '): ' + (e?.message || e)); } catch(_){ }
+    }
   } finally {
     withBusy(btn, false);
   }
@@ -3113,12 +3176,36 @@ async function pushPendingToRemote(){
   return { pushed, failed };
 }
 
+async function prefillSupabaseConfigForm(){
+  try {
+    setConfigStatus('', 'info');
+    const restInput = document.getElementById('configRestUrl');
+    const keyInput = document.getElementById('configAnonKey');
+    if (restInput) {
+      restInput.value = (await getConf('webhookUrl')) || '';
+    }
+    if (keyInput) {
+      const key = await getConf('webhookKey');
+      keyInput.value = key ? key.replace(/^Bearer\s+/i, '') : '';
+    }
+  } catch(_){ }
+}
+
+function setConfigStatus(msg, tone = 'info'){
+  const el = document.getElementById('configStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  const colors = { error: '#f87171', success: '#34d399', info: '#9aa3af' };
+  el.style.color = colors[tone] || colors.info;
+}
+
 function showLoginOverlay(show){
   const ov = document.getElementById('loginOverlay');
   if (!ov) return;
   const dialog = ov.querySelector('[role="dialog"]') || ov;
   if (show){
     ov.style.display = 'flex';
+    prefillSupabaseConfigForm();
     focusTrap.activate(dialog);
   } else {
     ov.style.display = 'none';
@@ -3153,18 +3240,57 @@ async function isLoggedInFast({ timeout = 400 } = {}) {
 // Buttons binden (einmalig, z. B. in main())
 function bindAuthButtons(){
 const gbtn = document.getElementById('googleLoginBtn');
+const saveBtn = document.getElementById('configSaveBtn');
+
+if (saveBtn) saveBtn.addEventListener('click', async ()=>{
+  const restInput = document.getElementById('configRestUrl');
+  const keyInput = document.getElementById('configAnonKey');
+  const rawRest = (restInput?.value || '').trim();
+  const rawKey = (keyInput?.value || '').trim();
+  if (!rawRest || !rawKey){
+    setConfigStatus('Bitte REST-Endpoint und ANON-Key eingeben.', 'error');
+    return;
+  }
+  if (!/\/rest\/v1\//i.test(rawRest)){
+    setConfigStatus('REST-Endpoint muss /rest/v1/ enthalten.', 'error');
+    return;
+  }
+  try {
+    new URL(rawRest);
+  } catch {
+    setConfigStatus('REST-Endpoint ist keine gueltige URL.', 'error');
+    return;
+  }
+  let anonKey = rawKey.startsWith('Bearer ') ? rawKey : `Bearer ${rawKey}`;
+  if (isServiceRoleKey(anonKey)){
+    setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
+    return;
+  }
+  try {
+    setConfigStatus('Speichere Konfiguration ...', 'info');
+    await putConf('webhookUrl', rawRest);
+    await putConf('webhookKey', anonKey);
+    sbClient = null;
+    await ensureSupabaseClient();
+    await requireSession();
+    setConfigStatus('Konfiguration gespeichert.', 'success');
+  } catch (e){
+    const message = restErrorMessage(e?.status || 0, e?.details || e?.message || '');
+    setConfigStatus(message, 'error');
+  }
+});
 
 if (gbtn) gbtn.addEventListener('click', async ()=>{
-const supa = await ensureSupabaseClient();
-if (!supa) { 
-alert('Konfiguration fehlt (REST-URL und ANON-Key). Standardwerte sind gesetzt - falls entfernt, bitte App neu laden oder Konfiguration in IndexedDB hinterlegen.');
-return;
-}
-const { error } = await supa.auth.signInWithOAuth({
-provider: 'google',
-options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
-});
-if (error) alert('Google-Login fehlgeschlagen: ' + error.message);
+  const supa = await ensureSupabaseClient();
+  if (!supa) {
+    setConfigStatus('Konfiguration fehlt - bitte REST-Endpoint und ANON-Key speichern.', 'error');
+    return;
+  }
+  const { error } = await supa.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
+  });
+  if (error) setConfigStatus('Google-Login fehlgeschlagen: ' + error.message, 'error');
 });
 }
 
@@ -5038,22 +5164,38 @@ if (sbClient) return sbClient;
 
 const rest = await getConf("webhookUrl");
 const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
-if (!rest || !keyConf) { diag.add("Supabase Auth: fehlende Konfiguration"); return null; }
+if (!rest || !keyConf) {
+  setConfigStatus('Bitte REST-Endpoint und ANON-Key speichern.', 'error');
+  diag.add("Supabase Auth: fehlende Konfiguration");
+  return null;
+}
 
 // NEU: niemals mit service_role starten
-if (isServiceRoleKey(keyConf)) {
-diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
-return null;
+const trimmedKey = String(keyConf || '').trim();
+if (isServiceRoleKey(trimmedKey)) {
+  setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
+  diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
+  return null;
 }
 
 const supabaseUrl = baseUrlFromRest(rest);
-const anonKey = keyConf.replace(/^Bearer\s+/i,"");
-if (!supabaseUrl || !anonKey) { diag.add("Supabase Auth: ungueltige URL/Key"); return null; }
+const anonKey = trimmedKey.replace(/^Bearer\s+/i,"");
+if (!supabaseUrl) {
+  setConfigStatus('REST-Endpoint ist ungueltig.', 'error');
+  diag.add("Supabase Auth: ungueltige URL");
+  return null;
+}
+if (!anonKey) {
+  setConfigStatus('ANON-Key ist ungueltig.', 'error');
+  diag.add("Supabase Auth: ungueltiger Key");
+  return null;
+}
 
 sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
 auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true } // Session nur im RAM
 });
 diag.add("Supabase: Client (Auth) initialisiert");
+setConfigStatus('', 'info');
 return sbClient;
 }
 
@@ -5349,8 +5491,10 @@ diag.init(); helpPanel.init(); await initDB();
 try {
 const haveUrl = await getConf("webhookUrl");
 const haveKey = await getConf("webhookKey");
-if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
-if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
+if (DEV_ALLOW_DEFAULTS) {
+  if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+  if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
+}
 } catch (_) {}
 chartPanel.init(); bindTabs();
 const todayIso = todayStr();
@@ -5687,6 +5831,14 @@ main();
   <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <h3 id="loginTitle">Willkommen</h3>
     <p class="small" style="margin:0 0 8px">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
+    <div class="config-box" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+      <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
+      <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db" />
+      <label class="small" for="configAnonKey" style="margin-top:4px">Supabase ANON-Key</label>
+      <textarea id="configAnonKey" rows="3" placeholder="ANON-Key (kein service_role)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;resize:vertical"></textarea>
+      <button class="btn ghost" id="configSaveBtn" type="button" style="width:100%;margin-top:4px">Konfiguration speichern</button>
+      <div id="configStatus" class="small" style="min-height:16px;color:#9aa3af"></div>
+    </div>
     <button class="btn primary" id="googleLoginBtn" type="button" style="width:100%;height:48px">Mit Google anmelden</button>
     <div id="whoAmI" class="small" style="text-align:center;margin-top:6px"></div>
   </div>
@@ -5730,6 +5882,12 @@ main();
 
 </body>
 </html>
+
+
+
+
+
+
 
 
 
