@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.3.1)</title>
+<title>Gesundheits-Logger (V1.7.3)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -623,7 +623,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.1</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -4741,31 +4741,109 @@ document.addEventListener('visibilitychange', () => {
   
 // Lifestyle binden und initial (falls bereits angemeldet) laden
 
-bindIntakeCapture();
-bindAppointmentsPanel();
-try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
+/* ===== Main ===== */
+async function main(){
+  diag.init(); helpPanel.init(); await initDB();
+  try {
+    const haveUrl = await getConf("webhookUrl");
+    const haveKey = await getConf("webhookKey");
+    if (DEV_ALLOW_DEFAULTS) {
+      if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
+      if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
+    }
+  } catch (_) {}
 
-// Initial Render
-await requestUiRefresh({ reason: 'boot:initial', appointments: true });
+  chartPanel.init();
+  bindTabs();
 
-// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
-$$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
-el.disabled = false;
-});
-document.body.classList.remove('auth-locked');
+  const todayIso = todayStr();
+  $("#date").value = todayIso;
+  __lastKnownToday = todayIso;
+  __dateUserSelected = false;
+  __bpUserOverride = false;
+  prepareIntakeStatusHeader();
+  $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
+  $("#to").value = todayIso;
+  setTab("capture");
 
-// Auto-Push Pending sobald online
-window.addEventListener('online', async ()=>{
-const resPush = await pushPendingToRemote();
-if(resPush.pushed || resPush.failed){
-diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
-if (typeof reconcileFromRemote === 'function') {
-  await reconcileFromRemote();
+  await ensureSupabaseClient();
+  try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
+  try { addCapturePanelKeys?.(); } catch(_){ }
+
+  bindAuthButtons();
+  bindIntakeCapture();
+  bindAppointmentsPanel();
+  bindAppLockButtons();
+
+  if (sbClient) watchAuthState();
+
+  const hasSession = await requireSession();
+  if (hasSession) {
+    await afterLoginBoot();
+    await setupRealtime();
+    await requestUiRefresh();
+  }
+
+  try {
+    await refreshCaptureIntake();
+  } catch(_) {}
+
+  __lastKnownToday = todayStr();
+  scheduleMidnightRefresh();
+  scheduleNoonSwitch();
+  startDayHeartbeat();
+  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
+  await refreshAppointments();
+
+  try { if (await isLoggedInFast()) { await cleanupOldIntake(); } } catch(_){ }
+
+  const savedUrl = await getConf("webhookUrl");
+  const savedKey = await getConf("webhookKey");
+  try{
+    diag.add?.('Config URL: ' + (savedUrl || '(none)'));
+    diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
+  }catch(_){ }
+  if (!savedUrl || !savedKey) {
+    setTab("capture");
+  }
+
+  ['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
+    const el = $(sel); if(!el) return;
+    el.addEventListener('input', updateBpCommentWarnings);
+  });
+  updateBpCommentWarnings();
+
+  const bpContextSel = document.getElementById('bpContextSel');
+  __bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
+  if (bpContextSel){
+    applyBpContext(bpContextSel.value || 'M');
+    maybeAutoApplyBpContext({ force: true, source: 'boot' });
+    bpContextSel.addEventListener('change', (e)=>{
+      __bpUserOverride = true;
+      applyBpContext(e.target.value);
+      updateBpCommentWarnings();
+    });
+  }
+
+  resetAppointmentsUi();
+
+  await requestUiRefresh({ reason: 'boot:initial', appointments: true });
+
+  $$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
+    el.disabled = false;
+  });
+  document.body.classList.remove('auth-locked');
+
+  window.addEventListener('online', async ()=>{
+    const resPush = await pushPendingToRemote();
+    if(resPush.pushed || resPush.failed){
+      diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
+      if (typeof reconcileFromRemote === 'function') {
+        await reconcileFromRemote();
+      }
+    }
+  });
 }
-}
-});
-
-resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
@@ -4847,3 +4925,23 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
