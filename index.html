@@ -1429,7 +1429,7 @@ function ensureNotObscured(el){
     const requiredTop = headerBottom + tabsHeight + 8;
     const rect = el.getBoundingClientRect();
     if (rect.top < requiredTop){
-      window.scrollBy({ top: rect.top - requiredTop, left: 0, behavior: 'auto' });
+      window.scrollBy({ top: (requiredTop - rect.top), left: 0, behavior: 'auto' });
     }
   }catch(_){ /* noop */ }
 }
