@@ -5908,6 +5908,8 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
   }
 }
 
+window.resumeFromBackground = resumeFromBackground;
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   (async () => { await resumeFromBackground({ source: 'visibility' }); })();
