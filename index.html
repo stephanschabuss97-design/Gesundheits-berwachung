@@ -626,18 +626,8 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   }
 }
 
-/* --- SAFETY: summary darf nie full-screen Klicks abfangen --- */
-summary {
-  display: list-item;
-  position: static !important;
-  z-index: auto !important;
-  pointer-events: auto;
-}
-details[open] > summary {
-  position: static !important;
-}
-/* Versteckte Details (falls genutzt) fangen nichts ab */
-details[hidden] {
+/* --- SAFETY: versteckte Dinge fangen keine Klicks --- */
+[hidden] {
   display: none !important;
   pointer-events: none !important;
 }
@@ -650,8 +640,28 @@ details[hidden] {
   display: none !important;
   pointer-events: none !important;
 }
-</style>
 
+/* --- SAFETY: summary darf nie full-screen „oben“ liegen --- */
+summary {
+  display: list-item;
+  position: static !important;
+  z-index: auto !important;
+  pointer-events: auto !important;
+}
+details[open] > summary {
+  position: static !important;
+}
+
+/* Falls Details per hidden versteckt werden */
+details[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Optional: Config-Accordion im Login-Overlay explizit entschärfen */
+#configAdv > summary { position: static !important; }
+
+</style>
 </head>
 <body>
 <!-- ANKER: touch-log-fallback -->
@@ -5662,7 +5672,7 @@ function bindAppLockButtons(){
 if (overlay) overlay.addEventListener('click', (e)=>{ 
   if (e.target === overlay){ 
     __pendingAfterUnlock = null; 
-    lockUi(false);
+    lockUi(false); 
     try { document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open')); } catch(_) {}
   } 
 });
@@ -5953,10 +5963,15 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
   __pendingAfterUnlock = null;
     lockUi(false);
 
-  // SAFETY: alle offenen <details> schließen, damit SUMMARY nichts überdeckt
-  try {
+// SAFETY: alle offenen <details> schließen, damit SUMMARY nichts überdeckt
+try {
+  document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'));
+  // Falls der Browser aus BFCache ein „hängendes“ SUMMARY liefert, Hit-Test prüfen
+  const midEl = document.elementFromPoint(innerWidth/2, innerHeight/2);
+  if (midEl?.tagName === 'SUMMARY' || midEl?.closest?.('summary')) {
     document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'));
-  } catch(_) {}
+  }
+} catch(_) {}
 
   try { document.body.classList.remove('app-locked'); } catch(_) {}
   try { setUnderlayInert(false); } catch(_) {}
