@@ -1330,6 +1330,11 @@ async function sbSelect({ table, select, filters = [], order = null, limit = nul
 
   // WICHTIG: mit User-JWT lesen (RLS)!
   const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
   if (!headers) throw new Error("Nicht angemeldet - keine Leseberechtigung.");
 
   const res = await withRetry(() => fetch(url.toString(), { headers }));
@@ -1794,29 +1799,37 @@ function deleteEntryLocal(id){
 
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
-  const key = await getConf("webhookKey");
-  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(_){} return null; }
-  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(_){} return null; }
-  const anonKey = key.replace(/^Bearer\s+/i, "");
+  // Key laden
+  let raw = await getConf("webhookKey");
+  raw = String(raw || "").trim();
 
-  const supa = await ensureSupabaseClient();
-  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(_){} return null; }
+  // „Bearer “ vorn entfernen (falls Nutzer es so gespeichert hat)
+  const anon = raw.replace(/^Bearer\s+/i, "").trim();
 
-  const { data: { session } } = await supa.auth.getSession();
-  const jwt = session?.access_token;
-  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
+  if (!anon) {
+    // Klare Diagnose + UI-Hinweis
+    try { diag.add?.("Headers: kein ANON-Key konfiguriert"); } catch(_){}
+    setConfigStatus?.("ANON-Key fehlt. Bitte in den Einstellungen speichern.", "error");
+    return null;
+  }
 
+  // Beide Header setzen – manche Gateways prüfen nur apikey
   return {
     "Content-Type": "application/json",
-    "apikey": anonKey,
-    "Authorization": `Bearer ${jwt}`,
-    "Prefer": "return=representation"
+    "apikey": anon,
+    "Authorization": `Bearer ${anon}`
   };
 }
 
 async function deleteRemote(remote_id){
 const url = await getConf("webhookUrl");
 const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
 if(!url || !headers || !remote_id) return {ok:false};
 const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
 try{
@@ -1856,7 +1869,13 @@ async function loadIntakeToday({ user_id, dayIso }){
 
 async function saveIntakeTotals({ dayIso, totals }){
   const url = await getConf('webhookUrl');
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   const uid = await getUserId();
   if (!url || !headers || !uid) {
     const errMissing = new Error('saveIntakeTotals: missing config/auth');
@@ -1910,7 +1929,13 @@ async function saveIntakeTotals({ dayIso, totals }){
 async function cleanupOldIntake(){
   try{
     const url = await getConf('webhookUrl');
-    const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
     const uid = await getUserId();
     if (!url || !headers || !uid) return;
     const today = todayStr();
@@ -2131,7 +2156,13 @@ async function fetchDailyOverview(fromIso, toIso){
 /* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
 async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if (!url || !headers) return { ok:false, status:0 };
 
   const from = `${dateIso}T00:00:00Z`;
@@ -2447,7 +2478,13 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
 async function getAppointmentsEndpoint(){
   const rest = await getConf('webhookUrl');
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if (!rest || !headers) return null;
   const base = baseUrlFromRest(rest);
   if (!base) {
@@ -2570,7 +2607,13 @@ function applyAppointmentsUi(summary){
 
 async function fetchAppointmentsSummary(){
   const rest = await getConf('webhookUrl');
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if (!rest || !headers) return null;
   const base = baseUrlFromRest(rest);
   if (!base) return null;
@@ -3165,7 +3208,13 @@ function bindLifestyle(){
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
 async function patchDayFlags({ user_id, dayIso, flags }){
   const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if (!url || !headers || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
@@ -3187,7 +3236,13 @@ async function patchDayFlags({ user_id, dayIso, flags }){
 async function appendNoteRemote(opts){
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if (!url || !headers || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
@@ -3235,7 +3290,13 @@ ${add}`.trim();
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if(!url || !headers) return { pushed:0, failed:0 };
 
   const all = await getAllEntries();
@@ -5237,7 +5298,13 @@ throw lastErr;
   
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
-  const headers = await getHeaders();
+const headers = await getHeaders();
+if (!headers) {
+  uiError("Nicht angemeldet oder ANON-Key fehlt – bitte in den Einstellungen speichern.");
+  showLoginOverlay?.(true);
+  throw new Error("no-apikey");
+}
+
   if(!url || !headers){
     uiError("Nicht angemeldet - bitte Google-Login ausfuehren.");
     showLoginOverlay(true);
@@ -5253,7 +5320,14 @@ async function syncWebhook(entry, localId){
     }
 
     const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
-    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+let res = await fetch(url, { method:"POST", headers, body: JSON.stringify(payload) });
+if (res.status === 401 || res.status === 403) {
+  // evtl. kam die erste Anfrage ohne Key – Header frisch holen und einmal wiederholen
+  const fresh = await getHeaders();
+  if (fresh) {
+    res = await fetch(url, { method:"POST", headers: fresh, body: JSON.stringify(payload) });
+  }
+}
 
     if(!res.ok){
       // Details ziehen (falls PostgREST JSON liefert)
@@ -6234,3 +6308,4 @@ main();
 
 </body>
 </html>
+
