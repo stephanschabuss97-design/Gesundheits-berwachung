@@ -2876,24 +2876,28 @@ async function refreshCaptureIntake(){
   captureIntakeState.dayIso = dayIso;
   clearCaptureIntakeInputs();
 
-  const logged = await isLoggedInFast();
-  captureIntakeState.logged = !!logged;
-  if (!logged){
+const logged = await isLoggedInFast();
+// Unknown-Phase: so tun, als ob weiter eingeloggt (keine Sperre!)
+const effectiveLogged = (__authState === 'unknown' && __lastLoggedIn) ? true : !!logged;
+captureIntakeState.logged = effectiveLogged;
+
+if (!effectiveLogged){
+  captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
+  setCaptureIntakeDisabled(true);
+  updateCaptureIntakeStatus();
+  try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
+  return;
+}
+
+setCaptureIntakeDisabled(false);
+try{
+  const uid = await getUserId();
+  // Unknown-Phase: UID kann transient null sein -> NICHT sperren
+  if (!uid && __authState !== 'unknown'){
+    captureIntakeState.logged = false;
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
     setCaptureIntakeDisabled(true);
-    updateCaptureIntakeStatus();
-    try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
-    return;
-  }
-
-  setCaptureIntakeDisabled(false);
-  try{
-    const uid = await getUserId();
-    if (!uid){
-      captureIntakeState.logged = false;
-      captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-      setCaptureIntakeDisabled(true);
-    } else {
+  } else {
       const totals = await loadIntakeToday({ user_id: uid, dayIso });
       captureIntakeState.totals = totals || { water_ml: 0, salt_g: 0, protein_g: 0 };
       captureIntakeState.logged = true;
@@ -5993,6 +5997,8 @@ try {
         el.disabled = false;
         el.removeAttribute('disabled');
       });
+        // Intake-Controls explizit wieder freigeben (Sicherheitsnetz)
+  try { setCaptureIntakeDisabled(false); } catch(_) {}
   } catch(_) {}
 
   try {
@@ -6018,6 +6024,14 @@ try {
   try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
   scheduleNoonSwitch();
   maybeAutoApplyBpContext({ source });
+
+  // Sanfter Intake-Refresh nach kurzer Grace – falls Capture aktiv ist
+  try {
+    const isCaptureActive = document.getElementById('capture')?.classList.contains('active');
+    if (isCaptureActive) {
+      setTimeout(() => { try { refreshCaptureIntake(); } catch(_) {} }, 400);
+    }
+  } catch(_) {}
 
   const doctorActive = document.getElementById('doctor')?.classList.contains('active');
   if (doctorActive && !__doctorUnlocked) {
