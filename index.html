@@ -5998,8 +5998,20 @@ try {
         el.removeAttribute('disabled');
       });
         // Intake-Controls explizit wieder freigeben (Sicherheitsnetz)
-  try { setCaptureIntakeDisabled(false); } catch(_) {}
-  } catch(_) {}
+try { setCaptureIntakeDisabled(false); } catch(_) {}
+
+// Intake-Buttons sicher „entbusy“ und Klicks neu binden
+try {
+  ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel=>{
+    const b = document.querySelector(sel);
+    if (!b) return;
+    b.disabled = false;
+    b.classList.remove('busy');
+    b.removeAttribute('aria-busy');
+  });
+  // Rebind, falls DOM neu aufgebaut wurde
+  try { bindIntakeCapture?.(); } catch(_){}
+} catch(_){}
 
   try {
     const logged = await isLoggedInFast({ timeout: 250 });
@@ -6024,12 +6036,29 @@ try {
   try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
   scheduleNoonSwitch();
   maybeAutoApplyBpContext({ source });
+  } catch(_) {}
 
   // Sanfter Intake-Refresh nach kurzer Grace – falls Capture aktiv ist
   try {
     const isCaptureActive = document.getElementById('capture')?.classList.contains('active');
     if (isCaptureActive) {
-      setTimeout(() => { try { refreshCaptureIntake(); } catch(_) {} }, 400);
+      setTimeout(() => {
+        try {
+          refreshCaptureIntake();
+          // WICHTIG: nach (Re)Render erneut binden
+          bindIntakeCapture?.();
+
+          // Optional: Intake-Buttons sicher ent-busy'en
+          ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel => {
+            const b = document.querySelector(sel);
+            if (b) {
+              b.disabled = false;
+              b.classList.remove('busy');
+              b.removeAttribute('aria-busy');
+            }
+          });
+        } catch(_) {}
+      }, 400);
     }
   } catch(_) {}
 
@@ -6037,8 +6066,9 @@ try {
   if (doctorActive && !__doctorUnlocked) {
     await setTab('capture');
   }
-}
+} // <-- Ende von async function resumeFromBackground
 
+// --- Resume-Listener ---
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   (async () => { await resumeFromBackground({ source: 'visibility' }); })();
@@ -6054,23 +6084,23 @@ window.addEventListener('focus', () => {
   (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
-  $("#doctorExportJson").addEventListener("click", async ()=>{
-  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
-  if (!__doctorUnlocked){
+// --- Arzt-Export ---
+$("#doctorExportJson").addEventListener("click", async () => {
+  if (!(await isLoggedInFast())) { showLoginOverlay(true); return; }
+  if (!__doctorUnlocked) {
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
     if (!ok) return;
     __pendingAfterUnlock = null;
   }
   const all = await getAllEntries();
-  dl("gesundheitslog.json", JSON.stringify(all,null,2), "application/json");
+  dl("gesundheitslog.json", JSON.stringify(all, null, 2), "application/json");
 });
-  
-// Lifestyle binden und initial (falls bereits angemeldet) laden
 
+// --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
 bindIntakeCapture();
 bindAppointmentsPanel();
-try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
+try { if (await isLoggedInFast()) { await cleanupOldIntake(); } } catch(_) {}
 
 // Initial Render
 await requestUiRefresh({ reason: 'boot:initial', appointments: true });
