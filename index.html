@@ -2986,13 +2986,30 @@ async function handleCaptureIntake(kind){
 }
 
 function bindIntakeCapture(){
-  const waterBtn = document.getElementById('cap-water-add-btn');
-  const saltBtn = document.getElementById('cap-salt-add-btn');
-  const proteinBtn = document.getElementById('cap-protein-add-btn');
-  if (waterBtn) waterBtn.addEventListener('click', ()=> handleCaptureIntake('water'));
-  if (saltBtn)  saltBtn.addEventListener('click', ()=> handleCaptureIntake('salt'));
-  if (proteinBtn) proteinBtn.addEventListener('click', ()=> handleCaptureIntake('protein'));
-  refreshCaptureIntake();
+  const wire = (id, kind) => {
+    const oldBtn = document.getElementById(id);
+    if (!oldBtn) return;
+
+    // alten Button durch Clone ersetzen => entfernt alle alten Listener
+    const fresh = oldBtn.cloneNode(true);
+    oldBtn.replaceWith(fresh);
+
+    // Safety: niemals "busy"/disabled, und Typ setzen
+    fresh.disabled = false;
+    fresh.classList.remove('busy');
+    fresh.removeAttribute('aria-busy');
+    fresh.removeAttribute('data-busy');
+    if (!fresh.type) fresh.type = 'button';
+
+    // Click-Handler binden (idempotent, weil frisch)
+    fresh.addEventListener('click', () => {
+      try { handleCaptureIntake(kind); } catch(_) {}
+    });
+  };
+
+  wire('cap-water-add-btn',   'water');
+  wire('cap-salt-add-btn',    'salt');
+  wire('cap-protein-add-btn', 'protein');
 }
 
 function setProgState(el, state){
@@ -6217,4 +6234,3 @@ main();
 
 </body>
 </html>
-
