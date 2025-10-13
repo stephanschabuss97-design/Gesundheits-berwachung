@@ -3412,6 +3412,7 @@ function watchAuthState(){
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
+let __lastScrollY = 0;
 
 async function afterLoginBoot(){
   if (__booted) return;
@@ -5890,6 +5891,21 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }catch(_){}
 
+  let spacerHeight = 0;
+  try {
+    spacerHeight = document.getElementById('topSpacer')?.offsetHeight || 0;
+  } catch(_){ spacerHeight = 0; }
+  const targetScroll = Math.max(__lastScrollY, spacerHeight);
+  try {
+    window.scrollTo({ top: targetScroll, behavior: 'auto' });
+  } catch(_){
+    try {
+      document.documentElement.scrollTop = targetScroll;
+      document.body.scrollTop = targetScroll;
+    } catch(__){}
+  }
+  __lastScrollY = targetScroll;
+
   try {
     if (!focusTarget || !focusTarget.isConnected) {
       if (document.activeElement?.matches?.('input, select, textarea')) {
@@ -5911,6 +5927,12 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
 window.resumeFromBackground = resumeFromBackground;
 
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    try {
+      __lastScrollY = window.scrollY || window.pageYOffset || 0;
+    } catch(_) { __lastScrollY = 0; }
+    return;
+  }
   if (document.visibilityState !== 'visible') return;
   (async () => { await resumeFromBackground({ source: 'visibility' }); })();
 });
@@ -5919,6 +5941,12 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted || document.visibilityState === 'visible') {
     (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
   }
+});
+
+window.addEventListener('pagehide', () => {
+  try {
+    __lastScrollY = window.scrollY || window.pageYOffset || 0;
+  } catch(_) { __lastScrollY = 0; }
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
