@@ -2658,10 +2658,7 @@ async function handleAppointmentSave(role){
   const saveBtn = document.getElementById(`appt-${role}-save`);
   if (!dateEl || !timeEl || !saveBtn) return;
 
-  if (!(await isLoggedInFast())){
-    showLoginOverlay(true);
-    return;
-  }
+  
 
   const date = (dateEl.value || '').trim();
   const time = (timeEl.value || '').trim();
@@ -2782,10 +2779,7 @@ async function handleAppointmentSave(role){
 async function handleAppointmentDone(role){
   const btn = document.getElementById(`appt-${role}-done`);
   if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
-  if (!(await isLoggedInFast())){
-    showLoginOverlay(true);
-    return;
-  }
+  
   const endpoint = await getAppointmentsEndpoint();
   if (!endpoint){
     uiError('Bitte zuerst anmelden.');
@@ -2797,7 +2791,14 @@ async function handleAppointmentDone(role){
   url.searchParams.set('status', 'eq.scheduled');
   url.searchParams.set('role', `eq.${role}`);
   const body = JSON.stringify({ status: 'done' });
-  withBusy(btn, true);
+  const loggedNow = await isLoggedInFast();
+if (!loggedNow){
+  captureIntakeState.totals = totals;
+  captureIntakeState.logged = false;
+  try{ input.value = ''; updateCaptureIntakeStatus(); }catch(_){ }
+  uiInfo('Vorgemerkt. Bitte anmelden zum Speichern.');
+  return;
+}withBusy(btn, true);
   try {
     const res = await withRetry(() => fetch(url.toString(), { method: 'PATCH', headers, body }));
     if (res.status === 401 || res.status === 403){
@@ -2853,10 +2854,7 @@ async function refreshCaptureIntake(){
   captureIntakeState.logged = !!logged;
   if (!logged){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    setCaptureIntakeDisabled(true);
-    updateCaptureIntakeStatus();
-    try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
-    return;
+    setCaptureIntakeDisabled(false);;
   }
 
   setCaptureIntakeDisabled(false);
@@ -2865,33 +2863,9 @@ async function refreshCaptureIntake(){
     if (!uid){
       captureIntakeState.logged = false;
       captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-      setCaptureIntakeDisabled(true);
-    } else {
-      const totals = await loadIntakeToday({ user_id: uid, dayIso });
-      captureIntakeState.totals = totals || { water_ml: 0, salt_g: 0, protein_g: 0 };
-      captureIntakeState.logged = true;
-      try{ __lsTotals = captureIntakeState.totals; updateLifestyleBars(); }catch(_){ }
-    }
-  }catch(e){
-    captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
+      setCaptureIntakeDisabled(false);;
 
-  try{ updateLifestyleBars(); }catch(_){ }
-  }
-
-  __lastKnownToday = todayStr();
-  updateCaptureIntakeStatus();
-}
-
-async function handleCaptureIntake(kind){
-  const btn = document.getElementById(`cap-${kind}-add-btn`);
-  const input = document.getElementById(`cap-${kind}-add`);
-  if (!btn || !input) return;
-
-  if (!(await isLoggedInFast())){
-    showLoginOverlay(true);
-    return;
-  }
+  
 
   try {
     if (!__dateUserSelected) {
@@ -5650,7 +5624,7 @@ if (bpContextSel){
 const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
 if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
@@ -5687,7 +5661,7 @@ if (saveBpPanelBtn){
 const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
 if (saveBodyPanelBtn){
   saveBodyPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -5716,7 +5690,7 @@ if (saveBodyPanelBtn){
 const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
 if (saveFlagsPanelBtn){
   saveFlagsPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -5782,7 +5756,7 @@ if (applyBtn) {
 }
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
+  
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'chart';
     const ok = await requireDoctorUnlock();
@@ -5954,7 +5928,7 @@ window.addEventListener('pagehide', () => {
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
-  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
+  
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
@@ -6071,4 +6045,7 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
+
+
+
 
