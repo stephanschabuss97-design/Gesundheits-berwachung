@@ -1404,10 +1404,6 @@ function updateStickyOffsets(){
     const tabsH = Math.max(tabsEl?.offsetHeight || 0, 40);
     document.documentElement.style.setProperty('--header-h', `${headerH}px`);
     document.documentElement.style.setProperty('--tabs-h', `${tabsH}px`);
-    const mainEl = document.querySelector('main');
-    if (mainEl){
-      mainEl.style.paddingTop = '12px';
-    }
     const spacer = document.getElementById('topSpacer');
     if (spacer){
       spacer.style.height = `${headerH + tabsH + 8}px`;
@@ -5876,6 +5872,10 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
       focusTarget = document.getElementById('sysM');
     }
   } catch(_) {}
+  if (focusTarget) {
+    ensureNotObscured(focusTarget);
+    try { focusTarget.focus?.(); } catch(_) {}
+  }
 
   try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
   scheduleNoonSwitch();
@@ -5917,10 +5917,6 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted || document.visibilityState === 'visible') {
     (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
   }
-});
-
-window.addEventListener('focus', () => {
-  (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
@@ -5966,14 +5962,14 @@ resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
-window.addEventListener("DOMContentLoaded", main);
+  window.addEventListener("DOMContentLoaded", main);
+} else {
+  main();
+}
 
 window.addEventListener('focus', () => {
-  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+  (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
-} else {
-main();
-}
 
 /* === Debug-Notizen
 - V1.5: Realtime ueber supabase-js; Projekt-URL aus REST-URL abgeleitet.
