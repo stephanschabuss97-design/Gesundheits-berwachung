@@ -626,7 +626,32 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   }
 }
 
+/* --- SAFETY: summary darf nie full-screen Klicks abfangen --- */
+summary {
+  display: list-item;
+  position: static !important;
+  z-index: auto !important;
+  pointer-events: auto;
+}
+details[open] > summary {
+  position: static !important;
+}
+/* Versteckte Details (falls genutzt) fangen nichts ab */
+details[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Versteckte Overlays fangen niemals Pointer-Events */
+#loginOverlay[hidden],
+#appLock[hidden],
+#loginOverlay.is-hidden,
+#appLock.is-hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
 </style>
+
 </head>
 <body>
 <!-- ANKER: touch-log-fallback -->
@@ -5634,9 +5659,20 @@ function bindAppLockButtons(){
     if (e.key === 'Enter'){ e.preventDefault(); unlockWithPin(); }
   });
   const overlay = document.getElementById('appLock');
-  if (overlay) overlay.addEventListener('click', (e)=>{ if (e.target === overlay){ __pendingAfterUnlock = null; lockUi(false); } });
+if (overlay) overlay.addEventListener('click', (e)=>{ 
+  if (e.target === overlay){ 
+    __pendingAfterUnlock = null; 
+    lockUi(false);
+    try { document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open')); } catch(_) {}
+  } 
+});
+
   const cancelBtn = document.getElementById('lockCancelBtn');
-  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ __pendingAfterUnlock = null; lockUi(false); });
+  if (cancelBtn) cancelBtn.addEventListener('click', ()=>{ 
+  __pendingAfterUnlock = null; 
+  lockUi(false); 
+  try { document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open')); } catch(_) {}
+});
 }
 
 /* ===== Main ===== */
@@ -5915,7 +5951,12 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
     if (!sbClient) await ensureSupabaseClient();
   } catch(_) {}
   __pendingAfterUnlock = null;
-  lockUi(false);
+    lockUi(false);
+
+  // SAFETY: alle offenen <details> schließen, damit SUMMARY nichts überdeckt
+  try {
+    document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'));
+  } catch(_) {}
 
   try { document.body.classList.remove('app-locked'); } catch(_) {}
   try { setUnderlayInert(false); } catch(_) {}
