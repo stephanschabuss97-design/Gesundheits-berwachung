@@ -2326,15 +2326,7 @@ function scheduleNoonSwitch(){
   } catch { /* noop */ }
 }
 
-function startDayHeartbeat({ intervalMs = 60000 } = {}){
-  try {
-    if (__dayHeartbeat) clearInterval(__dayHeartbeat);
-    const delay = Math.max(15000, Number(intervalMs) || 60000);
-    __dayHeartbeat = setInterval(() => {
-      try { maybeRefreshForTodayChange({ source: 'heartbeat' }); } catch(_){ }
-    }, delay);
-  } catch { /* noop */ }
-}
+function startDayHeartbeat(){ /* no-op: auf eventgetriebene Variante umgestellt */ }
 
 function isAfterNoonGrace(){
   try {
@@ -5607,7 +5599,6 @@ if (hasSession) {
   __lastKnownToday = todayStr();
   scheduleMidnightRefresh();
   scheduleNoonSwitch();
-  startDayHeartbeat();
   maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
 await refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
@@ -6020,6 +6011,7 @@ main();
 
 </body>
 </html>
+
 
 
 
