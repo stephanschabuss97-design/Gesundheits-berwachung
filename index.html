@@ -37,17 +37,13 @@ body.auth-locked main{ opacity:.6; }
   --tabs-h:48px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;scroll-padding-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px)}
+html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
 header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.7));backdrop-filter:blur(6px);z-index:10;padding:10px 12px;border-bottom:1px solid #1f232b}
-header, header *{pointer-events:none;}
-header button{pointer-events:auto;}
 h1{margin:0;font-size:20px}
 nav.tabs{display:flex;gap:8px;padding:8px 12px;position:sticky;top:var(--header-h,56px);background:rgba(11,12,16,.9);backdrop-filter:blur(6px);z-index:11}
-nav.tabs{pointer-events:none;}
-nav.tabs button{pointer-events:auto;}
 nav.tabs button{flex:1;min-width:100px;touch-action:manipulation}
-main{padding:12px;position:relative;z-index:1;}
+main{padding:12px;position:relative;z-index:1;padding-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px)}
 .card{background:var(--card);border:1px solid #242833;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -708,7 +704,6 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
 <main>
-<div id="topSpacer" aria-hidden="true"></div>
 <!-- Capture -->
 <section class="view active" id="capture">
  
@@ -1163,7 +1158,7 @@ if (t2) t2.addEventListener('click', toggle);
 close.addEventListener('click', ()=>{ this.hide(); });
 },
 show(){ if (!this.el) return; this.el.style.display='block'; focusTrap.activate(this.el); this.open=true; },
-hide(){ if (!this.el) return; this.el.style.display='none'; if (focusTrap.current===this.el) focusTrap.deactivate(); this.open=false; }
+hide(){ if (!this.el) return; this.el.style.display='none'; focusTrap.deactivate(); this.open=false; }
 };
 
 /* ===== Help panel ===== */
@@ -1176,7 +1171,7 @@ if (t2) t2.addEventListener('click', toggle);
 close.addEventListener('click', ()=>{ this.hide(); });
 },
 show(){ if (!this.el) return; this.el.style.display='block'; focusTrap.activate(this.el); this.open=true; },
-hide(){ if (!this.el) return; this.el.style.display='none'; if (focusTrap.current===this.el) focusTrap.deactivate(); this.open=false; }
+hide(){ if (!this.el) return; this.el.style.display='none'; focusTrap.deactivate(); this.open=false; }
 };
 
 /* ===== Helpers ===== */
@@ -1408,9 +1403,9 @@ function updateStickyOffsets(){
     const tabsH = Math.max(tabsEl?.offsetHeight || 0, 40);
     document.documentElement.style.setProperty('--header-h', `${headerH}px`);
     document.documentElement.style.setProperty('--tabs-h', `${tabsH}px`);
-    const spacer = document.getElementById('topSpacer');
-    if (spacer){
-      spacer.style.height = `${headerH + tabsH + 8}px`;
+    const mainEl = document.querySelector('main');
+    if (mainEl){
+      mainEl.style.paddingTop = `calc(${headerH}px + ${tabsH}px + 8px)`;
     }
   }catch(_){ /* noop */ }
 }
@@ -1421,15 +1416,12 @@ window.addEventListener('orientationchange', updateStickyOffsets);
 function ensureNotObscured(el){
   try{
     if (!el) return;
-    if (typeof el.scrollIntoView === 'function'){
-      el.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' });
-    }
     const headerBottom = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
     const tabsHeight = document.querySelector('nav.tabs')?.getBoundingClientRect().height ?? 0;
     const requiredTop = headerBottom + tabsHeight + 8;
     const rect = el.getBoundingClientRect();
     if (rect.top < requiredTop){
-      window.scrollBy({ top: (requiredTop - rect.top), left: 0, behavior: 'auto' });
+      window.scrollBy({ top: rect.top - requiredTop, left: 0, behavior: 'auto' });
     }
   }catch(_){ /* noop */ }
 }
@@ -2658,7 +2650,10 @@ async function handleAppointmentSave(role){
   const saveBtn = document.getElementById(`appt-${role}-save`);
   if (!dateEl || !timeEl || !saveBtn) return;
 
-  
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
 
   const date = (dateEl.value || '').trim();
   const time = (timeEl.value || '').trim();
@@ -2779,7 +2774,10 @@ async function handleAppointmentSave(role){
 async function handleAppointmentDone(role){
   const btn = document.getElementById(`appt-${role}-done`);
   if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
-  
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
   const endpoint = await getAppointmentsEndpoint();
   if (!endpoint){
     uiError('Bitte zuerst anmelden.');
@@ -2791,14 +2789,7 @@ async function handleAppointmentDone(role){
   url.searchParams.set('status', 'eq.scheduled');
   url.searchParams.set('role', `eq.${role}`);
   const body = JSON.stringify({ status: 'done' });
-  const loggedNow = await isLoggedInFast();
-if (!loggedNow){
-  captureIntakeState.totals = totals;
-  captureIntakeState.logged = false;
-  try{ input.value = ''; updateCaptureIntakeStatus(); }catch(_){ }
-  uiInfo('Vorgemerkt. Bitte anmelden zum Speichern.');
-  return;
-}withBusy(btn, true);
+  withBusy(btn, true);
   try {
     const res = await withRetry(() => fetch(url.toString(), { method: 'PATCH', headers, body }));
     if (res.status === 401 || res.status === 403){
@@ -2854,7 +2845,10 @@ async function refreshCaptureIntake(){
   captureIntakeState.logged = !!logged;
   if (!logged){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    setCaptureIntakeDisabled(false);;
+    setCaptureIntakeDisabled(true);
+    updateCaptureIntakeStatus();
+    try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
+    return;
   }
 
   setCaptureIntakeDisabled(false);
@@ -2863,9 +2857,33 @@ async function refreshCaptureIntake(){
     if (!uid){
       captureIntakeState.logged = false;
       captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-      setCaptureIntakeDisabled(false);;
+      setCaptureIntakeDisabled(true);
+    } else {
+      const totals = await loadIntakeToday({ user_id: uid, dayIso });
+      captureIntakeState.totals = totals || { water_ml: 0, salt_g: 0, protein_g: 0 };
+      captureIntakeState.logged = true;
+      try{ __lsTotals = captureIntakeState.totals; updateLifestyleBars(); }catch(_){ }
+    }
+  }catch(e){
+    captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
+    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
 
-  
+  try{ updateLifestyleBars(); }catch(_){ }
+  }
+
+  __lastKnownToday = todayStr();
+  updateCaptureIntakeStatus();
+}
+
+async function handleCaptureIntake(kind){
+  const btn = document.getElementById(`cap-${kind}-add-btn`);
+  const input = document.getElementById(`cap-${kind}-add`);
+  if (!btn || !input) return;
+
+  if (!(await isLoggedInFast())){
+    showLoginOverlay(true);
+    return;
+  }
 
   try {
     if (!__dateUserSelected) {
@@ -3252,7 +3270,7 @@ function showLoginOverlay(show){
     focusTrap.activate(dialog);
   } else {
     ov.style.display = 'none';
-    if (focusTrap.current === dialog) focusTrap.deactivate();
+    focusTrap.deactivate();
   }
 }
 function setUserUi(email){
@@ -3261,6 +3279,10 @@ function setUserUi(email){
 }
 
 let __lastLoggedIn = false;
+let __authState = 'unauth'; // 'auth' | 'unauth' | 'unknown'
+let __authGraceTimer = null;
+let __pendingSignOut = null;
+const AUTH_GRACE_MS = 400;
 async function isLoggedInFast({ timeout = 400 } = {}) {
   if (!sbClient) return __lastLoggedIn;
   let timer = null;
@@ -3272,12 +3294,64 @@ async function isLoggedInFast({ timeout = 400 } = {}) {
     const { data } = await Promise.race([sessionPromise, timeoutPromise]);
     if (timer) clearTimeout(timer);
     const logged = !!data?.session;
+    if (__authState === 'unknown' && !logged && __lastLoggedIn) {
+      return __lastLoggedIn;
+    }
     __lastLoggedIn = logged;
+    if (__authState !== 'unknown') {
+      __authState = logged ? 'auth' : 'unauth';
+    }
     return logged;
   } catch(_){
     if (timer) clearTimeout(timer);
     return __lastLoggedIn;
   }
+}
+
+function clearAuthGrace(){
+  if (__authGraceTimer){
+    clearTimeout(__authGraceTimer);
+    __authGraceTimer = null;
+  }
+}
+
+function applyAuthUi(logged){
+  try { setAuthGuard(!!logged); } catch(_){}
+  try { setDoctorAccess(!!logged); } catch(_){}
+  if (logged){
+    showLoginOverlay(false);
+  } else if (__authState !== 'unknown'){
+    showLoginOverlay(true);
+  }
+}
+
+function finalizeAuthState(logged){
+  clearAuthGrace();
+  __authState = logged ? 'auth' : 'unauth';
+  __lastLoggedIn = logged;
+  if (logged){
+    __pendingSignOut = null;
+  } else if (typeof __pendingSignOut === 'function'){
+    Promise.resolve(__pendingSignOut()).catch(()=>{}).finally(()=>{ __pendingSignOut = null; });
+  }
+  applyAuthUi(logged);
+}
+
+function scheduleAuthGrace(){
+  clearAuthGrace();
+  __authState = 'unknown';
+  __authGraceTimer = setTimeout(async ()=>{
+    try{
+      if (!sbClient){
+        finalizeAuthState(false);
+        return;
+      }
+      const { data } = await sbClient.auth.getSession();
+      finalizeAuthState(!!data?.session);
+    }catch(_){
+      finalizeAuthState(false);
+    }
+  }, AUTH_GRACE_MS);
 }
 
 // Buttons binden (einmalig, z. B. in main())
@@ -3348,49 +3422,65 @@ if (gbtn) gbtn.addEventListener('click', async ()=>{
 async function requireSession(){
 if(!sbClient){
 setUserUi('');
-showLoginOverlay(true);
+if (__authState !== 'unknown') {
+  showLoginOverlay(true);
+}
 setAuthGuard(false);
+setDoctorAccess(false);
+__lastLoggedIn = false;
 return false;
 }
+try{
 const { data: { session } } = await sbClient.auth.getSession();
-const email = session?.user?.email || '';
-setUserUi(email);
-showLoginOverlay(!session);
-setAuthGuard(!!session);
-setDoctorAccess(!!session);
-__lastLoggedIn = !!session;
-return !!session;
+const logged = !!session;
+__lastLoggedIn = logged;
+setUserUi(session?.user?.email || '');
+if (logged){
+  __authState = 'auth';
+  clearAuthGrace();
+} else if (!__authGraceTimer){
+  __authState = 'unauth';
+}
+applyAuthUi(logged);
+return logged;
+}catch(_){
+return false;
+}
 }
 
 // Reagiert auch auf spaetere Logins (z. B. nach Redirect)
 function watchAuthState(){
-  sbClient.auth.onAuthStateChange(async (_event, session)=>{
-    const email = session?.user?.email || '';
-    setUserUi(email);
-    showLoginOverlay(!session);
-    setAuthGuard(!!session);
-    setDoctorAccess(!!session);
-    __lastLoggedIn = !!session;
-
-    if (session) {
+  sbClient.auth.onAuthStateChange(async (event, session)=>{
+    const logged = !!session;
+    if (logged) {
+      setUserUi(session?.user?.email || '');
+      finalizeAuthState(true);
       await afterLoginBoot();
-      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)
-      await setupRealtime();     //  NEU: Realtime aktivieren nach Login
-      await requestUiRefresh();  // initialer Refresh
+      await setupRealtime();
+      await requestUiRefresh();
       await refreshCaptureIntake();
       await refreshAppointments();
+      return;
+    }
+
+    setUserUi('');
+    __lastLoggedIn = false;
+    __pendingSignOut = async () => {
+      teardownRealtime();
+      await refreshCaptureIntake();
+      await refreshAppointments();
+    };
+
+    if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+      finalizeAuthState(false);
     } else {
-      teardownRealtime();        //  NEU: Channels sauber schliessen
-      await refreshCaptureIntake();
-      await refreshAppointments();
-      // UI in "abgemeldet" lassen - renderDoctor() zeigt Info ohnehin
+      scheduleAuthGrace();
     }
   });
 }
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 let __booted = false; // ganz oben im Script oder vor afterLoginBoot definieren
-let __lastScrollY = 0;
 
 async function afterLoginBoot(){
   if (__booted) return;
@@ -3744,7 +3834,7 @@ const chartPanel = {
     this.open = false;
     if (this.el) {
       this.el.style.display = "none";
-      if (focusTrap.current === this.el) focusTrap.deactivate();
+      focusTrap.deactivate();
     }
     this.tipSticky = false;
     this.hideTip();
@@ -5423,7 +5513,7 @@ function lockUi(on){
         }
       });
     } else {
-      if (focusTrap.current === dialog) focusTrap.deactivate();
+      focusTrap.deactivate();
       const pin = document.getElementById('pinInput');
       if (pin && typeof pin.blur === 'function'){ pin.blur(); }
     }
@@ -5624,7 +5714,7 @@ if (bpContextSel){
 const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
 if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
-    
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
@@ -5661,7 +5751,7 @@ if (saveBpPanelBtn){
 const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
 if (saveBodyPanelBtn){
   saveBodyPanelBtn.addEventListener('click', async (e)=>{
-    
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -5690,7 +5780,7 @@ if (saveBodyPanelBtn){
 const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
 if (saveFlagsPanelBtn){
   saveFlagsPanelBtn.addEventListener('click', async (e)=>{
-    
+    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -5756,7 +5846,7 @@ if (applyBtn) {
 }
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-  
+  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'chart';
     const ok = await requireDoctorUnlock();
@@ -5811,14 +5901,10 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }catch(_){}
   updateStickyOffsets();
+  scheduleAuthGrace();
   try {
     if (!sbClient) await ensureSupabaseClient();
-    const logged = await isLoggedInFast();
-    setAuthGuard(!!logged);
-    setDoctorAccess(!!logged);
-    showLoginOverlay(!logged);
   } catch(_) {}
-
   __pendingAfterUnlock = null;
   lockUi(false);
 
@@ -5843,6 +5929,13 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
       });
   } catch(_) {}
 
+  try {
+    const logged = await isLoggedInFast({ timeout: 250 });
+    if (logged) {
+      finalizeAuthState(true);
+    }
+  } catch(_){}
+
   let focusTarget = null;
   try {
     if (document.activeElement?.matches?.('input, select, textarea')) {
@@ -5864,53 +5957,9 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
   if (doctorActive && !__doctorUnlocked) {
     await setTab('capture');
   }
-
-  try{
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }catch(_){}
-
-  let spacerHeight = 0;
-  try {
-    spacerHeight = document.getElementById('topSpacer')?.offsetHeight || 0;
-  } catch(_){ spacerHeight = 0; }
-  const targetScroll = Math.max(__lastScrollY, spacerHeight);
-  try {
-    window.scrollTo({ top: targetScroll, behavior: 'auto' });
-  } catch(_){
-    try {
-      document.documentElement.scrollTop = targetScroll;
-      document.body.scrollTop = targetScroll;
-    } catch(__){}
-  }
-  __lastScrollY = targetScroll;
-
-  try {
-    if (!focusTarget || !focusTarget.isConnected) {
-      if (document.activeElement?.matches?.('input, select, textarea')) {
-        focusTarget = document.activeElement;
-      } else if (document.getElementById('capture')?.classList.contains('active')) {
-        focusTarget = document.getElementById('sysM');
-      } else {
-        focusTarget = null;
-      }
-    }
-  } catch(_) { focusTarget = null; }
-
-  if (focusTarget) {
-    ensureNotObscured(focusTarget);
-    try { focusTarget.focus?.(); } catch(_) {}
-  }
 }
 
-window.resumeFromBackground = resumeFromBackground;
-
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    try {
-      __lastScrollY = window.scrollY || window.pageYOffset || 0;
-    } catch(_) { __lastScrollY = 0; }
-    return;
-  }
   if (document.visibilityState !== 'visible') return;
   (async () => { await resumeFromBackground({ source: 'visibility' }); })();
 });
@@ -5921,14 +5970,12 @@ window.addEventListener('pageshow', (event) => {
   }
 });
 
-window.addEventListener('pagehide', () => {
-  try {
-    __lastScrollY = window.scrollY || window.pageYOffset || 0;
-  } catch(_) { __lastScrollY = 0; }
+window.addEventListener('focus', () => {
+  (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
   $("#doctorExportJson").addEventListener("click", async ()=>{
-  
+  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
@@ -5970,14 +6017,14 @@ resetAppointmentsUi();
 
 /* boot */
 if (document.readyState === "loading") {
-  window.addEventListener("DOMContentLoaded", main);
-} else {
-  main();
-}
+window.addEventListener("DOMContentLoaded", main);
 
 window.addEventListener('focus', () => {
-  (async () => { await resumeFromBackground({ source: 'focus' }); })();
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
 });
+} else {
+main();
+}
 
 /* === Debug-Notizen
 - V1.5: Realtime ueber supabase-js; Projekt-URL aus REST-URL abgeleitet.
@@ -6045,7 +6092,4 @@ window.addEventListener('focus', () => {
 
 </body>
 </html>
-
-
-
 
