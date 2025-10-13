@@ -703,7 +703,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 <div id="err" role="status" aria-live="polite"></div>
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
-<main>
+<main id="appMain">
 <!-- Capture -->
 <section class="view active" id="capture">
  
@@ -740,7 +740,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
         <div class="card-nested bp-pane active" data-context="M">
           <h3 class="blockTitle">Morgens</h3>
           <div class="grid">
-            <div><label>Systolisch (mmHg)</label><input type="number" id="sysM" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
             <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
             <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
           </div>
@@ -1360,7 +1360,7 @@ function setUnderlayInert(active, exceptEl = null) {
     const targets = [
       document.querySelector('header'),
       document.querySelector('nav.tabs'),
-      document.querySelector('main'),
+      document.getElementById('appMain'),
       document.querySelector('.fab-wrap')
     ].filter(Boolean);
 
@@ -1403,7 +1403,7 @@ function updateStickyOffsets(){
     const tabsH = Math.max(tabsEl?.offsetHeight || 0, 40);
     document.documentElement.style.setProperty('--header-h', `${headerH}px`);
     document.documentElement.style.setProperty('--tabs-h', `${tabsH}px`);
-    const mainEl = document.querySelector('main');
+    const mainEl = document.getElementById('appMain');
     if (mainEl){
       mainEl.style.paddingTop = `calc(${headerH}px + ${tabsH}px + 8px)`;
     }
@@ -4830,7 +4830,7 @@ function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle")
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
 // Kommentar-Pflicht fuer BP: Grenzwerte markieren
 function requiresBpComment(which){
-  const sys = Number($(`#sys${which}`).value);
+  const sys = Number($(bpSelector('sys', which)).value);
   const dia = Number($(`#dia${which}`).value);
   const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
   const comment = (el?.value || "").trim();
@@ -4848,16 +4848,25 @@ function updateBpCommentWarnings(){
 }
 
 /* === Panel Reset Helpers (V1.5.7) === */
+function bpFieldId(base, ctx){
+  if (base === 'sys' && ctx === 'M') return 'captureAmount';
+  return base + ctx;
+}
+
+function bpSelector(base, ctx){
+  return base === 'sys' && ctx === 'M' ? '#captureAmount' : `#${base}${ctx}`;
+}
+
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
   ['sys','dia','pulse','bpComment'].forEach(id => {
-    const el = document.getElementById(id + ctx);
+    const el = document.getElementById(bpFieldId(id, ctx));
     if (el) el.value = '';
   });
   try { updateBpCommentWarnings?.(); } catch(_){}
   if (focus) {
-    const target = document.getElementById('sys' + ctx);
+    const target = document.getElementById(bpFieldId('sys', ctx));
     if (target) target.focus();
   }
 }
@@ -4902,7 +4911,7 @@ function resetCapturePanels(opts = {}) {
   });
   try { updateBpCommentWarnings?.(); } catch(_){ }
   if (focus) {
-    const first = document.getElementById('sysM');
+    const first = document.getElementById('captureAmount');
     if (first) first.focus();
   }
 }
@@ -4915,7 +4924,7 @@ function addCapturePanelKeys(){
       });
     });
   };
-  bind('#sysM, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
+  bind('#captureAmount, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
   bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
   bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
   bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
@@ -4929,7 +4938,7 @@ function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
 function blockHasData(which){
   const getVal = (sel) => document.querySelector(sel)?.value?.trim();
-  const sys = getVal(`#sys${which}`);
+  const sys = getVal(bpSelector('sys', which));
   const dia = getVal(`#dia${which}`);
   const pulse = getVal(`#pulse${which}`);
   const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
@@ -4940,7 +4949,7 @@ async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
 const time = which === 'M' ? '07:00' : '22:00';
 
-const sys   = $(`#sys${which}`).value   ? toNumDE($(`#sys${which}`).value)   : null;
+const sys   = $(bpSelector('sys', which)).value   ? toNumDE($(bpSelector('sys', which)).value)   : null;
 const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
 const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
 
@@ -5691,7 +5700,7 @@ if (!savedUrl || !savedKey) {
 
 // Sanfte Warnung
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
-['#sysM','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
+['#captureAmount','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
   const el = $(sel); if(!el) return;
   el.addEventListener('input', updateBpCommentWarnings);
 });
@@ -5910,9 +5919,10 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
 
   try { document.body.classList.remove('app-locked'); } catch(_) {}
   try { setUnderlayInert(false); } catch(_) {}
+  try { showLoginOverlay(false); } catch(_) {}
   try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_) {}
   try {
-    ['header','nav.tabs','main','.fab-wrap'].forEach(sel => {
+    ['header','nav.tabs','#appMain','.fab-wrap'].forEach(sel => {
       const el = document.querySelector(sel);
       if (el){
         el.removeAttribute('inert');
@@ -5922,7 +5932,7 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
     });
   } catch(_) {}
   try {
-    $$('main input, main select, main textarea, main button, nav.tabs button, fieldset')
+    $$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button, fieldset')
       .forEach(el => {
         el.disabled = false;
         el.removeAttribute('disabled');
@@ -5941,7 +5951,7 @@ async function resumeFromBackground({ source = 'visibility' } = {}) {
     if (document.activeElement?.matches?.('input, select, textarea')) {
       focusTarget = document.activeElement;
     } else if (document.getElementById('capture')?.classList.contains('active')) {
-      focusTarget = document.getElementById('sysM');
+      focusTarget = document.getElementById('captureAmount');
     }
   } catch(_) {}
   if (focusTarget) {
@@ -5996,7 +6006,7 @@ try { if (await isLoggedInFast()) { await cleanupOldIntake();  } } catch(_){ }
 await requestUiRefresh({ reason: 'boot:initial', appointments: true });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
-$$('main input, main select, main textarea, main button, nav.tabs button').forEach(el=>{
+$$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button').forEach(el=>{
 el.disabled = false;
 });
 document.body.classList.remove('auth-locked');
