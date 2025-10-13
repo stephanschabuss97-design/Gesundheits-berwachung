@@ -5992,11 +5992,26 @@ try {
     });
   } catch(_) {}
   try {
-    $$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button, fieldset')
-      .forEach(el => {
-        el.disabled = false;
-        el.removeAttribute('disabled');
-      });
+$$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button, fieldset')
+  .forEach(el => {
+    el.disabled = false;
+    el.removeAttribute('disabled');
+  });
+
+// Intake-Buttons sicher ent-busy'en + Listener neu binden (falls DOM ersetzt wurde)
+try {
+  ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel=>{
+    const b = document.querySelector(sel);
+    if (!b) return;
+    b.disabled = false;
+    b.classList.remove('busy');
+    b.removeAttribute('aria-busy');
+    b.removeAttribute('data-busy');
+  });
+  // Rebind auf jeden Fall (idempotent)
+  bindIntakeCapture?.();
+} catch(_) {}
+
         // Intake-Controls explizit wieder freigeben (Sicherheitsnetz)
 try { setCaptureIntakeDisabled(false); } catch(_) {}
 
