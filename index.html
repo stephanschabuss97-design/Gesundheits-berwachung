@@ -5596,6 +5596,7 @@ if (hasSession) {
   try {
     await refreshCaptureIntake();
   } catch(_) {}
+await maybeRefreshForTodayChange({ force: true, source: 'boot' });
   __lastKnownToday = todayStr();
   scheduleMidnightRefresh();
   scheduleNoonSwitch();
@@ -6011,6 +6012,7 @@ main();
 
 </body>
 </html>
+
 
 
 
