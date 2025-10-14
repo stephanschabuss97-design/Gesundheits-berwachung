@@ -651,7 +651,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   pointer-events: none !important;
 }
 
-/* --- SAFETY: summary darf nie full-screen „oben“ liegen --- */
+/* --- SAFETY: summary darf nie full-screen �oben� liegen --- */
 summary {
   display: list-item;
   position: static !important;
@@ -668,7 +668,7 @@ details[hidden] {
   pointer-events: none !important;
 }
 
-/* Optional: Config-Accordion im Login-Overlay explizit entschärfen */
+/* Optional: Config-Accordion im Login-Overlay explizit entsch�rfen */
 #configAdv > summary { position: static !important; }
 
 </style>
@@ -2991,12 +2991,12 @@ async function handleCaptureIntake(kind){
 // Auth-Guard gegen Edge-Klicks direkt vor dem Save
 try {
   const { data } = await sbClient.auth.getSession();
-  if (!data?.session) { diag.add?.('[capture] guard: no session before save'); showLoginOverlay(true); return; }
+  if (!data?.session) { diag.add?.('[capture] guard: no session before save (return)'); showLoginOverlay(true); return; }
   const headers = await getHeaders();
-  if (!headers) { diag.add?.('[capture] guard: headers missing'); showLoginOverlay(true); return; }
+  if (!headers) { diag.add?.('[capture] guard: headers missing (return)'); showLoginOverlay(true); return; }
 } catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
-try { diag.add?.('[capture] guard passed'); } catch(_){}
+try { diag.add?.('[capture] guard passed (continue)'); } catch(_){}
 
 withBusy(btn, true);
 try{
@@ -5182,7 +5182,7 @@ async function saveDaySummary(options = {}){
       const pct = toNumDE(raw);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100){
         setFieldError(el);
-        uiError(`Bitte gültigen Wert für ${label} (0–100 %) eingeben.`);
+        uiError(`Bitte g�ltigen Wert f�r ${label} (0�100 %) eingeben.`);
         if (!validationFailed) el.focus();
         validationFailed = true;
         return null;
@@ -6046,7 +6046,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session prüfen (Timeout-safe) und ggf. auffrischen
+    // Session pr�fen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
@@ -6247,3 +6247,4 @@ if (!window.__bootDone) {
 </body>
 </html>
 
+<!-- marker -->
