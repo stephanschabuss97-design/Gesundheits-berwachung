@@ -6047,14 +6047,14 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
     // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
-    try { await refreshCaptureIntake(); } catch(_) {}
+    try { await refreshCaptureIntake(); } catch(e) { diag.add?.('[resume] intake refresh error: ' + (e?.message || e)); throw e; }
     diag.add?.('[resume] intake refreshed');
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
       diag.add?.('Resume: re-setupRealtime');
-      await setupRealtime();
-      diag.add?.('[resume] realtime ensured');
+      try { await setupRealtime(); diag.add?.('[resume] realtime ensured'); }
+      catch(e) { diag.add?.('[resume] realtime error: ' + (e?.message || e)); throw e; }
     }
 
     // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
