@@ -2994,6 +2994,7 @@ try {
 
 withBusy(btn, true);
 try{
+    diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
     await saveIntakeTotals({ dayIso, totals });
     captureIntakeState.totals = totals;
     captureIntakeState.logged = true;
@@ -3002,9 +3003,10 @@ try{
     const needsLifestyle = dayIso === todayStr();
     await requestUiRefresh({ reason: 'capture:intake' });
     uiInfo(message);
+    diag.add?.(`[capture] save ok ${kind}`);
   }catch(e){
     uiError('Update fehlgeschlagen: ' + (e?.message || e));
-    try{ diag.add?.(`Capture intake update error (${kind}): ` + (e?.message || e)); }catch(_){}
+    try{ diag.add?.(`[capture] save error ${kind}: ` + (e?.message || e)); }catch(_){}
   }finally{
     withBusy(btn, false);
   }
