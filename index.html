@@ -2934,6 +2934,8 @@ async function handleCaptureIntake(kind){
   const input = document.getElementById(`cap-${kind}-add`);
   if (!btn || !input) return;
 
+  try { diag.add?.(`[capture] click ${kind}`); } catch(_){}
+
   if (!(await isLoggedInFast())){
     showLoginOverlay(true);
     return;
@@ -6036,12 +6038,19 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session prüfen/auffrischen
-    let { data } = await supa.auth.getSession();
-    if (!data?.session) {
-      try { const r = await supa.auth.refreshSession(); data = r?.data || data; } catch(_) {}
+    // Session prüfen (Timeout-safe) und ggf. auffrischen
+    let loggedIn = await isLoggedInFast({ timeout: 800 });
+    diag.add?.(`[resume] loggedFast=${loggedIn}`);
+    if (!loggedIn) {
+      diag.add?.('[resume] session miss -> refresh');
+      try {
+        const refreshed = await supa.auth.refreshSession();
+        loggedIn = !!refreshed?.data?.session;
+        diag.add?.(`[resume] refresh result=${loggedIn}`);
+      } catch(e) {
+        diag.add?.('[resume] refresh error: ' + (e?.message || e));
+      }
     }
-    const loggedIn = !!data?.session;
     finalizeAuthState(loggedIn);
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
@@ -6049,6 +6058,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
     try { await refreshCaptureIntake(); } catch(e) { diag.add?.('[resume] intake refresh error: ' + (e?.message || e)); throw e; }
     diag.add?.('[resume] intake refreshed');
+    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_){}
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
