@@ -2986,6 +2986,7 @@ async function handleCaptureIntake(kind){
     totals.protein_g = Number(total.toFixed(2));
     message = 'Protein aktualisiert.';
   }
+  try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(_){}
 
 // Auth-Guard gegen Edge-Klicks direkt vor dem Save
 try {
