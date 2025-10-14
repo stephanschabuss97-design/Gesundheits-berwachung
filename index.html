@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Gesundheits-Logger (V1.7.3.3)</title>
+<title>Gesundheits-Logger (V1.7.3.4)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -669,7 +669,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.3</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -5351,13 +5351,6 @@ function teardownRealtime(){
   __rtReady = false;
 }
 
-try{
-__channels.forEach(ch => ch.unsubscribe?.());
-diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
-}catch(e){ diag.add("Realtime: unsubscribe error"); }
-__channels = [];
-}
-
 window.addEventListener('beforeunload', () => {
   teardownRealtime();
   if (__midnightTimer) {
@@ -6191,5 +6184,4 @@ if (!window.__bootDone) {
 
 </body>
 </html>
-
 
