@@ -651,7 +651,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   pointer-events: none !important;
 }
 
-/* --- SAFETY: summary darf nie full-screen „oben“ liegen --- */
+/* --- SAFETY: summary darf nie full-screen �oben� liegen --- */
 summary {
   display: list-item;
   position: static !important;
@@ -668,7 +668,7 @@ details[hidden] {
   pointer-events: none !important;
 }
 
-/* Optional: Config-Accordion im Login-Overlay explizit entschärfen */
+/* Optional: Config-Accordion im Login-Overlay explizit entsch�rfen */
 #configAdv > summary { position: static !important; }
 
 </style>
@@ -2972,11 +2972,7 @@ async function handleCaptureIntake(kind){
   let value;
   if (kind === 'water'){
     value = Number(input.value);
-    if (!(value > 0)){
-      uiError('Bitte gueltige Wassermenge eingeben.');
-      try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){}
-      return;
-    }
+    if (!(value > 0)){ uiError('Bitte gueltige Wassermenge eingeben.'); try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){ } return; }
   } else {
     value = toNumDE(input.value);
     if (!(value > 0)){
@@ -3004,25 +3000,22 @@ async function handleCaptureIntake(kind){
   }
   try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(_){}
 
-  let headers;
-  try {
-    diag.add?.("[capture] guard: request headers");
-    headers = await getHeaders();
-    diag.add?.("[capture] guard: headers resp");
-  } catch(err) {
-    diag.add?.('[capture] guard exception: ' + (err?.message || err));
-    showLoginOverlay(true);
-    return;
-  }
-  if (!headers) {
-    diag.add?.('[capture] guard: headers missing (return)');
-    showLoginOverlay(true);
-    return;
-  }
-  try { diag.add?.('[capture] guard passed (continue)'); } catch(_){}
+// Auth-Guard gegen Edge-Klicks direkt vor dem Save
+try {
+  diag.add?.("[capture] guard: request session");
+  const { data } = await sbClient.auth.getSession();
+  diag.add?.("[capture] guard: session resp");
+  if (!data?.session) { diag.add?.('[capture] guard: no session before save (return)'); showLoginOverlay(true); return; }
+  diag.add?.("[capture] guard: request headers");
+  const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
+  if (!headers) { diag.add?.('[capture] guard: headers missing (return)'); showLoginOverlay(true); return; }
+} catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
-  withBusy(btn, true);
-  try{
+try { diag.add?.('[capture] guard passed (continue)'); } catch(_){}
+
+withBusy(btn, true);
+try{
     diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
     await saveIntakeTotals({ dayIso, totals });
     captureIntakeState.totals = totals;
@@ -3030,9 +3023,6 @@ async function handleCaptureIntake(kind){
     input.value = '';
     updateCaptureIntakeStatus();
     const needsLifestyle = dayIso === todayStr();
-    if (needsLifestyle) {
-      try { __lsTotals = captureIntakeState.totals; updateLifestyleBars(); } catch(_){}
-    }
     await requestUiRefresh({ reason: 'capture:intake' });
     uiInfo(message);
     diag.add?.(`[capture] save ok ${kind}`);
@@ -3049,23 +3039,328 @@ function bindIntakeCapture(){
     const oldBtn = document.getElementById(id);
     if (!oldBtn) return;
 
+    // alten Button durch Clone ersetzen => entfernt alle alten Listener
     const fresh = oldBtn.cloneNode(true);
     oldBtn.replaceWith(fresh);
 
+    // Safety: niemals "busy"/disabled, und Typ setzen
     fresh.disabled = false;
     fresh.classList.remove('busy');
     fresh.removeAttribute('aria-busy');
     fresh.removeAttribute('data-busy');
     if (!fresh.type) fresh.type = 'button';
 
+    // Click-Handler binden (idempotent, weil frisch)
     fresh.addEventListener('click', () => {
-      try { handleCaptureIntake(kind); } catch(_){}
+      try { handleCaptureIntake(kind); } catch(_) {}
     });
   };
 
   wire('cap-water-add-btn',   'water');
   wire('cap-salt-add-btn',    'salt');
   wire('cap-protein-add-btn', 'protein');
+}
+
+function setProgState(el, state){
+  if (!el) return;
+  el.classList.remove('ok','warn','bad');
+  if (state) el.classList.add(state);
+}
+
+function fmtDE(n, digits){
+  if (!Number.isFinite(n)) return '0';
+  return n.toFixed(digits).replace('.', ',');
+}
+
+function updateLifestyleBars(){
+  const wBar = document.getElementById('ls-water-bar');
+  const wProg = document.getElementById('ls-water-prog');
+  const wLbl = document.getElementById('ls-water-label');
+  const sBar = document.getElementById('ls-salt-bar');
+  const sProg = document.getElementById('ls-salt-prog');
+  const sLbl = document.getElementById('ls-salt-label');
+  const pBar = document.getElementById('ls-protein-bar');
+  const pProg = document.getElementById('ls-protein-prog');
+  const pLbl = document.getElementById('ls-protein-label');
+
+  const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, 6000));
+  const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, 30));
+  const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, 300));
+
+  const wPct = Math.min(1, w / LS_WATER_GOAL) * 100;
+  const sPct = Math.min(1, s / LS_SALT_MAX) * 100;
+  const pPct = Math.min(1, p / LS_PROTEIN_GOAL) * 100;
+
+  if (wBar) wBar.style.width = `${wPct.toFixed(1)}%`;
+  if (sBar) sBar.style.width = `${sPct.toFixed(1)}%`;
+  if (pBar) pBar.style.width = `${pPct.toFixed(1)}%`;
+
+  if (wLbl) {
+    let status = '';
+    if (w >= LS_WATER_GOAL * 1.1) status = ' * Ziel erreicht';
+    else if (w >= LS_WATER_GOAL * 0.9) status = ' * Zielbereich';
+    else if (w >= LS_WATER_GOAL * 0.5) status = ' * moderate Aufnahme';
+    else status = ' * niedrig';
+    wLbl.textContent = `${w|0} / ${LS_WATER_GOAL} ml${status}`;
+  }
+
+  if (sLbl) {
+    let status = ' * Zielbereich';
+    if (s > LS_SALT_MAX) status = ' * ueber Ziel';
+    else if (s >= 5) status = ' * Warnung';
+    sLbl.textContent = `${fmtDE(s,1)} / ${fmtDE(LS_SALT_MAX,1)} g${status}`;
+  }
+
+  if (pLbl) {
+    let status = ' * noch offen';
+    if (p >= 78 && p <= 90) status = ' * Zielbereich';
+    else if (p > 90) status = ' * ueber Ziel';
+    pLbl.textContent = `${fmtDE(p,1)} / ${fmtDE(LS_PROTEIN_GOAL,1)} g${status}`;
+  }
+
+  // Wasser: <50% rot, 50-89% gelb, 90% gruen
+  let wState = 'bad';
+  if (w >= LS_WATER_GOAL * 0.9) wState = 'ok';
+  else if (w >= LS_WATER_GOAL * 0.5) wState = 'warn';
+  setProgState(wProg, wState);
+
+  // Salz: 0-4.9 g gruen, 5-6 gelb, >6 rot
+  let sState = 'ok';
+  if (s > LS_SALT_MAX) sState = 'bad';
+  else if (s >= 5) sState = 'warn';
+  setProgState(sProg, sState);
+
+  // Protein: <78 neutral, 78-90 gruen, >90 rot
+  let pState = 'neutral';
+  if (p >= 78 && p <= 90) pState = 'ok';
+  else if (p > 90) pState = 'bad';
+  setProgState(pProg, pState);
+}
+
+async function renderLifestyle(){
+  const logged = await isLoggedIn();
+  if (!logged){
+    // Nichts anzeigen, Tab ist ohnehin gesperrt
+    return;
+  }
+  try{
+    const uid = await getUserId();
+    const dayIso = todayStr();
+    const cur = await loadIntakeToday({ user_id: uid, dayIso });
+    __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
+    updateLifestyleBars();
+  }catch(_){ /* ignore */ }
+}
+
+function bindLifestyle(){
+  const addWaterBtn = document.getElementById('ls-water-add-btn');
+  const addSaltBtn = document.getElementById('ls-salt-add-btn');
+  const addProtBtn = document.getElementById('ls-protein-add-btn');
+
+  const addWater = async ()=>{
+    const el = document.getElementById('ls-water-add');
+    const v = Number(el?.value || 0);
+    if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
+
+    const dayIso = todayStr();
+    let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
+    if (total > 6000) total = 6000;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
+      __lsTotals.water_ml = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Wasser aktualisiert.');
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
+  };
+
+  const addSalt = async ()=>{
+    const el = document.getElementById('ls-salt-add');
+    const v = toNumDE(el?.value);
+    if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
+    const dayIso = todayStr();
+    let total = (__lsTotals.salt_g||0) + v;
+    if (total > 30) total = 30;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
+      __lsTotals.salt_g = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Salz aktualisiert.');
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
+  };
+
+  const addProtein = async ()=>{
+    const el = document.getElementById('ls-protein-add');
+    const v = toNumDE(el?.value);
+    if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
+    const dayIso = todayStr();
+    let total = (__lsTotals.protein_g||0) + v;
+    if (total > 300) total = 300;
+    try{
+      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
+      __lsTotals.protein_g = total;
+      updateLifestyleBars();
+      el.value = '';
+      uiInfo('Protein aktualisiert.');
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
+  };
+
+  if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
+  if (addSaltBtn) addSaltBtn.addEventListener('click', addSalt);
+  if (addProtBtn) addProtBtn.addEventListener('click', addProtein);
+}
+
+// PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
+async function patchDayFlags({ user_id, dayIso, flags }){
+  const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
+  const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
+  if (!url || !headers || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
+
+  const from = `${dayIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
+  const toIso = toNext.toISOString().slice(0,10);
+
+  const q = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.day_flags`+
+            `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+  const res = await withRetry(() => fetch(q, { method: 'PATCH', headers, body: JSON.stringify({ payload: flags }) }));
+  if (!res.ok) {
+    let details = '';
+    try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
+    throw new Error(`patch day_flags failed ${res.status} - ${details}`);
+  }
+  return await res.json();
+}
+
+
+async function appendNoteRemote(opts){
+  const { user_id, dayIso, noteEvent } = opts || {};
+  const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
+  const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
+  if (!url || !headers || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
+
+  const from = `${dayIso}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
+  const toIso = toNext.toISOString().slice(0, 10);
+  const baseQuery = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.note`
+                  + `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+
+  const resGet = await withRetry(() => fetch(baseQuery, { method: 'GET', headers }));
+  if (!resGet.ok) throw new Error(`note-get-failed-${resGet.status}`);
+  const rows = await resGet.json();
+  const existing = Array.isArray(rows) && rows[0] ? rows[0] : null;
+
+  const addition = (noteEvent?.payload?.text || '').trim();
+  if (!addition) {
+    return existing ? { id: existing.id, text: existing?.payload?.text || '' } : { id: null, text: '' };
+  }
+
+  const combineText = (prev, add) => {
+    if (!prev) return add;
+    return `${prev.trim()}
+${add}`.trim();
+  };
+
+  if (existing) {
+    const combined = combineText(existing?.payload?.text || '', addition);
+    const patchRes = await withRetry(() => fetch(`${url}?id=eq.${encodeURIComponent(existing.id)}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ payload: { text: combined } })
+    }));
+    if (!patchRes.ok) throw new Error(`note-patch-failed-${patchRes.status}`);
+    const patched = await patchRes.json().catch(() => null);
+    const patchedId = patched?.[0]?.id ?? existing.id;
+    return { id: patchedId, text: combined };
+  }
+
+  const body = [{ ...noteEvent, user_id }];
+  const postRes = await withRetry(() => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }));
+  if (!postRes.ok) throw new Error(`note-post-failed-${postRes.status}`);
+  const created = await postRes.json().catch(() => null);
+  const newId = created?.[0]?.id ?? null;
+  return { id: newId, text: addition };
+}
+
+async function pushPendingToRemote(){
+  const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
+  const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
+  if(!url || !headers) return { pushed:0, failed:0 };
+
+  const all = await getAllEntries();
+  const pending = all.filter(e => !e.remote_id);
+
+  let pushed = 0, failed = 0;
+
+  for (const e of pending){
+    try{
+      const uid = await getUserId();
+
+      // 1) Legacy-Entry  0..N Events
+      const events = toHealthEvents(e);
+      if (!events.length) { 
+        // nichts sendbar: als "abgearbeitet" markieren, damit wir nicht haengen bleiben
+        await updateEntry(e.id, { remote_id: -1 });
+        continue;
+      }
+
+      // 2) user_id anhaengen (RLS)
+      const payload = uid ? events.map(ev => ({...ev, user_id: uid})) : events;
+
+      // 3) Batch-POST (Array)
+      const res = await withRetry(() => fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      }));
+      if (!res.ok) { failed++; continue; }
+
+      const json = await res.json();
+      const firstId = json?.[0]?.id ?? null;
+
+      // 4) Lokal markieren: irgendein Remote-Event existiert  Cloud-Icon ok
+      if (firstId != null) {
+        await updateEntry(e.id, { remote_id: firstId });
+        pushed++;
+      } else {
+        failed++;
+      }
+
+      await sleep(50);
+    } catch(_){
+      failed++;
+    }
+  }
+
+  return { pushed, failed };
+}
+
+async function prefillSupabaseConfigForm(){
+  try {
+    setConfigStatus('', 'info');
+    const restInput = document.getElementById('configRestUrl');
+    const keyInput = document.getElementById('configAnonKey');
+    const adv = document.getElementById('configAdv');
+    const rest = await getConf('webhookUrl');
+    const keyStored = await getConf('webhookKey');
+    if (restInput) {
+      restInput.value = rest || '';
+    }
+    if (keyInput) {
+      keyInput.value = keyStored ? keyStored.replace(/^Bearer\s+/i, '') : '';
+    }
+    if (adv) {
+      const hasRest = !!(rest && String(rest).trim());
+      const hasKey = !!(keyStored && String(keyStored).trim());
+      adv.open = !(hasRest && hasKey) && !DEV_ALLOW_DEFAULTS;
+    }
+  } catch(_){ }
 }
 
 function setConfigStatus(msg, tone = 'info'){
@@ -4911,7 +5206,7 @@ async function saveDaySummary(options = {}){
       const pct = toNumDE(raw);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100){
         setFieldError(el);
-        uiError(`Bitte gültigen Wert für ${label} (0–100 %) eingeben.`);
+        uiError(`Bitte g�ltigen Wert f�r ${label} (0�100 %) eingeben.`);
         if (!validationFailed) el.focus();
         validationFailed = true;
         return null;
@@ -5777,7 +6072,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session prüfen (Timeout-safe) und ggf. auffrischen
+    // Session pr�fen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
