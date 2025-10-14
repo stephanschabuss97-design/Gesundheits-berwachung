@@ -456,7 +456,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
 .panel h4{margin:0;font-size:14px}
 .panel .content{
-  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  padding: 12px;
   font-size: 13px;
   line-height: 1.45;
 }
@@ -1088,7 +1088,7 @@ details[hidden] {
 <!-- Doctor -->
 <section class="view" id="doctor" aria-labelledby="doctorHeading">
   <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
-  <section class="card" id="doctorCard">
+  <div class="card" id="doctorCard">
     <div class="toolbar">
       <strong id="doctorTitle">Arzt-Ansicht</strong>
 
@@ -1111,7 +1111,7 @@ details[hidden] {
         <div class="small" style="margin-top:6px">
       Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
     </div>
-  </section>
+  </div>
 </section>
 
 </main>
