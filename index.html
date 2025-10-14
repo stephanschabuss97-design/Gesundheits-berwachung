@@ -2967,16 +2967,13 @@ async function handleCaptureIntake(kind){
     message = 'Protein aktualisiert.';
   }
 
-// Auth-Guard direkt vor dem Speichern (Edge-Klicks nach Resume abfangen)
+// Auth-Guard gegen Edge-Klicks direkt vor dem Save
 try {
   const { data } = await sbClient.auth.getSession();
   if (!data?.session) { showLoginOverlay(true); return; }
   const headers = await getHeaders();
   if (!headers) { showLoginOverlay(true); return; }
-} catch(_) {
-  showLoginOverlay(true);
-  return;
-}
+} catch(_) { showLoginOverlay(true); return; }
 
 withBusy(btn, true);
 try{
@@ -5339,8 +5336,21 @@ async function syncWebhook(entry, localId){
 let sbClient = null;
 
 let __channels = [];
+let __rtReady = false;
+
 function trackChannel(ch){ __channels.push(ch); return ch; }
+
 function teardownRealtime(){
+  try{
+    if (__channels.length) {
+      __channels.forEach(ch => ch.unsubscribe?.());
+      diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
+    }
+  }catch(e){ diag.add("Realtime: unsubscribe error"); }
+  __channels = [];
+  __rtReady = false;
+}
+
 try{
 __channels.forEach(ch => ch.unsubscribe?.());
 diag.add(`Realtime: ${__channels.length} Channel(s) unsubscribed`);
@@ -5425,8 +5435,13 @@ async function setupRealtime(){
     const supa = await ensureSupabaseClient();
     if (!supa) return;
 
+    // Idempotenz: wenn schon "ready", nichts tun
+    if (__rtReady && __channels.length > 0) {
+      return;
+    }
+
     // Bestehende Channels schliessen, um Doppelbindungen zu vermeiden
-    teardownRealtime();
+    if (__channels.length > 0) teardownRealtime();
 
     // Channel auf health_events - RLS begrenzt automatisch auf auth.uid()
     trackChannel(
@@ -5439,7 +5454,7 @@ async function setupRealtime(){
               requestUiRefresh({ reason: 'realtime' });
             })
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: subscribed'); }
+          if (status === 'SUBSCRIBED') { __rtReady = true; diag.add?.('Realtime: appointments subscribed'); }
         })
     );
     trackChannel(
@@ -5451,7 +5466,7 @@ async function setupRealtime(){
               requestUiRefresh({ reason: 'realtime:appointments', appointments: true });
             })
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') { diag.add?.('Realtime: appointments subscribed'); }
+          if (status === 'SUBSCRIBED') { __rtReady = true; diag.add?.('Realtime: subscribed'); }
         })
     );
   }catch(e){
@@ -5985,54 +6000,40 @@ document.addEventListener('keydown', (e)=>{
 
 async function resumeFromBackground({ source = 'resume' } = {}) {
   try {
-    // 1) sanftes Repaint & Layout aktualisieren
+    // sanftes Repaint
     try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
     updateStickyOffsets();
     scheduleAuthGrace();
 
-    // 2) Supabase Client sicherstellen
     const supa = await ensureSupabaseClient();
-    if (!supa) {
-      finalizeAuthState(false);
-      showLoginOverlay(true);
-      return;
-    }
+    if (!supa) { finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // 3) Session prüfen (und einmalig refreshen, falls möglich)
+    // Session prüfen/auffrischen
     let { data } = await supa.auth.getSession();
     if (!data?.session) {
-      try {
-        const r = await supa.auth.refreshSession();
-        data = r?.data || data;
-      } catch(_) {}
+      try { const r = await supa.auth.refreshSession(); data = r?.data || data; } catch(_) {}
     }
     const loggedIn = !!data?.session;
     finalizeAuthState(loggedIn);
-    if (!loggedIn) {
-      showLoginOverlay(true);
-      return; // UI NICHT freischalten, solange keine Session
-    }
+    if (!loggedIn) { showLoginOverlay(true); return; }
 
-    // 4) Realtime nur bei Bedarf neu aufbauen (keine Doppelbindungen)
-    const needRealtime = !Array.isArray(__channels) || __channels.length === 0;
-    if (needRealtime) {
+    // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
+    try { await refreshCaptureIntake(); } catch(_) {}
+
+    // Realtime nur bei Bedarf neu aufbauen
+    if (!__rtReady || __channels.length === 0) {
       diag.add?.('Resume: re-setupRealtime');
       await setupRealtime();
     }
 
-    // 5) UI/State aktualisieren (erst NACH bestätigter Session!)
+    // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
     await requestUiRefresh({ reason: 'resume', appointments: true });
 
-    // Capture/Intake gezielt auffrischen & Buttons neu binden
-    try { await refreshCaptureIntake(); } catch(_) {}
-    try { bindIntakeCapture?.(); } catch(_) {}
-
-    // Tageswechsel/Noon-Kontext und Fokusfreundlichkeit
     try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
     scheduleNoonSwitch();
     maybeAutoApplyBpContext({ source });
 
-    // Optional: Fokus sanft reparieren
+    // sanfte Fokusreparatur
     try {
       let focusTarget = null;
       if (document.activeElement?.matches?.('input, select, textarea')) {
@@ -6111,14 +6112,17 @@ if (typeof reconcileFromRemote === 'function') {
 resetAppointmentsUi();
 
 /* boot */
-if (document.readyState === "loading") {
-window.addEventListener("DOMContentLoaded", main);
+if (!window.__bootDone) {
+  window.__bootDone = true;
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", main);
 
-window.addEventListener('focus', () => {
-  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
-});
-} else {
-main();
+    window.addEventListener('focus', () => {
+      try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+    });
+  } else {
+    main();
+  }
 }
 
 /* === Debug-Notizen
@@ -6187,4 +6191,5 @@ main();
 
 </body>
 </html>
+
 
