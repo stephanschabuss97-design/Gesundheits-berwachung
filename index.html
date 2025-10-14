@@ -651,7 +651,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   pointer-events: none !important;
 }
 
-/* --- SAFETY: summary darf nie full-screen �oben� liegen --- */
+/* --- SAFETY: summary darf nie full-screen „oben“ liegen --- */
 summary {
   display: list-item;
   position: static !important;
@@ -668,7 +668,7 @@ details[hidden] {
   pointer-events: none !important;
 }
 
-/* Optional: Config-Accordion im Login-Overlay explizit entsch�rfen */
+/* Optional: Config-Accordion im Login-Overlay explizit entschärfen */
 #configAdv > summary { position: static !important; }
 
 </style>
@@ -2972,7 +2972,11 @@ async function handleCaptureIntake(kind){
   let value;
   if (kind === 'water'){
     value = Number(input.value);
-    if (!(value > 0)){ uiError('Bitte gueltige Wassermenge eingeben.'); try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){ } return; }
+    if (!(value > 0)){
+      uiError('Bitte gueltige Wassermenge eingeben.');
+      try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){}
+      return;
+    }
   } else {
     value = toNumDE(input.value);
     if (!(value > 0)){
@@ -3000,15 +3004,68 @@ async function handleCaptureIntake(kind){
   }
   try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(_){}
 
-// Auth-Guard gegen Edge-Klicks direkt vor dem Save
-try {
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp");
-  if (!headers) { diag.add?.('[capture] guard: headers missing (return)'); showLoginOverlay(true); return; }
-} catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
+  let headers;
+  try {
+    diag.add?.("[capture] guard: request headers");
+    headers = await getHeaders();
+    diag.add?.("[capture] guard: headers resp");
+  } catch(err) {
+    diag.add?.('[capture] guard exception: ' + (err?.message || err));
+    showLoginOverlay(true);
+    return;
+  }
+  if (!headers) {
+    diag.add?.('[capture] guard: headers missing (return)');
+    showLoginOverlay(true);
+    return;
+  }
+  try { diag.add?.('[capture] guard passed (continue)'); } catch(_){}
 
-try { diag.add?.('[capture] guard passed (continue)'); } catch(_){ }
+  withBusy(btn, true);
+  try{
+    diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
+    await saveIntakeTotals({ dayIso, totals });
+    captureIntakeState.totals = totals;
+    captureIntakeState.logged = true;
+    input.value = '';
+    updateCaptureIntakeStatus();
+    const needsLifestyle = dayIso === todayStr();
+    if (needsLifestyle) {
+      try { __lsTotals = captureIntakeState.totals; updateLifestyleBars(); } catch(_){}
+    }
+    await requestUiRefresh({ reason: 'capture:intake' });
+    uiInfo(message);
+    diag.add?.(`[capture] save ok ${kind}`);
+  }catch(e){
+    uiError('Update fehlgeschlagen: ' + (e?.message || e));
+    try{ diag.add?.(`[capture] save error ${kind}: ` + (e?.message || e)); }catch(_){}
+  }finally{
+    withBusy(btn, false);
+  }
+}
+
+function bindIntakeCapture(){
+  const wire = (id, kind) => {
+    const oldBtn = document.getElementById(id);
+    if (!oldBtn) return;
+
+    const fresh = oldBtn.cloneNode(true);
+    oldBtn.replaceWith(fresh);
+
+    fresh.disabled = false;
+    fresh.classList.remove('busy');
+    fresh.removeAttribute('aria-busy');
+    fresh.removeAttribute('data-busy');
+    if (!fresh.type) fresh.type = 'button';
+
+    fresh.addEventListener('click', () => {
+      try { handleCaptureIntake(kind); } catch(_){}
+    });
+  };
+
+  wire('cap-water-add-btn',   'water');
+  wire('cap-salt-add-btn',    'salt');
+  wire('cap-protein-add-btn', 'protein');
 }
 
 function setConfigStatus(msg, tone = 'info'){
@@ -4854,7 +4911,7 @@ async function saveDaySummary(options = {}){
       const pct = toNumDE(raw);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100){
         setFieldError(el);
-        uiError(`Bitte g�ltigen Wert f�r ${label} (0�100 %) eingeben.`);
+        uiError(`Bitte gültigen Wert für ${label} (0–100 %) eingeben.`);
         if (!validationFailed) el.focus();
         validationFailed = true;
         return null;
@@ -5720,7 +5777,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session pr�fen (Timeout-safe) und ggf. auffrischen
+    // Session prüfen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
