@@ -1342,7 +1342,9 @@ async function sbSelect({ table, select, filters = [], order = null, limit = nul
   if (limit) url.searchParams.set('limit', String(limit));
 
   // WICHTIG: mit User-JWT lesen (RLS)!
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!headers) throw new Error("Nicht angemeldet - keine Leseberechtigung.");
 
   const res = await withRetry(() => fetch(url.toString(), { headers }));
@@ -1871,7 +1873,9 @@ async function loadIntakeToday({ user_id, dayIso }){
 
 async function saveIntakeTotals({ dayIso, totals }){
   const url = await getConf('webhookUrl');
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   const uid = await getUserId();
   if (!url || !headers || !uid) {
     const errMissing = new Error('saveIntakeTotals: missing config/auth');
@@ -1925,7 +1929,9 @@ async function saveIntakeTotals({ dayIso, totals }){
 async function cleanupOldIntake(){
   try{
     const url = await getConf('webhookUrl');
-    const headers = await getHeaders();
+    diag.add?.("[capture] guard: request headers");
+  const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
     const uid = await getUserId();
     if (!url || !headers || !uid) return;
     const today = todayStr();
@@ -2146,7 +2152,9 @@ async function fetchDailyOverview(fromIso, toIso){
 /* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
 async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!url || !headers) return { ok:false, status:0 };
 
   const from = `${dateIso}T00:00:00Z`;
@@ -2462,7 +2470,9 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
 async function getAppointmentsEndpoint(){
   const rest = await getConf('webhookUrl');
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!rest || !headers) return null;
   const base = baseUrlFromRest(rest);
   if (!base) {
@@ -2585,7 +2595,9 @@ function applyAppointmentsUi(summary){
 
 async function fetchAppointmentsSummary(){
   const rest = await getConf('webhookUrl');
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!rest || !headers) return null;
   const base = baseUrlFromRest(rest);
   if (!base) return null;
@@ -2990,9 +3002,13 @@ async function handleCaptureIntake(kind){
 
 // Auth-Guard gegen Edge-Klicks direkt vor dem Save
 try {
+  diag.add?.("[capture] guard: request session");
   const { data } = await sbClient.auth.getSession();
+  diag.add?.("[capture] guard: session resp");
   if (!data?.session) { diag.add?.('[capture] guard: no session before save (return)'); showLoginOverlay(true); return; }
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!headers) { diag.add?.('[capture] guard: headers missing (return)'); showLoginOverlay(true); return; }
 } catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
@@ -3198,7 +3214,9 @@ function bindLifestyle(){
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
 async function patchDayFlags({ user_id, dayIso, flags }){
   const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!url || !headers || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
@@ -3220,7 +3238,9 @@ async function patchDayFlags({ user_id, dayIso, flags }){
 async function appendNoteRemote(opts){
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if (!url || !headers || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
@@ -3268,7 +3288,9 @@ ${add}`.trim();
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if(!url || !headers) return { pushed:0, failed:0 };
 
   const all = await getAllEntries();
@@ -3435,7 +3457,9 @@ function scheduleAuthGrace(){
         finalizeAuthState(false);
         return;
       }
-      const { data } = await sbClient.auth.getSession();
+      diag.add?.("[capture] guard: request session");
+  const { data } = await sbClient.auth.getSession();
+  diag.add?.("[capture] guard: session resp");
       finalizeAuthState(!!data?.session);
     }catch(_){
       finalizeAuthState(false);
@@ -5270,7 +5294,9 @@ throw lastErr;
   
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
+  diag.add?.("[capture] guard: request headers");
   const headers = await getHeaders();
+  diag.add?.("[capture] guard: headers resp" );
   if(!url || !headers){
     uiError("Nicht angemeldet - bitte Google-Login ausfuehren.");
     showLoginOverlay(true);
