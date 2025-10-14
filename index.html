@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gesundheits-Logger (V1.7.3.4)</title>
 <style>
 
@@ -37,6 +37,17 @@ body.auth-locked main{ opacity:.6; }
   --tabs-h:48px;
 }
 *{box-sizing:border-box}
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
 html,body{height:100%}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
 header{position:sticky;top:0;background:linear-gradient(180deg,rgba(11,12,16,.95),rgba(11,12,16,.7));backdrop-filter:blur(6px);z-index:10;padding:10px 12px;border-bottom:1px solid #1f232b}
@@ -445,8 +456,7 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 .panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
 .panel h4{margin:0;font-size:14px}
 .panel .content{
-  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 
-           max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   font-size: 13px;
   line-height: 1.45;
 }
@@ -740,8 +750,9 @@ details[hidden] {
 
 <main id="appMain">
 <!-- Capture -->
-<section class="view active" id="capture">
+<section class="view active" id="capture" aria-labelledby="captureHeading">
  
+  <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
   <!-- Daily-Capture -->
   <section class="card" id="entry">
     <div class="capture-header">
@@ -812,7 +823,7 @@ details[hidden] {
               </div>
               <div>
                 <label>Bauchumfang (cm)</label>
-                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5" />
+                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
               </div>
               <div>
                 <label>Fett (%)</label>
@@ -1068,8 +1079,6 @@ details[hidden] {
   </div>
 </details>
 
-    </details>
-    </div>
   </section>
 </section>
 
@@ -1077,7 +1086,8 @@ details[hidden] {
 
 
 <!-- Doctor -->
-<section class="view" id="doctor">
+<section class="view" id="doctor" aria-labelledby="doctorHeading">
+  <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
   <section class="card" id="doctorCard">
     <div class="toolbar">
       <strong id="doctorTitle">Arzt-Ansicht</strong>
@@ -1103,6 +1113,8 @@ details[hidden] {
     </div>
   </section>
 </section>
+
+</main>
 
 <!-- Supabase (UMD, v2) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -6135,7 +6147,7 @@ if (!window.__bootDone) {
       <summary class="small" style="cursor:pointer;list-style:none;padding:8px 0">Erweiterte Einstellungen</summary>
       <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
         <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
-        <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db" />
+        <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db">
         <label class="small" for="configAnonKey" style="margin-top:4px">Supabase ANON-Key</label>
         <textarea id="configAnonKey" rows="3" placeholder="ANON-Key (kein service_role)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;resize:vertical"></textarea>
         <button class="btn ghost" id="configSaveBtn" type="button" style="width:100%;margin-top:4px">Konfiguration speichern</button>
@@ -6161,7 +6173,7 @@ if (!window.__bootDone) {
     </div>
 
     <div class="pin-wrap">
-      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN (optional)" />
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN (optional)">
       <button class="btn ghost" id="unlockPinBtn" type="button">PIN</button>
     </div>
 
