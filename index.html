@@ -2967,8 +2967,19 @@ async function handleCaptureIntake(kind){
     message = 'Protein aktualisiert.';
   }
 
-  withBusy(btn, true);
-  try{
+// Auth-Guard direkt vor dem Speichern (Edge-Klicks nach Resume abfangen)
+try {
+  const { data } = await sbClient.auth.getSession();
+  if (!data?.session) { showLoginOverlay(true); return; }
+  const headers = await getHeaders();
+  if (!headers) { showLoginOverlay(true); return; }
+} catch(_) {
+  showLoginOverlay(true);
+  return;
+}
+
+withBusy(btn, true);
+try{
     await saveIntakeTotals({ dayIso, totals });
     captureIntakeState.totals = totals;
     captureIntakeState.logged = true;
@@ -5972,133 +5983,75 @@ document.addEventListener('keydown', (e)=>{
   } catch(_){ }
 });
 
-async function resumeFromBackground({ source = 'visibility' } = {}) {
-  try{
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }catch(_){}
-  updateStickyOffsets();
-  scheduleAuthGrace();
+async function resumeFromBackground({ source = 'resume' } = {}) {
   try {
-    if (!sbClient) await ensureSupabaseClient();
-  } catch(_) {}
-  __pendingAfterUnlock = null;
-    lockUi(false);
+    // 1) sanftes Repaint & Layout aktualisieren
+    try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
+    updateStickyOffsets();
+    scheduleAuthGrace();
 
-// SAFETY: alle offenen <details> schließen, damit SUMMARY nichts überdeckt
-try {
-  document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'));
-  // Falls der Browser aus BFCache ein „hängendes“ SUMMARY liefert, Hit-Test prüfen
-  const midEl = document.elementFromPoint(innerWidth/2, innerHeight/2);
-  if (midEl?.tagName === 'SUMMARY' || midEl?.closest?.('summary')) {
-    document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'));
-  }
-} catch(_) {}
+    // 2) Supabase Client sicherstellen
+    const supa = await ensureSupabaseClient();
+    if (!supa) {
+      finalizeAuthState(false);
+      showLoginOverlay(true);
+      return;
+    }
 
-  try { document.body.classList.remove('app-locked'); } catch(_) {}
-  try { setUnderlayInert(false); } catch(_) {}
-  try { showLoginOverlay(false); } catch(_) {}
-  try { if (focusTrap?.current) focusTrap.deactivate(); } catch(_) {}
-  try {
-    ['header','nav.tabs','#appMain','.fab-wrap'].forEach(sel => {
-      const el = document.querySelector(sel);
-      if (el){
-        el.removeAttribute('inert');
-        el.removeAttribute('data-inert-applied');
-        el.removeAttribute('aria-hidden');
+    // 3) Session prüfen (und einmalig refreshen, falls möglich)
+    let { data } = await supa.auth.getSession();
+    if (!data?.session) {
+      try {
+        const r = await supa.auth.refreshSession();
+        data = r?.data || data;
+      } catch(_) {}
+    }
+    const loggedIn = !!data?.session;
+    finalizeAuthState(loggedIn);
+    if (!loggedIn) {
+      showLoginOverlay(true);
+      return; // UI NICHT freischalten, solange keine Session
+    }
+
+    // 4) Realtime nur bei Bedarf neu aufbauen (keine Doppelbindungen)
+    const needRealtime = !Array.isArray(__channels) || __channels.length === 0;
+    if (needRealtime) {
+      diag.add?.('Resume: re-setupRealtime');
+      await setupRealtime();
+    }
+
+    // 5) UI/State aktualisieren (erst NACH bestätigter Session!)
+    await requestUiRefresh({ reason: 'resume', appointments: true });
+
+    // Capture/Intake gezielt auffrischen & Buttons neu binden
+    try { await refreshCaptureIntake(); } catch(_) {}
+    try { bindIntakeCapture?.(); } catch(_) {}
+
+    // Tageswechsel/Noon-Kontext und Fokusfreundlichkeit
+    try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
+    scheduleNoonSwitch();
+    maybeAutoApplyBpContext({ source });
+
+    // Optional: Fokus sanft reparieren
+    try {
+      let focusTarget = null;
+      if (document.activeElement?.matches?.('input, select, textarea')) {
+        focusTarget = document.activeElement;
+      } else if (document.getElementById('capture')?.classList.contains('active')) {
+        focusTarget = document.getElementById('captureAmount');
       }
-    });
-  } catch(_) {}
-  try {
-$$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button, fieldset')
-  .forEach(el => {
-    el.disabled = false;
-    el.removeAttribute('disabled');
-  });
+      if (focusTarget) {
+        ensureNotObscured(focusTarget);
+        try { focusTarget.focus?.(); } catch(_) {}
+      }
+    } catch(_) {}
 
-// Intake-Buttons sicher ent-busy'en + Listener neu binden (falls DOM ersetzt wurde)
-try {
-  ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel=>{
-    const b = document.querySelector(sel);
-    if (!b) return;
-    b.disabled = false;
-    b.classList.remove('busy');
-    b.removeAttribute('aria-busy');
-    b.removeAttribute('data-busy');
-  });
-  // Rebind auf jeden Fall (idempotent)
-  bindIntakeCapture?.();
-} catch(_) {}
-
-        // Intake-Controls explizit wieder freigeben (Sicherheitsnetz)
-try { setCaptureIntakeDisabled(false); } catch(_) {}
-
-// Intake-Buttons sicher „entbusy“ und Klicks neu binden
-try {
-  ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel=>{
-    const b = document.querySelector(sel);
-    if (!b) return;
-    b.disabled = false;
-    b.classList.remove('busy');
-    b.removeAttribute('aria-busy');
-  });
-  // Rebind, falls DOM neu aufgebaut wurde
-  try { bindIntakeCapture?.(); } catch(_){}
-} catch(_){}
-
-  try {
-    const logged = await isLoggedInFast({ timeout: 250 });
-    if (logged) {
-      finalizeAuthState(true);
-    }
-  } catch(_){}
-
-  let focusTarget = null;
-  try {
-    if (document.activeElement?.matches?.('input, select, textarea')) {
-      focusTarget = document.activeElement;
-    } else if (document.getElementById('capture')?.classList.contains('active')) {
-      focusTarget = document.getElementById('captureAmount');
-    }
-  } catch(_) {}
-  if (focusTarget) {
-    ensureNotObscured(focusTarget);
-    try { focusTarget.focus?.(); } catch(_) {}
+    diag.add?.('Resume: done');
+  } catch (e) {
+    diag.add?.('Resume error: ' + (e?.message || e));
   }
-
-  try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
-  scheduleNoonSwitch();
-  maybeAutoApplyBpContext({ source });
-  } catch(_) {}
-
-  // Sanfter Intake-Refresh nach kurzer Grace – falls Capture aktiv ist
-  try {
-    const isCaptureActive = document.getElementById('capture')?.classList.contains('active');
-    if (isCaptureActive) {
-      setTimeout(() => {
-        try {
-          refreshCaptureIntake();
-          // WICHTIG: nach (Re)Render erneut binden
-          bindIntakeCapture?.();
-
-          // Optional: Intake-Buttons sicher ent-busy'en
-          ['#cap-water-add-btn','#cap-salt-add-btn','#cap-protein-add-btn'].forEach(sel => {
-            const b = document.querySelector(sel);
-            if (b) {
-              b.disabled = false;
-              b.classList.remove('busy');
-              b.removeAttribute('aria-busy');
-            }
-          });
-        } catch(_) {}
-      }, 400);
-    }
-  } catch(_) {}
-
-  const doctorActive = document.getElementById('doctor')?.classList.contains('active');
-  if (doctorActive && !__doctorUnlocked) {
-    await setTab('capture');
-  }
-} // <-- Ende von async function resumeFromBackground
+}
+// <-- Ende von async function resumeFromBackground
 
 // --- Resume-Listener ---
 document.addEventListener('visibilitychange', () => {
@@ -6234,3 +6187,4 @@ main();
 
 </body>
 </html>
+
