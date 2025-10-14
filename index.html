@@ -6006,7 +6006,22 @@ document.addEventListener('keydown', (e)=>{
   } catch(_){ }
 });
 
+let __lastResumeAt = 0;
+let __resumeRunning = false;
+const RESUME_COOLDOWN_MS = 250;
+
 async function resumeFromBackground({ source = 'resume' } = {}) {
+  const now = Date.now();
+  if (__resumeRunning) {
+    diag.add?.(`[resume] skipped (running) - ${source}`);
+    return;
+  }
+  if (__lastResumeAt && (now - __lastResumeAt) < RESUME_COOLDOWN_MS) {
+    diag.add?.(`[resume] skipped (cooldown) - ${source}`);
+    return;
+  }
+  __resumeRunning = true;
+  __lastResumeAt = now;
   try {
     if (!diag?.logEl) {
       try { diag.init(); } catch(_) {}
@@ -6018,6 +6033,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     scheduleAuthGrace();
 
     const supa = await ensureSupabaseClient();
+    diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
     // Session prüfen/auffrischen
@@ -6027,19 +6043,23 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     }
     const loggedIn = !!data?.session;
     finalizeAuthState(loggedIn);
+    diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
     // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
     try { await refreshCaptureIntake(); } catch(_) {}
+    diag.add?.('[resume] intake refreshed');
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
       diag.add?.('Resume: re-setupRealtime');
       await setupRealtime();
+      diag.add?.('[resume] realtime ensured');
     }
 
     // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
     await requestUiRefresh({ reason: 'resume', appointments: true });
+    diag.add?.('[resume] ui refresh requested');
 
     try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
     scheduleNoonSwitch();
@@ -6062,6 +6082,8 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('Resume: done');
   } catch (e) {
     diag.add?.('Resume error: ' + (e?.message || e));
+  } finally {
+    __resumeRunning = false;
   }
 }
 // <-- Ende von async function resumeFromBackground
