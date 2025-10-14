@@ -2937,6 +2937,7 @@ async function handleCaptureIntake(kind){
   try { diag.add?.(`[capture] click ${kind}`); } catch(_){}
 
   if (!(await isLoggedInFast())){
+    try { diag.add?.('[capture] blocked: isLoggedInFast false'); } catch(_){}
     showLoginOverlay(true);
     return;
   }
@@ -2959,14 +2960,16 @@ async function handleCaptureIntake(kind){
   let value;
   if (kind === 'water'){
     value = Number(input.value);
-    if (!(value > 0)){ uiError('Bitte gueltige Wassermenge eingeben.'); return; }
+    if (!(value > 0)){ uiError('Bitte gueltige Wassermenge eingeben.'); try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){ } return; }
   } else {
     value = toNumDE(input.value);
     if (!(value > 0)){
       uiError(kind === 'salt' ? 'Bitte gueltige Salzmenge eingeben.' : 'Bitte gueltige Proteinmenge eingeben.');
+      try { diag.add?.(`[capture] blocked: invalid ${kind} value ${input.value}`); } catch(_){}
       return;
     }
   }
+  try { diag.add?.(`[capture] parsed ${kind}=${value}`); } catch(_){}
 
   const totals = { ...captureIntakeState.totals };
   let message = '';
@@ -2987,9 +2990,9 @@ async function handleCaptureIntake(kind){
 // Auth-Guard gegen Edge-Klicks direkt vor dem Save
 try {
   const { data } = await sbClient.auth.getSession();
-  if (!data?.session) { showLoginOverlay(true); return; }
+  if (!data?.session) { diag.add?.('[capture] guard: no session before save'); showLoginOverlay(true); return; }
   const headers = await getHeaders();
-  if (!headers) { showLoginOverlay(true); return; }
+  if (!headers) { diag.add?.('[capture] guard: headers missing'); showLoginOverlay(true); return; }
 } catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
 withBusy(btn, true);
