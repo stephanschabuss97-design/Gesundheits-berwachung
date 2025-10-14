@@ -2996,6 +2996,8 @@ try {
   if (!headers) { diag.add?.('[capture] guard: headers missing'); showLoginOverlay(true); return; }
 } catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
+try { diag.add?.('[capture] guard passed'); } catch(_){}
+
 withBusy(btn, true);
 try{
     diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
