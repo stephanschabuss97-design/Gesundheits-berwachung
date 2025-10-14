@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.3.4)</title>
+<title>Gesundheits-Logger (V1.7.3.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -679,7 +679,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1197,6 +1197,7 @@ function recordPerfStat(key, startedAt){
 const diag = { el:null, logEl:null, open:false, lines:[],
 add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
 init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
+if (this.logEl && this.lines.length) { this.logEl.textContent = this.lines.join('\n'); }
 const t1=document.getElementById('diagToggle'); const t2=document.getElementById('diagToggleFab');
 const close=document.getElementById('diagClose');
 const toggle=()=>{ this.open=!this.open; if (this.open){ this.show(); } else { this.hide(); } };
@@ -1818,12 +1819,14 @@ async function getHeaders(){
   const jwt = session?.access_token;
   if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
 
-  return {
+  const headers = {
     "Content-Type": "application/json",
     "apikey": anonKey,
     "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
+  try{ diag.add?.('[headers] ok'); }catch(_){}
+  return headers;
 }
 
 async function deleteRemote(remote_id){
@@ -6005,13 +6008,17 @@ document.addEventListener('keydown', (e)=>{
 
 async function resumeFromBackground({ source = 'resume' } = {}) {
   try {
+    if (!diag?.logEl) {
+      try { diag.init(); } catch(_) {}
+    }
+    diag.add?.(`[resume] start: ${source}`);
     // sanftes Repaint
     try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
     updateStickyOffsets();
     scheduleAuthGrace();
 
     const supa = await ensureSupabaseClient();
-    if (!supa) { finalizeAuthState(false); showLoginOverlay(true); return; }
+    if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
     // Session prüfen/auffrischen
     let { data } = await supa.auth.getSession();
@@ -6020,7 +6027,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     }
     const loggedIn = !!data?.session;
     finalizeAuthState(loggedIn);
-    if (!loggedIn) { showLoginOverlay(true); return; }
+    if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
     // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
     try { await refreshCaptureIntake(); } catch(_) {}
@@ -6061,17 +6068,20 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
 
 // --- Resume-Listener ---
 document.addEventListener('visibilitychange', () => {
+  diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
   (async () => { await resumeFromBackground({ source: 'visibility' }); })();
 });
 
 window.addEventListener('pageshow', (event) => {
+  diag.add?.(`[event] pageshow (persisted=${event.persisted ? 1 : 0})`);
   if (event.persisted || document.visibilityState === 'visible') {
     (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
   }
 });
 
 window.addEventListener('focus', () => {
+  diag.add?.('[event] focus');
   (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
