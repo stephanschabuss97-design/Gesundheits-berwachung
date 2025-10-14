@@ -2990,7 +2990,7 @@ try {
   if (!data?.session) { showLoginOverlay(true); return; }
   const headers = await getHeaders();
   if (!headers) { showLoginOverlay(true); return; }
-} catch(_) { showLoginOverlay(true); return; }
+} catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
 
 withBusy(btn, true);
 try{
