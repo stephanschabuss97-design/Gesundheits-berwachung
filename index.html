@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.3.5)</title>
+<title>Gesundheits-Logger (V1.7.3.6)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -679,7 +679,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.6</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -6058,21 +6058,21 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
   }
   __resumeRunning = true;
   __lastResumeAt = now;
+
   try {
-    if (!diag?.logEl) {
-      try { diag.init(); } catch(_) {}
-    }
+    if (!diag?.logEl) { try { diag.init(); } catch(_) {} }
     diag.add?.(`[resume] start: ${source}`);
+
     // sanftes Repaint
     try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
     updateStickyOffsets();
     scheduleAuthGrace();
 
+    // Supabase-Client & schnelle Auth-Prüfung
     const supa = await ensureSupabaseClient();
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session pr�fen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
@@ -6089,27 +6089,29 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
-    // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
-    try { await refreshCaptureIntake(); } catch(e) { diag.add?.('[resume] intake refresh error: ' + (e?.message || e)); throw e; }
-    diag.add?.('[resume] intake refreshed');
-    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_){}
+    // *** WICHTIG: ZUERST Tageswechsel prüfen/setzen (zieht Datum auf heute & lädt Tageswerte) ***
+    try {
+      await maybeRefreshForTodayChange({ source: 'resume', force: true });
+      diag.add?.('[resume] today ensured');
+    } catch(e) {
+      diag.add?.('[resume] today ensure error: ' + (e?.message || e));
+    }
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
-      diag.add?.('Resume: re-setupRealtime');
+      diag.add?.('[resume] re-setupRealtime');
       try { await setupRealtime(); diag.add?.('[resume] realtime ensured'); }
-      catch(e) { diag.add?.('[resume] realtime error: ' + (e?.message || e)); throw e; }
+      catch(e) { diag.add?.('[resume] realtime error: ' + (e?.message || e)); }
     }
 
     // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
     await requestUiRefresh({ reason: 'resume', appointments: true });
     diag.add?.('[resume] ui refresh requested');
 
-    try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
-    scheduleNoonSwitch();
-    maybeAutoApplyBpContext({ source });
+    // Intake-Listener sicherstellen (falls beim Today-Check UI neu gerendert wurde)
+    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_) {}
 
-    // sanfte Fokusreparatur
+    // Fokus sanft reparieren
     try {
       let focusTarget = null;
       if (document.activeElement?.matches?.('input, select, textarea')) {
@@ -6123,6 +6125,8 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
       }
     } catch(_) {}
 
+    scheduleNoonSwitch();
+    maybeAutoApplyBpContext({ source });
     diag.add?.('Resume: done');
   } catch (e) {
     diag.add?.('Resume error: ' + (e?.message || e));
@@ -6274,5 +6278,6 @@ if (!window.__bootDone) {
 </html>
 
 <!-- marker -->
+
 
 
