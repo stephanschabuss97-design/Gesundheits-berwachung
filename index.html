@@ -6044,7 +6044,7 @@ document.addEventListener('keydown', (e)=>{
 
 let __lastResumeAt = 0;
 let __resumeRunning = false;
-const RESUME_COOLDOWN_MS = 250;
+const RESUME_COOLDOWN_MS = 0; // Debounce verhindert Event-Stürme; Cooldown nicht mehr nötig
 
 async function resumeFromBackground({ source = 'resume' } = {}) {
   const now = Date.now();
@@ -6136,23 +6136,33 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
 }
 // <-- Ende von async function resumeFromBackground
 
-// --- Resume-Listener ---
+// --- Resume-Listener (debounced) ---
+let __resumeTimer = null;
+function scheduleResume(source){
+  // mehrere Events in kurzem Abstand -> ein Resume
+  if (__resumeTimer) clearTimeout(__resumeTimer);
+  __resumeTimer = setTimeout(() => {
+    __resumeTimer = null;
+    (async () => { await resumeFromBackground({ source }); })();
+  }, 300);
+}
+
 document.addEventListener('visibilitychange', () => {
   diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
-  (async () => { await resumeFromBackground({ source: 'visibility' }); })();
+  scheduleResume('visibility');
 });
 
 window.addEventListener('pageshow', (event) => {
   diag.add?.(`[event] pageshow (persisted=${event.persisted ? 1 : 0})`);
   if (event.persisted || document.visibilityState === 'visible') {
-    (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
+    scheduleResume('pageshow');
   }
 });
 
 window.addEventListener('focus', () => {
   diag.add?.('[event] focus');
-  (async () => { await resumeFromBackground({ source: 'focus' }); })();
+  scheduleResume('focus');
 });
 
 // --- Arzt-Export ---
@@ -6278,6 +6288,7 @@ if (!window.__bootDone) {
 </html>
 
 <!-- marker -->
+
 
 
 
