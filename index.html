@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -3722,8 +3723,6 @@ function watchAuthState(){
         __lastUserId = newUid;
         diag.add?.(`[auth] session uid=${newUid}`);
       }
-      __cachedHeaders = null;
-      __cachedHeadersAt = 0;
       finalizeAuthState(true);
       await afterLoginBoot();
       await setupRealtime();
@@ -3739,8 +3738,6 @@ function watchAuthState(){
       diag.add?.('[auth] session cleared');
       __lastUserId = null;
     }
-    __cachedHeaders = null;
-    __cachedHeadersAt = 0;
     __pendingSignOut = async () => {
       teardownRealtime();
       await refreshCaptureIntake();
@@ -5476,8 +5473,6 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
       } catch (refreshErr) {
         diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`);
       }
-      __cachedHeaders = null;
-      __cachedHeadersAt = 0;
       diag.add?.(`[auth] refresh end ${tag || 'request'}`);
     }
     if (!forceRefresh && __cachedHeaders && __cachedHeadersAt && (Date.now() - __cachedHeadersAt) < 5 * 60 * 1000) {
