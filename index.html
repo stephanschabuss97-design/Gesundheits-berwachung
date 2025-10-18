@@ -2794,10 +2794,18 @@ async function handleAppointmentSave(role){
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
       uiRestError(e.status, e.details || e.message);
-      diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e));
+      try {
+        diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
     } else {
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
-      diag.add?.('appointments save error (' + role + '): ' + (e?.message || e));
+      try {
+        diag.add?.('appointments save error (' + role + '): ' + (e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
     }
   } finally {
     withBusy(saveBtn, false);
@@ -2846,10 +2854,18 @@ async function handleAppointmentDone(role){
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
       uiRestError(e.status, e.details || e.message, 'Termin konnte nicht abgeschlossen werden.');
-      diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e));
+      try {
+        diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
     } else {
       uiError('Termin konnte nicht abgeschlossen werden.');
-      diag.add?.('appointments done error (' + role + '): ' + (e?.message || e));
+      try {
+        diag.add?.('appointments done error (' + role + '): ' + (e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
     }
   } finally {
     withBusy(btn, false);
@@ -2900,8 +2916,10 @@ try{
     }
   }catch(e){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    diag.add?.('Capture intake load error: ' + (e?.message || e));
-    try{ updateLifestyleBars(); }catch(_){ }
+    try {
+      diag.add?.('Capture intake load error: ' + (e?.message || e));
+      updateLifestyleBars();
+    } catch(_) { }
   }
 
   __lastKnownToday = todayStr();
@@ -3128,7 +3146,14 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Wasser aktualisiert.');
-  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }
+  }catch(e){
+    uiError('Update fehlgeschlagen: ' + (e?.message||e));
+    try {
+      diag.add?.('Lifestyle update error (water): ' + (e?.message||e));
+    } catch (logErr) {
+      console.error('diag.add failed', logErr);
+    }
+  }
   };
 
   const addSalt = async ()=>{
@@ -3144,7 +3169,14 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Salz aktualisiert.');
-  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }
+  }catch(e){
+    uiError('Update fehlgeschlagen: ' + (e?.message||e));
+    try {
+      diag.add?.('Lifestyle update error (salt): ' + (e?.message||e));
+    } catch (logErr) {
+      console.error('diag.add failed', logErr);
+    }
+  }
   };
 
   const addProtein = async ()=>{
@@ -3160,7 +3192,14 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Protein aktualisiert.');
-  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }
+  }catch(e){
+    uiError('Update fehlgeschlagen: ' + (e?.message||e));
+    try {
+      diag.add?.('Lifestyle update error (protein): ' + (e?.message||e));
+    } catch (logErr) {
+      console.error('diag.add failed', logErr);
+    }
+  }
   };
 
   if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
@@ -6199,7 +6238,11 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
       bindIntakeCapture();
       diag.add?.('[resume] intake listeners rebound');
     } catch(err) {
-      diag.add?.('[resume] intake listener error: ' + (err?.message || err));
+      try {
+        diag.add?.('[resume] intake listener error: ' + (err?.message || err));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
     }
 
     // Realtime nur bei Bedarf neu aufbauen
