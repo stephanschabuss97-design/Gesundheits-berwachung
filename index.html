@@ -1223,6 +1223,7 @@ hide(){ if (!this.el) return; this.el.style.display='none'; focusTrap.deactivate
 };
 
 /* ===== Helpers ===== */
+const UI_REFRESH_TIMEOUT_MS = 8000;
 const uiRefreshState = {
   timer: null,
   running: false,
@@ -1231,10 +1232,14 @@ const uiRefreshState = {
   lifestyleNeeded: false,
   appointmentsNeeded: false,
   resolvers: [],
-  lastReason: ''
+  lastReason: '',
+  reasons: new Set()
 };
 
-function requestUiRefresh(opts = {}){
+const uiRefreshTimeoutSymbol = Symbol('ui-refresh-timeout');
+const uiNow = () => (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
+
+function requestUiRefresh(opts = {}) {
   if (typeof opts === "string") {
     opts = { reason: opts };
   }
@@ -1259,13 +1264,46 @@ function requestUiRefresh(opts = {}){
   uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
   uiRefreshState.appointmentsNeeded = uiRefreshState.appointmentsNeeded || appointments;
   uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
+  if (reason) uiRefreshState.reasons.add(reason);
 
   const promise = new Promise(resolve => uiRefreshState.resolvers.push(resolve));
 
   if (!uiRefreshState.running && !uiRefreshState.timer) {
-    uiRefreshState.timer = setTimeout(runUiRefresh, 60);
+    uiRefreshState.timer = setTimeout(() => {
+      uiRefreshState.timer = null;
+      runUiRefresh().catch(err => {
+        diag.add?.('[ui] refresh fatal: ' + (err?.message || err));
+      });
+    }, 0);
   }
   return promise;
+}
+
+async function runUiSubStep(label, enabled, fn) {
+  if (!enabled) return;
+  const start = uiNow();
+  diag.add?.(`[ui] step start ${label}`);
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(uiRefreshTimeoutSymbol), UI_REFRESH_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([
+      (async () => { await fn(); })(),
+      timeoutPromise
+    ]);
+    const duration = Math.round(uiNow() - start);
+    diag.add?.(`[ui] step end ${label} (${duration} ms)`);
+  } catch (err) {
+    const duration = Math.round(uiNow() - start);
+    if (err === uiRefreshTimeoutSymbol) {
+      diag.add?.(`[ui] step timeout ${label} (${duration} ms)`);
+    } else {
+      diag.add?.(`[ui] step error ${label}: ${err?.message || err} (${duration} ms)`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function runUiRefresh(){
@@ -1274,7 +1312,13 @@ async function runUiRefresh(){
     clearTimeout(state.timer);
     state.timer = null;
   }
+  if (state.running) return;
   state.running = true;
+  const refreshStart = uiNow();
+  const reasons = state.reasons.size ? Array.from(state.reasons) : (state.lastReason ? [state.lastReason] : []);
+  state.reasons.clear();
+  const reasonLabel = reasons.length ? reasons.join(',') : 'unspecified';
+  diag.add?.(`[ui] refresh start reason=${reasonLabel}`);
   try {
     while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) {
       const doc = state.docNeeded;
@@ -1285,22 +1329,24 @@ async function runUiRefresh(){
       state.chartNeeded = false;
       state.lifestyleNeeded = false;
       state.appointmentsNeeded = false;
-      try {
-        if (doc) await renderDoctor();
-        if (appointments) await refreshAppointments();
-        if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
-        if (chart) await chartPanel.draw?.();
-      } catch (e) {
-        diag.add?.('uiRefresh error: ' + (e?.message || e));
-      }
+
+      await runUiSubStep('doctor', doc, async () => { await renderDoctor(); });
+      await runUiSubStep('appointments', appointments, async () => { await refreshAppointments(); });
+      await runUiSubStep('lifestyle', lifestyle && typeof renderLifestyle === 'function', async () => { await renderLifestyle(); });
+      await runUiSubStep('chart', chart && !!chartPanel?.draw, async () => { await chartPanel.draw?.(); });
     }
   } finally {
     state.running = false;
+    const duration = Math.round(uiNow() - refreshStart);
+    diag.add?.(`[ui] refresh end reason=${reasonLabel} (${duration} ms)`);
     const resolvers = state.resolvers;
     state.resolvers = [];
     resolvers.forEach(resolve => { try { resolve(); } catch(_){} });
-    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded) && !state.timer){
-      state.timer = setTimeout(runUiRefresh, 60);
+    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) && !state.timer){
+      state.timer = setTimeout(() => {
+        uiRefreshState.timer = null;
+        runUiRefresh().catch(err => diag.add?.('[ui] refresh fatal: ' + (err?.message || err)));
+      }, 0);
     }
   }
 }
@@ -3013,12 +3059,21 @@ withBusy(btn, true);
 try{
     diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
     await saveIntakeTotals({ dayIso, totals });
+    diag.add?.('[capture] save network ok');
     captureIntakeState.totals = totals;
     captureIntakeState.logged = true;
     input.value = '';
     updateCaptureIntakeStatus();
     const needsLifestyle = dayIso === todayStr();
-    await requestUiRefresh({ reason: 'capture:intake' });
+    requestUiRefresh({
+      reason: 'capture:intake',
+      doctor: false,
+      chart: false,
+      appointments: false,
+      lifestyle: needsLifestyle
+    }).catch(err => {
+      diag.add?.('ui refresh err: ' + (err?.message || err));
+    });
     uiInfo(message);
     diag.add?.(`[capture] save ok ${kind}`);
   }catch(e){
@@ -6019,7 +6074,9 @@ if (saveBpPanelBtn){
         uiError('Keine Daten fuer diesen Messzeitpunkt eingegeben.');
       } else {
         savedOk = true;
-        await requestUiRefresh({ reason: 'panel:bp' });
+        requestUiRefresh({ reason: 'panel:bp' }).catch(err => {
+          diag.add?.('ui refresh err: ' + (err?.message || err));
+        });
       }
     }catch(err){
       diag.add?.('Panel BP Fehler: ' + (err?.message || err));
@@ -6055,7 +6112,9 @@ if (saveBodyPanelBtn){
         uiError('Keine Koerperdaten eingegeben.');
       } else {
         savedOk = true;
-        await requestUiRefresh({ reason: 'panel:body' });
+        requestUiRefresh({ reason: 'panel:body' }).catch(err => {
+          diag.add?.('ui refresh err: ' + (err?.message || err));
+        });
       }
     }catch(err){
       diag.add?.('Panel Koerper Fehler: ' + (err?.message || err));
@@ -6092,7 +6151,9 @@ if (saveFlagsPanelBtn){
         uiError('Keine Flag-Daten eingegeben.');
       } else {
         savedOk = true;
-        await requestUiRefresh({ reason: 'panel:flags' });
+        requestUiRefresh({ reason: 'panel:flags' }).catch(err => {
+          diag.add?.('ui refresh err: ' + (err?.message || err));
+        });
       }
     }catch(err){
       diag.add?.('Panel Flags Fehler: ' + (err?.message || err));
@@ -6208,7 +6269,7 @@ document.addEventListener('keydown', (e)=>{
 
 let __lastResumeAt = 0;
 let __resumeRunning = false;
-const RESUME_COOLDOWN_MS = 250;
+const RESUME_COOLDOWN_MS = 0;
 
 async function resumeFromBackground({ source = 'resume' } = {}) {
   const now = Date.now();
@@ -6279,7 +6340,11 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     }
 
     // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
-    await requestUiRefresh({ reason: 'resume', appointments: true });
+    setTimeout(() => {
+      requestUiRefresh({ reason: 'resume', appointments: true }).catch(err => {
+        diag.add?.('ui refresh err: ' + (err?.message || err));
+      });
+    }, 0);
     diag.add?.('[resume] ui refresh requested');
 
     scheduleNoonSwitch();
