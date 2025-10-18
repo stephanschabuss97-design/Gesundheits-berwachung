@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.3.6)</title>
+<title>Gesundheits-Logger (V1.7.3.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -651,7 +652,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   pointer-events: none !important;
 }
 
-/* --- SAFETY: summary darf nie full-screen �oben� liegen --- */
+/* --- SAFETY: summary darf nie full-screen ?oben? liegen --- */
 summary {
   display: list-item;
   position: static !important;
@@ -668,7 +669,7 @@ details[hidden] {
   pointer-events: none !important;
 }
 
-/* Optional: Config-Accordion im Login-Overlay explizit entsch�rfen */
+/* Optional: Config-Accordion im Login-Overlay explizit entsch?rfen */
 #configAdv > summary { position: static !important; }
 
 </style>
@@ -679,7 +680,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.6</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1342,12 +1343,10 @@ async function sbSelect({ table, select, filters = [], order = null, limit = nul
   if (limit) url.searchParams.set('limit', String(limit));
 
   // WICHTIG: mit User-JWT lesen (RLS)!
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!headers) throw new Error("Nicht angemeldet - keine Leseberechtigung.");
-
-  const res = await withRetry(() => fetch(url.toString(), { headers }));
+  const res = await fetchWithAuth(
+    headers => fetch(url.toString(), { headers }),
+    { tag: `sbSelect:${table}`, maxAttempts: 2 }
+  );
   if (!res.ok) {
     let details = '';
     try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
@@ -1457,7 +1456,10 @@ function updateStickyOffsets(){
     if (mainEl){
       mainEl.style.paddingTop = `calc(${headerH}px + ${tabsH}px + 8px)`;
     }
-  }catch(_){ /* noop */ }
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* noop */ }
 }
 
 window.addEventListener('resize', updateStickyOffsets);
@@ -1473,7 +1475,10 @@ function ensureNotObscured(el){
     if (rect.top < requiredTop){
       window.scrollBy({ top: rect.top - requiredTop, left: 0, behavior: 'auto' });
     }
-  }catch(_){ /* noop */ }
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* noop */ }
 }
 
 document.addEventListener('focusin', (e)=>{
@@ -1482,7 +1487,10 @@ document.addEventListener('focusin', (e)=>{
       return;
     }
     ensureNotObscured(e.target);
-  }catch(_){ /* noop */ }
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* noop */ }
 }, true);
 
 // Simple focus trap for modal overlays
@@ -1725,8 +1733,14 @@ function initDB(){
         s.createIndex("byRemote","remote_id",{unique:false});
       } else {
         const s = e.target.transaction.objectStore(STORE);
-        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
-        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
+        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
+        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
       }
       // config
       if(!db.objectStoreNames.contains(CONF)){
@@ -1810,16 +1824,28 @@ function deleteEntryLocal(id){
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
   const key = await getConf("webhookKey");
-  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(_){} return null; }
-  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(_){} return null; }
+  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }} return null; }
+  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }} return null; }
   const anonKey = key.replace(/^Bearer\s+/i, "");
 
   const supa = await ensureSupabaseClient();
-  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(_){} return null; }
+  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }} return null; }
 
   const { data: { session } } = await supa.auth.getSession();
   const jwt = session?.access_token;
-  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
+  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }} return null; }
 
   const headers = {
     "Content-Type": "application/json",
@@ -1827,20 +1853,22 @@ async function getHeaders(){
     "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
-  try{ diag.add?.('[headers] ok'); }catch(_){}
+  try{ diag.add?.('[headers] ok'); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
   return headers;
 }
 
 async function deleteRemote(remote_id){
 const url = await getConf("webhookUrl");
-const headers = await getHeaders();
-if(!url || !headers || !remote_id) return {ok:false};
+if(!url || !remote_id) return {ok:false};
 const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
 try{
-const res = await withRetry(()=> fetch(q, { method:"DELETE", headers }));
+const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete', maxAttempts: 2 });
 return {ok: res.ok, status: res.status};
 }catch(e){
-return {ok:false, status:0};
+return {ok:false, status: e?.status ?? 0};
 }
 }
   
@@ -1873,15 +1901,13 @@ async function loadIntakeToday({ user_id, dayIso }){
 
 async function saveIntakeTotals({ dayIso, totals }){
   const url = await getConf('webhookUrl');
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
   const uid = await getUserId();
-  if (!url || !headers || !uid) {
+  if (!url || !uid) {
     const errMissing = new Error('saveIntakeTotals: missing config/auth');
     errMissing.status = 0;
     throw errMissing;
   }
+
   const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||'')) ? dayIso : todayStr();
   const ts = new Date(`${dayIsoNorm}T12:00:00Z`).toISOString();
   const payloadTotals = {
@@ -1890,18 +1916,27 @@ async function saveIntakeTotals({ dayIso, totals }){
     protein_g: Number(totals?.protein_g || 0),
   };
   const payload = [{ ts, type: 'intake', payload: payloadTotals, user_id: uid }];
-  const res = await withRetry(async ()=>{
-    const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(payload) });
-    if (!r.ok && r.status === 404) {
-      const body = await r.text();
+
+  const performPost = () => fetchWithAuth(
+    headers => fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }),
+    { tag: 'intake:post', maxAttempts: 2 }
+  );
+
+  const res = await performPost();
+  if (!res.ok && res.status === 404) {
+    try {
+      const body = await res.clone().text();
       diag.add?.(`Lifestyle POST 404 body: ${body}`);
-    }
-    return r;
-  });
-  if (res.ok) return await res.json();
+    } catch(_){}
+  }
+
+  if (res.ok) {
+    return await res.json();
+  }
 
   let details = '';
-  try { const e = await res.json(); details = e?.message || e?.details || ''; } catch{}
+  try { const e = await res.clone().json(); details = e?.message || e?.details || ''; } catch{}
+
   if (!(res.status === 409 || /duplicate|unique/i.test(details))) {
     try { diag.add?.(`[intake] POST failed ${res.status} ${details||''}`); } catch {}
     const errRes = new Error('intake-post-failed');
@@ -1912,12 +1947,17 @@ async function saveIntakeTotals({ dayIso, totals }){
 
   const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
   const toIso = toNext.toISOString().slice(0,10);
-  const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
+  const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
             `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  const res2 = await withRetry(()=> fetch(q, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }));
+
+  const res2 = await fetchWithAuth(
+    headers => fetch(patchUrl, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }),
+    { tag: 'intake:patch', maxAttempts: 2 }
+  );
+
   if (!res2.ok){
     let d2='';
-    try{ const e2 = await res2.json(); d2 = e2?.message || e2?.details || ''; }catch{}
+    try{ const e2 = await res2.clone().json(); d2 = e2?.message || e2?.details || ''; }catch{}
     const errPatch = new Error('intake-patch-failed');
     errPatch.status = res2.status;
     errPatch.details = d2;
@@ -1929,16 +1969,16 @@ async function saveIntakeTotals({ dayIso, totals }){
 async function cleanupOldIntake(){
   try{
     const url = await getConf('webhookUrl');
-    diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
     const uid = await getUserId();
-    if (!url || !headers || !uid) return;
+    if (!url || !uid) return;
     const today = todayStr();
     const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
               `&ts=lt.${encodeURIComponent(today)}T00:00:00Z`;
-    await withRetry(()=> fetch(q, { method:'DELETE', headers }));
-  }catch(_){ /* non-blocking */ }
+    await fetchWithAuth(headers => fetch(q, { method:'DELETE', headers }), { tag: 'intake:cleanup', maxAttempts: 2 });
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* non-blocking */ }
 }
 
 /* === Remote-Fetch Arzt-Ansicht (Views) === */
@@ -1997,7 +2037,10 @@ async function syncCaptureToggles(){
     setNsar(!!f.nsar_taken);
     const flagsCommentEl = document.getElementById("flagsComment");
     if (flagsCommentEl) flagsCommentEl.value = "";
-  }catch(_){ /* non-blocking */ }
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* non-blocking */ }
 }
 
 async function prefillBodyInputs(){
@@ -2152,10 +2195,7 @@ async function fetchDailyOverview(fromIso, toIso){
 /* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
 async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const url = await getConf("webhookUrl");
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!url || !headers) return { ok:false, status:0 };
+  if (!url) return { ok:false, status:0 };
 
   const from = `${dateIso}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
@@ -2163,7 +2203,7 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
 
   const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
   try{
-    const res = await withRetry(() => fetch(q, { method:"DELETE", headers }));
+    const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete-day', maxAttempts: 2 });
     return { ok: res.ok, status: res.status };
   }catch{
     return { ok:false, status:0 };
@@ -2470,16 +2510,13 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
 async function getAppointmentsEndpoint(){
   const rest = await getConf('webhookUrl');
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!rest || !headers) return null;
+  if (!rest) return null;
   const base = baseUrlFromRest(rest);
   if (!base) {
     setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
     return null;
   }
-  return { base, headers } ;
+  return { base };
 }
 
 function getAppointmentRoleLabel(code){
@@ -2595,15 +2632,15 @@ function applyAppointmentsUi(summary){
 
 async function fetchAppointmentsSummary(){
   const rest = await getConf('webhookUrl');
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!rest || !headers) return null;
+  if (!rest) return null;
   const base = baseUrlFromRest(rest);
   if (!base) return null;
 
   const fetchJson = async (url) => {
-    const res = await withRetry(() => fetch(url.toString(), { headers }));
+    const res = await fetchWithAuth(
+      headers => fetch(url.toString(), { headers }),
+      { tag: 'appt:summary', maxAttempts: 2 }
+    );
     if (res.status === 404) return [];
     if (!res.ok) {
       let details = '';
@@ -2696,6 +2733,9 @@ async function refreshAppointments(){
       appointmentsState.next = nextAppt;
       setAppointmentBadge(nextAppt);
   } catch (e) {
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
     try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
     appointmentsState.data = Object.create(null);
     appointmentsState.loaded = false;
@@ -2740,7 +2780,7 @@ async function handleAppointmentSave(role){
     showLoginOverlay(true);
     return;
   }
-  const { base, headers } = endpoint;
+  const { base } = endpoint;
 
   const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
   const patchUrl = new URL(`${base}/rest/v1/appointments`);
@@ -2752,12 +2792,10 @@ async function handleAppointmentSave(role){
   try {
     let saved = false;
     if (hasScheduled){
-      const res = await withRetry(() => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }));
-      if (res.status === 401 || res.status === 403){
-        uiError('Bitte erneut anmelden.');
-        showLoginOverlay(true);
-        return;
-      }
+      const res = await fetchWithAuth(
+        headers => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }),
+        { tag: `appt:patch:${role}`, maxAttempts: 2 }
+      );
       if (!res.ok){
         let details = '';
         try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
@@ -2788,12 +2826,10 @@ async function handleAppointmentSave(role){
       }
       const postUrl = new URL(`${base}/rest/v1/appointments`);
       const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled', user_id: uid }]);
-      const resPost = await withRetry(() => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }));
-      if (resPost.status === 401 || resPost.status === 403){
-        uiError('Bitte erneut anmelden.');
-        showLoginOverlay(true);
-        return;
-      }
+      const resPost = await fetchWithAuth(
+        headers => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }),
+        { tag: `appt:post:${role}`, maxAttempts: 2 }
+      );
       if (resPost.status === 409){
         uiError('Es existiert bereits ein geplanter Termin. Bitte aktualisieren.');
         return;
@@ -2821,6 +2857,9 @@ async function handleAppointmentSave(role){
     if (e?.status === 400){
       uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
       timeEl.focus();
+    } else if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+      uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
       uiRestError(e.status, e.details || e.message);
       try { diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
@@ -2846,19 +2885,17 @@ async function handleAppointmentDone(role){
     showLoginOverlay(true);
     return;
   }
-  const { base, headers } = endpoint;
+  const { base } = endpoint;
   const url = new URL(`${base}/rest/v1/appointments`);
   url.searchParams.set('status', 'eq.scheduled');
   url.searchParams.set('role', `eq.${role}`);
   const body = JSON.stringify({ status: 'done' });
   withBusy(btn, true);
   try {
-    const res = await withRetry(() => fetch(url.toString(), { method: 'PATCH', headers, body }));
-    if (res.status === 401 || res.status === 403){
-      uiError('Bitte erneut anmelden.');
-      showLoginOverlay(true);
-      return;
-    }
+    const res = await fetchWithAuth(
+      headers => fetch(url.toString(), { method: 'PATCH', headers, body }),
+      { tag: `appt:done:${role}`, maxAttempts: 2 }
+    );
     if (!res.ok){
       let details = '';
       try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
@@ -2875,7 +2912,10 @@ async function handleAppointmentDone(role){
     await refreshAppointments();
     uiInfo('Termin abgeschlossen.');
   } catch (e){
-    if (e?.status) {
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+      uiError('Bitte erneut anmelden.');
+    } else if (e?.status) {
       uiRestError(e.status, e.details || e.message, 'Termin konnte nicht abgeschlossen werden.');
       try { diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
     } else {
@@ -2932,9 +2972,11 @@ try{
     }
   }catch(e){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
-
-  try{ updateLifestyleBars(); }catch(_){ }
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
+    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){ }
+    try{ updateLifestyleBars(); }catch(_){ }
   }
 
   __lastKnownToday = todayStr();
@@ -3000,20 +3042,6 @@ async function handleCaptureIntake(kind){
   }
   try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(_){}
 
-// Auth-Guard gegen Edge-Klicks direkt vor dem Save
-try {
-  diag.add?.("[capture] guard: request session");
-  const { data } = await sbClient.auth.getSession();
-  diag.add?.("[capture] guard: session resp");
-  if (!data?.session) { diag.add?.('[capture] guard: no session before save (return)'); showLoginOverlay(true); return; }
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!headers) { diag.add?.('[capture] guard: headers missing (return)'); showLoginOverlay(true); return; }
-} catch(err) { diag.add?.('[capture] guard exception: ' + (err?.message || err)); showLoginOverlay(true); return; }
-
-try { diag.add?.('[capture] guard passed (continue)'); } catch(_){}
-
 withBusy(btn, true);
 try{
     diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
@@ -3027,8 +3055,17 @@ try{
     uiInfo(message);
     diag.add?.(`[capture] save ok ${kind}`);
   }catch(e){
-    uiError('Update fehlgeschlagen: ' + (e?.message || e));
-    try{ diag.add?.(`[capture] save error ${kind}: ` + (e?.message || e)); }catch(_){}
+    const msg = e?.details || e?.message || e;
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+      uiError('Bitte erneut anmelden, um weiter zu speichern.');
+    } else {
+      uiError('Update fehlgeschlagen: ' + msg);
+    }
+    try{ diag.add?.(`[capture] save error ${kind}: ` + msg); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
   }finally{
     withBusy(btn, false);
   }
@@ -3149,7 +3186,10 @@ async function renderLifestyle(){
     const cur = await loadIntakeToday({ user_id: uid, dayIso });
     __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
     updateLifestyleBars();
-  }catch(_){ /* ignore */ }
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    } /* ignore */ }
 }
 
 function bindLifestyle(){
@@ -3165,13 +3205,24 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
-    try{
+  try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.water_ml = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Wasser aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
+    }catch(e){
+      if (e?.status === 401 || e?.status === 403) {
+        showLoginOverlay(true);
+        uiError('Bitte erneut anmelden.');
+      } else {
+        uiError('Update fehlgeschlagen: ' + (e?.message||e));
+      }
+      try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
+    }
   };
 
   const addSalt = async ()=>{
@@ -3181,13 +3232,24 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = (__lsTotals.salt_g||0) + v;
     if (total > 30) total = 30;
-    try{
+  try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.salt_g = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Salz aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
+    }catch(e){
+      if (e?.status === 401 || e?.status === 403) {
+        showLoginOverlay(true);
+        uiError('Bitte erneut anmelden.');
+      } else {
+        uiError('Update fehlgeschlagen: ' + (e?.message||e));
+      }
+      try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
+    }
   };
 
   const addProtein = async ()=>{
@@ -3197,13 +3259,24 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = (__lsTotals.protein_g||0) + v;
     if (total > 300) total = 300;
-    try{
+  try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
       __lsTotals.protein_g = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Protein aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
+    }catch(e){
+      if (e?.status === 401 || e?.status === 403) {
+        showLoginOverlay(true);
+        uiError('Bitte erneut anmelden.');
+      } else {
+        uiError('Update fehlgeschlagen: ' + (e?.message||e));
+      }
+      try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }}
+    }
   };
 
   if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
@@ -3214,10 +3287,7 @@ function bindLifestyle(){
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
 async function patchDayFlags({ user_id, dayIso, flags }){
   const url = await getConf("webhookUrl");
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!url || !headers || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
+  if (!url || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
@@ -3225,7 +3295,10 @@ async function patchDayFlags({ user_id, dayIso, flags }){
 
   const q = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.day_flags`+
             `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  const res = await withRetry(() => fetch(q, { method: 'PATCH', headers, body: JSON.stringify({ payload: flags }) }));
+  const res = await fetchWithAuth(
+    headers => fetch(q, { method: 'PATCH', headers, body: JSON.stringify({ payload: flags }) }),
+    { tag: 'flags:patch', maxAttempts: 2 }
+  );
   if (!res.ok) {
     let details = '';
     try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
@@ -3238,10 +3311,7 @@ async function patchDayFlags({ user_id, dayIso, flags }){
 async function appendNoteRemote(opts){
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf("webhookUrl");
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if (!url || !headers || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
+  if (!url || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
 
   const from = `${dayIso}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
@@ -3249,7 +3319,10 @@ async function appendNoteRemote(opts){
   const baseQuery = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.note`
                   + `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
 
-  const resGet = await withRetry(() => fetch(baseQuery, { method: 'GET', headers }));
+  const resGet = await fetchWithAuth(
+    headers => fetch(baseQuery, { method: 'GET', headers }),
+    { tag: 'note:get', maxAttempts: 2 }
+  );
   if (!resGet.ok) throw new Error(`note-get-failed-${resGet.status}`);
   const rows = await resGet.json();
   const existing = Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -3267,11 +3340,14 @@ ${add}`.trim();
 
   if (existing) {
     const combined = combineText(existing?.payload?.text || '', addition);
-    const patchRes = await withRetry(() => fetch(`${url}?id=eq.${encodeURIComponent(existing.id)}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ payload: { text: combined } })
-    }));
+    const patchRes = await fetchWithAuth(
+      headers => fetch(`${url}?id=eq.${encodeURIComponent(existing.id)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ payload: { text: combined } })
+      }),
+      { tag: 'note:patch', maxAttempts: 2 }
+    );
     if (!patchRes.ok) throw new Error(`note-patch-failed-${patchRes.status}`);
     const patched = await patchRes.json().catch(() => null);
     const patchedId = patched?.[0]?.id ?? existing.id;
@@ -3279,7 +3355,10 @@ ${add}`.trim();
   }
 
   const body = [{ ...noteEvent, user_id }];
-  const postRes = await withRetry(() => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }));
+  const postRes = await fetchWithAuth(
+    headers => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }),
+    { tag: 'note:post', maxAttempts: 2 }
+  );
   if (!postRes.ok) throw new Error(`note-post-failed-${postRes.status}`);
   const created = await postRes.json().catch(() => null);
   const newId = created?.[0]?.id ?? null;
@@ -3288,10 +3367,7 @@ ${add}`.trim();
 
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if(!url || !headers) return { pushed:0, failed:0 };
+  if(!url) return { pushed:0, failed:0 };
 
   const all = await getAllEntries();
   const pending = all.filter(e => !e.remote_id);
@@ -3314,11 +3390,14 @@ async function pushPendingToRemote(){
       const payload = uid ? events.map(ev => ({...ev, user_id: uid})) : events;
 
       // 3) Batch-POST (Array)
-      const res = await withRetry(() => fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload)
-      }));
+      const res = await fetchWithAuth(
+        headers => fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        }),
+        { tag: 'pending:post', maxAttempts: 2 }
+      );
       if (!res.ok) { failed++; continue; }
 
       const json = await res.json();
@@ -3333,8 +3412,12 @@ async function pushPendingToRemote(){
       }
 
       await sleep(50);
-    } catch(_){
+    } catch(err){
       failed++;
+      if (err?.status === 401 || err?.status === 403) {
+        try { diag.add?.('[push] auth error, abbrechen'); } catch(_){}
+        break;
+      }
     }
   }
 
@@ -3461,7 +3544,10 @@ function scheduleAuthGrace(){
   const { data } = await sbClient.auth.getSession();
   diag.add?.("[capture] guard: session resp");
       finalizeAuthState(!!data?.session);
-    }catch(_){
+    }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
       finalizeAuthState(false);
     }
   }, AUTH_GRACE_MS);
@@ -3556,7 +3642,10 @@ if (logged){
 }
 applyAuthUi(logged);
 return logged;
-}catch(_){
+}catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
 return false;
 }
 }
@@ -3672,7 +3761,10 @@ async function renderDoctor(){
   let daysArr = [];
   try{
     daysArr = await fetchDailyOverview(from, to);
-  }catch(_){
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
     return;
@@ -5206,7 +5298,7 @@ async function saveDaySummary(options = {}){
       const pct = toNumDE(raw);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100){
         setFieldError(el);
-        uiError(`Bitte g�ltigen Wert f�r ${label} (0�100 %) eingeben.`);
+        uiError(`Bitte g?ltigen Wert f?r ${label} (0?100 %) eingeben.`);
         if (!validationFailed) el.focus();
         validationFailed = true;
         return null;
@@ -5291,13 +5383,91 @@ lastErr = e;
 }
 throw lastErr;
 }
+
+async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {
+  const supa = await ensureSupabaseClient();
+  if (!supa) {
+    const err = new Error('auth-client-missing');
+    err.status = 401;
+    throw err;
+  }
+
+  const loadHeaders = async (forceRefresh = false) => {
+    if (forceRefresh) {
+      try {
+        await supa.auth.refreshSession();
+      } catch (refreshErr) {
+        try { diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`); } catch (_) {}
+      }
+    }
+    return await getHeaders();
+  };
+
+  let headers = await loadHeaders(false);
+  if (!headers) {
+    headers = await loadHeaders(true);
+  }
+  if (!headers) {
+    const err = new Error('auth-headers-missing');
+    err.status = 401;
+    throw err;
+  }
+
+  let attempts = 0;
+  let refreshed = false;
+  const max = Math.max(0, maxAttempts);
+
+  while (true) {
+    let res;
+    try {
+      res = await makeRequest(headers);
+    } catch (err) {
+      if (attempts < max) {
+        attempts += 1;
+        await sleep(200 * attempts);
+        continue;
+      }
+      throw err;
+    }
+
+    if (!res || typeof res.status !== 'number') {
+      const err = new Error('invalid-response');
+      err.status = 0;
+      throw err;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      if (retry401 && !refreshed) {
+        refreshed = true;
+        try { diag.add?.(`[auth] ${tag || 'request'} ${res.status} -> refresh`); } catch(_) {}
+        headers = await loadHeaders(true);
+        if (!headers) {
+          const err = new Error('auth-headers-missing');
+          err.status = res.status;
+          throw err;
+        }
+        attempts = 0;
+        continue;
+      }
+      const err = new Error('auth-http');
+      err.status = res.status;
+      err.response = res;
+      throw err;
+    }
+
+    if (res.status >= 500 && res.status < 600 && attempts < max) {
+      attempts += 1;
+      await sleep(200 * attempts);
+      continue;
+    }
+
+    return res;
+  }
+}
   
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
-  diag.add?.("[capture] guard: request headers");
-  const headers = await getHeaders();
-  diag.add?.("[capture] guard: headers resp" );
-  if(!url || !headers){
+  if(!url){
     uiError("Nicht angemeldet - bitte Google-Login ausfuehren.");
     showLoginOverlay(true);
     return;
@@ -5312,13 +5482,16 @@ async function syncWebhook(entry, localId){
     }
 
     const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
-    const res = await withRetry(()=> fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }));
+    const res = await fetchWithAuth(
+      headers => fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }),
+      { tag: 'webhook:post', maxAttempts: 2 }
+    );
 
     if(!res.ok){
       // Details ziehen (falls PostgREST JSON liefert)
       let details = "";
       try {
-        const e = await res.json();
+        const e = await res.clone().json();
         details = (e?.message || e?.details || "");
       } catch { /* plain text? */ }
 
@@ -5331,7 +5504,10 @@ async function syncWebhook(entry, localId){
             await patchDayFlags({ user_id: uid, dayIso, flags: flagsEv.payload });
             const others = events.filter(ev => ev.type !== 'day_flags');
             if (others.length) {
-              const res2 = await withRetry(() => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }));
+              const res2 = await fetchWithAuth(
+                headers => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }),
+                { tag: 'webhook:fallback-post', maxAttempts: 2 }
+              );
               if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
             }
             uiInfo("Flags aktualisiert.");
@@ -5363,7 +5539,10 @@ async function syncWebhook(entry, localId){
       }
 
       diag.add(`Webhook-Fehler ${res.status}: ${details || "-"}`);
-      throw new Error(`save-failed-${res.status}`);
+      const err = new Error(`save-failed-${res.status}`);
+      err.status = res.status;
+      err.details = details;
+      throw err;
     }
 
     const json = await res.json();
@@ -5376,9 +5555,13 @@ async function syncWebhook(entry, localId){
       uiError("Unerwartete Antwort vom Server - kein Datensatz zurueckgegeben.");
     }
   }catch(e){
-    // Netzwerkfehler, 5xx nach Exhaust, etc.
-    uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
-    diag.add("Webhook: Netzwerkfehler");
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+      uiError("Bitte erneut anmelden, um weiter zu speichern.");
+    } else {
+      uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
+    }
+    try { diag.add("Webhook: Netzwerkfehler"); } catch(_){}
     throw e;
   }
 }
@@ -5526,7 +5709,10 @@ async function isWebAuthnAvailable(){
   if (!window?.PublicKeyCredential) return false;
   try{
     return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  }catch(_){
+  }catch(e){
+    if (e?.status === 401 || e?.status === 403) {
+      showLoginOverlay(true);
+    }
     return false;
   }
 }
@@ -6044,7 +6230,7 @@ document.addEventListener('keydown', (e)=>{
 
 let __lastResumeAt = 0;
 let __resumeRunning = false;
-const RESUME_COOLDOWN_MS = 0; // Debounce verhindert Event-Stürme; Cooldown nicht mehr nötig
+const RESUME_COOLDOWN_MS = 250;
 
 async function resumeFromBackground({ source = 'resume' } = {}) {
   const now = Date.now();
@@ -6058,21 +6244,21 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
   }
   __resumeRunning = true;
   __lastResumeAt = now;
-
   try {
-    if (!diag?.logEl) { try { diag.init(); } catch(_) {} }
+    if (!diag?.logEl) {
+      try { diag.init(); } catch(_) {}
+    }
     diag.add?.(`[resume] start: ${source}`);
-
     // sanftes Repaint
     try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
     updateStickyOffsets();
     scheduleAuthGrace();
 
-    // Supabase-Client & schnelle Auth-Prüfung
     const supa = await ensureSupabaseClient();
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
+    // Session pr?fen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
@@ -6089,29 +6275,27 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
-    // *** WICHTIG: ZUERST Tageswechsel prüfen/setzen (zieht Datum auf heute & lädt Tageswerte) ***
-    try {
-      await maybeRefreshForTodayChange({ source: 'resume', force: true });
-      diag.add?.('[resume] today ensured');
-    } catch(e) {
-      diag.add?.('[resume] today ensure error: ' + (e?.message || e));
-    }
+    // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
+    try { await refreshCaptureIntake(); } catch(e) { diag.add?.('[resume] intake refresh error: ' + (e?.message || e)); throw e; }
+    diag.add?.('[resume] intake refreshed');
+    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_){}
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
-      diag.add?.('[resume] re-setupRealtime');
+      diag.add?.('Resume: re-setupRealtime');
       try { await setupRealtime(); diag.add?.('[resume] realtime ensured'); }
-      catch(e) { diag.add?.('[resume] realtime error: ' + (e?.message || e)); }
+      catch(e) { diag.add?.('[resume] realtime error: ' + (e?.message || e)); throw e; }
     }
 
     // Gezielter UI-Refresh (Doctor immer; Lifestyle/Charts nur wenn aktiv/offen; Appointments explizit)
     await requestUiRefresh({ reason: 'resume', appointments: true });
     diag.add?.('[resume] ui refresh requested');
 
-    // Intake-Listener sicherstellen (falls beim Today-Check UI neu gerendert wurde)
-    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_) {}
+    try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
+    scheduleNoonSwitch();
+    maybeAutoApplyBpContext({ source });
 
-    // Fokus sanft reparieren
+    // sanfte Fokusreparatur
     try {
       let focusTarget = null;
       if (document.activeElement?.matches?.('input, select, textarea')) {
@@ -6125,8 +6309,6 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
       }
     } catch(_) {}
 
-    scheduleNoonSwitch();
-    maybeAutoApplyBpContext({ source });
     diag.add?.('Resume: done');
   } catch (e) {
     diag.add?.('Resume error: ' + (e?.message || e));
@@ -6136,33 +6318,23 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
 }
 // <-- Ende von async function resumeFromBackground
 
-// --- Resume-Listener (debounced) ---
-let __resumeTimer = null;
-function scheduleResume(source){
-  // mehrere Events in kurzem Abstand -> ein Resume
-  if (__resumeTimer) clearTimeout(__resumeTimer);
-  __resumeTimer = setTimeout(() => {
-    __resumeTimer = null;
-    (async () => { await resumeFromBackground({ source }); })();
-  }, 300);
-}
-
+// --- Resume-Listener ---
 document.addEventListener('visibilitychange', () => {
   diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
-  scheduleResume('visibility');
+  (async () => { await resumeFromBackground({ source: 'visibility' }); })();
 });
 
 window.addEventListener('pageshow', (event) => {
   diag.add?.(`[event] pageshow (persisted=${event.persisted ? 1 : 0})`);
   if (event.persisted || document.visibilityState === 'visible') {
-    scheduleResume('pageshow');
+    (async () => { await resumeFromBackground({ source: 'pageshow' }); })();
   }
 });
 
 window.addEventListener('focus', () => {
   diag.add?.('[event] focus');
-  scheduleResume('focus');
+  (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
 // --- Arzt-Export ---
@@ -6288,7 +6460,4 @@ if (!window.__bootDone) {
 </html>
 
 <!-- marker -->
-
-
-
 
