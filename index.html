@@ -1609,6 +1609,24 @@ const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String
 const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+
+/* ===== Capture/Lifestyle Defaults ===== */
+const LS_WATER_GOAL = 3000;    // Milliliter Zielbereich
+const LS_SALT_MAX   = 10;      // Gramm obere Grenze
+const LS_PROTEIN_GOAL = 120;   // Gramm Zielbereich
+
+let captureIntakeState = {
+  logged: false,
+  dayIso: todayStr(),
+  totals: { water_ml: 0, salt_g: 0, protein_g: 0 }
+};
+let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
+let __dateUserSelected = false;
+let __lastKnownToday = todayStr();
+let __bpUserOverride = false;
+let __midnightTimer = null;
+let __noonTimer = null;
+let __dayHeartbeat = null;
 function formatDateTimeDE(iso){
   if (!iso) return '\u2014';
   try {
