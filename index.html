@@ -3676,7 +3676,7 @@ function watchAuthState(){
       finalizeAuthState(true);
       await afterLoginBoot();
       await setupRealtime();
-      await requestUiRefresh();
+      requestUiRefresh().catch(err => diag.add?.('ui refresh err: ' + (err?.message || err)));
       await refreshCaptureIntake();
       await refreshAppointments();
       return;
@@ -3705,7 +3705,7 @@ async function afterLoginBoot(){
   if (__booted) return;
   __booted = true;
   // Keine Auto-Sync/Realtime bis Arzt-Ansicht umgestellt ist
-  await requestUiRefresh({ reason: 'boot:afterLogin' });
+  requestUiRefresh({ reason: 'boot:afterLogin' }).catch(err => diag.add?.('ui refresh err: ' + (err?.message || err)));
 }
 
 /* ===== CSV/JSON export (Daily) ===== */
@@ -5440,7 +5440,25 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
   while (true) {
     let res;
     try {
-      res = await makeRequest(headers);
+      // Per-request soft timeout to avoid hanging saves (e.g., after resume)
+      const REQ_TIMEOUT_MS = 10000;
+      const reqStart = (typeof performance!=="undefined" && typeof performance.now==="function") ? performance.now() : Date.now();
+      diag.add?.(`[auth] request start ${tag || 'request'}`);
+      let timeoutId; let timedOut = false;
+      const timeoutPromise = new Promise((_,reject)=>{
+        timeoutId = setTimeout(()=>{ timedOut = true; reject(new Error('request-timeout')); }, REQ_TIMEOUT_MS);
+      });
+      const fetchPromise = (async ()=>{
+        try { return await makeRequest(headers); }
+        catch(err){ if (!timedOut) throw err; diag.add?.(`[auth] late error ${tag || 'request'}: ${err?.message || err}`); return null; }
+      })();
+      try {
+        res = await Promise.race([fetchPromise, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutId);
+        const dur = (typeof performance!=="undefined" && typeof performance.now==="function") ? (performance.now()-reqStart) : (Date.now()-reqStart);
+        if (timedOut) { diag.add?.(`[auth] ${tag || 'request'} timeout (${Math.round(dur)} ms)`); }
+      }
     } catch (err) {
       if (attempts < max) {
         attempts += 1;
