@@ -1687,6 +1687,8 @@ let __noonTimer = null;
 let __dayHeartbeat = null;
 let __bpPanesCache = null;
 let __lastUserId = null;
+let __cachedHeaders = null;
+let __cachedHeadersAt = 0;
 function formatDateTimeDE(iso){
   if (!iso) return '\u2014';
   try {
@@ -1910,11 +1912,37 @@ async function getHeaders(){
     return null;
   }
 
-  const { data: { session } } = await supa.auth.getSession();
-  const jwt = session?.access_token;
+  let timeoutId;
+  let timedOut = false;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      reject(new Error('getSession-timeout'));
+    }, GET_USER_TIMEOUT_MS);
+  });
+  let sessionInfo = null;
+  try {
+    const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
+    sessionInfo = result?.data?.session ?? null;
+  } catch (err) {
+    if (timedOut) {
+      diag.add?.('[auth] getSession timeout');
+    } else {
+      diag.add?.('[auth] getSession error: ' + (err?.message || err));
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (timedOut && __cachedHeaders && __cachedHeadersAt) {
+    diag.add?.('[headers] fallback cached (timeout)');
+    return __cachedHeaders;
+  }
+
+  const jwt = sessionInfo?.access_token;
   if (!anonKey || !jwt) {
     diag.add?.('Headers: fehlende Session/JWT');
-    return null;
+    return __cachedHeaders;
   }
 
   const headers = {
@@ -1923,6 +1951,8 @@ async function getHeaders(){
     "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
+  __cachedHeaders = headers;
+  __cachedHeadersAt = Date.now();
   diag.add?.('[headers] ok');
   return headers;
 }
@@ -3692,6 +3722,8 @@ function watchAuthState(){
         __lastUserId = newUid;
         diag.add?.(`[auth] session uid=${newUid}`);
       }
+      __cachedHeaders = null;
+      __cachedHeadersAt = 0;
       finalizeAuthState(true);
       await afterLoginBoot();
       await setupRealtime();
@@ -3707,6 +3739,8 @@ function watchAuthState(){
       diag.add?.('[auth] session cleared');
       __lastUserId = null;
     }
+    __cachedHeaders = null;
+    __cachedHeadersAt = 0;
     __pendingSignOut = async () => {
       teardownRealtime();
       await refreshCaptureIntake();
@@ -5436,11 +5470,19 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
 
   const loadHeaders = async (forceRefresh = false) => {
     if (forceRefresh) {
+      diag.add?.(`[auth] refresh start ${tag || 'request'}`);
       try {
         await supa.auth.refreshSession();
       } catch (refreshErr) {
         diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`);
       }
+      __cachedHeaders = null;
+      __cachedHeadersAt = 0;
+      diag.add?.(`[auth] refresh end ${tag || 'request'}`);
+    }
+    if (!forceRefresh && __cachedHeaders && __cachedHeadersAt && (Date.now() - __cachedHeadersAt) < 5 * 60 * 1000) {
+      diag.add?.('[headers] cache hit');
+      return __cachedHeaders;
     }
     return await getHeaders();
   };
