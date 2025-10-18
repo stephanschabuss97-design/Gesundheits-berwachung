@@ -1627,6 +1627,7 @@ let __bpUserOverride = false;
 let __midnightTimer = null;
 let __noonTimer = null;
 let __dayHeartbeat = null;
+let __bpPanesCache = null;
 function formatDateTimeDE(iso){
   if (!iso) return '\u2014';
   try {
@@ -2895,6 +2896,13 @@ function bindAppointmentsPanel(){
     const doneBtn = document.getElementById(`appt-${code}-done`);
     if (saveBtn) saveBtn.addEventListener('click', () => handleAppointmentSave(code));
     if (doneBtn) doneBtn.addEventListener('click', () => handleAppointmentDone(code));
+  });
+}
+
+function clearCaptureIntakeInputs(){
+  ['water', 'salt', 'protein'].forEach(kind => {
+    const input = document.getElementById(`cap-${kind}-add`);
+    if (input) input.value = '';
   });
 }
 
