@@ -1284,12 +1284,23 @@ async function runUiSubStep(label, enabled, fn) {
   const start = uiNow();
   diag.add?.(`[ui] step start ${label}`);
   let timeoutId;
+  let timedOut = false;
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(uiRefreshTimeoutSymbol), UI_REFRESH_TIMEOUT_MS);
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      reject(uiRefreshTimeoutSymbol);
+    }, UI_REFRESH_TIMEOUT_MS);
   });
   try {
     await Promise.race([
-      (async () => { await fn(); })(),
+      (async () => {
+        try {
+          await fn();
+        } catch (err) {
+          if (!timedOut) throw err;
+          diag.add?.(`[ui] step late error ${label}: ${err?.message || err}`);
+        }
+      })(),
       timeoutPromise
     ]);
     const duration = Math.round(uiNow() - start);
