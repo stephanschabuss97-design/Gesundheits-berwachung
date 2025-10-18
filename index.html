@@ -1827,11 +1827,19 @@ function putConf(key, value){
   });
 }
 function getConf(key){
+  diag.add?.(`[conf] getConf start ${key}`);
   return new Promise((res,rej)=>{
     const tx = db.transaction(CONF,"readonly");
     const rq = tx.objectStore(CONF).get(key);
-    rq.onsuccess = ()=> res(rq.result?.value ?? null);
-    rq.onerror   = (e)=> rej(e);
+    rq.onsuccess = ()=>{
+      const val = rq.result?.value ?? null;
+      diag.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
+      res(val);
+    };
+    rq.onerror   = (e)=>{
+      diag.add?.(`[conf] getConf error ${key}: ${e?.target?.error || e}`);
+      rej(e);
+    };
   });
 }
 function addEntry(obj){
@@ -1931,6 +1939,7 @@ async function deleteRemote(remote_id){
 
 async function loadIntakeToday({ user_id, dayIso }){
   if (!user_id) return null;
+  diag.add?.(`[capture] loadIntakeToday start uid=${user_id} day=${dayIso||''}`);
   const baseDay = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso || '')) ? dayIso : todayStr();
   const from = `${baseDay}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
@@ -1950,6 +1959,7 @@ async function loadIntakeToday({ user_id, dayIso }){
   });
   const r = Array.isArray(rows) && rows.length ? rows[0] : null;
   const p = r?.payload || {};
+  diag.add?.(`[capture] loadIntakeToday done id=${r?.id || 'null'} payload=${JSON.stringify(p)}`);
   return {
     id: r?.id ?? null,
     water_ml: Number(p.water_ml || 0),
@@ -1976,6 +1986,7 @@ async function saveIntakeTotals({ dayIso, totals }){
   };
   const payload = [{ ts, type: 'intake', payload: payloadTotals, user_id: uid }];
 
+  diag.add?.('[capture] fetch start intake:post');
   const res = await fetchWithAuth(
     headers => fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }),
     { tag: 'intake:post', maxAttempts: 2 }
@@ -2000,6 +2011,7 @@ async function saveIntakeTotals({ dayIso, totals }){
   const toIso = toNext.toISOString().slice(0,10);
   const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`
             + `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+  diag.add?.('[capture] fetch start intake:patch');
   const res2 = await fetchWithAuth(
     headers => fetch(patchUrl, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }),
     { tag: 'intake:patch', maxAttempts: 2 }
@@ -5645,11 +5657,17 @@ return i>0 ? restUrl.slice(0, i) : null;
 
 async function getUserId(){
 try{
+diag.add?.('[auth] getUserId start');
 const supa = await ensureSupabaseClient();
 if(!supa) return null;
 const { data: { user } } = await supa.auth.getUser();
-return user?.id ?? null;
-}catch{ return null; }
+const uid = user?.id ?? null;
+diag.add?.(`[auth] getUserId done ${uid ? uid : 'null'}`);
+return uid;
+}catch(e){
+diag.add?.('[auth] getUserId error: ' + (e?.message || e));
+return null;
+}
 }
 
 async function ensureSupabaseClient(){
