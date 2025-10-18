@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.3.5)</title>
+<title>Gesundheits-Logger (V1.7.3.6)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -680,7 +680,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.6</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1456,10 +1456,7 @@ function updateStickyOffsets(){
     if (mainEl){
       mainEl.style.paddingTop = `calc(${headerH}px + ${tabsH}px + 8px)`;
     }
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* noop */ }
+  }catch(_){ /* noop */ }
 }
 
 window.addEventListener('resize', updateStickyOffsets);
@@ -1475,10 +1472,7 @@ function ensureNotObscured(el){
     if (rect.top < requiredTop){
       window.scrollBy({ top: rect.top - requiredTop, left: 0, behavior: 'auto' });
     }
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* noop */ }
+  }catch(_){ /* noop */ }
 }
 
 document.addEventListener('focusin', (e)=>{
@@ -1487,10 +1481,7 @@ document.addEventListener('focusin', (e)=>{
       return;
     }
     ensureNotObscured(e.target);
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* noop */ }
+  }catch(_){ /* noop */ }
 }, true);
 
 // Simple focus trap for modal overlays
@@ -1733,14 +1724,8 @@ function initDB(){
         s.createIndex("byRemote","remote_id",{unique:false});
       } else {
         const s = e.target.transaction.objectStore(STORE);
-        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
-        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
+        try{ s.createIndex("byDateTime","dateTime",{unique:false}); }catch(_){}
+        try{ s.createIndex("byRemote","remote_id",{unique:false}); }catch(_){}
       }
       // config
       if(!db.objectStoreNames.contains(CONF)){
@@ -1824,28 +1809,16 @@ function deleteEntryLocal(id){
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
   const key = await getConf("webhookKey");
-  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }} return null; }
-  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }} return null; }
+  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(_){} return null; }
+  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(_){} return null; }
   const anonKey = key.replace(/^Bearer\s+/i, "");
 
   const supa = await ensureSupabaseClient();
-  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }} return null; }
+  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(_){} return null; }
 
   const { data: { session } } = await supa.auth.getSession();
   const jwt = session?.access_token;
-  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }} return null; }
+  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
 
   const headers = {
     "Content-Type": "application/json",
@@ -1853,33 +1826,32 @@ async function getHeaders(){
     "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
-  try{ diag.add?.('[headers] ok'); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
+  try{ diag.add?.('[headers] ok'); }catch(_){}
   return headers;
 }
 
 async function deleteRemote(remote_id){
-const url = await getConf("webhookUrl");
-if(!url || !remote_id) return {ok:false};
-const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
-try{
-const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete', maxAttempts: 2 });
-return {ok: res.ok, status: res.status};
-}catch(e){
-return {ok:false, status: e?.status ?? 0};
+  const url = await getConf("webhookUrl");
+  if(!url || !remote_id) return {ok:false};
+  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
+  try{
+    const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete', maxAttempts: 2 });
+    return {ok: res.ok, status: res.status};
+  }catch(e){
+    return {ok:false, status: e?.status ?? 0};
+  }
 }
-}
-  
-/* === Lifestyle Intake REST Helpers === */
+
 async function loadIntakeToday({ user_id, dayIso }){
-  const from = `${dayIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
+  if (!user_id) return null;
+  const baseDay = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso || '')) ? dayIso : todayStr();
+  const from = `${baseDay}T00:00:00Z`;
+  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
+  const toIso = toNext.toISOString().slice(0, 10);
+
   const rows = await sbSelect({
     table: 'health_events',
-    select: 'id,day,ts,payload',
+    select: 'id,payload',
     filters: [
       ['user_id', `eq.${user_id}`],
       ['type', 'eq.intake'],
@@ -1900,15 +1872,15 @@ async function loadIntakeToday({ user_id, dayIso }){
 }
 
 async function saveIntakeTotals({ dayIso, totals }){
-  const url = await getConf('webhookUrl');
+  const url = await getConf("webhookUrl");
   const uid = await getUserId();
   if (!url || !uid) {
-    const errMissing = new Error('saveIntakeTotals: missing config/auth');
-    errMissing.status = 0;
+    const errMissing = new Error("saveIntakeTotals: missing config/auth");
+    errMissing.status = 401;
     throw errMissing;
   }
 
-  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||'')) ? dayIso : todayStr();
+  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||"")) ? dayIso : todayStr();
   const ts = new Date(`${dayIsoNorm}T12:00:00Z`).toISOString();
   const payloadTotals = {
     water_ml: Number(totals?.water_ml || 0),
@@ -1917,18 +1889,10 @@ async function saveIntakeTotals({ dayIso, totals }){
   };
   const payload = [{ ts, type: 'intake', payload: payloadTotals, user_id: uid }];
 
-  const performPost = () => fetchWithAuth(
+  const res = await fetchWithAuth(
     headers => fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }),
     { tag: 'intake:post', maxAttempts: 2 }
   );
-
-  const res = await performPost();
-  if (!res.ok && res.status === 404) {
-    try {
-      const body = await res.clone().text();
-      diag.add?.(`Lifestyle POST 404 body: ${body}`);
-    } catch(_){}
-  }
 
   if (res.ok) {
     return await res.json();
@@ -1947,14 +1911,12 @@ async function saveIntakeTotals({ dayIso, totals }){
 
   const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
   const toIso = toNext.toISOString().slice(0,10);
-  const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
-            `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-
+  const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`
+            + `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
   const res2 = await fetchWithAuth(
     headers => fetch(patchUrl, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }),
     { tag: 'intake:patch', maxAttempts: 2 }
   );
-
   if (!res2.ok){
     let d2='';
     try{ const e2 = await res2.clone().json(); d2 = e2?.message || e2?.details || ''; }catch{}
@@ -1976,9 +1938,8 @@ async function cleanupOldIntake(){
               `&ts=lt.${encodeURIComponent(today)}T00:00:00Z`;
     await fetchWithAuth(headers => fetch(q, { method:'DELETE', headers }), { tag: 'intake:cleanup', maxAttempts: 2 });
   }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* non-blocking */ }
+    try { diag.add?.('cleanupOldIntake error: ' + (e?.message || e)); } catch(_){}
+  }
 }
 
 /* === Remote-Fetch Arzt-Ansicht (Views) === */
@@ -2037,10 +1998,7 @@ async function syncCaptureToggles(){
     setNsar(!!f.nsar_taken);
     const flagsCommentEl = document.getElementById("flagsComment");
     if (flagsCommentEl) flagsCommentEl.value = "";
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* non-blocking */ }
+  }catch(_){ /* non-blocking */ }
 }
 
 async function prefillBodyInputs(){
@@ -2205,31 +2163,9 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   try{
     const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete-day', maxAttempts: 2 });
     return { ok: res.ok, status: res.status };
-  }catch{
-    return { ok:false, status:0 };
+  }catch(e){
+    return { ok:false, status: e?.status ?? 0 };
   }
-}
-
-/* ===== Lifestyle (Heute) ===== */
-const LS_WATER_GOAL = 2000;
-const LS_SALT_MAX = 6;
-const LS_PROTEIN_GOAL = 90;
-
-let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-let __midnightTimer = null;
-let __noonTimer = null;
-let __dayHeartbeat = null;
-let __lastKnownToday = null;
-let __dateUserSelected = false;
-let __bpUserOverride = false;
-let __bpPanesCache = null;
-const captureIntakeState = { dayIso: null, totals: { water_ml: 0, salt_g: 0, protein_g: 0 }, logged: false };
-
-function clearCaptureIntakeInputs(){
-  ['cap-water-add','cap-salt-add','cap-protein-add'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
 }
 
 function setCaptureIntakeDisabled(disabled){
@@ -2644,7 +2580,7 @@ async function fetchAppointmentsSummary(){
     if (res.status === 404) return [];
     if (!res.ok) {
       let details = '';
-      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){}
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
       throw new Error(`appointments fetch failed ${res.status} ${details}`);
     }
     return await res.json();
@@ -2668,28 +2604,19 @@ async function fetchAppointmentsSummary(){
 }
 
 async function refreshAppointments(){
-  const wrap = document.getElementById('appointmentsWrap');
-  if (!wrap) return;
   if (appointmentsState.loading) return;
   appointmentsState.loading = true;
   try {
     const summaryRaw = await fetchAppointmentsSummary();
-    if (!summaryRaw) {
-      appointmentsState.data = Object.create(null);
-      appointmentsState.loaded = false;
-      resetAppointmentsUi();
-      return;
-    }
-
-    const scheduledList = Array.isArray(summaryRaw.scheduled) ? summaryRaw.scheduled : [];
-    const doneList = Array.isArray(summaryRaw.done) ? summaryRaw.done : [];
+    const scheduledList = Array.isArray(summaryRaw?.scheduled) ? summaryRaw.scheduled : [];
+    const doneList = Array.isArray(summaryRaw?.done) ? summaryRaw.done : [];
 
     const scheduledMap = new Map();
     for (const item of scheduledList) {
       const role = item?.role;
       const dt = item?.dt;
       if (!role || !dt) continue;
-      if (!scheduledMap.has(role) || Date.parse(dt) < Date.parse(scheduledMap.get(role).dt)) {
+      if (!scheduledMap.has(role)) {
         scheduledMap.set(role, item);
       }
     }
@@ -2726,16 +2653,13 @@ async function refreshAppointments(){
       summary[code] = { next: nextIso, last: lastIso };
     });
 
-      appointmentsState.data = summary;
-      appointmentsState.loaded = true;
-      applyAppointmentsUi(summary);
-      const nextAppt = computeNextAppointment(summary);
-      appointmentsState.next = nextAppt;
-      setAppointmentBadge(nextAppt);
+    appointmentsState.data = summary;
+    appointmentsState.loaded = true;
+    applyAppointmentsUi(summary);
+    const nextAppt = computeNextAppointment(summary);
+    appointmentsState.next = nextAppt;
+    setAppointmentBadge(nextAppt);
   } catch (e) {
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
     try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
     appointmentsState.data = Object.create(null);
     appointmentsState.loaded = false;
@@ -2751,11 +2675,6 @@ async function handleAppointmentSave(role){
   const timeEl = document.getElementById(`appt-${role}-time`);
   const saveBtn = document.getElementById(`appt-${role}-save`);
   if (!dateEl || !timeEl || !saveBtn) return;
-
-  if (!(await isLoggedInFast())){
-    showLoginOverlay(true);
-    return;
-  }
 
   const date = (dateEl.value || '').trim();
   const time = (timeEl.value || '').trim();
@@ -2773,28 +2692,32 @@ async function handleAppointmentSave(role){
     }
     return;
   }
-  const iso = validation.iso;
+
   const endpoint = await getAppointmentsEndpoint();
-  if (!endpoint){
-    uiError('Bitte zuerst anmelden.');
-    showLoginOverlay(true);
-    return;
-  }
-  const { base } = endpoint;
+  const base = endpoint?.base || null;
+  const iso = validation.iso;
 
   const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
-  const patchUrl = new URL(`${base}/rest/v1/appointments`);
-  patchUrl.searchParams.set('status', 'eq.scheduled');
-  patchUrl.searchParams.set('role', `eq.${role}`);
+  const patchUrl = base ? new URL(base + '/rest/v1/appointments') : null;
+  if (patchUrl){
+    patchUrl.searchParams.set('status', 'eq.scheduled');
+    patchUrl.searchParams.set('role', 'eq.' + role);
+  }
 
   const body = JSON.stringify({ dt: iso });
   withBusy(saveBtn, true);
   try {
+    if (!base || !patchUrl){
+      const errMissing = new Error('appointments-endpoint-missing');
+      errMissing.status = 401;
+      throw errMissing;
+    }
+
     let saved = false;
     if (hasScheduled){
       const res = await fetchWithAuth(
         headers => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }),
-        { tag: `appt:patch:${role}`, maxAttempts: 2 }
+        { tag: 'appt:patch', maxAttempts: 2 }
       );
       if (!res.ok){
         let details = '';
@@ -2804,9 +2727,7 @@ async function handleAppointmentSave(role){
           timeEl.focus();
           return;
         }
-        if (res.status === 404){
-          // kein vorhandener Termin -> POST im Anschluss
-        } else {
+        if (res.status !== 404){
           const errPatch = new Error('appointments-patch-failed');
           errPatch.status = res.status;
           errPatch.details = details;
@@ -2820,15 +2741,15 @@ async function handleAppointmentSave(role){
     if (!saved){
       const uid = await getUserId();
       if (!uid){
-        uiError('Bitte erneut anmelden.');
-        showLoginOverlay(true);
-        return;
+        const errAuth = new Error('appointments-user-missing');
+        errAuth.status = 401;
+        throw errAuth;
       }
-      const postUrl = new URL(`${base}/rest/v1/appointments`);
+      const postUrl = new URL(base + '/rest/v1/appointments');
       const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled', user_id: uid }]);
       const resPost = await fetchWithAuth(
         headers => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }),
-        { tag: `appt:post:${role}`, maxAttempts: 2 }
+        { tag: 'appt:post', maxAttempts: 2 }
       );
       if (resPost.status === 409){
         uiError('Es existiert bereits ein geplanter Termin. Bitte aktualisieren.');
@@ -2857,7 +2778,7 @@ async function handleAppointmentSave(role){
     if (e?.status === 400){
       uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
       timeEl.focus();
-    } else if (e?.status === 401 || e?.status === 403) {
+    } else if (e?.status === 401 || e?.status === 403){
       showLoginOverlay(true);
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
@@ -2871,30 +2792,27 @@ async function handleAppointmentSave(role){
     withBusy(saveBtn, false);
   }
 }
-
 async function handleAppointmentDone(role){
   const btn = document.getElementById(`appt-${role}-done`);
   if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
-  if (!(await isLoggedInFast())){
-    showLoginOverlay(true);
-    return;
-  }
+
   const endpoint = await getAppointmentsEndpoint();
-  if (!endpoint){
-    uiError('Bitte zuerst anmelden.');
-    showLoginOverlay(true);
-    return;
-  }
-  const { base } = endpoint;
-  const url = new URL(`${base}/rest/v1/appointments`);
-  url.searchParams.set('status', 'eq.scheduled');
-  url.searchParams.set('role', `eq.${role}`);
-  const body = JSON.stringify({ status: 'done' });
+  const base = endpoint?.base || null;
   withBusy(btn, true);
   try {
+    if (!base){
+      const errMissing = new Error('appointments-endpoint-missing');
+      errMissing.status = 401;
+      throw errMissing;
+    }
+    const url = new URL(base + '/rest/v1/appointments');
+    url.searchParams.set('status', 'eq.scheduled');
+    url.searchParams.set('role', 'eq.' + role);
+    const body = JSON.stringify({ status: 'done' });
+
     const res = await fetchWithAuth(
       headers => fetch(url.toString(), { method: 'PATCH', headers, body }),
-      { tag: `appt:done:${role}`, maxAttempts: 2 }
+      { tag: 'appt:done', maxAttempts: 2 }
     );
     if (!res.ok){
       let details = '';
@@ -2912,7 +2830,7 @@ async function handleAppointmentDone(role){
     await refreshAppointments();
     uiInfo('Termin abgeschlossen.');
   } catch (e){
-    if (e?.status === 401 || e?.status === 403) {
+    if (e?.status === 401 || e?.status === 403){
       showLoginOverlay(true);
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
@@ -2926,7 +2844,6 @@ async function handleAppointmentDone(role){
     withBusy(btn, false);
   }
 }
-
 function bindAppointmentsPanel(){
   APPOINTMENT_ROLES.forEach(({ code }) => {
     const saveBtn = document.getElementById(`appt-${code}-save`);
@@ -2972,11 +2889,9 @@ try{
     }
   }catch(e){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
-    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){ }
-    try{ updateLifestyleBars(); }catch(_){ }
+    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
+
+  try{ updateLifestyleBars(); }catch(_){ }
   }
 
   __lastKnownToday = todayStr();
@@ -2989,12 +2904,6 @@ async function handleCaptureIntake(kind){
   if (!btn || !input) return;
 
   try { diag.add?.(`[capture] click ${kind}`); } catch(_){}
-
-  if (!(await isLoggedInFast())){
-    try { diag.add?.('[capture] blocked: isLoggedInFast false'); } catch(_){}
-    showLoginOverlay(true);
-    return;
-  }
 
   try {
     if (!__dateUserSelected) {
@@ -3062,10 +2971,7 @@ try{
     } else {
       uiError('Update fehlgeschlagen: ' + msg);
     }
-    try{ diag.add?.(`[capture] save error ${kind}: ` + msg); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
+    try{ diag.add?.(`[capture] save error ${kind}: ` + msg); }catch(_){}
   }finally{
     withBusy(btn, false);
   }
@@ -3186,10 +3092,7 @@ async function renderLifestyle(){
     const cur = await loadIntakeToday({ user_id: uid, dayIso });
     __lsTotals = { water_ml: cur.water_ml||0, salt_g: cur.salt_g||0, protein_g: cur.protein_g||0 };
     updateLifestyleBars();
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    } /* ignore */ }
+  }catch(_){ /* ignore */ }
 }
 
 function bindLifestyle(){
@@ -3205,24 +3108,13 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
-  try{
+    try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.water_ml = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Wasser aktualisiert.');
-    }catch(e){
-      if (e?.status === 401 || e?.status === 403) {
-        showLoginOverlay(true);
-        uiError('Bitte erneut anmelden.');
-      } else {
-        uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      }
-      try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
-    }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
   };
 
   const addSalt = async ()=>{
@@ -3232,24 +3124,13 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = (__lsTotals.salt_g||0) + v;
     if (total > 30) total = 30;
-  try{
+    try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.salt_g = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Salz aktualisiert.');
-    }catch(e){
-      if (e?.status === 401 || e?.status === 403) {
-        showLoginOverlay(true);
-        uiError('Bitte erneut anmelden.');
-      } else {
-        uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      }
-      try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
-    }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
   };
 
   const addProtein = async ()=>{
@@ -3259,24 +3140,13 @@ function bindLifestyle(){
     const dayIso = todayStr();
     let total = (__lsTotals.protein_g||0) + v;
     if (total > 300) total = 300;
-  try{
+    try{
       await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
       __lsTotals.protein_g = total;
       updateLifestyleBars();
       el.value = '';
       uiInfo('Protein aktualisiert.');
-    }catch(e){
-      if (e?.status === 401 || e?.status === 403) {
-        showLoginOverlay(true);
-        uiError('Bitte erneut anmelden.');
-      } else {
-        uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      }
-      try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }}
-    }
+    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
   };
 
   if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
@@ -3287,7 +3157,11 @@ function bindLifestyle(){
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
 async function patchDayFlags({ user_id, dayIso, flags }){
   const url = await getConf("webhookUrl");
-  if (!url || !user_id || !dayIso) throw new Error('patchDayFlags: missing params');
+  if (!url || !user_id || !dayIso) {
+    const err = new Error('patchDayFlags: missing params');
+    err.status = 401;
+    throw err;
+  }
 
   const from = `${dayIso}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
@@ -3311,7 +3185,11 @@ async function patchDayFlags({ user_id, dayIso, flags }){
 async function appendNoteRemote(opts){
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf("webhookUrl");
-  if (!url || !user_id || !dayIso) throw new Error('appendNoteRemote: missing params');
+  if (!url || !user_id || !dayIso) {
+    const err = new Error('appendNoteRemote: missing params');
+    err.status = 401;
+    throw err;
+  }
 
   const from = `${dayIso}T00:00:00Z`;
   const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
@@ -3544,10 +3422,7 @@ function scheduleAuthGrace(){
   const { data } = await sbClient.auth.getSession();
   diag.add?.("[capture] guard: session resp");
       finalizeAuthState(!!data?.session);
-    }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
+    }catch(_){
       finalizeAuthState(false);
     }
   }, AUTH_GRACE_MS);
@@ -3642,10 +3517,7 @@ if (logged){
 }
 applyAuthUi(logged);
 return logged;
-}catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
+}catch(_){
 return false;
 }
 }
@@ -3761,10 +3633,7 @@ async function renderDoctor(){
   let daysArr = [];
   try{
     daysArr = await fetchDailyOverview(from, to);
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
+  }catch(_){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
     return;
@@ -5389,15 +5258,20 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
   if (!supa) {
     const err = new Error('auth-client-missing');
     err.status = 401;
+    try { showLoginOverlay(true); } catch(_) {}
     throw err;
   }
+
+  const signalAuth = () => {
+    try { showLoginOverlay(true); } catch(_) {}
+  };
 
   const loadHeaders = async (forceRefresh = false) => {
     if (forceRefresh) {
       try {
         await supa.auth.refreshSession();
       } catch (refreshErr) {
-        try { diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`); } catch (_) {}
+        try { diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`); } catch(_) {}
       }
     }
     return await getHeaders();
@@ -5410,6 +5284,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
   if (!headers) {
     const err = new Error('auth-headers-missing');
     err.status = 401;
+    signalAuth();
     throw err;
   }
 
@@ -5444,6 +5319,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
         if (!headers) {
           const err = new Error('auth-headers-missing');
           err.status = res.status;
+          signalAuth();
           throw err;
         }
         attempts = 0;
@@ -5452,6 +5328,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
       const err = new Error('auth-http');
       err.status = res.status;
       err.response = res;
+      signalAuth();
       throw err;
     }
 
@@ -5468,9 +5345,10 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   if(!url){
-    uiError("Nicht angemeldet - bitte Google-Login ausfuehren.");
+    const err = new Error("syncWebhook: missing webhookUrl");
+    err.status = 401;
     showLoginOverlay(true);
-    return;
+    throw err;
   }
 
   try{
@@ -5488,14 +5366,12 @@ async function syncWebhook(entry, localId){
     );
 
     if(!res.ok){
-      // Details ziehen (falls PostgREST JSON liefert)
       let details = "";
       try {
         const e = await res.clone().json();
         details = (e?.message || e?.details || "");
       } catch { /* plain text? */ }
 
-      // v1.2.1: Fallback for duplicate day_flags (upsert via PATCH)
       if (res.status === 409 || /duplicate|unique/i.test(details)) {
         const flagsEv = events.find(ev => ev.type === 'day_flags');
         try {
@@ -5506,7 +5382,7 @@ async function syncWebhook(entry, localId){
             if (others.length) {
               const res2 = await fetchWithAuth(
                 headers => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }),
-                { tag: 'webhook:fallback-post', maxAttempts: 2 }
+                { tag: 'webhook:fallback', maxAttempts: 2 }
               );
               if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
             }
@@ -5514,7 +5390,7 @@ async function syncWebhook(entry, localId){
             diag.add("Fallback: day_flags via PATCH");
             return;
           }
-        } catch (_) { /* fallback failed: proceed to generic handling */ }
+        } catch (_) { /* fallback failed */ }
         const noteEv = events.find(ev => ev.type === 'note');
         try {
           if (noteEv && uid) {
@@ -5525,15 +5401,13 @@ async function syncWebhook(entry, localId){
             diag.add('Fallback: note via PATCH');
             return;
           }
-        } catch (_) { /* fallback failed: proceed to generic handling */ }
-        }
+        } catch (_) { /* fallback failed */ }
+      }
 
-        if (res.status === 409 || /duplicate|unique/i.test(details)) {
+      if (res.status === 409 || /duplicate|unique/i.test(details)) {
         uiError("Es gibt bereits einen Eintrag fuer diesen Tag/Kontext.");
       } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
         uiError("Eingaben ungueltig - bitte Wertebereiche/Pflichtfelder pruefen.");
-      } else if (res.status === 401 || res.status === 403) {
-        uiError("Zugriff verweigert - bitte erneut anmelden.");
       } else {
         uiError(`Speichern fehlgeschlagen (HTTP ${res.status}).`);
       }
@@ -5556,16 +5430,14 @@ async function syncWebhook(entry, localId){
     }
   }catch(e){
     if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
       uiError("Bitte erneut anmelden, um weiter zu speichern.");
     } else {
       uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
     }
-    try { diag.add("Webhook: Netzwerkfehler"); } catch(_){}
+    try { diag.add("Webhook: Netzwerkfehler"); } catch(_){ }
     throw e;
   }
 }
-
 /* ===== Realtime / Auto-Sync ===== */
 let sbClient = null;
 
@@ -5709,10 +5581,7 @@ async function isWebAuthnAvailable(){
   if (!window?.PublicKeyCredential) return false;
   try{
     return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      showLoginOverlay(true);
-    }
+  }catch(_){
     return false;
   }
 }
@@ -6046,7 +5915,10 @@ if (bpContextSel){
 const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
 if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    try {
+      const logged = await isLoggedInFast();
+      if (!logged) { diag.add?.('[panel] bp save while auth unknown'); }
+    } catch(_) {}
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
@@ -6083,7 +5955,10 @@ if (saveBpPanelBtn){
 const saveBodyPanelBtn = document.getElementById('saveBodyPanelBtn');
 if (saveBodyPanelBtn){
   saveBodyPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    try {
+      const logged = await isLoggedInFast();
+      if (!logged) { diag.add?.('[panel] body save while auth unknown'); }
+    } catch(_) {}
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -6112,7 +5987,10 @@ if (saveBodyPanelBtn){
 const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
 if (saveFlagsPanelBtn){
   saveFlagsPanelBtn.addEventListener('click', async (e)=>{
-    if (!(await isLoggedInFast())){ alert("Bitte zuerst mit Google anmelden."); return; }
+    try {
+      const logged = await isLoggedInFast();
+      if (!logged) { diag.add?.('[panel] flags save while auth unknown'); }
+    } catch(_) {}
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -6178,7 +6056,10 @@ if (applyBtn) {
 }
 
 $("#doctorChartBtn").addEventListener("click", async ()=>{
-  if (!(await isLoggedInFast())){ showLoginOverlay(true); return; }
+  try {
+    const logged = await isLoggedInFast();
+    if (!logged) { diag.add?.('[doctor] chart open while auth unknown'); }
+  } catch(_) {}
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'chart';
     const ok = await requireDoctorUnlock();
@@ -6276,8 +6157,12 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     if (!loggedIn) { diag.add?.('[resume] no session -> login overlay'); showLoginOverlay(true); return; }
 
     // *** Intake-Pills zuerst auf den aktuellen Tagesstand bringen ***
-    try { await refreshCaptureIntake(); } catch(e) { diag.add?.('[resume] intake refresh error: ' + (e?.message || e)); throw e; }
-    diag.add?.('[resume] intake refreshed');
+    try {
+      await maybeRefreshForTodayChange({ force: true, source: source || 'resume' });
+      diag.add?.('[resume] day state refreshed');
+    } catch(e) {
+      diag.add?.('[resume] day refresh error: ' + (e?.message || e));
+    }
     try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_){}
 
     // Realtime nur bei Bedarf neu aufbauen
@@ -6291,7 +6176,6 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     await requestUiRefresh({ reason: 'resume', appointments: true });
     diag.add?.('[resume] ui refresh requested');
 
-    try { await maybeRefreshForTodayChange({ source }); } catch(_) {}
     scheduleNoonSwitch();
     maybeAutoApplyBpContext({ source });
 
@@ -6339,7 +6223,10 @@ window.addEventListener('focus', () => {
 
 // --- Arzt-Export ---
 $("#doctorExportJson").addEventListener("click", async () => {
-  if (!(await isLoggedInFast())) { showLoginOverlay(true); return; }
+  try {
+    const logged = await isLoggedInFast();
+    if (!logged) { diag.add?.('[doctor] export while auth unknown'); }
+  } catch(_) {}
   if (!__doctorUnlocked) {
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
@@ -6460,4 +6347,3 @@ if (!window.__bootDone) {
 </html>
 
 <!-- marker -->
-
