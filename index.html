@@ -1224,6 +1224,7 @@ hide(){ if (!this.el) return; this.el.style.display='none'; focusTrap.deactivate
 
 /* ===== Helpers ===== */
 const UI_REFRESH_TIMEOUT_MS = 8000;
+const GET_USER_TIMEOUT_MS = 2000;
 const uiRefreshState = {
   timer: null,
   running: false,
@@ -1685,6 +1686,7 @@ let __midnightTimer = null;
 let __noonTimer = null;
 let __dayHeartbeat = null;
 let __bpPanesCache = null;
+let __lastUserId = null;
 function formatDateTimeDE(iso){
   if (!iso) return '\u2014';
   try {
@@ -3685,6 +3687,11 @@ function watchAuthState(){
     const logged = !!session;
     if (logged) {
       setUserUi(session?.user?.email || '');
+      const newUid = session?.user?.id || null;
+      if (newUid) {
+        __lastUserId = newUid;
+        diag.add?.(`[auth] session uid=${newUid}`);
+      }
       finalizeAuthState(true);
       await afterLoginBoot();
       await setupRealtime();
@@ -3696,6 +3703,10 @@ function watchAuthState(){
 
     setUserUi('');
     __lastLoggedIn = false;
+    if (__lastUserId) {
+      diag.add?.('[auth] session cleared');
+      __lastUserId = null;
+    }
     __pendingSignOut = async () => {
       teardownRealtime();
       await refreshCaptureIntake();
@@ -5659,13 +5670,55 @@ async function getUserId(){
 try{
 diag.add?.('[auth] getUserId start');
 const supa = await ensureSupabaseClient();
-if(!supa) return null;
-const { data: { user } } = await supa.auth.getUser();
-const uid = user?.id ?? null;
-diag.add?.(`[auth] getUserId done ${uid ? uid : 'null'}`);
-return uid;
+if(!supa) {
+  if ((__authState === 'auth' || __authState === 'unknown') && __lastUserId) {
+    diag.add?.(`[auth] getUserId fallback (no client) ${__lastUserId}`);
+    return __lastUserId;
+  }
+  return null;
+}
+let timeoutId;
+let timedOut = false;
+const timeoutPromise = new Promise((_, reject) => {
+  timeoutId = setTimeout(() => {
+    timedOut = true;
+    reject(new Error('getUser-timeout'));
+  }, GET_USER_TIMEOUT_MS);
+});
+let userInfo = null;
+try {
+  const result = await Promise.race([supa.auth.getUser(), timeoutPromise]);
+  userInfo = result?.data?.user ?? null;
+} catch (err) {
+  if (timedOut) {
+    diag.add?.('[auth] getUserId timeout');
+    if ((__authState === 'auth' || __authState === 'unknown') && __lastUserId) {
+      diag.add?.(`[auth] getUserId fallback (timeout) ${__lastUserId}`);
+      return __lastUserId;
+    }
+  }
+  throw err;
+} finally {
+  clearTimeout(timeoutId);
+}
+const uid = userInfo?.id ?? null;
+if (uid) {
+  __lastUserId = uid;
+  diag.add?.(`[auth] getUserId done ${uid}`);
+  return uid;
+}
+if ((__authState === 'auth' || __authState === 'unknown') && __lastUserId) {
+  diag.add?.(`[auth] getUserId fallback (no uid) ${__lastUserId}`);
+  return __lastUserId;
+}
+diag.add?.('[auth] getUserId done null');
+return null;
 }catch(e){
 diag.add?.('[auth] getUserId error: ' + (e?.message || e));
+if ((__authState === 'auth' || __authState === 'unknown') && __lastUserId) {
+  diag.add?.(`[auth] getUserId fallback (error) ${__lastUserId}`);
+  return __lastUserId;
+}
 return null;
 }
 }
