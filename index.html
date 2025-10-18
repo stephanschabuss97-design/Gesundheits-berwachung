@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -1291,8 +1290,8 @@ async function runUiRefresh(){
         if (appointments) await refreshAppointments();
         if (lifestyle && typeof renderLifestyle === 'function') await renderLifestyle();
         if (chart) await chartPanel.draw?.();
-      } catch (e) {
-        try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch(_){}
+    } catch (e) {
+      try { diag.add?.('uiRefresh error: ' + (e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
       }
     }
   } finally {
@@ -1809,16 +1808,28 @@ function deleteEntryLocal(id){
 /* ===== Remote (Supabase REST) ===== */
 async function getHeaders(){
   const key = await getConf("webhookKey");
-  if (!key) { try{ diag.add?.('Headers: kein Key (webhookKey)'); }catch(_){} return null; }
-  if (isServiceRoleKey(key)) { try{ diag.add?.('Headers: service_role Key blockiert'); }catch(_){} return null; }
+  if (!key) {
+    try { diag.add?.('Headers: kein Key (webhookKey)'); } catch (err) { console.error('diag.add failed', err); }
+    return null;
+  }
+  if (isServiceRoleKey(key)) {
+    try { diag.add?.('Headers: service_role Key blockiert'); } catch (err) { console.error('diag.add failed', err); }
+    return null;
+  }
   const anonKey = key.replace(/^Bearer\s+/i, "");
 
   const supa = await ensureSupabaseClient();
-  if (!supa) { try{ diag.add?.('Headers: Supabase-Client fehlt'); }catch(_){} return null; }
+  if (!supa) {
+    try { diag.add?.('Headers: Supabase-Client fehlt'); } catch (err) { console.error('diag.add failed', err); }
+    return null;
+  }
 
   const { data: { session } } = await supa.auth.getSession();
   const jwt = session?.access_token;
-  if (!anonKey || !jwt) { try{ diag.add?.('Headers: fehlende Session/JWT'); }catch(_){} return null; }
+  if (!anonKey || !jwt) {
+    try { diag.add?.('Headers: fehlende Session/JWT'); } catch (err) { console.error('diag.add failed', err); }
+    return null;
+  }
 
   const headers = {
     "Content-Type": "application/json",
@@ -1826,7 +1837,7 @@ async function getHeaders(){
     "Authorization": `Bearer ${jwt}`,
     "Prefer": "return=representation"
   };
-  try{ diag.add?.('[headers] ok'); }catch(_){}
+  try { diag.add?.('[headers] ok'); } catch (err) { console.error('diag.add failed', err); }
   return headers;
 }
 
@@ -1938,7 +1949,7 @@ async function cleanupOldIntake(){
               `&ts=lt.${encodeURIComponent(today)}T00:00:00Z`;
     await fetchWithAuth(headers => fetch(q, { method:'DELETE', headers }), { tag: 'intake:cleanup', maxAttempts: 2 });
   }catch(e){
-    try { diag.add?.('cleanupOldIntake error: ' + (e?.message || e)); } catch(_){}
+    try { diag.add?.('cleanupOldIntake error: ' + (e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
   }
 }
 
@@ -2387,7 +2398,7 @@ function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
   select.value = desired;
   applyBpContext(desired);
   updateBpCommentWarnings?.();
-  try { diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`); } catch(_){ }
+  try { diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`); } catch (err) { console.error('diag.add failed', err); }
 }
 
 function handleNoonSwitch(){
@@ -2440,7 +2451,7 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
     __bpUserOverride = false;
     maybeAutoApplyBpContext({ force: true, source: source || 'day-change' });
   }
-  try { diag.add?.(`intake: day refresh (${source || 'auto'})`); } catch(_) {}
+  try { diag.add?.(`intake: day refresh (${source || 'auto'})`); } catch (err) { console.error('diag.add failed', err); }
 }
 
 
@@ -2660,7 +2671,7 @@ async function refreshAppointments(){
     appointmentsState.next = nextAppt;
     setAppointmentBadge(nextAppt);
   } catch (e) {
-    try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch(_){}
+    try { diag.add?.('appointments refresh error: ' + (e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
     appointmentsState.data = Object.create(null);
     appointmentsState.loaded = false;
     resetAppointmentsUi();
@@ -2783,10 +2794,10 @@ async function handleAppointmentSave(role){
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
       uiRestError(e.status, e.details || e.message);
-      try { diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
+      try { diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
     } else {
       uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
-      try { diag.add?.('appointments save error (' + role + '): ' + (e?.message || e)); } catch(_){ }
+      try { diag.add?.('appointments save error (' + role + '): ' + (e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
     }
   } finally {
     withBusy(saveBtn, false);
@@ -2835,10 +2846,10 @@ async function handleAppointmentDone(role){
       uiError('Bitte erneut anmelden.');
     } else if (e?.status) {
       uiRestError(e.status, e.details || e.message, 'Termin konnte nicht abgeschlossen werden.');
-      try { diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e)); } catch(_){ }
+      try { diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
     } else {
       uiError('Termin konnte nicht abgeschlossen werden.');
-      try { diag.add?.('appointments done error (' + role + '): ' + (e?.message || e)); } catch(_){ }
+      try { diag.add?.('appointments done error (' + role + '): ' + (e?.message || e)); } catch (err) { console.error('diag.add failed', err); }
     }
   } finally {
     withBusy(btn, false);
@@ -2889,7 +2900,7 @@ try{
     }
   }catch(e){
     captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(_){}
+    try{ diag.add?.('Capture intake load error: ' + (e?.message || e)); }catch(err){ console.error('diag.add failed', err); }
 
   try{ updateLifestyleBars(); }catch(_){ }
   }
@@ -2903,7 +2914,7 @@ async function handleCaptureIntake(kind){
   const input = document.getElementById(`cap-${kind}-add`);
   if (!btn || !input) return;
 
-  try { diag.add?.(`[capture] click ${kind}`); } catch(_){}
+  try { diag.add?.(`[capture] click ${kind}`); } catch(err) { console.error('diag.add failed', err); }
 
   try {
     if (!__dateUserSelected) {
@@ -2923,16 +2934,20 @@ async function handleCaptureIntake(kind){
   let value;
   if (kind === 'water'){
     value = Number(input.value);
-    if (!(value > 0)){ uiError('Bitte gueltige Wassermenge eingeben.'); try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(_){ } return; }
+    if (!(value > 0)){
+      uiError('Bitte gueltige Wassermenge eingeben.');
+      try { diag.add?.('[capture] blocked: invalid water value ' + input.value); } catch(err) { console.error('diag.add failed', err); }
+      return;
+    }
   } else {
     value = toNumDE(input.value);
     if (!(value > 0)){
       uiError(kind === 'salt' ? 'Bitte gueltige Salzmenge eingeben.' : 'Bitte gueltige Proteinmenge eingeben.');
-      try { diag.add?.(`[capture] blocked: invalid ${kind} value ${input.value}`); } catch(_){}
+      try { diag.add?.(`[capture] blocked: invalid ${kind} value ${input.value}`); } catch(err) { console.error('diag.add failed', err); }
       return;
     }
   }
-  try { diag.add?.(`[capture] parsed ${kind}=${value}`); } catch(_){}
+  try { diag.add?.(`[capture] parsed ${kind}=${value}`); } catch(err) { console.error('diag.add failed', err); }
 
   const totals = { ...captureIntakeState.totals };
   let message = '';
@@ -2949,7 +2964,7 @@ async function handleCaptureIntake(kind){
     totals.protein_g = Number(total.toFixed(2));
     message = 'Protein aktualisiert.';
   }
-  try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(_){}
+  try { diag.add?.(`[capture] totals ${JSON.stringify(totals)}`); } catch(err) { console.error('diag.add failed', err); }
 
 withBusy(btn, true);
 try{
@@ -2971,7 +2986,7 @@ try{
     } else {
       uiError('Update fehlgeschlagen: ' + msg);
     }
-    try{ diag.add?.(`[capture] save error ${kind}: ` + msg); }catch(_){}
+    try{ diag.add?.(`[capture] save error ${kind}: ` + msg); }catch(err){ console.error('diag.add failed', err); }
   }finally{
     withBusy(btn, false);
   }
@@ -3114,7 +3129,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Wasser aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(_){} }
+  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (water): ' + (e?.message||e)); }catch(err){ console.error('diag.add failed', err); } }
   };
 
   const addSalt = async ()=>{
@@ -3130,7 +3145,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Salz aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(_){} }
+  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (salt): ' + (e?.message||e)); }catch(err){ console.error('diag.add failed', err); } }
   };
 
   const addProtein = async ()=>{
@@ -3146,7 +3161,7 @@ function bindLifestyle(){
       updateLifestyleBars();
       el.value = '';
       uiInfo('Protein aktualisiert.');
-    }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(_){} }
+  }catch(e){ uiError('Update fehlgeschlagen: ' + (e?.message||e)); try{ diag.add?.('Lifestyle update error (protein): ' + (e?.message||e)); }catch(err){ console.error('diag.add failed', err); } }
   };
 
   if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
@@ -3293,7 +3308,7 @@ async function pushPendingToRemote(){
     } catch(err){
       failed++;
       if (err?.status === 401 || err?.status === 403) {
-        try { diag.add?.('[push] auth error, abbrechen'); } catch(_){}
+        try { diag.add?.('[push] auth error, abbrechen'); } catch(err2){ console.error('diag.add failed', err2); }
         break;
       }
     }
@@ -5271,7 +5286,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
       try {
         await supa.auth.refreshSession();
       } catch (refreshErr) {
-        try { diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`); } catch(_) {}
+        try { diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`); } catch(err) { console.error('diag.add failed', err); }
       }
     }
     return await getHeaders();
@@ -5314,7 +5329,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
     if (res.status === 401 || res.status === 403) {
       if (retry401 && !refreshed) {
         refreshed = true;
-        try { diag.add?.(`[auth] ${tag || 'request'} ${res.status} -> refresh`); } catch(_) {}
+        try { diag.add?.(`[auth] ${tag || 'request'} ${res.status} -> refresh`); } catch(err) { console.error('diag.add failed', err); }
         headers = await loadHeaders(true);
         if (!headers) {
           const err = new Error('auth-headers-missing');
@@ -5434,7 +5449,7 @@ async function syncWebhook(entry, localId){
     } else {
       uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
     }
-    try { diag.add("Webhook: Netzwerkfehler"); } catch(_){ }
+    try { diag.add("Webhook: Netzwerkfehler"); } catch(err) { console.error('diag.add failed', err); }
     throw e;
   }
 }
@@ -5885,7 +5900,7 @@ const savedKey = await getConf("webhookKey");
 try{
   diag.add?.('Config URL: ' + (savedUrl || '(none)'));
   diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
-}catch(_){ }
+}catch(err){ console.error('diag.add failed', err); }
 if (!savedUrl || !savedKey) {
   setTab("capture"); // In Erfassung bleiben
 }
@@ -5917,8 +5932,13 @@ if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
     try {
       const logged = await isLoggedInFast();
-      if (!logged) { diag.add?.('[panel] bp save while auth unknown'); }
-    } catch(_) {}
+      if (!logged) {
+        diag.add?.('[panel] bp save while auth unknown');
+        // Diagnostics only: keep going so fetchWithAuth can recover auth state.
+      }
+    } catch(err) {
+      console.error('isLoggedInFast check failed', err);
+    }
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
@@ -5957,8 +5977,13 @@ if (saveBodyPanelBtn){
   saveBodyPanelBtn.addEventListener('click', async (e)=>{
     try {
       const logged = await isLoggedInFast();
-      if (!logged) { diag.add?.('[panel] body save while auth unknown'); }
-    } catch(_) {}
+      if (!logged) {
+        diag.add?.('[panel] body save while auth unknown');
+        // Diagnostics only: continue to let fetchWithAuth handle auth refresh.
+      }
+    } catch(err) {
+      console.error('isLoggedInFast check failed', err);
+    }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -5989,8 +6014,13 @@ if (saveFlagsPanelBtn){
   saveFlagsPanelBtn.addEventListener('click', async (e)=>{
     try {
       const logged = await isLoggedInFast();
-      if (!logged) { diag.add?.('[panel] flags save while auth unknown'); }
-    } catch(_) {}
+      if (!logged) {
+        diag.add?.('[panel] flags save while auth unknown');
+        // Diagnostics only: request proceeds so auth wrapper can retry properly.
+      }
+    } catch(err) {
+      console.error('isLoggedInFast check failed', err);
+    }
     const btn = e.currentTarget;
     withBusy(btn, true);
     let savedOk = false;
@@ -6058,8 +6088,13 @@ if (applyBtn) {
 $("#doctorChartBtn").addEventListener("click", async ()=>{
   try {
     const logged = await isLoggedInFast();
-    if (!logged) { diag.add?.('[doctor] chart open while auth unknown'); }
-  } catch(_) {}
+    if (!logged) {
+      diag.add?.('[doctor] chart open while auth unknown');
+      // Diagnostics only: chart refresh still runs so auth flow can recover.
+    }
+  } catch(err) {
+    console.error('isLoggedInFast check failed', err);
+  }
   if (!__doctorUnlocked){
     __pendingAfterUnlock = 'chart';
     const ok = await requireDoctorUnlock();
@@ -6163,7 +6198,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     } catch(e) {
       diag.add?.('[resume] day refresh error: ' + (e?.message || e));
     }
-    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(_){}
+    try { bindIntakeCapture(); diag.add?.('[resume] intake listeners rebound'); } catch(err) { console.error('diag.add failed', err); }
 
     // Realtime nur bei Bedarf neu aufbauen
     if (!__rtReady || __channels.length === 0) {
@@ -6225,8 +6260,13 @@ window.addEventListener('focus', () => {
 $("#doctorExportJson").addEventListener("click", async () => {
   try {
     const logged = await isLoggedInFast();
-    if (!logged) { diag.add?.('[doctor] export while auth unknown'); }
-  } catch(_) {}
+    if (!logged) {
+      diag.add?.('[doctor] export while auth unknown');
+      // Diagnostics only: export still runs so auth wrapper can trigger re-login if needed.
+    }
+  } catch(err) {
+    console.error('isLoggedInFast check failed', err);
+  }
   if (!__doctorUnlocked) {
     __pendingAfterUnlock = 'export';
     const ok = await requireDoctorUnlock();
@@ -6345,5 +6385,3 @@ if (!window.__bootDone) {
 
 </body>
 </html>
-
-<!-- marker -->
