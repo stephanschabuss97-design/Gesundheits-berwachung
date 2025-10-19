@@ -2585,18 +2585,46 @@ function maybeResetIntakeForToday(todayIso){
   } catch(_) { /* ignore storage */ }
 
   (async () => {
+    let guardSet = false;
     try {
       const logged = await isLoggedInFast();
       if (!logged) return;
-      diag.add?.(`[capture] reset intake start day=${todayIso}`);
-      const zeros = { water_ml: 0, salt_g: 0, protein_g: 0 };
-      await saveIntakeTotalsRpc({ dayIso: todayIso, totals: zeros });
-      __intakeResetDoneFor = todayIso;
-      try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
-      diag.add?.('[capture] reset intake ok');
-      try { refreshCaptureIntake(); } catch(_) {}
+      const uid = await getUserId();
+      if (!uid) return;
+
+      let existing = null;
+      try {
+        existing = await loadIntakeToday({ user_id: uid, dayIso: todayIso });
+      } catch (err) {
+        diag.add?.(`[capture] reset intake skip day=${todayIso} (lookup failed: ${err?.message || err})`);
+        return;
+      }
+
+      const hasTotals = !!(existing && (
+        Number(existing.water_ml || 0) > 0 ||
+        Number(existing.salt_g || 0) > 0 ||
+        Number(existing.protein_g || 0) > 0
+      ));
+
+      if (hasTotals) {
+        diag.add?.(`[capture] reset intake skip day=${todayIso} (existing totals)`);
+        guardSet = true;
+      } else {
+        diag.add?.(`[capture] reset intake start day=${todayIso}`);
+        const zeros = { water_ml: 0, salt_g: 0, protein_g: 0 };
+        await saveIntakeTotalsRpc({ dayIso: todayIso, totals: zeros });
+        diag.add?.('[capture] reset intake ok');
+        guardSet = true;
+      }
     } catch(e) {
       try { diag.add?.('[capture] reset intake error: ' + (e?.message || e)); } catch(_) {}
+      return;
+    } finally {
+      if (guardSet) {
+        __intakeResetDoneFor = todayIso;
+        try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
+        try { refreshCaptureIntake(); } catch(_) {}
+      }
     }
   })();
 }
