@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.3.6)</title>
+<title>Gesundheits-Logger (V1.7.4)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -680,7 +679,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.3.6</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.4</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1673,6 +1672,7 @@ function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 const LS_WATER_GOAL = 3000;    // Milliliter Zielbereich
 const LS_SALT_MAX   = 10;      // Gramm obere Grenze
 const LS_PROTEIN_GOAL = 120;   // Gramm Zielbereich
+const LS_INTAKE_RESET_DONE_KEY = 'healthlog_intake_reset_done';
 
 let captureIntakeState = {
   logged: false,
@@ -1686,6 +1686,7 @@ let __bpUserOverride = false;
 let __midnightTimer = null;
 let __noonTimer = null;
 let __dayHeartbeat = null;
+let __intakeResetDoneFor = null; // Tag, fuer den Reset bereits gelaufen ist (pro Tab)
 let __bpPanesCache = null;
 let __lastUserId = null;
 let __cachedHeaders = null;
@@ -1847,6 +1848,55 @@ function getConf(key){
     };
   });
 }
+
+function getTimeZoneOffsetMs(timeZone, referenceDate) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    const parts = dtf.formatToParts(referenceDate);
+    const bucket = {};
+    for (const part of parts) {
+      if (part.type === 'literal') continue;
+      bucket[part.type] = part.value;
+    }
+    const year = Number(bucket.year);
+    const month = Number(bucket.month);
+    const day = Number(bucket.day);
+    const hour = Number(bucket.hour);
+    const minute = Number(bucket.minute);
+    const second = Number(bucket.second);
+    if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) {
+      return 0;
+    }
+    const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+    return asUtc - referenceDate.getTime();
+  } catch(_) {
+    return 0;
+  }
+}
+
+function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
+  try {
+    const normalized = String(dayIso || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+    const [y, m, d] = normalized.split('-').map(Number);
+    if (![y, m, d].every(Number.isFinite)) return null;
+    const ref = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+    const offset = getTimeZoneOffsetMs(timeZone, ref);
+    const utcMillis = ref.getTime() - offset;
+    return new Date(utcMillis).toISOString();
+  } catch(_) {
+    return null;
+  }
+}
 function addEntry(obj){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
@@ -1974,9 +2024,6 @@ async function loadIntakeToday({ user_id, dayIso }){
   if (!user_id) return null;
   diag.add?.(`[capture] loadIntakeToday start uid=${user_id} day=${dayIso||''}`);
   const baseDay = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso || '')) ? dayIso : todayStr();
-  const from = `${baseDay}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
-  const toIso = toNext.toISOString().slice(0, 10);
 
   const rows = await sbSelect({
     table: 'health_events',
@@ -1984,8 +2031,7 @@ async function loadIntakeToday({ user_id, dayIso }){
     filters: [
       ['user_id', `eq.${user_id}`],
       ['type', 'eq.intake'],
-      ['ts', `gte.${from}`],
-      ['ts', `lt.${toIso}T00:00:00Z`]
+      ['day', `eq.${baseDay}`]
     ],
     order: 'ts.desc',
     limit: 1
@@ -2011,7 +2057,7 @@ async function saveIntakeTotals({ dayIso, totals }){
   }
 
   const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||"")) ? dayIso : todayStr();
-  const ts = new Date(`${dayIsoNorm}T12:00:00Z`).toISOString();
+  const ts = dayIsoToMidnightIso(dayIsoNorm) || new Date().toISOString();
   const payloadTotals = {
     water_ml: Number(totals?.water_ml || 0),
     salt_g: Number(totals?.salt_g || 0),
@@ -2040,10 +2086,8 @@ async function saveIntakeTotals({ dayIso, totals }){
     throw errRes;
   }
 
-  const toNext = new Date(`${dayIsoNorm}T00:00:00Z`); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
   const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`
-            + `&ts=gte.${encodeURIComponent(dayIsoNorm)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
+            + `&day=eq.${encodeURIComponent(dayIsoNorm)}`;
   diag.add?.('[capture] fetch start intake:patch');
   const res2 = await fetchWithAuth(
     headers => fetch(patchUrl, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }),
@@ -2058,6 +2102,70 @@ async function saveIntakeTotals({ dayIso, totals }){
     throw errPatch;
   }
   return await res2.json();
+}
+
+// Neuer atomarer RPC/UPSERT-Save (ein Request)
+let __intakeRpcDisabled = false;
+async function saveIntakeTotalsRpc({ dayIso, totals }){
+  const restUrl = await getConf("webhookUrl");
+  const base    = baseUrlFromRest(restUrl) || (DEV_ALLOW_DEFAULTS ? SUPABASE_URL_DEFAULT : null);
+  if (!base) {
+    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
+    const err = new Error("REST-Basis fehlt");
+    err.status = 0;
+    throw err;
+  }
+
+  if (__intakeRpcDisabled) {
+    diag.add?.('[capture] rpc missing, fallback to legacy');
+    return await saveIntakeTotals({ dayIso, totals });
+  }
+
+  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||"")) ? dayIso : todayStr();
+  const payloadTotals = {
+    water_ml: Number(totals?.water_ml || 0),
+    salt_g: Number(totals?.salt_g || 0),
+    protein_g: Number(totals?.protein_g || 0),
+  };
+
+  const url = new URL(`${base}/rest/v1/rpc/upsert_intake`);
+  const body = JSON.stringify({
+    p_day: dayIsoNorm,
+    p_water_ml: payloadTotals.water_ml,
+    p_salt_g: payloadTotals.salt_g,
+    p_protein_g: payloadTotals.protein_g,
+  });
+
+  diag.add?.('[capture] fetch start intake:rpc');
+  const res = await fetchWithAuth(
+    headers => fetch(url.toString(), { method: 'POST', headers, body }),
+    { tag: 'intake:rpc', maxAttempts: 2 }
+  );
+
+  if (res.status === 404 || res.status === 405) {
+    __intakeRpcDisabled = true;
+    diag.add?.('[capture] rpc missing, fallback to legacy');
+    return await saveIntakeTotals({ dayIso: dayIsoNorm, totals: payloadTotals });
+  }
+
+  if (!res.ok) {
+    let details = '';
+    try { const e = await res.clone().json(); details = e?.message || e?.details || ''; } catch{}
+    const err = new Error('intake-rpc-failed');
+    err.status = res.status;
+    err.details = details;
+    throw err;
+  }
+
+  let json;
+  try { json = await res.json(); } catch { json = null; }
+  const row = Array.isArray(json) ? (json?.[0] ?? null) : (json || null);
+  if (!row || typeof row !== 'object') {
+    const err = new Error('rpc-empty');
+    err.status = 200;
+    throw err;
+  }
+  return row;
 }
 
 async function cleanupOldIntake(){
@@ -2469,6 +2577,30 @@ function scheduleMidnightRefresh(){
   } catch { /* noop */ }
 }
 
+// Fire-and-Forget: Intake-Totals beim echten Tageswechsel auf 0 setzen
+function maybeResetIntakeForToday(todayIso){
+  try {
+    const last = window?.localStorage?.getItem(LS_INTAKE_RESET_DONE_KEY) || '';
+    if (__intakeResetDoneFor === todayIso || last === todayIso) return;
+  } catch(_) { /* ignore storage */ }
+
+  (async () => {
+    try {
+      const logged = await isLoggedInFast();
+      if (!logged) return;
+      diag.add?.(`[capture] reset intake start day=${todayIso}`);
+      const zeros = { water_ml: 0, salt_g: 0, protein_g: 0 };
+      await saveIntakeTotalsRpc({ dayIso: todayIso, totals: zeros });
+      __intakeResetDoneFor = todayIso;
+      try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
+      diag.add?.('[capture] reset intake ok');
+      try { refreshCaptureIntake(); } catch(_) {}
+    } catch(e) {
+      try { diag.add?.('[capture] reset intake error: ' + (e?.message || e)); } catch(_) {}
+    }
+  })();
+}
+
 function millisUntilNoonGrace(){
   try {
     const now = new Date();
@@ -2559,6 +2691,11 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
       dateEl.value = todayIso;
     }
     __dateUserSelected = false;
+  }
+
+  // Tageswechsel erkannt -> Intake ggf. automatisch auf 0 zuruecksetzen
+  if (!userPinnedOtherDay) {
+    try { maybeResetIntakeForToday(todayIso); } catch(_) {}
   }
 
   try {
@@ -3114,7 +3251,7 @@ async function handleCaptureIntake(kind){
 withBusy(btn, true);
 try{
     diag.add?.(`[capture] save start ${kind}: ${JSON.stringify(totals)}`);
-    await saveIntakeTotals({ dayIso, totals });
+    await saveIntakeTotalsRpc({ dayIso, totals });
     diag.add?.('[capture] save network ok');
     captureIntakeState.totals = totals;
     captureIntakeState.logged = true;
@@ -3278,7 +3415,7 @@ function bindLifestyle(){
     let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
     if (total > 6000) total = 6000;
     try{
-      await saveIntakeTotals({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
+      await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.water_ml = total;
       updateLifestyleBars();
       el.value = '';
@@ -3301,7 +3438,7 @@ function bindLifestyle(){
     let total = (__lsTotals.salt_g||0) + v;
     if (total > 30) total = 30;
     try{
-      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
+      await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
       __lsTotals.salt_g = total;
       updateLifestyleBars();
       el.value = '';
@@ -3324,7 +3461,7 @@ function bindLifestyle(){
     let total = (__lsTotals.protein_g||0) + v;
     if (total > 300) total = 300;
     try{
-      await saveIntakeTotals({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
+      await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
       __lsTotals.protein_g = total;
       updateLifestyleBars();
       el.value = '';
