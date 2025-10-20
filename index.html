@@ -3987,18 +3987,20 @@ async function renderDoctor(){
   const host = $("#doctorView");
   if (!host) return;
 
-  if (!host.dataset.scrollWatcher) {
-    host.addEventListener('scroll', () => {
-      const h = host.scrollHeight || 1;
-      __doctorScrollSnapshot.top = host.scrollTop;
-      __doctorScrollSnapshot.ratio = h ? Math.min(1, host.scrollTop / h) : 0;
+  const scroller = document.getElementById('doctorDailyWrap') || host.parentElement || host;
+  if (!scroller.dataset.scrollWatcher) {
+    scroller.addEventListener('scroll', () => {
+      const h = scroller.scrollHeight || 1;
+      __doctorScrollSnapshot.top = scroller.scrollTop;
+      __doctorScrollSnapshot.ratio = h ? Math.min(1, scroller.scrollTop / h) : 0;
     }, { passive: true });
-    host.dataset.scrollWatcher = "1";
+    scroller.dataset.scrollWatcher = "1";
   }
 
   if (!(await isLoggedIn())){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
     setDocBadges({ visible: false });
+    if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
@@ -4016,7 +4018,7 @@ async function renderDoctor(){
     }
   }
 
-  const prevScrollTop = (__doctorScrollSnapshot?.top ?? host.scrollTop ?? 0) || 0;
+  const prevScrollTop = (__doctorScrollSnapshot?.top ?? scroller.scrollTop ?? 0) || 0;
   const prevScrollRatio = (__doctorScrollSnapshot?.ratio ?? 0) || 0;
   host.innerHTML = "";
 
@@ -4034,7 +4036,7 @@ async function renderDoctor(){
   if (!from || !to){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum waehlen.</div>`;
     setDocBadges({ visible: false });
-    host.scrollTop = 0;
+    if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
@@ -4046,7 +4048,7 @@ async function renderDoctor(){
   }catch(_){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
-    host.scrollTop = 0;
+    if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
@@ -4125,21 +4127,22 @@ async function renderDoctor(){
   // Rendern / Leerzustand
   if (!daysArr.length){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Eintraege im Zeitraum</div>`;
-    host.scrollTop = 0;
+    if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {
     host.innerHTML = daysArr.map(renderDoctorDay).join("");
 
     const restoreScroll = () => {
-      const height = host.scrollHeight || 1;
-      const maxScroll = Math.max(0, height - host.clientHeight);
+      const targetEl = scroller || host;
+      const height = targetEl.scrollHeight || 1;
+      const maxScroll = Math.max(0, height - targetEl.clientHeight);
       const fromTop = Math.max(0, Math.min(prevScrollTop, maxScroll));
       const fromRatio = Math.max(0, Math.min(Math.round(prevScrollRatio * height), maxScroll));
       const target = prevScrollTop ? fromTop : fromRatio;
-      host.scrollTop = target;
-      const h = host.scrollHeight || 1;
-      __doctorScrollSnapshot.top = host.scrollTop;
-      __doctorScrollSnapshot.ratio = h ? Math.min(1, host.scrollTop / h) : 0;
+      targetEl.scrollTop = target;
+      const h = targetEl.scrollHeight || 1;
+      __doctorScrollSnapshot.top = targetEl.scrollTop;
+      __doctorScrollSnapshot.ratio = h ? Math.min(1, targetEl.scrollTop / h) : 0;
     };
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(restoreScroll);
