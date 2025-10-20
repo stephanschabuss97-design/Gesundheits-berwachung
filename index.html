@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.4)</title>
+<title>Gesundheits-Logger (V1.7.5)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -493,6 +493,37 @@ content:""; position:absolute; inset:2px; background:var(--accent); border-radiu
 
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid #000}
 
+#chartSvg path[data-series]{
+  transition: opacity .18s cubic-bezier(.16,1,.3,1), stroke-width .18s cubic-bezier(.16,1,.3,1);
+}
+#chartSvg path[data-series].is-hover{ stroke-width:3; opacity:1; }
+#chartSvg path[data-series].is-dim{ opacity:.25; }
+
+#chartSvg .pt{
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), opacity .18s cubic-bezier(.16,1,.3,1);
+}
+#chartSvg .pt.is-hover{ transform:scale(1.4); opacity:1; }
+#chartSvg .pt.is-dim{ opacity:.35; }
+
+#chartSvg .body-bar{
+  transition: opacity .18s cubic-bezier(.16,1,.3,1), transform .18s cubic-bezier(.16,1,.3,1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+#chartSvg .body-bar.is-hover{ opacity:.9; transform:translateY(-1px); }
+#chartSvg .body-bar.is-dim{ opacity:.35; }
+
+#chart .legend [data-series]{
+  transition: opacity .18s cubic-bezier(.16,1,.3,1), transform .18s cubic-bezier(.16,1,.3,1);
+}
+#chart .legend [data-series].is-hover{ opacity:1; transform:translateY(-1px); }
+#chart .legend [data-series].is-dim{ opacity:.35; }
+
+#chartSvg .chart-hit{ cursor:pointer; }
+#chartSvg .chart-hit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
 /* Busy overlay */
 #busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
 #busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
@@ -679,7 +710,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.4</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.5</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -2372,7 +2403,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
     d.notes = n.text || "";
   }
 
-  return Array.from(days.values()).sort((a,b)=> a.date.localeCompare(b.date));
+  return Array.from(days.values()).sort((a,b)=> b.date.localeCompare(a.date));
 }
 
 /* Neues fetchDailyOverview: liest direkt aus den Views */
@@ -3956,9 +3987,19 @@ async function renderDoctor(){
   const host = $("#doctorView");
   if (!host) return;
 
+  if (!host.dataset.scrollWatcher) {
+    host.addEventListener('scroll', () => {
+      const h = host.scrollHeight || 1;
+      __doctorScrollSnapshot.top = host.scrollTop;
+      __doctorScrollSnapshot.ratio = h ? Math.min(1, host.scrollTop / h) : 0;
+    }, { passive: true });
+    host.dataset.scrollWatcher = "1";
+  }
+
   if (!(await isLoggedIn())){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
     setDocBadges({ visible: false });
+    __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
   // Nur sperren, wenn die Arzt-Ansicht wirklich aktiv angezeigt wird
@@ -3974,6 +4015,9 @@ async function renderDoctor(){
       return;
     }
   }
+
+  const prevScrollTop = (__doctorScrollSnapshot?.top ?? host.scrollTop ?? 0) || 0;
+  const prevScrollRatio = (__doctorScrollSnapshot?.ratio ?? 0) || 0;
   host.innerHTML = "";
 
   // Anzeige-Helper
@@ -3990,6 +4034,8 @@ async function renderDoctor(){
   if (!from || !to){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum waehlen.</div>`;
     setDocBadges({ visible: false });
+    host.scrollTop = 0;
+    __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
 
@@ -4000,8 +4046,12 @@ async function renderDoctor(){
   }catch(_){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
+    host.scrollTop = 0;
+    __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
+
+  daysArr.sort((a,b)=> b.date.localeCompare(a.date));
 
   // KPIs
   const trainingDays = daysArr.filter(d => !!d.flags.training).length;
@@ -4075,8 +4125,27 @@ async function renderDoctor(){
   // Rendern / Leerzustand
   if (!daysArr.length){
     host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Eintraege im Zeitraum</div>`;
+    host.scrollTop = 0;
+    __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {
     host.innerHTML = daysArr.map(renderDoctorDay).join("");
+
+    const restoreScroll = () => {
+      const height = host.scrollHeight || 1;
+      const maxScroll = Math.max(0, height - host.clientHeight);
+      const fromTop = Math.max(0, Math.min(prevScrollTop, maxScroll));
+      const fromRatio = Math.max(0, Math.min(Math.round(prevScrollRatio * height), maxScroll));
+      const target = prevScrollTop ? fromTop : fromRatio;
+      host.scrollTop = target;
+      const h = host.scrollHeight || 1;
+      __doctorScrollSnapshot.top = host.scrollTop;
+      __doctorScrollSnapshot.ratio = h ? Math.min(1, host.scrollTop / h) : 0;
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(restoreScroll);
+    } else {
+      setTimeout(restoreScroll, 0);
+    }
 
     //  Loeschen: alle Server-Events des Tages entfernen
     host.querySelectorAll('[data-del-day]').forEach(btn=>{
@@ -4121,6 +4190,7 @@ const chartPanel = {
   open: false,
   tip: null,
   tipSticky: false,
+  hoverSeries: null,
   SHOW_BODY_COMP_BARS: true,
 
   init() {
@@ -4188,7 +4258,7 @@ const chartPanel = {
         if (this.tipSticky) return;
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
         if (!(isPt || isHit)) { this.hideTip(); return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
@@ -4207,7 +4277,7 @@ const chartPanel = {
       this.svg.addEventListener("click", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
         if (!(isPt || isHit)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
@@ -4222,7 +4292,7 @@ const chartPanel = {
       this.svg.addEventListener("keydown", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isHit = !!(tgt && tgt.classList?.contains("flag-hit"));
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
         if (!(isPt || isHit)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -4433,6 +4503,31 @@ async getFiltered() {
       this.tip.style.display = "none";
       this.tip.textContent = "";
     }
+    this.setHoverSeries(null);
+  },
+  setHoverSeries(seriesKey) {
+    if (!this.svg && !this.legend) return;
+    const nextKey = seriesKey || null;
+    if (this.hoverSeries === nextKey) return;
+    this.hoverSeries = nextKey;
+
+    const svgNodes = this.svg ? Array.from(this.svg.querySelectorAll('[data-series]')) : [];
+    const legendNodes = this.legend ? Array.from(this.legend.querySelectorAll('[data-series]')) : [];
+    [...svgNodes, ...legendNodes].forEach(node => {
+      node.classList.remove('is-hover', 'is-dim');
+    });
+
+    if (!nextKey) return;
+    svgNodes.forEach(node => {
+      const key = node.getAttribute('data-series');
+      if (!key) return;
+      node.classList.add(key === nextKey ? 'is-hover' : 'is-dim');
+    });
+    legendNodes.forEach(node => {
+      const key = node.getAttribute('data-series');
+      if (!key) return;
+      node.classList.add(key === nextKey ? 'is-hover' : 'is-dim');
+    });
   },
   positionTip(e) {
     if (!this.tip || !this.el) return;
@@ -4445,6 +4540,7 @@ async getFiltered() {
   },
   fillTipFromTarget(tgt) {
     if (!this.tip) return;
+    this.setHoverSeries(tgt?.getAttribute("data-series") || null);
     const note = tgt.getAttribute("data-note") || "";
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
@@ -4591,6 +4687,7 @@ const metric = $("#metricSel")?.value || "bp";
     let series = [];
     let barSeries = [];
     let X = xsAll;
+    let pendingBodyHitsSvg = "";
 
     // KPI-Box
     const avgBox = $("#chartAverages");
@@ -4680,10 +4777,10 @@ const metric = $("#metricSel")?.value || "bp";
 
       // Serien definieren
       series = [
-        { name: "Sys Morgens", values: sysM, color: "#93c5fd", type: "sys" },
-        { name: "Sys Abends",  values: sysA, color: "#2563eb", type: "sys" },
-        { name: "Dia Morgens", values: diaM, color: "#f9a8d4", type: "dia" },
-        { name: "Dia Abends",  values: diaA, color: "#db2777", type: "dia" },
+        { key: "bp-sys-m", name: "Sys Morgens", values: sysM, color: "#93c5fd", type: "sys" },
+        { key: "bp-sys-a", name: "Sys Abends",  values: sysA, color: "#2563eb", type: "sys" },
+        { key: "bp-dia-m", name: "Dia Morgens", values: diaM, color: "#f9a8d4", type: "dia" },
+        { key: "bp-dia-a", name: "Dia Abends",  values: diaA, color: "#db2777", type: "dia" },
       ];
 
       X = xsBP; // wichtig
@@ -4691,12 +4788,14 @@ const metric = $("#metricSel")?.value || "bp";
   // Serien: Gewicht + Bauchumfang
   series = [
     {
+      key: "body-weight",
       name: "Gewicht (kg)",
       values: data.map(e => e.weight != null ? Number(e.weight) : null),
       color: "#f59e0b", // Amber
       type: "misc",
     },
     {
+      key: "body-waist",
       name: "Bauchumfang (cm)",
       values: data.map(e => e.waist_cm != null ? Number(e.waist_cm) : null),
       color: "#10b981", // Gruen
@@ -4739,8 +4838,8 @@ const metric = $("#metricSel")?.value || "bp";
   const muscleKg = data.map(e => e.muscle_kg != null ? Number(e.muscle_kg) : null);
   const fatKg    = data.map(e => e.fat_kg    != null ? Number(e.fat_kg)    : null);
   barSeries = [
-    { name: "Muskelmasse (kg)", values: muscleKg, color: "#4DA8FF" },
-    { name: "Fettmasse (kg)",   values: fatKg,    color: "#D2A85F" },
+    { key: "body-muscle", name: "Muskelmasse (kg)", values: muscleKg, color: "#4DA8FF" },
+    { key: "body-fat",    name: "Fettmasse (kg)",   values: fatKg,    color: "#D2A85F" },
   ];
 }
 
@@ -4981,7 +5080,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             hit.setAttribute("width", bandW); hit.setAttribute("height", Math.ceil(totalSlots * slotH));
             hit.setAttribute("fill", "transparent");
             hit.setAttribute("pointer-events", "all");
-            hit.setAttribute("class", "flag-hit");
+            hit.setAttribute("class", "flag-hit chart-hit");
             hit.setAttribute("data-date", d);
             hit.setAttribute("role", "button");
             hit.setAttribute("tabindex", "0");
@@ -5020,7 +5119,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
         const muscle = muscleSeries.values[idx];
         const fat = fatSeries.values[idx];
         if (muscle == null && fat == null) return null;
-        return { ts, muscle, fat };
+        return { ts, muscle, fat, src: data[idx], idx };
       }).filter(Boolean);
 
       if (entries.length) {
@@ -5034,12 +5133,24 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
         const barWidth = Math.max(4, Math.floor((groupWidth - gap) / 2));
 
         if (barWidth > 0 && Number.isFinite(baseline)) {
+          const formatKg = (val) => {
+            if (val == null) return null;
+            const num = Number(val);
+            if (!Number.isFinite(num)) return null;
+            return (typeof fmtNum === "function" ? fmtNum(num, 1) : num.toFixed(1));
+          };
           let barsSvg = '<g class="body-bars" aria-hidden="true">';
-          for (const { ts, muscle, fat } of entries) {
+          let hitsSvg = '<g class="body-bar-hits">';
+          for (const { ts, muscle, fat, src } of entries) {
             const center = x(ts);
             const start = center - groupWidth / 2;
-            const hasMuscle = muscle != null;
-            const hasFat = fat != null;
+            const raw = src || {};
+            const dayIso = raw?.date || (raw?.dateTime ? raw.dateTime.slice(0, 10) : new Date(ts).toISOString().slice(0, 10));
+            const weightVal = formatKg(raw?.weight);
+            const muscleNum = muscle != null ? Number(muscle) : null;
+            const fatNum = fat != null ? Number(fat) : null;
+            const hasMuscle = muscleNum != null && Number.isFinite(muscleNum);
+            const hasFat = fatNum != null && Number.isFinite(fatNum);
             let muscleX = start;
             let fatX = start + barWidth + gap;
             if (hasMuscle && !hasFat) {
@@ -5050,25 +5161,65 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             }
 
             if (hasMuscle) {
-              const yVal = y(muscle);
-              const h = Math.abs(baseline - yVal);
-              if (Number.isFinite(yVal) && h > 0.5) {
-                const top = Math.min(baseline, yVal);
-                barsSvg += `<rect x="${muscleX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#4DA8FF" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+              const yVal = y(muscleNum);
+              if (Number.isFinite(yVal)) {
+                const h = Math.abs(baseline - yVal);
+                if (h > 0.5) {
+                  const top = Math.min(baseline, yVal);
+                  barsSvg += `<rect class="body-bar" data-series="body-muscle" x="${muscleX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#4DA8FF" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+                  let hitHeight = Math.max(h, 14);
+                  let hitTop = Math.min(top, baseline - hitHeight);
+                  if (hitTop < PT) {
+                    hitTop = PT;
+                    hitHeight = Math.max(4, baseline - hitTop);
+                  }
+                  if (hitHeight > 0.5) {
+                    const muscleVal = formatKg(muscleNum);
+                    const parts = [];
+                    if (muscleVal) parts.push(`Muskelmasse: ${muscleVal} kg`);
+                    if (weightVal) parts.push(`Gewicht: ${weightVal} kg`);
+                    const note = parts.join('\n');
+                    const aria = `${dayIso || ''} Muskel ${muscleVal ? muscleVal + ' kg' : ''}`.trim();
+                    hitsSvg += `<rect class="body-hit chart-hit" x="${muscleX.toFixed(1)}" y="${hitTop.toFixed(1)}" width="${barWidth}" height="${hitHeight.toFixed(1)}" fill="transparent" pointer-events="all"
+                      data-series="body-muscle" data-date="${esc(dayIso || '')}" data-ctx="Muskel" data-note="${esc(note)}"
+                      aria-label="${esc(aria)}" title="${esc(aria)}" role="button" tabindex="0"></rect>`;
+                  }
+                }
               }
             }
 
             if (hasFat) {
-              const yVal = y(fat);
-              const h = Math.abs(baseline - yVal);
-              if (Number.isFinite(yVal) && h > 0.5) {
-                const top = Math.min(baseline, yVal);
-                barsSvg += `<rect x="${fatX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#D2A85F" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+              const yVal = y(fatNum);
+              if (Number.isFinite(yVal)) {
+                const h = Math.abs(baseline - yVal);
+                if (h > 0.5) {
+                  const top = Math.min(baseline, yVal);
+                  barsSvg += `<rect class="body-bar" data-series="body-fat" x="${fatX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="#D2A85F" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
+                  let hitHeight = Math.max(h, 14);
+                  let hitTop = Math.min(top, baseline - hitHeight);
+                  if (hitTop < PT) {
+                    hitTop = PT;
+                    hitHeight = Math.max(4, baseline - hitTop);
+                  }
+                  if (hitHeight > 0.5) {
+                    const fatVal = formatKg(fatNum);
+                    const parts = [];
+                    if (fatVal) parts.push(`Fettmasse: ${fatVal} kg`);
+                    if (weightVal) parts.push(`Gewicht: ${weightVal} kg`);
+                    const note = parts.join('\n');
+                    const aria = `${dayIso || ''} Fett ${fatVal ? fatVal + ' kg' : ''}`.trim();
+                    hitsSvg += `<rect class="body-hit chart-hit" x="${fatX.toFixed(1)}" y="${hitTop.toFixed(1)}" width="${barWidth}" height="${hitHeight.toFixed(1)}" fill="transparent" pointer-events="all"
+                      data-series="body-fat" data-date="${esc(dayIso || '')}" data-ctx="Fett" data-note="${esc(note)}"
+                      aria-label="${esc(aria)}" title="${esc(aria)}" role="button" tabindex="0"></rect>`;
+                  }
+                }
               }
             }
           }
           barsSvg += '</g>';
+          hitsSvg += '</g>';
           this.svg.insertAdjacentHTML("beforeend", barsSvg);
+          pendingBodyHitsSvg = hitsSvg;
         }
       }
     }
@@ -5076,16 +5227,20 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
     // Linien + Punkte
 const isFiniteTs = (t) => Number.isFinite(t);
 
-const mkPath = (values, color) => {
+const mkPath = (seriesItem) => {
+  const { values = [], color = "#fff", key } = seriesItem || {};
   let d = "";
   values.forEach((v,i) => {
     if (v == null || !isFiniteTs(X[i])) return; // statt !X[i]
     d += (d === "" ? "M" : "L") + `${x(X[i]).toFixed(1)},${y(v).toFixed(1)} `;
   });
-  return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" pointer-events="none" />`;
+  const seriesAttr = key ? ` data-series="${esc(key)}"` : "";
+  return `<path${seriesAttr} d="${d}" fill="none" stroke="${color}" stroke-width="2.2" pointer-events="none" />`;
 };
 
-const mkDots = (values, color, kind) => {
+const mkDots = (seriesItem) => {
+  const { values = [], color = "#fff", type, key } = seriesItem || {};
+  const kind = (type === "sys" || type === "dia") ? type : "misc";
   let out = "";
   values.forEach((v, i) => {
     if (v == null || !Number.isFinite(X[i])) return;
@@ -5100,10 +5255,11 @@ const mkDots = (values, color, kind) => {
     const labelBase = (kind === "sys" || kind === "dia") ? `${kind.toUpperCase()} ${v}` : `${v}`;
     const aria = `${date} ${ctx} ${labelBase}`.trim();
 
+    const seriesAttr = key ? ` data-series="${esc(key)}"` : "";
     out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
                 data-kind="${esc(kind)}" data-val="${v}"
                 data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-               data-note="${esc(note)}" tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
+               data-note="${esc(note)}"${seriesAttr} tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
                stroke="rgba(0,0,0,0)" stroke-width="12" pointer-events="stroke" />`;
   });
   return out;
@@ -5120,10 +5276,11 @@ const mkAlertDots = (seriesItem) => {
     if (v > thr) {
       const cx = x(X[i]).toFixed(1), cy = y(v).toFixed(1);
       const m = meta?.[i] || {};
+      const seriesAttr = seriesItem?.key ? ` data-series="${esc(seriesItem.key)}"` : "";
       out += `<circle class="pt" cx="${cx}" cy="${cy}" r="5.2" fill="#ef4444" stroke="#000" stroke-width="0.8"
                data-kind="${kind}" data-val="${v}"
                data-date="${esc(m.date || "")}" data-ctx="${esc(m.ctx || "")}"
-               data-note="${esc(m.note || "")}" />`;
+               data-note="${esc(m.note || "")}"${seriesAttr} />`;
     }
   });
   return out;
@@ -5132,11 +5289,8 @@ const mkAlertDots = (seriesItem) => {
     // Zeichnen
     series.forEach((s) => {
       if (!this.svg) return;
-      this.svg.insertAdjacentHTML("beforeend", mkPath(s.values, s.color));
-      this.svg.insertAdjacentHTML(
-        "beforeend",
-        mkDots(s.values, s.color, (s.type === "sys" || s.type === "dia") ? s.type : "misc")
-      );
+      this.svg.insertAdjacentHTML("beforeend", mkPath(s));
+      this.svg.insertAdjacentHTML("beforeend", mkDots(s));
       if (metric === "bp") {
         this.svg.insertAdjacentHTML("beforeend", mkAlertDots(s));
       }
@@ -5146,6 +5300,7 @@ const mkAlertDots = (seriesItem) => {
         wrap.style.display = "inline-flex";
         wrap.style.alignItems = "center";
         wrap.style.gap = "6px";
+        if (s.key) wrap.setAttribute("data-series", s.key);
         const dot = Object.assign(document.createElement("span"), { className: "dot" });
         dot.style.background = s.color;
         dot.style.width = "10px";
@@ -5158,6 +5313,10 @@ const mkAlertDots = (seriesItem) => {
       }
     });
 
+    if (pendingBodyHitsSvg && this.svg) {
+      this.svg.insertAdjacentHTML("beforeend", pendingBodyHitsSvg);
+    }
+
     if (metric === "weight" && this.legend) {
       barSeries.forEach((s) => {
         if (!s.values.some(v => v != null)) return;
@@ -5165,6 +5324,7 @@ const mkAlertDots = (seriesItem) => {
         wrap.style.display = "inline-flex";
         wrap.style.alignItems = "center";
         wrap.style.gap = "6px";
+        if (s.key) wrap.setAttribute("data-series", s.key);
         const dot = Object.assign(document.createElement("span"), { className: "dot" });
         dot.style.background = s.color;
         dot.style.width = "10px";
@@ -6013,6 +6173,7 @@ async function setupRealtime(){
 /* Doctor-only Unlock (no global lock) */
 let __doctorUnlocked = false;
 let __pendingAfterUnlock = null;
+let __doctorScrollSnapshot = { top: 0, ratio: 0 };
 async function isWebAuthnAvailable(){
   if (!window?.PublicKeyCredential) return false;
   try{
@@ -6424,11 +6585,11 @@ if (saveBodyPanelBtn){
     }finally{
       withBusy(btn, false);
     }
-      if (savedOk){
-        resetBodyPanel();
-        await prefillBodyInputs();
-        flashButtonOk(btn, '&#x2705; Koerper gespeichert');
-      }
+    if (savedOk){
+      resetBodyPanel();
+      diag.add?.('[body] cleared');
+      flashButtonOk(btn, '&#x2705; Koerper gespeichert');
+    }
   });
 }
 
