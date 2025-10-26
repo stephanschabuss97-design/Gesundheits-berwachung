@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!-- MODULE: BOOTSTRAP & CONSTANTS
   intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
@@ -10,7 +9,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'nonce-4fCs9vA1o9yXQdf3'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
 <title>Gesundheits-Logger (V1.7.5.2)</title>
 <style>
 
@@ -1181,7 +1180,7 @@ details[hidden] {
   crossorigin="anonymous"
 ></script>
 
-<script>
+<script nonce="4fCs9vA1o9yXQdf3">
 /** MODULE: CONFIG
  * intent: Laufzeit-Defaults fuer Feature-Toggles und Termin-Rollen der App
  * contracts: stellt DEV_ALLOW_DEFAULTS und APPOINTMENT_ROLES fuer AUTH, DATA ACCESS, UI bereit
@@ -4046,9 +4045,7 @@ if (gbtn) gbtn.addEventListener('click', async ()=>{
 async function requireSession(){
 if(!sbClient){
 setUserUi('');
-if (__authState !== 'unknown') {
-  showLoginOverlay(true);
-}
+showLoginOverlay(true);
 setAuthGuard(false);
 setDoctorAccess(false);
 __lastLoggedIn = false;
