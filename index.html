@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!-- MODULE: BOOTSTRAP & CONSTANTS
+  intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
+  contracts: definiert Head-Struktur, laedt globale Styles, bereitet Container fuer nachgelagerte Module vor
+  notes: Kommentarpflege; Markup fuer W3C-Compliance unveraendert lassen
+-->
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -703,6 +708,7 @@ details[hidden] {
 #configAdv > summary { position: static !important; }
 
 </style>
+<!-- END MODULE -->
 </head>
 <body>
 <!-- ANKER: touch-log-fallback -->
@@ -780,11 +786,18 @@ details[hidden] {
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
 <main id="appMain">
+<!-- END MODULE -->
+<!-- MODULE: CAPTURE (Intake)
+  intent: Tageserfassung (UI) inkl. Intake/BP/Body/Flags/Termine, verbindet Benutzeraktionen mit Save-Flows
+  contracts: nutzt DATA ACCESS.saveIntakeTotals*, AUTH.isLoggedIn, UI.requestUiRefresh
+  todo: @extract-candidate bindIntakeCapture, refreshCaptureIntake spaeter extrahieren
+-->
 <!-- Capture -->
 <section class="view active" id="capture" aria-labelledby="captureHeading">
  
   <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
   <!-- Daily-Capture -->
+  <!-- SUBMODULE: capture-entry shell @internal - wraps accordions and intake status pills -->
   <section class="card" id="entry">
     <div class="capture-header">
       <div class="capture-date">
@@ -799,7 +812,7 @@ details[hidden] {
       </div>
     </div>
 
-
+    <!-- SUBMODULE: bp-capture accordion @internal - logs morning/abends Werte & Kommentare -->
     <details class="accordion">
       <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
@@ -842,6 +855,7 @@ details[hidden] {
       </div>
     </details>
 
+    <!-- SUBMODULE: body-capture accordion @internal - captures weight + Umfang Werte -->
     <details class="accordion">
       <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
@@ -873,6 +887,7 @@ details[hidden] {
       </div>
     </details>
 
+    <!-- SUBMODULE: intake-capture accordion @internal - updates water/salt/protein totals -->
     <details class="accordion" id="captureIntake">
       <summary><span>&#x1F964; Fluessigkeit & Intake</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
@@ -917,6 +932,7 @@ details[hidden] {
       </div>
     </details>
 
+    <!-- SUBMODULE: day-flags accordion @internal - toggles training/sick/salt states -->
     <details class="accordion">
       <summary><span>&#x1F6A9; Flags</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
@@ -943,6 +959,7 @@ details[hidden] {
 
 </details>
 
+<!-- SUBMODULE: appointments accordion @internal - manages per-role appointment cards -->
 <details class="accordion" id="appointments">
   <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
   <div class="accordion-body">
@@ -1112,10 +1129,16 @@ details[hidden] {
 
   </section>
 </section>
+<!-- END MODULE -->
 
 <!-- Lifestyle (Heute) -->
 
 
+<!-- MODULE: DOCTOR VIEW
+  intent: Aggregations-UI fuer Aerzt:innen, steuert Zeitraum-Filter, Export und Chart-Pivot
+  contracts: nutzt DATA ACCESS.fetchDailyOverview, CHARTS.renderDailyChart, AUTH.setDoctorAccess @public
+  todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
+-->
 <!-- Doctor -->
 <section class="view" id="doctor" aria-labelledby="doctorHeading">
   <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
@@ -1145,12 +1168,20 @@ details[hidden] {
   </div>
 </section>
 
+<!-- END MODULE -->
+
 </main>
 
 <!-- Supabase (UMD, v2) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
 <script>
+/** MODULE: CONFIG
+ * intent: Laufzeit-Defaults fuer Konfiguration, Supabase-Endpunkte, Feature-Toggles der App
+ * contracts: stellt SUPABASE_URL_DEFAULT, DEV_ALLOW_DEFAULTS, Termin-Konstanten fuer AUTH, DATA ACCESS, UI bereit
+ * exports: SUPABASE_URL_DEFAULT, SUPABASE_ANON_DEFAULT, DEFAULT_WEBHOOK_ENTRIES, DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES
+ * notes: reine Kommentarpflege; Werte mit Backend synchron halten
+ */
 /* ===== Supabase Defaults (ANON only - niemals service_role!) ===== */
 const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
 const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
@@ -1185,8 +1216,16 @@ const appointmentsState = {
   next: null,
 };
 
+/** END MODULE */
 
+/** MODULE: LOGGING & DIAGNOSTICS
+ * intent: sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
+ * contracts: stellt diag-Logger, perfStats-Snapshots, uiError/uiInfo fuer UI-Module bereit
+ * exports: diag, recordPerfStat, uiError, uiInfo
+ * notes: rein beobachtend; Verhalten bleibt unveraendert
+ */
 /* ===== Fehlerbox ===== */
+// SUBMODULE: unhandled rejection sink @internal - pipes promise rejections to inline toast
 window.addEventListener('unhandledrejection', (e)=>{
 const box = document.getElementById('err');
 box.style.display='block';
@@ -1194,6 +1233,7 @@ box.textContent = 'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fe
 });
 
 /* ===== Diagnostics ===== */
+// SUBMODULE: perfStats sampler @internal - records timing buckets for perf telemetry
 const perfStats = (() => {
   const buckets = Object.create(null);
   const add = (k, ms) => (buckets[k] ??= []).push(ms);
@@ -1224,7 +1264,6 @@ function recordPerfStat(key, startedAt){
     }
   } catch(_){}
 }
-
 const diag = { el:null, logEl:null, open:false, lines:[],
 add(msg){ const t=new Date().toLocaleTimeString(); this.lines.unshift(`[${t}] ${msg}`); this.lines=this.lines.slice(0,80); if(this.logEl) this.logEl.textContent = this.lines.join('\n'); },
 init(){ this.el=document.getElementById('diag'); this.logEl=document.getElementById('diagLog');
@@ -1240,7 +1279,16 @@ show(){ if (!this.el) return; this.el.style.display='block'; focusTrap.activate(
 hide(){ if (!this.el) return; this.el.style.display='none'; focusTrap.deactivate(); this.open=false; }
 };
 
+/** END MODULE */
+
+/** MODULE: UI / ROUTING / VIEWS - Core (Refresh/Help)
+ * intent: steuert Hilfspanel, UI Refresh Loop, Tabs & Fokusreparatur
+ * contracts: stellt requestUiRefresh @public, maybeRefreshForTodayChange, setUnderlayInert fuer andere Module bereit
+ * exports: requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert
+ * notes: Fortsetzung des Kern-UI-Routings (Refresh/Help); DOM-Struktur unveraendert belassen
+ */
 /* ===== Help panel ===== */
+// SUBMODULE: help-panel overlay @internal - toggles inline support dialog
 const helpPanel={ el:null, open:false,
 init(){ this.el=document.getElementById('help');
 const t1=document.getElementById('helpToggle'); const t2=document.getElementById('helpToggleFab'); const close=document.getElementById('helpClose');
@@ -1271,6 +1319,7 @@ const uiRefreshState = {
 const uiRefreshTimeoutSymbol = Symbol('ui-refresh-timeout');
 const uiNow = () => (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
 
+// SUBMODULE: requestUiRefresh @public - debounces multi-surface refresh (doctor/chart/capture); mutex via uiRefreshState
 function requestUiRefresh(opts = {}) {
   if (typeof opts === "string") {
     opts = { reason: opts };
@@ -1311,6 +1360,7 @@ function requestUiRefresh(opts = {}) {
   return promise;
 }
 
+// SUBMODULE: runUiSubStep @internal - executes gated refresh tasks with perf tracking
 async function runUiSubStep(label, enabled, fn) {
   if (!enabled) return;
   const start = uiNow();
@@ -1349,6 +1399,7 @@ async function runUiSubStep(label, enabled, fn) {
   }
 }
 
+// SUBMODULE: runUiRefresh @internal - orchestrates capture/doctor/chart refresh pipeline
 async function runUiRefresh(){
   const state = uiRefreshState;
   if (state.timer){
@@ -1394,6 +1445,7 @@ async function runUiRefresh(){
   }
 }
 // kleines visuelles Ping bei Realtime
+// SUBMODULE: livePulse @internal - flashes heartbeat indicator for realtime events
 function livePulse(){
   const el = document.getElementById('doctorLive');
   if (!el) return;
@@ -1401,7 +1453,10 @@ function livePulse(){
   setTimeout(() => el.classList.remove('pulse'), 900);
 }
 
+/** END MODULE */
+
 // --- Service-Role-Schutz (NIEMALS im Browser) ---
+// SUBMODULE: isServiceRoleKey @internal - blocks service_role keys in browser context
 function isServiceRoleKey(raw){
   const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
   try{
@@ -1413,6 +1468,7 @@ function isServiceRoleKey(raw){
 }
 
 // ANKER: sb-rest
+// SUBMODULE: sbSelect @internal - abstracts Supabase REST GET with auth headers
 async function sbSelect({ table, select, filters = [], order = null, limit = null }) {
   // Basis-URL aus gespeicherter REST-URL ableiten (z. B. .../rest/v1/health_events)
   const restUrl = await getConf("webhookUrl");
@@ -1659,19 +1715,28 @@ function withBusy(el, on=true){
   el.disabled = !!on;
 }
   
+/** MODULE: AUTH
+ * intent: verwaltet Supabase-Sitzung, legt Auth-Locks frei, bindet Login-Overlay ein
+ * contracts: stellt isLoggedIn @public, setAuthGuard, setDoctorAccess bereit und sichert spaeter Client/Header fuer DATA ACCESS
+ * exports: isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess
+ * notes: Seiteneffekte auf Auth-Surfaces beschraenken; Verhalten unveraendert lassen
+ */
 /* ===== Auth-Guard ===== */
+// SUBMODULE: isLoggedIn @public - quick check to gate protected actions
 async function isLoggedIn(){
   if (!sbClient) return false;
   return await isLoggedInFast({ timeout: 800 });
 }
 
 /** Schaltet optisch auf "gesperrt" - ohne Controls hart zu deaktivieren */
+// SUBMODULE: setAuthGuard - dims UI when auth session missing
 function setAuthGuard(logged){
   // Nur visuelles Dimmen; die Save-Logik prueft isLoggedIn() ohnehin.
   document.body.classList.toggle('auth-locked', !logged);
   // Kein auto-boot mehr hier - Start erfolgt in main()/watchAuthState.
 }
 
+// SUBMODULE: setDoctorAccess - toggles doctor tab when auth state changes
 function setDoctorAccess(enabled){
   // Tab-Button
   const tabBtn = document.getElementById('tab-doctor');
@@ -1690,6 +1755,14 @@ function setDoctorAccess(enabled){
   
 }
   
+/** END MODULE */
+  
+/** MODULE: UTILITIES
+ * intent: generische DOM/Format Helper fuer das Monolith-Skript
+ * contracts: stellt $, $$, fmtNum, todayStr, timeStr, esc/nl2br fuer UI-/Capture-Module bereit
+ * exports: $, $$, fmtNum, todayStr, timeStr, esc, nl2br
+ * notes: deterministische Hilfsfunktionen; rein funktional belassen
+ */
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
@@ -1699,6 +1772,14 @@ const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2
 function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
 
+/** END MODULE */
+
+/** MODULE: CAPTURE (Intake)
+ * intent: steuert Intake-State, Mitternachts-Resets und Bindings fuer die Tageserfassung
+ * contracts: nutzt DATA ACCESS.loadIntakeToday/saveIntakeTotals*, UI.requestUiRefresh, AUTH.isLoggedIn
+ * exports: refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus
+ * notes: spiegelt CAPTURE UI Modul; reine Logik
+ */
 /* ===== Capture/Lifestyle Defaults ===== */
 const LS_WATER_GOAL = 3000;    // Milliliter Zielbereich
 const LS_SALT_MAX   = 10;      // Gramm obere Grenze
@@ -1740,6 +1821,7 @@ function formatDateTimeDE(iso){
 function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
   // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
 // Erzeugt pro Eingabe die noetigen Events (bp/body/day_flags/note)
+// SUBMODULE: toHealthEvents @internal - mappt Capture-Eintrag auf health_events payloads
 function toHealthEvents(entry){
   const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
   const out = [];
@@ -1817,12 +1899,21 @@ el.style.outline = '';
 }
 }
 
+/** END MODULE */
+
+/** MODULE: DATA ACCESS (IndexedDB)
+ * intent: lokale IndexedDB- und Konfig-Hilfen fuer Intake-/Doctor-Features
+ * contracts: stellt initDB, Config-Lese/Schreibhelfer sowie Entry-Stores fuer CAPTURE/BP bereit
+ * exports: initDB, putConf, getConf, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal, dayIsoToMidnightIso
+ * notes: dient als Basis fuer Offline-Zwischenspeicher; keine Netz-Calls
+ */
 /* ===== IndexedDB ===== */
 let db;
 const DB_NAME = "healthlog_db";
 const STORE   = "entries";
 const CONF    = "config";
 
+// SUBMODULE: initDB @internal - initialisiert IndexedDB Stores (entries/config)
 function initDB(){
   return new Promise((resolve, reject)=>{
     const req = indexedDB.open(DB_NAME, 5);
@@ -1928,6 +2019,7 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
     return null;
   }
 }
+// SUBMODULE: addEntry @internal - persistiert Capture-Eintrag lokal vor Sync
 function addEntry(obj){
   return new Promise((res,rej)=>{
     const tx = db.transaction(STORE,"readwrite");
@@ -1975,7 +2067,16 @@ function deleteEntryLocal(id){
   });
 }
 
+/** END MODULE */
+
 /* ===== Remote (Supabase REST) ===== */
+/** MODULE: AUTH
+ * intent: stellt Supabase JWT Header bereit und kapselt Service-Role-Schutz (Fortsetzung)
+ * contracts: stellt getHeaders @public fuer DATA ACCESS.fetchWithAuth zur Verfuegung
+ * exports: getHeaders
+ * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
+ */
+// SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
 async function getHeaders(){
   const key = await getConf("webhookKey");
   if (!key) {
@@ -2039,6 +2140,15 @@ async function getHeaders(){
   return headers;
 }
 
+/** END MODULE */
+
+/** MODULE: DATA ACCESS (REST/RPC)
+ * intent: kapselt Supabase REST/RPC Zugriffe fuer Intake/Doctor/Sync Flows
+ * contracts: nutzt fetchWithAuth/getHeaders, befuellt CAPTURE/DOCTOR/CHART Pipelines
+ * exports: deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay
+ * notes: enthaelt Fallbacks fuer RPC/REST sowie Merge-Helper fuer Tagesansichten
+ */
+// SUBMODULE: deleteRemote @internal - deletes single health_event via REST endpoint
 async function deleteRemote(remote_id){
   const url = await getConf("webhookUrl");
   if(!url || !remote_id) return {ok:false};
@@ -2051,6 +2161,7 @@ async function deleteRemote(remote_id){
   }
 }
 
+// SUBMODULE: loadIntakeToday @internal - holt Tagesintake via REST health_events view
 async function loadIntakeToday({ user_id, dayIso }){
   if (!user_id) return null;
   diag.add?.(`[capture] loadIntakeToday start uid=${user_id} day=${dayIso||''}`);
@@ -2078,6 +2189,7 @@ async function loadIntakeToday({ user_id, dayIso }){
   };
 }
 
+// SUBMODULE: saveIntakeTotals @public - legacy POST fallback wenn RPC fehlt
 async function saveIntakeTotals({ dayIso, totals }){
   const url = await getConf("webhookUrl");
   const uid = await getUserId();
@@ -2137,6 +2249,7 @@ async function saveIntakeTotals({ dayIso, totals }){
 
 // Neuer atomarer RPC/UPSERT-Save (ein Request)
 let __intakeRpcDisabled = false;
+// SUBMODULE: saveIntakeTotalsRpc @public - RPC upsert_intake Pfad fuer Intake-Summen
 async function saveIntakeTotalsRpc({ dayIso, totals }){
   const restUrl = await getConf("webhookUrl");
   const base    = baseUrlFromRest(restUrl) || (DEV_ALLOW_DEFAULTS ? SUPABASE_URL_DEFAULT : null);
@@ -2199,6 +2312,7 @@ async function saveIntakeTotalsRpc({ dayIso, totals }){
   return row;
 }
 
+// SUBMODULE: cleanupOldIntake @internal - prunes stale intake events prior to today
 async function cleanupOldIntake(){
   try{
     const url = await getConf('webhookUrl');
@@ -2214,6 +2328,7 @@ async function cleanupOldIntake(){
 }
 
 /* === Remote-Fetch Arzt-Ansicht (Views) === */
+// SUBMODULE: loadBpFromView @internal - queries v_events_bp view for doctor data
 async function loadBpFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -2226,6 +2341,7 @@ async function loadBpFromView({ user_id, from, to }) {
   });
 }
 
+// SUBMODULE: loadBodyFromView @internal - reads body composition view entries
 async function loadBodyFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -2238,6 +2354,7 @@ async function loadBodyFromView({ user_id, from, to }) {
   });
 }
 
+// SUBMODULE: loadFlagsFromView @internal - fetches daily flag states from view
 async function loadFlagsFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -2251,6 +2368,7 @@ async function loadFlagsFromView({ user_id, from, to }) {
 }
 
 // Sync capture toggles with existing day flags from the cloud for the selected date
+// SUBMODULE: syncCaptureToggles @internal - aligns capture toggles with remote day flags
 async function syncCaptureToggles(){
   try{
     const uid = await getUserId();
@@ -2307,6 +2425,7 @@ async function prefillBodyInputs(){
 }
 
 /* Optional: Notes (aus health_events, falls keine View v_events_note existiert) */
+// SUBMODULE: loadNotesLastPerDay @internal - grabs latest note per day for doctor exports
 async function loadNotesLastPerDay({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`], ['type', 'eq.note']];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -2332,7 +2451,7 @@ async function loadNotesLastPerDay({ user_id, from, to }) {
   }
   return out;
 }
-
+// SUBMODULE: joinViewsToDaily @internal - merges view rows into doctor daily aggregate shape
 /* View-Zeilen  Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
 function joinViewsToDaily({ bp, body, flags, notes = [] }) {
   const days = new Map();
@@ -2407,6 +2526,7 @@ function joinViewsToDaily({ bp, body, flags, notes = [] }) {
 }
 
 /* Neues fetchDailyOverview: liest direkt aus den Views */
+// SUBMODULE: fetchDailyOverview @public - kombiniert Views fuer Arzt-Daily UIs
 async function fetchDailyOverview(fromIso, toIso){
   const user_id = await getUserId();
   if (!user_id) return [];
@@ -2422,6 +2542,7 @@ async function fetchDailyOverview(fromIso, toIso){
 }
 
 /* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
+// SUBMODULE: deleteRemoteDay @internal - entfernt alle Events eines Tages serverseitig
 async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   const url = await getConf("webhookUrl");
   if (!url) return { ok:false, status:0 };
@@ -2439,6 +2560,9 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
   }
 }
 
+/** END MODULE */
+
+// SUBMODULE: setCaptureIntakeDisabled @internal - toggles intake inputs while syncing
 function setCaptureIntakeDisabled(disabled){
   ['cap-water-add','cap-salt-add','cap-protein-add'].forEach(id => {
     const el = document.getElementById(id);
@@ -2450,18 +2574,21 @@ function setCaptureIntakeDisabled(disabled){
   });
 }
 
+// SUBMODULE: clearFieldError @internal - entfernt visuelle Fehlerzustände von Intake-Feldern
 function clearFieldError(el){
   if (!el) return;
   el.style.outline = '';
   el.removeAttribute('aria-invalid');
 }
 
+// SUBMODULE: setFieldError @internal - markiert Intake-Felder bei Validierungsfehlern
 function setFieldError(el){
   if (!el) return;
   el.style.outline = '2px solid var(--danger)';
   el.setAttribute('aria-invalid','true');
 }
 
+// SUBMODULE: prepareIntakeStatusHeader @internal - ensures pills/status container exists
 function prepareIntakeStatusHeader(){
   try {
     const wrap = document.getElementById('capturePillsRow');
@@ -2505,6 +2632,7 @@ function prepareIntakeStatusHeader(){
   } catch(_) {}
 }
 
+// SUBMODULE: updateCaptureIntakeStatus @internal - renders intake KPI pills with aria-friendly labels
 const updateCaptureIntakeStatus = debounce(function(){
   const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
   try {
@@ -2580,6 +2708,7 @@ const updateCaptureIntakeStatus = debounce(function(){
   }
 }, 150);
 
+// SUBMODULE: millisUntilNextMidnight @internal - calculates next zero reset window
 function millisUntilNextMidnight(){
   try {
     const now = new Date();
@@ -2591,6 +2720,7 @@ function millisUntilNextMidnight(){
   } catch { return 3600_000; }
 }
 
+// SUBMODULE: handleMidnightRefresh @internal - trigger capture refresh on new day
 async function handleMidnightRefresh(){
   __midnightTimer = null;
   try {
@@ -2600,6 +2730,7 @@ async function handleMidnightRefresh(){
   }
 }
 
+// SUBMODULE: scheduleMidnightRefresh @internal - arms midnight timer loop
 function scheduleMidnightRefresh(){
   try {
     if (__midnightTimer) clearTimeout(__midnightTimer);
@@ -2609,6 +2740,7 @@ function scheduleMidnightRefresh(){
 }
 
 // Fire-and-Forget: Intake-Totals beim echten Tageswechsel auf 0 setzen
+// SUBMODULE: maybeResetIntakeForToday - ensures zeroed intake when day rolls over
 function maybeResetIntakeForToday(todayIso){
   try {
     const last = window?.localStorage?.getItem(LS_INTAKE_RESET_DONE_KEY) || '';
@@ -2660,6 +2792,7 @@ function maybeResetIntakeForToday(todayIso){
   })();
 }
 
+// SUBMODULE: millisUntilNoonGrace @internal - calculates midday cutoff for BP context
 function millisUntilNoonGrace(){
   try {
     const now = new Date();
@@ -2675,6 +2808,7 @@ function millisUntilNoonGrace(){
   }
 }
 
+// SUBMODULE: scheduleNoonSwitch @internal - toggles noon-based BP auto context timer
 function scheduleNoonSwitch(){
   try {
     if (__noonTimer) clearTimeout(__noonTimer);
@@ -2685,6 +2819,7 @@ function scheduleNoonSwitch(){
 
 function startDayHeartbeat(){ /* no-op: auf eventgetriebene Variante umgestellt */ }
 
+// SUBMODULE: isAfterNoonGrace @internal - checks midday threshold for BP context
 function isAfterNoonGrace(){
   try {
     const now = new Date();
@@ -2695,6 +2830,7 @@ function isAfterNoonGrace(){
   }
 }
 
+// SUBMODULE: maybeAutoApplyBpContext @internal - flips BP panes based on time-of-day
 function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
   if (!force && __bpUserOverride) return;
   const select = document.getElementById('bpContextSel');
@@ -2713,6 +2849,7 @@ function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
   diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`);
 }
 
+// SUBMODULE: handleNoonSwitch @internal - noon timer callback to adjust BP context
 function handleNoonSwitch(){
   __noonTimer = null;
   try {
@@ -2722,6 +2859,7 @@ function handleNoonSwitch(){
   }
 }
 
+// SUBMODULE: getBpPanes @internal - caches BP accordion panes for faster toggles
 function getBpPanes(){
   if (!__bpPanesCache || __bpPanesCache.length === 0) {
     __bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
@@ -2729,6 +2867,7 @@ function getBpPanes(){
   return __bpPanesCache;
 }
 
+// SUBMODULE: applyBpContext @internal - swaps visible BP pane
 function applyBpContext(value){
   const ctx = value === 'A' ? 'A' : 'M';
   getBpPanes().forEach(pane => {
@@ -2737,6 +2876,7 @@ function applyBpContext(value){
   });
 }
 
+// SUBMODULE: maybeRefreshForTodayChange @extract-candidate - reconciles capture state across day changes
 async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
   const todayIso = todayStr();
   const dateEl = document.getElementById('date');
@@ -2771,7 +2911,15 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
   diag.add?.(`intake: day refresh (${source || 'auto'})`);
 }
 
+/** END MODULE */
 
+/** MODULE: APPOINTMENTS
+ * intent: CRUD und UI-Sync fuer Arzttermine inkl. Badge und Summary Mapping
+ * contracts: nutzt DATA ACCESS.fetchWithAuth, UI.requestUiRefresh, AUTH.getHeaders
+ * exports: refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge
+ * notes: integriert Capture-Header-Pills; reine Kommentare
+ */
+// SUBMODULE: getAppointmentsEndpoint @internal - derives base URL for appointments REST calls
 async function getAppointmentsEndpoint(){
   const rest = await getConf('webhookUrl');
   if (!rest) return null;
@@ -2783,11 +2931,13 @@ async function getAppointmentsEndpoint(){
   return { base };
 }
 
+// SUBMODULE: getAppointmentRoleLabel @internal - human readable role label
 function getAppointmentRoleLabel(code){
   const role = APPOINTMENT_ROLES.find(r => r.code === code);
   return role ? role.label : (code || '');
 }
 
+// SUBMODULE: setAppointmentBadge @internal - updates capture header appointment pill
 const setAppointmentBadge = debounce(function(details){
   const badge = document.getElementById('nextApptBadge');
   if (!badge) return;
@@ -2823,6 +2973,7 @@ const setAppointmentBadge = debounce(function(details){
   }
 }, 160);
 
+// SUBMODULE: computeNextAppointment @internal - finds nearest upcoming appointment
 function computeNextAppointment(summary){
   if (!summary) return null;
   let nextRole = null;
@@ -2847,6 +2998,7 @@ function computeNextAppointment(summary){
   return { role: nextRole, dt: nextIso };
 }
 
+// SUBMODULE: validateAppointmentInput @internal - guards appointment form inputs
 function validateAppointmentInput({ date, time }){
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { ok: false, error: 'date' };
@@ -2861,6 +3013,7 @@ function validateAppointmentInput({ date, time }){
   return { ok: true, iso: dt.toISOString() };
 }
 
+// SUBMODULE: resetAppointmentsUi @internal - clears appointment UI state
 function resetAppointmentsUi(){
   APPOINTMENT_ROLES.forEach(({ code }) => {
     const nextEl = document.getElementById(`appt-${code}-next`);
@@ -2878,6 +3031,7 @@ function resetAppointmentsUi(){
   setAppointmentBadge();
 }
 
+// SUBMODULE: applyAppointmentsUi @internal - binds fetched appointment summary to DOM
 function applyAppointmentsUi(summary){
   APPOINTMENT_ROLES.forEach(({ code }) => {
     const record = summary && summary[code] ? summary[code] : { next: null, last: null };
@@ -2894,6 +3048,7 @@ function applyAppointmentsUi(summary){
   });
 }
 
+// SUBMODULE: fetchAppointmentsSummary @internal - loads scheduled/done appointments from REST
 async function fetchAppointmentsSummary(){
   const rest = await getConf('webhookUrl');
   if (!rest) return null;
@@ -2931,6 +3086,7 @@ async function fetchAppointmentsSummary(){
   return { scheduled, done };
 }
 
+// SUBMODULE: refreshAppointments @internal - orchestrates summary fetch and UI update
 async function refreshAppointments(){
   if (appointmentsState.loading) return;
   appointmentsState.loading = true;
@@ -2998,6 +3154,7 @@ async function refreshAppointments(){
 }
 
 
+// SUBMODULE: handleAppointmentSave @internal - POST/PUT appointment scheduling flow
 async function handleAppointmentSave(role){
   const dateEl = document.getElementById(`appt-${role}-date`);
   const timeEl = document.getElementById(`appt-${role}-time`);
@@ -3128,6 +3285,7 @@ async function handleAppointmentSave(role){
     withBusy(saveBtn, false);
   }
 }
+// SUBMODULE: handleAppointmentDone @internal - marks scheduled appointment as completed
 async function handleAppointmentDone(role){
   const btn = document.getElementById(`appt-${role}-done`);
   if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
@@ -3188,6 +3346,7 @@ async function handleAppointmentDone(role){
     withBusy(btn, false);
   }
 }
+// SUBMODULE: bindAppointmentsPanel @internal - wires appointment buttons to handlers
 function bindAppointmentsPanel(){
   APPOINTMENT_ROLES.forEach(({ code }) => {
     const saveBtn = document.getElementById(`appt-${code}-save`);
@@ -3197,6 +3356,15 @@ function bindAppointmentsPanel(){
   });
 }
 
+/** END MODULE */
+
+/** MODULE: CAPTURE (Intake)
+ * intent: UI Helpers fuer Intake-Status, Guards und Reset-Flows (Fortsetzung)
+ * contracts: nutzt requestUiRefresh, saveIntakeTotals*, DATA ACCESS Helfer
+ * exports: setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, clearCaptureIntakeInputs, handleCaptureIntake
+ * notes: Fortsetzung des Capture-Logikblocks (Status/Guards)
+ */
+// SUBMODULE: clearCaptureIntakeInputs @internal - leert temporäre Intake-Felder vor neuem Save-Lauf
 function clearCaptureIntakeInputs(){
   ['water', 'salt', 'protein'].forEach(kind => {
     const input = document.getElementById(`cap-${kind}-add`);
@@ -3204,6 +3372,7 @@ function clearCaptureIntakeInputs(){
   });
 }
 
+// SUBMODULE: refreshCaptureIntake @extract-candidate - laedt Intake-Daten und synchronisiert Pills/UI
 async function refreshCaptureIntake(){
   const wrap = document.getElementById('cap-intake-wrap');
   if (!wrap) return;
@@ -3250,6 +3419,7 @@ try{
   updateCaptureIntakeStatus();
 }
 
+// SUBMODULE: handleCaptureIntake @internal - validiert Intake-Eingaben, triggert RPC-Speicherpfad und Refresh-Fallbacks
 async function handleCaptureIntake(kind){
   const btn = document.getElementById(`cap-${kind}-add-btn`);
   const input = document.getElementById(`cap-${kind}-add`);
@@ -3342,6 +3512,7 @@ try{
   }
 }
 
+// SUBMODULE: bindIntakeCapture @extract-candidate - verbindet Intake-Inputs mit Save/Guard Flows
 function bindIntakeCapture(){
   const wire = (id, kind) => {
     const oldBtn = document.getElementById(id);
@@ -3541,6 +3712,7 @@ function bindLifestyle(){
 }
 
 // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
+// SUBMODULE: patchDayFlags @internal - updates day_flags row for given user/day with new payload
 async function patchDayFlags({ user_id, dayIso, flags }){
   const url = await getConf("webhookUrl");
   if (!url || !user_id || !dayIso) {
@@ -3567,7 +3739,7 @@ async function patchDayFlags({ user_id, dayIso, flags }){
   return await res.json();
 }
 
-
+// SUBMODULE: appendNoteRemote @internal - upserts note events for a day via REST
 async function appendNoteRemote(opts){
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf("webhookUrl");
@@ -3629,6 +3801,7 @@ ${add}`.trim();
   return { id: newId, text: addition };
 }
 
+// SUBMODULE: pushPendingToRemote @internal - flushes unsynced local entries to Supabase
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
   if(!url) return { pushed:0, failed:0 };
@@ -3967,7 +4140,14 @@ a.click();
 URL.revokeObjectURL(a.href);
 }
 
+/** MODULE: DOCTOR VIEW
+ * intent: Zeitraumansicht fuer Aerzt:innen inklusive KPIs, Tagesrendering und Cloud-Aktionen
+ * contracts: verwendet DATA ACCESS.fetchDailyOverview, AUTH.requireDoctorUnlock, UI.requestUiRefresh
+ * exports: renderDoctor, setDocBadges, renderDoctorDay, exportDoctorJson
+ * notes: Markup-Erzeugung stabil halten; @todo buildDoctorSummaryJson @extract-candidate @public fuer Export
+ */
 /* ===== Doctor view ===== */
+// SUBMODULE: setDocBadges @internal - updates toolbar KPI badges for training/bad days
 function setDocBadges({ training, bad, visible } = {}) {
   const t = document.getElementById('docTrainCnt');
   const b = document.getElementById('docBadCnt');
@@ -3983,6 +4163,7 @@ function setDocBadges({ training, bad, visible } = {}) {
 }
 
 const __t0 = performance.now();
+// SUBMODULE: renderDoctor @extract-candidate - orchestrates gated render flow, fetches days, manages scroll state
 async function renderDoctor(){
   const host = $("#doctorView");
   if (!host) return;
@@ -4064,6 +4245,7 @@ async function renderDoctor(){
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
   // Renderer je Tag
+  // SUBMODULE: renderDoctorDay @internal - templates per-day HTML card for doctor view
   const renderDoctorDay = (day) => `
 <section class="doctor-day" data-date="${day.date}">
   <div class="col-date">
@@ -4174,6 +4356,12 @@ async function renderDoctor(){
   }
 }
 
+/** MODULE: CHARTS (SVG/Canvas)
+ * intent: rendert Tages-Charts (BP/Body) inkl. KPI-Leiste, Flags-Overlay und Tooltips
+ * contracts: haengt von DATA ACCESS.fetchDailyOverview, UTILITIES esc/fmtNum, PERF.diag Logging ab
+ * exports: chartPanel
+ * notes: drawing/scaling pipelines sind @extract-candidate fuer spaetere Auslagerung
+ */
 /* ===== Simple SVG Chart (Daily) - final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
 /* Fallbacks nur, wenn extern nicht verfuegbar */
@@ -4186,6 +4374,7 @@ const safeGetConf = async (k) => {
   return null;
 };
 
+// SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
 const chartPanel = {
   el: null,
   svg: null,
@@ -4196,6 +4385,7 @@ const chartPanel = {
   hoverSeries: null,
   SHOW_BODY_COMP_BARS: true,
 
+  // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
   init() {
     this.el = $("#chart");
     this.svg = $("#chartSvg");
@@ -4325,6 +4515,7 @@ const chartPanel = {
     this.ensureKpiFields();
   },
 
+  // SUBMODULE: chartPanel.toggle @internal - schaltet Chart-Panel an/aus inkl. Fokus
   toggle() {
     if (this.open) {
       this.hide();
@@ -4333,6 +4524,7 @@ const chartPanel = {
     }
   },
 
+  // SUBMODULE: chartPanel.show @internal - oeffnet Panel und aktiviert focusTrap
   show() {
     this.open = true;
     if (this.el) {
@@ -4341,6 +4533,7 @@ const chartPanel = {
     }
   },
 
+  // SUBMODULE: chartPanel.hide @internal - schliesst Panel, deaktiviert focusTrap und Tooltips
   hide() {
     this.open = false;
     if (this.el) {
@@ -4350,8 +4543,8 @@ const chartPanel = {
     this.tipSticky = false;
     this.hideTip();
   },
-
   // ----- Helpers -----
+  // SUBMODULE: chartPanel.getFiltered @extract-candidate - aggregiert Cloud/Local Daten fuer Zeichnung
 async getFiltered() {
   const from = $("#from")?.value;
   const to   = $("#to")?.value;
@@ -4484,6 +4677,7 @@ async getFiltered() {
 },
 
   // Hoehe laden (Konfig oder Fallback 183 cm)
+  // SUBMODULE: chartPanel.getHeightCm @internal - liest Nutzerkoerpergroesse aus Supabase/Lokal
   async getHeightCm() {
     // 1) Supabase-Profil
     const supa = await safeEnsureSupabaseClient();
@@ -4508,6 +4702,7 @@ async getFiltered() {
     }
     this.setHoverSeries(null);
   },
+  // SUBMODULE: chartPanel.setHoverSeries @internal - hebt aktuelle Serie in Chart/Legende hervor
   setHoverSeries(seriesKey) {
     if (!this.svg && !this.legend) return;
     const nextKey = seriesKey || null;
@@ -4532,6 +4727,7 @@ async getFiltered() {
       node.classList.add(key === nextKey ? 'is-hover' : 'is-dim');
     });
   },
+  // SUBMODULE: chartPanel.positionTip @internal - positioniert Tooltip relativ zum Cursor
   positionTip(e) {
     if (!this.tip || !this.el) return;
     const hostRect = (this.el.querySelector(".content") || this.el).getBoundingClientRect();
@@ -4541,6 +4737,7 @@ async getFiltered() {
     this.tip.style.top  = `${y + 10}px`;
     if (this.tip.style.display !== "block") this.tip.style.display = "block";
   },
+  // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt inkl. Flags
   fillTipFromTarget(tgt) {
     if (!this.tip) return;
     this.setHoverSeries(tgt?.getAttribute("data-series") || null);
@@ -4575,6 +4772,7 @@ async getFiltered() {
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
+  // SUBMODULE: chartPanel.ensureKpiFields @internal - stellt KPI-Marker im UI bereit
   ensureKpiFields() {
     const box = $("#chartAverages");
     if (!box) return;
@@ -4596,6 +4794,7 @@ async getFiltered() {
   },
 
   // WHO-Farben
+  // SUBMODULE: chartPanel.kpiColorBMI @internal - mappt BMI auf WHO-Farben
   kpiColorBMI(v) {
     if (v == null) return "#9aa3af";        // unknown
     if (v < 18.5) return "#60a5fa";         // untergew.
@@ -4603,6 +4802,7 @@ async getFiltered() {
     if (v < 30)   return "#f59e0b";         // uebergew.
     return "#ef4444";                        // adipoes
   },
+  // SUBMODULE: chartPanel.kpiColorWHtR @internal - mappt WHtR auf WHO-Farben
   kpiColorWHtR(v) {
     if (v == null) return "#9aa3af";
     if (v < 0.5)   return "#10b981";        // ok
@@ -4611,6 +4811,7 @@ async getFiltered() {
   },
 
   // Ein Punkt pro KPI, korrekt eingefaerbt; saubere Separatoren
+  // SUBMODULE: chartPanel.layoutKpis @internal - zeichnet KPI-Dots/Sep dynamisch
   layoutKpis() {
     const box = $("#chartAverages");
     if (!box) return;
@@ -4674,6 +4875,7 @@ async getFiltered() {
   },
 
   // ----- Zeichnen -----
+  // SUBMODULE: chartPanel.draw @extract-candidate - berechnet Scales, Flags und rendert SVG Layer
   async draw() {
     const t0 = performance.now?.() ?? Date.now();
 if (!(await isLoggedIn())) {
@@ -5349,6 +5551,8 @@ const mkAlertDots = (seriesItem) => {
   },
 };
 
+/** END MODULE */
+
 /* --- Button-Flash (nur Platzhalter, wie gehabt) --- */
 
 
@@ -5364,7 +5568,13 @@ function flashButtonOk(btn, successHtml){
   }, 1200);
 }
 
+/** MODULE: UI / ROUTING / VIEWS - Navigation (Tabs/Resume/Focus)
+ * intent: Tab- und Overlay-Routing, Resume-Listener, Fokusreparatur
+ * exports: setTab, bindTabs
+ * notes: Fortsetzung der Navigations-Hooks nach dem Chart-Block; keine DOM-Aenderungen
+ */
 /* ===== Tabs / Segments ===== */
+// SUBMODULE: setTab @extract-candidate - steuert Tabwechsel inkl. Auth/Unlock Hooks
 async function setTab(name){
   if (name !== "doctor" && document.body.classList.contains('app-locked')){
     __pendingAfterUnlock = null;
@@ -5409,10 +5619,19 @@ function bindTabs(){
     })
   );
 }
+/** END MODULE */
+
+/** MODULE: CAPTURE (Intake)
+ * intent: Panel hotkeys, save/reset flows und flag handling (Fortsetzung)
+ * contracts: interagiert mit DATA ACCESS.saveBlock, UI.requestUiRefresh, AUTH Guards
+ * exports: setProteinHigh, setTraining, setLowIntake, setSaltHigh
+ * notes: Fortsetzung fuer Panel-Operationen (Hotkeys/Speichern)
+ */
 
 /* ===== Save flows ===== */
 // Replace sugar toggle with protein (runtime migration for legacy layouts)
 // Migration entfernt: Markup nutzt direkt #proteinHighToggle
+// SUBMODULE: captureFlagToggles @internal - manages capture flag buttons and state cache
 function setProteinHigh(on){
   proteinHigh = !!on;
   setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
@@ -5430,6 +5649,15 @@ function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), t
 function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
 function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
 // Kommentar-Pflicht fuer BP: Grenzwerte markieren
+/** END MODULE */
+
+/** MODULE: BP (Blood Pressure)
+ * intent: BP-spezifische Validierungen, Kontextumschaltung und Panel-Reset
+ * contracts: arbeitet mit CAPTURE UI, DATA ACCESS.saveBlock, CHARTS-Schwellenwerten
+ * exports: requiresBpComment, updateBpCommentWarnings, resetBpPanel
+ * notes: UI-Validierung strikt halten; keine DOM-Umbauten
+ */
+// SUBMODULE: requiresBpComment @internal - enforces comment when vitals exceed thresholds
 function requiresBpComment(which){
   const sys = Number($(bpSelector('sys', which)).value);
   const dia = Number($(`#dia${which}`).value);
@@ -5437,6 +5665,7 @@ function requiresBpComment(which){
   const comment = (el?.value || "").trim();
   return ((sys > 130) || (dia > 90)) && !comment;
 }
+// SUBMODULE: updateBpCommentWarnings @internal - highlights comment fields requiring input
 function updateBpCommentWarnings(){
   ['M','A'].forEach(which => {
     const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
@@ -5449,15 +5678,18 @@ function updateBpCommentWarnings(){
 }
 
 /* === Panel Reset Helpers (V1.5.7) === */
+// SUBMODULE: bpFieldId @internal - maps BP field ids for capture contexts
 function bpFieldId(base, ctx){
   if (base === 'sys' && ctx === 'M') return 'captureAmount';
   return base + ctx;
 }
 
+// SUBMODULE: bpSelector @internal - resolves selector for BP inputs
 function bpSelector(base, ctx){
   return base === 'sys' && ctx === 'M' ? '#captureAmount' : `#${base}${ctx}`;
 }
 
+// SUBMODULE: resetBpPanel @internal - clears BP inputs per context
 function resetBpPanel(which, opts = {}) {
   const { focus = true } = opts;
   const ctx = which === 'A' ? 'A' : 'M';
@@ -5471,6 +5703,15 @@ function resetBpPanel(which, opts = {}) {
     if (target) target.focus();
   }
 }
+/** END MODULE */
+
+/** MODULE: CAPTURE (Intake)
+ * intent: Panel Resets, Flag-Hooks und Tastatur-Shortcuts (Fortsetzung)
+ * contracts: verbindet BP-/BODY-Panels, nutzt CAPTURE State Toggles
+ * exports: resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar
+ * notes: Fortsetzung fuer Capture-Hilfsfunktionen (Resets/Toggles)
+ */
+// SUBMODULE: resetBodyPanel @internal - leert Body-Eingaben und stellt optional den Fokus wieder her
 function resetBodyPanel(opts = {}) {
   const { focus = true } = opts;
   const weightEl = document.getElementById('weightDay');
@@ -5483,6 +5724,7 @@ function resetBodyPanel(opts = {}) {
   if (muscleEl) { muscleEl.value = ''; clearFieldError(muscleEl); }
   if (focus && weightEl) weightEl.focus();
 }
+// SUBMODULE: resetFlagsPanel @internal - setzt Flag-Toggles und Kommentar auf Ausgangszustand
 function resetFlagsPanel(opts = {}) {
   const { focus = true } = opts;
   try {
@@ -5499,6 +5741,7 @@ function resetFlagsPanel(opts = {}) {
   if (commentEl) commentEl.value = '';
   if (focus && commentEl) commentEl.focus();
 }
+// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurück
 function resetCapturePanels(opts = {}) {
   const { focus = true } = opts;
   resetBpPanel('M', { focus: false });
@@ -5516,6 +5759,7 @@ function resetCapturePanels(opts = {}) {
     if (first) first.focus();
   }
 }
+// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkürzel fuer Save-/Reset-Flows
 function addCapturePanelKeys(){
   const bind = (selectors, onEnter, onEsc) => {
     document.querySelectorAll(selectors).forEach(el => {
@@ -5529,14 +5773,29 @@ function addCapturePanelKeys(){
   bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
   bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanel());
   bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
-}function setSick(on){
+}
+// SUBMODULE: setSick @internal - setzt Krank-Flag und sperrt Forxiga-Toggle bei Bedarf
+function setSick(on){
 sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
 if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
 else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
 }
+// SUBMODULE: setValsartanMiss @internal - pflegt Valsartan-vergessen Status und UI-Text
 function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "&#x1F48A; Valsartan vergessen (aktiv)", "&#x1F48A; Valsartan vergessen"); }
+// SUBMODULE: setForxigaMiss @internal - pflegt Forxiga-vergessen Status inkl. Label
 function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "&#x23F0; Forxiga vergessen (aktiv)", "&#x23F0; Forxiga vergessen"); }
+// SUBMODULE: setNsar @internal - pflegt NSAR-Flag und Screenreader-Label
 function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
+
+/** END MODULE */
+
+/** MODULE: BP (Blood Pressure)
+ * intent: verarbeitet Blutdruck-Erfassung, Validation und Persistierung
+ * contracts: interagiert mit DATA ACCESS.addEntry/syncWebhook, CAPTURE Toggles, UI-Warnungen
+ * exports: saveBlock, appendNote, allocateNoteTimestamp
+ * notes: Validierungslogik unveraendert dokumentieren; nur Kommentare
+ */
+// SUBMODULE: blockHasData @internal - detects if BP panel has any input before saving
 function blockHasData(which){
   const getVal = (sel) => document.querySelector(sel)?.value?.trim();
   const sys = getVal(bpSelector('sys', which));
@@ -5546,6 +5805,7 @@ function blockHasData(which){
   const comment = (commentEl?.value || "").trim();
   return !!(sys || dia || pulse || comment);
 }
+// SUBMODULE: saveBlock @internal - persists BP measurements and optional comments
 async function saveBlock(contextLabel, which, includeWeight=false, force=false){
 const date = $("#date").value || todayStr();
 const time = which === 'M' ? '07:00' : '22:00';
@@ -5609,6 +5869,7 @@ if (hasComment){
 return hasAny || hasComment;
 }
 
+// SUBMODULE: baseEntry @internal - composes canonical intake/bp entry skeleton
 function baseEntry(date, time, contextLabel){
 const iso = new Date(date + "T" + time).toISOString();
 const ts = new Date(date + "T" + time).getTime();
@@ -5628,6 +5889,7 @@ protein_high90: proteinHigh
 };
 }
 
+// SUBMODULE: appendNote @internal - stores supplemental note entries for BP/flags
 async function appendNote(date, prefix, text){
   const trimmed = (text || '').trim();
   if (!trimmed) return;
@@ -5648,6 +5910,7 @@ async function appendNote(date, prefix, text){
   await syncWebhook(entry, localId);
 }
 
+// SUBMODULE: allocateNoteTimestamp @internal - generates staggered timestamps for notes
 function allocateNoteTimestamp(date){
   const base = new Date(date + "T22:30:00");
   const now = Date.now();
@@ -5659,6 +5922,7 @@ function allocateNoteTimestamp(date){
   return { iso, ts: base.getTime(), time: iso.slice(11,16) };
 }
 
+// SUBMODULE: saveFlagsCommentNote @internal - persists capture flags note
 async function saveFlagsCommentNote(date, text){
   const trimmed = (text || '').trim();
   if (!trimmed) return false;
@@ -5666,6 +5930,15 @@ async function saveFlagsCommentNote(date, text){
   return true;
 }
 
+/** END MODULE */
+
+/** MODULE: BODY (Koerperwerte)
+ * intent: verarbeitet Tageszusammenfassung, Flags und Body-Werte Validierung
+ * contracts: nutzt DATA ACCESS.saveDaySummary/saveFlagsCommentNote, CAPTURE Toggles
+ * exports: saveDaySummary, saveFlagsCommentNote
+ * notes: Body- und Flag-Eintraege konsistent dokumentieren; nur Kommentare
+ */
+// SUBMODULE: saveDaySummary @internal - validates and saves body/flags daily summary
 async function saveDaySummary(options = {}){
   const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
   const date = $("#date")?.value || todayStr();
@@ -5766,6 +6039,15 @@ if (includeFlagsComment && flagsComment){
 return saved;
 }
 
+/** END MODULE */
+
+/** MODULE: DATA ACCESS (Auth Helpers)
+ * intent: Hilfsfunktionen fuer Netzwerk-Retries und Auth-gebundene Fetches
+ * contracts: wird von BP/BODY/APPOINTMENTS Save-Flows genutzt, haengt von AUTH.ensureSupabaseClient ab
+ * exports: withRetry, fetchWithAuth, syncWebhook
+ * notes: Fortsetzung; reine Kommentare
+ */
+// SUBMODULE: withRetry @internal - retries transient 5xx requests with exponential backoff
 async function withRetry(fn, {tries=3, base=300}={}) {
 let lastErr;
 for (let i=0;i<tries;i++){
@@ -5780,6 +6062,7 @@ lastErr = e;
 throw lastErr;
 }
 
+// SUBMODULE: fetchWithAuth @extract-candidate - wraps fetch with Supabase session headers and auto refresh
 async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {
   const supa = await ensureSupabaseClient();
   if (!supa) {
@@ -5893,6 +6176,7 @@ async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttemp
   }
 }
   
+// SUBMODULE: syncWebhook @extract-candidate - posts capture events batch to Supabase with fallbacks
 async function syncWebhook(entry, localId){
   const url = await getConf("webhookUrl");
   if(!url){
@@ -5989,14 +6273,22 @@ async function syncWebhook(entry, localId){
     throw e;
   }
 }
+/** MODULE: REALTIME
+ * intent: verwaltet Supabase Realtime Channels und Sync-Trigger fuer Intake/Termine
+ * contracts: nutzt CONFIG.getConf, AUTH.getUserId @public, UI.requestUiRefresh, LOGGING.diag
+ * exports: ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground
+ * notes: Channel-Tracking idempotent halten; Verhalten bleibt unveraendert
+ */
 /* ===== Realtime / Auto-Sync ===== */
 let sbClient = null;
 
 let __channels = [];
 let __rtReady = false;
 
+// SUBMODULE: trackChannel @internal - keeps channel references for teardown
 function trackChannel(ch){ __channels.push(ch); return ch; }
 
+// SUBMODULE: teardownRealtime @internal - unsubscribes all registered realtime channels
 function teardownRealtime(){
   try{
     if (__channels.length) {
@@ -6025,12 +6317,14 @@ window.addEventListener('beforeunload', () => {
 });
 
 
+// SUBMODULE: baseUrlFromRest @internal - strips /rest prefix to find Supabase base URL
 function baseUrlFromRest(restUrl){
 if(!restUrl) return null;
 const i = restUrl.indexOf("/rest/");
 return i>0 ? restUrl.slice(0, i) : null;
 }
 
+// SUBMODULE: getUserId @public - resolves current Supabase auth user with timeout fallbacks
 async function getUserId(){
 try{
 diag.add?.('[auth] getUserId start');
@@ -6088,6 +6382,7 @@ return null;
 }
 }
 
+// SUBMODULE: ensureSupabaseClient @extract-candidate - lazy-inits Supabase client with config guards
 async function ensureSupabaseClient(){
 if (sbClient) return sbClient;
 
@@ -6128,6 +6423,7 @@ setConfigStatus('', 'info');
 return sbClient;
 }
 
+// SUBMODULE: setupRealtime @extract-candidate - wires Supabase channel subscriptions for health_events
 async function setupRealtime(){
   try{
     const supa = await ensureSupabaseClient();
@@ -6172,6 +6468,8 @@ async function setupRealtime(){
   }
 }
 
+/** END MODULE */
+
 /* ===== App-Lock (Passkey + PIN) ===== */
 /* Doctor-only Unlock (no global lock) */
 let __doctorUnlocked = false;
@@ -6186,6 +6484,7 @@ async function isWebAuthnAvailable(){
   }
 }
 
+// SUBMODULE: configureLockOverlay @internal - updates app-lock overlay buttons/messages
 function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, message = '', highlightSetup = false } = {}){
   const passBtn = document.getElementById('unlockPasskeyBtn');
   if (passBtn){
@@ -6202,6 +6501,7 @@ function configureLockOverlay({ hasPasskey = false, webAuthnAvailable = false, m
   setLockMsg(message);
 }
 
+// SUBMODULE: requireDoctorUnlock @extract-candidate - guards doctor view with passkey/pin flows
 async function requireDoctorUnlock(){
   if (!(await isLoggedInFast())) { showLoginOverlay(true); return false; }
   if (__doctorUnlocked) return true;
@@ -6315,6 +6615,7 @@ function setLockMsg(msg){
 }
 
 /* Setup: Passkey registrieren (platform) */
+// SUBMODULE: registerPasskey @extract-candidate - registers resident passkey and stores credential id
 async function registerPasskey(){
   try{
     const rpId = location.hostname;
@@ -6347,6 +6648,7 @@ async function registerPasskey(){
 }
 
 /* Entsperren per Passkey (nur Besitz+UV Check - lokal ausreichend fuer App-Lock) */
+// SUBMODULE: unlockWithPasskey @extract-candidate - performs WebAuthn assertion to unlock doctor view
 async function unlockWithPasskey(){
   try{
     const credId = await getConf(LOCK_CRED_ID_KEY);
@@ -6374,6 +6676,7 @@ async function unlockWithPasskey(){
 }
 
 /* PIN setzen/pruefen */
+// SUBMODULE: setPinInteractive @internal - prompts user to configure local PIN hash
 async function setPinInteractive(){
   const pin = prompt("Neue PIN (4-10 Ziffern):") || "";
   if (!/^\d{4,10}$/.test(pin)){ alert("Ungueltige PIN."); return false; }
@@ -6383,6 +6686,7 @@ async function setPinInteractive(){
   setLockMsg("PIN gesetzt ");
   return true;
 }
+// SUBMODULE: unlockWithPin @internal - validates entered PIN hash and resumes app
 async function unlockWithPin(){
   const input = document.getElementById('pinInput');
   const pin = (input?.value||"").trim();
@@ -6400,6 +6704,7 @@ async function unlockWithPin(){
 }
 
 /* Events binden (einmal in main()) */
+// SUBMODULE: bindAppLockButtons @internal - wires app-lock control buttons to handlers
 function bindAppLockButtons(){
   const btnPass = document.getElementById('unlockPasskeyBtn');
   const btnPin  = document.getElementById('unlockPinBtn');
@@ -6737,6 +7042,7 @@ let __lastResumeAt = 0;
 let __resumeRunning = false;
 const RESUME_COOLDOWN_MS = 0;
 
+// SUBMODULE: resumeFromBackground @extract-candidate - handles tab focus/resume flows with auth + refresh
 async function resumeFromBackground({ source = 'resume' } = {}) {
   const now = Date.now();
   if (__resumeRunning) {
@@ -6840,6 +7146,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
 // <-- Ende von async function resumeFromBackground
 
 // --- Resume-Listener ---
+// SUBMODULE: resumeListeners @internal - rehydrates app on visibility/pageshow/focus events
 document.addEventListener('visibilitychange', () => {
   diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
@@ -6858,7 +7165,11 @@ window.addEventListener('focus', () => {
   (async () => { await resumeFromBackground({ source: 'focus' }); })();
 });
 
+/** END MODULE */
+
 // --- Arzt-Export ---
+// SUBMODULE: buildDoctorSummaryJson @extract-candidate @public - planned aggregator for doctor export payloads
+// SUBMODULE: exportDoctorJson @internal - triggers download (future: route via buildDoctorSummaryJson @extract-candidate @public)
 $("#doctorExportJson").addEventListener("click", async () => {
   try {
     const logged = await isLoggedInFast();
@@ -6920,6 +7231,16 @@ if (!window.__bootDone) {
     main();
   }
 }
+
+/** MODULE: FUTURE (placeholders)
+ * intent: haelt geplante Assist/PWA/BLE-Refactors fuer die Zeit nach dem Annotations-Pass bereit
+ * exports: (geplant) assistHooks, pwaBootstrap, bleIntegration
+ * notes: Nur Kommentare; Logik folgt bei Modul-Extraction
+ */
+// SUBMODULE: assist hooks (planned) @internal - future foodcoach/health assistants
+// SUBMODULE: pwa bootstrap (planned) @internal - manifest/service worker wiring
+// SUBMODULE: ble integration (planned) @internal - GATT 0x1810 blood pressure bridge
+/** END MODULE */
 
 /* === Debug-Notizen
 - V1.5: Realtime ueber supabase-js; Projekt-URL aus REST-URL abgeleitet.
@@ -6988,5 +7309,35 @@ if (!window.__bootDone) {
 </body>
 </html>
 
-<!-- marker -->
+<!-- ANNOTATION SUMMARY
+  modules:
+    - BOOTSTRAP & CONSTANTS -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
+    - CAPTURE (Intake) – HTML Shell -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
+    - DOCTOR VIEW – HTML -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
+    - CONFIG -> #SUBMODULES: 0, #@extract: 0, Exports:[SUPABASE_URL_DEFAULT, SUPABASE_ANON_DEFAULT, DEFAULT_WEBHOOK_ENTRIES, DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES]
+    - LOGGING & DIAGNOSTICS -> #SUBMODULES: 2, #@extract: 0, Exports:[diag, recordPerfStat, uiError, uiInfo]
+    - UI / ROUTING / VIEWS – Core (Refresh/Help) -> #SUBMODULES: 7, #@extract: 0, Exports:[requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert]
+    - AUTH – Guards -> #SUBMODULES: 3, #@extract: 0, Exports:[isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess]
+    - UTILITIES -> #SUBMODULES: 0, #@extract: 0, Exports:[$,$$,fmtNum,todayStr,timeStr,esc,nl2br]
+    - CAPTURE (Intake) – State & Timer -> #SUBMODULES: 1, #@extract: 0, Exports:[refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus]
+    - DATA ACCESS (IndexedDB) -> #SUBMODULES: 2, #@extract: 0, Exports:[initDB, putConf, getConf, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal, dayIsoToMidnightIso]
+    - AUTH – Header Cache -> #SUBMODULES: 1, #@extract: 0, Exports:[getHeaders]
+    - DATA ACCESS (REST/RPC) -> #SUBMODULES: 30, #@extract: 1, Exports:[deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay]
+    - APPOINTMENTS -> #SUBMODULES: 12, #@extract: 0, Exports:[refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge]
+    - CAPTURE (Intake) – Status & RPC Hooks -> #SUBMODULES: 7, #@extract: 2, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake]
+    - DOCTOR VIEW – Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, setDocBadges, renderDoctorDay, exportDoctorJson]
+    - CHARTS (SVG/Canvas) -> #SUBMODULES: 15, #@extract: 3, Exports:[chartPanel]
+    - UI / ROUTING / VIEWS – Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
+    - CAPTURE (Intake) – Flag Toggles -> #SUBMODULES: 1, #@extract: 0, Exports:[setProteinHigh, setTraining, setLowIntake, setSaltHigh]
+    - BP (Blood Pressure) – Validierung -> #SUBMODULES: 5, #@extract: 0, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel]
+    - CAPTURE (Intake) – Panel Resets & Shortcuts -> #SUBMODULES: 8, #@extract: 0, Exports:[resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar]
+    - BP (Blood Pressure) – Persistenz -> #SUBMODULES: 6, #@extract: 0, Exports:[saveBlock, appendNote, allocateNoteTimestamp]
+    - BODY (Koerperwerte) -> #SUBMODULES: 1, #@extract: 0, Exports:[saveDaySummary, saveFlagsCommentNote]
+    - DATA ACCESS (Auth Helpers) -> #SUBMODULES: 3, #@extract: 2, Exports:[withRetry, fetchWithAuth, syncWebhook]
+    - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
+    - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
+    - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
+    - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
+  total @extract-candidate markers: 18
+-->
 
