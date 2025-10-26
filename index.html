@@ -3859,15 +3859,25 @@ async function prefillSupabaseConfigForm(){
     const adv = document.getElementById('configAdv');
     const rest = await getConf('webhookUrl');
     const keyStored = await getConf('webhookKey');
+    const restStored = rest && String(rest).trim() ? String(rest).trim() : '';
+    const keyClean = keyStored && String(keyStored).trim()
+      ? keyStored.replace(/^Bearer\s+/i, '').trim()
+      : '';
     if (restInput) {
-      restInput.value = rest || '';
+      const hasUserText = !!(restInput.value && restInput.value.trim());
+      if (!hasUserText && restStored) {
+        restInput.value = restStored;
+      }
     }
     if (keyInput) {
-      keyInput.value = keyStored ? keyStored.replace(/^Bearer\s+/i, '') : '';
+      const hasUserText = !!(keyInput.value && keyInput.value.trim());
+      if (!hasUserText && keyClean) {
+        keyInput.value = keyClean;
+      }
     }
     if (adv) {
-      const hasRest = !!(rest && String(rest).trim());
-      const hasKey = !!(keyStored && String(keyStored).trim());
+      const hasRest = !!restStored;
+      const hasKey = !!keyClean;
       adv.open = !(hasRest && hasKey);
     }
   } catch(_){ }
@@ -3886,8 +3896,11 @@ function showLoginOverlay(show){
   if (!ov) return;
   const dialog = ov.querySelector('[role="dialog"]') || ov;
   if (show){
+    const alreadyVisible = ov.style.display === 'flex';
     ov.style.display = 'flex';
-    prefillSupabaseConfigForm();
+    if (!alreadyVisible) {
+      prefillSupabaseConfigForm();
+    }
     focusTrap.activate(dialog);
   } else {
     ov.style.display = 'none';
