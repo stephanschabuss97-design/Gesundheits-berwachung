@@ -6447,6 +6447,10 @@ async function setupRealtime(){
               // Optional: Zeitraum grob pruefen? (einfach halten: immer refreshen)
               livePulse();
               requestUiRefresh({ reason: 'realtime' });
+              const captureTab = document.getElementById('capture');
+              if (captureTab?.classList?.contains('active')) {
+                refreshCaptureIntake().catch(err => diag.add?.('[realtime] capture refresh err: ' + (err?.message || err)));
+              }
             })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') { __rtReady = true; diag.add?.('Realtime: appointments subscribed'); }
