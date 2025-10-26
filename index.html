@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- MODULE: BOOTSTRAP & CONSTANTS
   intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
@@ -9,7 +10,8 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gesundheits-Logger (V1.7.5)</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<title>Gesundheits-Logger (V1.7.5.2)</title>
 <style>
 
 /* ANKER: chart-controls styles (move to assets/app.css bei naechster Release) */
@@ -687,7 +689,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   pointer-events: none !important;
 }
 
-/* --- SAFETY: summary darf nie full-screen ?oben? liegen --- */
+/* --- SAFETY: summary darf nie full-screen 'oben' liegen --- */
 summary {
   display: list-item;
   position: static !important;
@@ -704,7 +706,7 @@ details[hidden] {
   pointer-events: none !important;
 }
 
-/* Optional: Config-Accordion im Login-Overlay explizit entsch?rfen */
+/* Optional: Config-Accordion im Login-Overlay explizit entschaerfen */
 #configAdv > summary { position: static !important; }
 
 </style>
@@ -716,7 +718,7 @@ details[hidden] {
 
 <header>
 <div style="display:flex;align-items:center;gap:10px">
-<h1>Gesundheits-Logger</h1><span class="small">V1.7.5</span>
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.5.2</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
 <button class="btn ghost" id="diagToggle" type="button">Log</button>
@@ -1122,7 +1124,7 @@ details[hidden] {
         </div>
       </div>
 
-      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen ? aktuell nur UI-Skelett.</div>
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen - aktuell nur UI-Skelett.</div>
     </div>
   </div>
 </details>
@@ -1173,32 +1175,21 @@ details[hidden] {
 </main>
 
 <!-- Supabase (UMD, v2) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+  integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+  crossorigin="anonymous"
+></script>
 
 <script>
 /** MODULE: CONFIG
- * intent: Laufzeit-Defaults fuer Konfiguration, Supabase-Endpunkte, Feature-Toggles der App
- * contracts: stellt SUPABASE_URL_DEFAULT, DEV_ALLOW_DEFAULTS, Termin-Konstanten fuer AUTH, DATA ACCESS, UI bereit
- * exports: SUPABASE_URL_DEFAULT, SUPABASE_ANON_DEFAULT, DEFAULT_WEBHOOK_ENTRIES, DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES
- * notes: reine Kommentarpflege; Werte mit Backend synchron halten
+ * intent: Laufzeit-Defaults fuer Feature-Toggles und Termin-Rollen der App
+ * contracts: stellt DEV_ALLOW_DEFAULTS und APPOINTMENT_ROLES fuer AUTH, DATA ACCESS, UI bereit
+ * exports: DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES
+ * notes: Supabase-Endpoints werden ausschliesslich durch Nutzerkonfiguration gesetzt
  */
-/* ===== Supabase Defaults (ANON only - niemals service_role!) ===== */
-const SUPABASE_URL_DEFAULT = "https://jlylmservssinsavlkdi.supabase.co";
-const SUPABASE_ANON_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseWxtc2VydnNzaW5zYXZsa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTQ2NjAsImV4cCI6MjA3MDgzMDY2MH0.4BpnwDJAlPohSYLfNcaEJfxQNvlHBbMvxVcCOAWpkFA";
-const DEFAULT_WEBHOOK_ENTRIES = `${SUPABASE_URL_DEFAULT}/rest/v1/health_events`;
-const DEV_ALLOW_DEFAULTS = (() => {
-  try {
-    const host = window?.location?.hostname || "";
-    if (/^(localhost|127\.0\.0\.1)$/i.test(host) || /\.local$/i.test(host)) return true;
-    const params = new URLSearchParams(window?.location?.search || "");
-    if (params.get('devDefaults') === '1') {
-      window?.localStorage?.setItem('healthlog_dev_defaults', '1');
-      return true;
-    }
-    if (window?.localStorage?.getItem('healthlog_dev_defaults') === '1') return true;
-  } catch(_){ }
-  return false;
-})();
+/* ===== Dev/Termin Defaults ===== */
+const DEV_ALLOW_DEFAULTS = /^(localhost|127\.0\.0\.1|.*\.local)$/i.test(window?.location?.hostname || "");
 const APPOINTMENT_GRACE_MS = 5 * 60 * 1000;
 const APPOINTMENT_ROLES = [
   { code: 'nephro', label: 'Nephrologe' },
@@ -1472,7 +1463,7 @@ function isServiceRoleKey(raw){
 async function sbSelect({ table, select, filters = [], order = null, limit = null }) {
   // Basis-URL aus gespeicherter REST-URL ableiten (z. B. .../rest/v1/health_events)
   const restUrl = await getConf("webhookUrl");
-  const base    = baseUrlFromRest(restUrl) || (DEV_ALLOW_DEFAULTS ? SUPABASE_URL_DEFAULT : null);
+  const base    = baseUrlFromRest(restUrl);
   if (!base) {
     setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
     const err = new Error("REST-Basis fehlt");
@@ -2252,7 +2243,7 @@ let __intakeRpcDisabled = false;
 // SUBMODULE: saveIntakeTotalsRpc @public - RPC upsert_intake Pfad fuer Intake-Summen
 async function saveIntakeTotalsRpc({ dayIso, totals }){
   const restUrl = await getConf("webhookUrl");
-  const base    = baseUrlFromRest(restUrl) || (DEV_ALLOW_DEFAULTS ? SUPABASE_URL_DEFAULT : null);
+  const base    = baseUrlFromRest(restUrl);
   if (!base) {
     setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
     const err = new Error("REST-Basis fehlt");
@@ -2574,7 +2565,7 @@ function setCaptureIntakeDisabled(disabled){
   });
 }
 
-// SUBMODULE: clearFieldError @internal - entfernt visuelle Fehlerzustände von Intake-Feldern
+// SUBMODULE: clearFieldError @internal - entfernt visuelle FehlerzustÃ¤nde von Intake-Feldern
 function clearFieldError(el){
   if (!el) return;
   el.style.outline = '';
@@ -3364,7 +3355,7 @@ function bindAppointmentsPanel(){
  * exports: setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, clearCaptureIntakeInputs, handleCaptureIntake
  * notes: Fortsetzung des Capture-Logikblocks (Status/Guards)
  */
-// SUBMODULE: clearCaptureIntakeInputs @internal - leert temporäre Intake-Felder vor neuem Save-Lauf
+// SUBMODULE: clearCaptureIntakeInputs @internal - leert temporÃ¤re Intake-Felder vor neuem Save-Lauf
 function clearCaptureIntakeInputs(){
   ['water', 'salt', 'protein'].forEach(kind => {
     const input = document.getElementById(`cap-${kind}-add`);
@@ -3878,7 +3869,7 @@ async function prefillSupabaseConfigForm(){
     if (adv) {
       const hasRest = !!(rest && String(rest).trim());
       const hasKey = !!(keyStored && String(keyStored).trim());
-      adv.open = !(hasRest && hasKey) && !DEV_ALLOW_DEFAULTS;
+      adv.open = !(hasRest && hasKey);
     }
   } catch(_){ }
 }
@@ -5741,7 +5732,7 @@ function resetFlagsPanel(opts = {}) {
   if (commentEl) commentEl.value = '';
   if (focus && commentEl) commentEl.focus();
 }
-// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurück
+// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurÃ¼ck
 function resetCapturePanels(opts = {}) {
   const { focus = true } = opts;
   resetBpPanel('M', { focus: false });
@@ -5759,7 +5750,7 @@ function resetCapturePanels(opts = {}) {
     if (first) first.focus();
   }
 }
-// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkürzel fuer Save-/Reset-Flows
+// SUBMODULE: addCapturePanelKeys @internal - registriert TastaturkÃ¼rzel fuer Save-/Reset-Flows
 function addCapturePanelKeys(){
   const bind = (selectors, onEnter, onEsc) => {
     document.querySelectorAll(selectors).forEach(el => {
@@ -5967,7 +5958,7 @@ async function saveDaySummary(options = {}){
       const pct = toNumDE(raw);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100){
         setFieldError(el);
-        uiError(`Bitte g?ltigen Wert f?r ${label} (0?100 %) eingeben.`);
+        uiError(`Bitte gueltigen Wert fuer ${label} (0-100 %) eingeben.`);
         if (!validationFailed) el.focus();
         validationFailed = true;
         return null;
@@ -6575,11 +6566,31 @@ async function sha256(text){
   return b64u.enc(buf);
 }
 
+async function derivePinHash(pin, saltBytes, iterations){
+  const material = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode("pin:"+pin),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
+    material,
+    256
+  );
+  return b64u.enc(bits);
+}
+
 /* Config-Keys in IndexedDB.CONF */
 const LOCK_ENABLED_KEY   = "app_lock_enabled";     // bool
 const LOCK_CRED_ID_KEY   = "lock_cred_id";         // base64url
 const LOCK_PIN_HASH_KEY  = "lock_pin_hash";        // SHA-256 b64url
+const LOCK_PIN_KDF_KEY   = "lock_pin_kdf";         // PBKDF2 b64url
+const LOCK_PIN_SALT_KEY  = "lock_pin_salt";        // base64url
+const LOCK_PIN_ITER_KEY  = "lock_pin_iter";        // number
 const LOCK_LAST_OK_KEY   = "lock_last_ok";         // timestamp
+const LOCK_PIN_DEFAULT_ITER = 120000;
 
 /* UI Helpers */
 function lockUi(on){
@@ -6680,8 +6691,12 @@ async function unlockWithPasskey(){
 async function setPinInteractive(){
   const pin = prompt("Neue PIN (4-10 Ziffern):") || "";
   if (!/^\d{4,10}$/.test(pin)){ alert("Ungueltige PIN."); return false; }
-  const hash = await sha256("pin:"+pin);
-  await putConf(LOCK_PIN_HASH_KEY, hash);
+  const saltBytes = u8(16);
+  const hash = await derivePinHash(pin, saltBytes, LOCK_PIN_DEFAULT_ITER);
+  await putConf(LOCK_PIN_KDF_KEY, hash);
+  await putConf(LOCK_PIN_SALT_KEY, b64u.enc(saltBytes));
+  await putConf(LOCK_PIN_ITER_KEY, LOCK_PIN_DEFAULT_ITER);
+  await putConf(LOCK_PIN_HASH_KEY, null);
   await putConf(LOCK_ENABLED_KEY, true);
   setLockMsg("PIN gesetzt ");
   return true;
@@ -6691,10 +6706,44 @@ async function unlockWithPin(){
   const input = document.getElementById('pinInput');
   const pin = (input?.value||"").trim();
   if (!pin){ setLockMsg("PIN eingeben."); return false; }
-  const saved = await getConf(LOCK_PIN_HASH_KEY);
-  if (!saved){ setLockMsg("Keine PIN hinterlegt."); return false; }
-  const hash = await sha256("pin:"+pin);
-  if (hash !== saved){ setLockMsg("PIN falsch."); return false; }
+  const storedHash = await getConf(LOCK_PIN_KDF_KEY);
+  const storedSaltB64 = await getConf(LOCK_PIN_SALT_KEY);
+  const storedIter = await getConf(LOCK_PIN_ITER_KEY);
+  let ok = false;
+
+  if (storedHash && storedSaltB64 && storedIter){
+    try{
+      const saltBytes = b64u.dec(storedSaltB64);
+      const derived = await derivePinHash(pin, saltBytes, Number(storedIter) || LOCK_PIN_DEFAULT_ITER);
+      ok = (derived === storedHash);
+    }catch(e){
+      console.error('PIN derive error', e);
+      ok = false;
+    }
+  } else {
+    const legacy = await getConf(LOCK_PIN_HASH_KEY);
+    if (!legacy){
+      setLockMsg("Keine PIN hinterlegt.");
+      return false;
+    }
+    const legacyHash = await sha256("pin:"+pin);
+    ok = (legacyHash === legacy);
+    if (ok){
+      // Migration: PBKDF2 + Salt speichern
+      const saltBytes = u8(16);
+      const newHash = await derivePinHash(pin, saltBytes, LOCK_PIN_DEFAULT_ITER);
+      await putConf(LOCK_PIN_KDF_KEY, newHash);
+      await putConf(LOCK_PIN_SALT_KEY, b64u.enc(saltBytes));
+      await putConf(LOCK_PIN_ITER_KEY, LOCK_PIN_DEFAULT_ITER);
+      await putConf(LOCK_PIN_HASH_KEY, null);
+    }
+  }
+
+  if (!ok){
+    setLockMsg("PIN falsch.");
+    return false;
+  }
+
   await putConf(LOCK_LAST_OK_KEY, Date.now());
   input.value = "";
   __doctorUnlocked = true;
@@ -6743,10 +6792,6 @@ updateStickyOffsets();
 try {
 const haveUrl = await getConf("webhookUrl");
 const haveKey = await getConf("webhookKey");
-if (DEV_ALLOW_DEFAULTS) {
-  if (!haveUrl && SUPABASE_URL_DEFAULT) await putConf("webhookUrl", DEFAULT_WEBHOOK_ENTRIES);
-  if (!haveKey && SUPABASE_ANON_DEFAULT) await putConf("webhookKey", `Bearer ${SUPABASE_ANON_DEFAULT}`);
-}
 } catch (_) {}
 chartPanel.init(); bindTabs();
 const todayIso = todayStr();
@@ -6764,7 +6809,7 @@ try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
 
-// Wenn schon eingeloggt ? App starten, sonst Login-Leiste zeigen
+// Wenn schon eingeloggt -> App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();
 if (hasSession) {
   await afterLoginBoot(); // wichtig fuer Reload mit persistierter Session
@@ -7069,7 +7114,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) { diag.add?.('[resume] no supabase client -> login overlay'); finalizeAuthState(false); showLoginOverlay(true); return; }
 
-    // Session pr?fen (Timeout-safe) und ggf. auffrischen
+    // Session pruefen (Timeout-safe) und ggf. auffrischen
     let loggedIn = await isLoggedInFast({ timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
@@ -7312,30 +7357,28 @@ if (!window.__bootDone) {
 <!-- ANNOTATION SUMMARY
   modules:
     - BOOTSTRAP & CONSTANTS -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
-    - CAPTURE (Intake) – HTML Shell -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
-    - DOCTOR VIEW – HTML -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
-    - CONFIG -> #SUBMODULES: 0, #@extract: 0, Exports:[SUPABASE_URL_DEFAULT, SUPABASE_ANON_DEFAULT, DEFAULT_WEBHOOK_ENTRIES, DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES]
+    - CAPTURE (Intake) - HTML Shell -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
+    - DOCTOR VIEW - HTML -> #SUBMODULES: 0, #@extract: 0, Exports:[none]
+    - CONFIG -> #SUBMODULES: 0, #@extract: 0, Exports:[DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES]
     - LOGGING & DIAGNOSTICS -> #SUBMODULES: 2, #@extract: 0, Exports:[diag, recordPerfStat, uiError, uiInfo]
-    - UI / ROUTING / VIEWS – Core (Refresh/Help) -> #SUBMODULES: 7, #@extract: 0, Exports:[requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert]
-    - AUTH – Guards -> #SUBMODULES: 3, #@extract: 0, Exports:[isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess]
+    - UI / ROUTING / VIEWS - Core (Refresh/Help) -> #SUBMODULES: 7, #@extract: 0, Exports:[requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert]
+    - AUTH - Guards -> #SUBMODULES: 3, #@extract: 0, Exports:[isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess]
     - UTILITIES -> #SUBMODULES: 0, #@extract: 0, Exports:[$,$$,fmtNum,todayStr,timeStr,esc,nl2br]
-    - CAPTURE (Intake) – State & Timer -> #SUBMODULES: 1, #@extract: 0, Exports:[refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus]
+    - CAPTURE (Intake) - State & Timer -> #SUBMODULES: 1, #@extract: 0, Exports:[refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus]
     - DATA ACCESS (IndexedDB) -> #SUBMODULES: 2, #@extract: 0, Exports:[initDB, putConf, getConf, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal, dayIsoToMidnightIso]
-    - AUTH – Header Cache -> #SUBMODULES: 1, #@extract: 0, Exports:[getHeaders]
+    - AUTH - Header Cache -> #SUBMODULES: 1, #@extract: 0, Exports:[getHeaders]
     - DATA ACCESS (REST/RPC) -> #SUBMODULES: 30, #@extract: 1, Exports:[deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay]
     - APPOINTMENTS -> #SUBMODULES: 12, #@extract: 0, Exports:[refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge]
-    - CAPTURE (Intake) – Status & RPC Hooks -> #SUBMODULES: 7, #@extract: 2, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake]
-    - DOCTOR VIEW – Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, setDocBadges, renderDoctorDay, exportDoctorJson]
+    - CAPTURE (Intake) - Status & RPC Hooks -> #SUBMODULES: 7, #@extract: 2, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake]
+    - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, setDocBadges, renderDoctorDay, exportDoctorJson]
     - CHARTS (SVG/Canvas) -> #SUBMODULES: 15, #@extract: 3, Exports:[chartPanel]
-    - UI / ROUTING / VIEWS – Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
-    - CAPTURE (Intake) – Flag Toggles -> #SUBMODULES: 1, #@extract: 0, Exports:[setProteinHigh, setTraining, setLowIntake, setSaltHigh]
-    - BP (Blood Pressure) – Validierung -> #SUBMODULES: 5, #@extract: 0, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel]
-    - CAPTURE (Intake) – Panel Resets & Shortcuts -> #SUBMODULES: 8, #@extract: 0, Exports:[resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar]
-    - BP (Blood Pressure) – Persistenz -> #SUBMODULES: 6, #@extract: 0, Exports:[saveBlock, appendNote, allocateNoteTimestamp]
+    - UI / ROUTING / VIEWS - Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
+    - CAPTURE (Intake) - Flag Toggles -> #SUBMODULES: 1, #@extract: 0, Exports:[setProteinHigh, setTraining, setLowIntake, setSaltHigh]
+    - BP (Blood Pressure) - Validierung -> #SUBMODULES: 5, #@extract: 0, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel]
+    - CAPTURE (Intake) - Panel Resets & Shortcuts -> #SUBMODULES: 8, #@extract: 0, Exports:[resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar]
+    - BP (Blood Pressure) - Persistenz -> #SUBMODULES: 6, #@extract: 0, Exports:[saveBlock, appendNote, allocateNoteTimestamp]
     - BODY (Koerperwerte) -> #SUBMODULES: 1, #@extract: 0, Exports:[saveDaySummary, saveFlagsCommentNote]
     - DATA ACCESS (Auth Helpers) -> #SUBMODULES: 3, #@extract: 2, Exports:[withRetry, fetchWithAuth, syncWebhook]
-    - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
-    - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
     - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
