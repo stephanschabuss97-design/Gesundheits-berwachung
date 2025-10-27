@@ -1044,23 +1044,27 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 }
 .appointment-line {
   display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:4px;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
   font-size:13px;
   color:var(--muted);
 }
+.appointment-line .label {
+  order:1;
+}
 .appointment-line .value {
+  order:3;
   font-size:13px;
   color:var(--fg);
   font-weight:500;
 }
 .appointment-line button {
-  align-self:flex-end;
-  min-width:120px;
+  order:2;
+  min-width:110px;
   height:36px;
-  margin-top:8px;
-  padding-inline:16px;
+  margin:0 0 0 8px;
+  padding-inline:14px;
 }
 @media (max-width: 640px) {
   .appointment-inputs > div {
@@ -1070,15 +1074,10 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
     width: 100%;
   }
   .appointment-line {
-    flex-wrap: wrap;
     gap: 6px;
-    align-items: stretch;
   }
-  .appointment-line button {
-    align-self:flex-end;
-    min-width:110px;
-    width:auto;
-    margin-left:auto;
+  .appointment-line .value {
+    flex-basis:100%;
   }
 }
 
@@ -5579,8 +5578,16 @@ const metric = $("#metricSel")?.value || "bp";
     xmin -= xPad; xmax += xPad;
 
     const lineVals = series.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
-    const barVals  = barSeries.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
+    const barVals  = metric === "weight"
+      ? []
+      : barSeries.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
     let allY = [...lineVals, ...barVals];
+    if (metric === "weight") {
+      const weightValsOnly = series
+        .filter(s => s.key === "body-weight" || s.key === "body-waist")
+        .flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
+      allY = weightValsOnly.length ? weightValsOnly : [75, 110];
+    }
     if (!allY.length) allY = [0];
     let yminRaw = Math.min(...allY);
     let ymaxRaw = Math.max(...allY);
@@ -5594,7 +5601,18 @@ const metric = $("#metricSel")?.value || "bp";
     };
     let yPad = 1;
     if (metric === "weight") {
-      [yminRaw, ymaxRaw] = ensureSpan(yminRaw, ymaxRaw, 8);
+      const baseMin = 75;
+      const baseMax = 110;
+      const belowBase = yminRaw < baseMin;
+      const aboveBase = ymaxRaw > baseMax;
+      if (!belowBase && !aboveBase) {
+        yminRaw = baseMin;
+        ymaxRaw = baseMax;
+      } else {
+        yminRaw = belowBase ? Math.min(yminRaw, baseMin) : baseMin;
+        ymaxRaw = aboveBase ? Math.max(ymaxRaw, baseMax) : baseMax;
+        [yminRaw, ymaxRaw] = ensureSpan(yminRaw, ymaxRaw, 6);
+      }
       yPad = Math.max((ymaxRaw - yminRaw) * 0.08, 0.5);
     } else {
       [yminRaw, ymaxRaw] = ensureSpan(yminRaw, ymaxRaw, 2);
