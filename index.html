@@ -1045,6 +1045,7 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
 .appointment-line {
   display:flex;
   flex-direction:column;
+  align-items:flex-start;
   gap:4px;
   font-size:13px;
   color:var(--muted);
@@ -1055,10 +1056,11 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   font-weight:500;
 }
 .appointment-line button {
-  width:100%;
-  max-width:220px;
-  height:40px;
-  margin-top:6px;
+  align-self:flex-end;
+  min-width:120px;
+  height:36px;
+  margin-top:8px;
+  padding-inline:16px;
 }
 @media (max-width: 640px) {
   .appointment-inputs > div {
@@ -1070,9 +1072,13 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   .appointment-line {
     flex-wrap: wrap;
     gap: 6px;
+    align-items: stretch;
   }
   .appointment-line button {
-    margin-left: 0;
+    align-self:flex-end;
+    min-width:110px;
+    width:auto;
+    margin-left:auto;
   }
 }
 
@@ -1263,7 +1269,6 @@ details[hidden] {
       <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
           <div class="card-nested">
-            <h3 class="blockTitle">Koerper</h3>
             <div class="body-grid">
               <div>
                 <label>Gewicht (kg)</label>
