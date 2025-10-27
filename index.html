@@ -1054,13 +1054,13 @@ body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
   order:1;
 }
 .appointment-line .value {
-  order:3;
+  order:2;
   font-size:13px;
   color:var(--fg);
   font-weight:500;
 }
 .appointment-line button {
-  order:2;
+  order:3;
   min-width:110px;
   height:36px;
   margin:0 0 0 8px;
@@ -5790,7 +5790,8 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     // Koerper: Kompositionsbalken (Muskel/Fett) als hinterer Layer
     if (metric === "weight" && this.SHOW_BODY_COMP_BARS && this.svg) {
-      const baseline = y(0);
+      const baseLineValue = 75;
+      const baseline = y(baseLineValue);
       const muscleSeries = barSeries[0] || { values: [] };
       const fatSeries    = barSeries[1] || { values: [] };
       const entries = data.map((entry, idx) => {
@@ -5841,7 +5842,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             }
 
             if (hasMuscle) {
-              const yVal = y(muscleNum);
+              const yVal = y(baseLineValue + muscleNum);
               if (Number.isFinite(yVal)) {
                 const h = Math.abs(baseline - yVal);
                 if (h > 0.5) {
@@ -5869,7 +5870,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
             }
 
             if (hasFat) {
-              const yVal = y(fatNum);
+              const yVal = y(baseLineValue + fatNum);
               if (Number.isFinite(yVal)) {
                 const h = Math.abs(baseline - yVal);
                 if (h > 0.5) {
