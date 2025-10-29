@@ -14,9 +14,9 @@ meta:
     It ensures Brand Harmony through controlled light and depth —
     never through over-stimulation or decorative effects.
   assets:
-    logo_wordmark: "assets/midas_wordmark.png"
-    logo_symbol: "assets/midas_symbol.png"
-    logo_complete: "assets/midas_logo_complete.png"
+    logo_wordmark: "assets/img/midas_wordmark.png"
+    logo_symbol: "assets/img/midas_symbol.png"
+    logo_complete: "assets/img/midas_logo_complete.png"
 
 # ------------------------------------------------------------
 # 🎨 Design Tokens (Primary Palette)
@@ -48,7 +48,7 @@ rules:
     with:
       html: |
         <div class="app-logo">
-          <img src="assets/midas_wordmark.png" alt="M.I.D.A.S." class="logo-img">
+          <img src="assets/img/midas_wordmark.png" alt="M.I.D.A.S." class="logo-img">
           <span class="midas-title" aria-hidden="true">M.I.D.A.S.</span>
         </div>
     css: |
