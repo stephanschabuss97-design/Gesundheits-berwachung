@@ -95,4 +95,8 @@ function isWeightOnly(entry) {
 const formatApi = { formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly };
 window.AppModules = window.AppModules || {};
 window.AppModules.format = formatApi;
-Object.assign(window, formatApi);
+for (const [key, value] of Object.entries(formatApi)) {
+  if (typeof window[key] === 'undefined') {
+    window[key] = value;
+  }
+}

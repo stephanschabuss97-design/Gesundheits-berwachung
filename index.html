@@ -1662,6 +1662,11 @@ const appointmentsState = {
  */
 // @refactor: moved to assets/js/ui.js (helpPanel)
 
+const uiCore = (window.AppModules && window.AppModules.uiCore) || {};
+const helpPanel = uiCore.helpPanel;
+const debounce = uiCore.debounce || ((fn) => fn);
+const focusTrap = uiCore.focusTrap;
+
 /* ===== Helpers ===== */
 const UI_REFRESH_TIMEOUT_MS = 8000;
 const GET_USER_TIMEOUT_MS = 2000;
@@ -2017,6 +2022,7 @@ el.style.outline = '';
  * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
  */
 // SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
+// Dep: expects SupabaseAPI helpers (assets/js/supabase.js) to be registered on window.
 async function getHeaders({ forceRefresh = false } = {}) {
   const supaApi = window.SupabaseAPI || {};
   const maxAgeMs = 5 * 60 * 1000;
@@ -2139,6 +2145,7 @@ const REQUIRED_GLOBALS = [
   'getAllEntries',
   'getEntryByRemoteId',
   'deleteEntryLocal',
+  'SupabaseAPI',
   'fetchWithAuth',
   'ensureSupabaseClient',
   'getUserId',
@@ -2159,32 +2166,51 @@ const REQUIRED_GLOBALS = [
   'deleteRemoteDay',
   'setupRealtime',
   'requireDoctorUnlock',
-  'resumeFromBackground'
+  'resumeFromBackground',
+  'fmtDE',
+  'updateLifestyleBars',
+  'AppModules.uiCore.helpPanel',
+  'AppModules.uiCore.debounce',
+  'AppModules.uiCore.setUnderlayInert',
+  'AppModules.uiCore.focusTrap',
+  'AppModules.uiLayout.updateStickyOffsets',
+  'AppModules.uiLayout.ensureNotObscured'
 ];
 
+function resolveGlobal(path) {
+  return path.split('.').reduce((acc, part) => {
+    if (acc == null) return undefined;
+    return acc[part];
+  }, window);
+}
+
 function ensureModulesReady() {
-  const missing = REQUIRED_GLOBALS.filter(name => typeof window[name] === "undefined");
+  const missing = REQUIRED_GLOBALS.filter((name) => typeof resolveGlobal(name) === "undefined");
   if (!missing.length) return true;
   const message = `Fehler: Module fehlen (${missing.join(', ')})`;
-  try {
+  let displayed = false;
+  if (document.readyState !== 'loading') {
     const errBox = document.getElementById('err');
     if (errBox) {
       errBox.textContent = message;
       errBox.style.display = 'block';
-    } else {
+      displayed = true;
+    } else if (document.body) {
       const div = document.createElement('div');
       div.textContent = message;
-      div.style.background = 'var(--warn, #ff6b6b)';
-      div.style.color = 'var(--bg, #121417)';
+      div.style.background = '#ff6b6b';
+      div.style.color = '#121417';
       div.style.padding = '12px';
       div.style.margin = '16px';
       div.style.borderRadius = '8px';
-      document.body?.appendChild(div);
+      div.style.fontWeight = '600';
+      document.body.appendChild(div);
+      displayed = true;
     }
-  } catch (_) {
-    try { alert(message); } catch (__){ console.error(message); }
   }
-  console.error(message);
+  if (!displayed) {
+    console.error(message);
+  }
   return false;
 }
 
@@ -3570,7 +3596,7 @@ async function renderDoctor(){
 
 /** MODULE: CHARTS (SVG/Canvas)
  * intent: rendert Tages-Charts (BP/Body) inkl. KPI-Leiste, Flags-Overlay und Tooltips
- * contracts: haengt von DATA ACCESS.fetchDailyOverview, UTILITIES esc/fmtNum, PERF.diag Logging ab
+ * contracts: haengt von DATA ACCESS.fetchDailyOverview, UTILITIES esc/fmtNum, PERF.diag Logging, SupabaseAPI.ensureSupabaseClient ab
  * exports: chartPanel
  * notes: drawing/scaling pipelines sind @extract-candidate fuer spaetere Auslagerung
  */
@@ -3598,6 +3624,7 @@ const chartPanel = {
   SHOW_BODY_COMP_BARS: true,
   _abort: null,
   _ro: null,
+  initialized: false,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
   init() {
@@ -3725,6 +3752,7 @@ const chartPanel = {
 
     // KPI-Box: Felder sicherstellen
     this.ensureKpiFields();
+    this.initialized = true;
   },
 
   // SUBMODULE: chartPanel.toggle @internal - schaltet Chart-Panel an/aus inkl. Fokus
@@ -3738,10 +3766,13 @@ const chartPanel = {
 
   // SUBMODULE: chartPanel.show @internal - oeffnet Panel und aktiviert focusTrap
   show() {
+    if (!this.el || !this.initialized) {
+      this.init();
+    }
     this.open = true;
     if (this.el) {
       this.el.style.display = "block";
-      focusTrap.activate(this.el);
+      focusTrap?.activate?.(this.el);
     }
   },
 
@@ -3750,10 +3781,11 @@ const chartPanel = {
     this.open = false;
     if (this.el) {
       this.el.style.display = "none";
-      focusTrap.deactivate();
+      focusTrap?.deactivate?.();
     }
     this.tipSticky = false;
     this.hideTip();
+    this.destroy();
   },
   destroy() {
     if (this._abort) {
@@ -3788,6 +3820,7 @@ const chartPanel = {
     this.svg = null;
     this.el = null;
     this.legend = null;
+    this.initialized = false;
   },
   // ----- Helpers -----
   // SUBMODULE: chartPanel.getFiltered @extract-candidate - aggregiert Cloud/Local Daten fuer Zeichnung
@@ -5472,7 +5505,7 @@ function lockUi(on){
     const dialog = ov.querySelector('[role="dialog"]') || ov;
     ov.style.display = on ? 'flex' : 'none';
     if (on){
-      focusTrap.activate(dialog);
+      focusTrap?.activate?.(dialog);
       requestAnimationFrame(()=>{
         const pin = document.getElementById('pinInput');
         const pass = document.getElementById('unlockPasskeyBtn');
@@ -5486,7 +5519,7 @@ function lockUi(on){
         }
       });
     } else {
-      focusTrap.deactivate();
+      focusTrap?.deactivate?.();
       const pin = document.getElementById('pinInput');
       if (pin && typeof pin.blur === 'function'){ pin.blur(); }
     }
@@ -5659,18 +5692,27 @@ if (overlay) overlay.addEventListener('click', (e)=>{
 
 /* ===== Main ===== */
 async function main(){
+  if (document.readyState === 'loading') {
+    await new Promise((resolve) => {
+      document.addEventListener('DOMContentLoaded', resolve, { once: true });
+    });
+  }
   if (!ensureModulesReady()) {
-    console.error('Abbruch: erforderliche Module nicht geladen');
     return;
   }
-  diag.init(); helpPanel.init(); await initDB();
-  updateStickyOffsets();
+  diag.init();
+  helpPanel?.init?.();
+  await initDB();
+  window.AppModules?.uiLayout?.updateStickyOffsets?.();
   bindHeaderShadow();
   try {
-const haveUrl = await getConf("webhookUrl");
-const haveKey = await getConf("webhookKey");
-} catch (_) {}
-chartPanel.init(); bindTabs();
+    await getConf("webhookUrl");
+    await getConf("webhookKey");
+  } catch (_) {}
+  // Dep: chart panel and refresh flows expect Supabase client to exist beforehand.
+  await ensureSupabaseClient();
+  chartPanel.init();
+  bindTabs();
 const todayIso = todayStr();
 $("#date").value = todayIso;
 __lastKnownToday = todayIso;
@@ -5680,7 +5722,6 @@ prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
 setTab("capture");
-await ensureSupabaseClient();
 try{ resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
@@ -5932,7 +5973,7 @@ document.addEventListener('keydown', (e)=>{
       return;
     }
     if (helpPanel?.open) {
-      helpPanel.hide();
+      helpPanel?.hide?.();
       e.preventDefault();
       return;
     }
@@ -5984,7 +6025,7 @@ async function resumeFromBackground({ source = 'resume' } = {}) {
     diag.add?.(`[resume] start: ${source}`);
     // sanftes Repaint
     try { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); } catch(_) {}
-    updateStickyOffsets();
+    window.AppModules?.uiLayout?.updateStickyOffsets?.();
     scheduleAuthGrace();
 
     const supa = await ensureSupabaseClient();

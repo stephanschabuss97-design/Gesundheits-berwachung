@@ -193,4 +193,8 @@ const dataLocalApi = {
 };
 window.AppModules = window.AppModules || {};
 window.AppModules.dataLocal = dataLocalApi;
-Object.assign(window, dataLocalApi);
+for (const [key, value] of Object.entries(dataLocalApi)) {
+  if (typeof window[key] === 'undefined') {
+    window[key] = value;
+  }
+}

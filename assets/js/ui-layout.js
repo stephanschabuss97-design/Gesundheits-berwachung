@@ -5,7 +5,7 @@
  * notes: Logik unveraendert aus index.html extrahiert
  */
 
-// SUBMODULE: updateStickyOffsets @internal - aktualisiert CSS-Offests fuer Header/Tabs
+// SUBMODULE: updateStickyOffsets @public - aktualisiert CSS-Offests fuer Header/Tabs
 function updateStickyOffsets() {
   try {
     const headerEl = document.querySelector('header');
@@ -26,7 +26,7 @@ function updateStickyOffsets() {
 window.addEventListener('resize', updateStickyOffsets);
 window.addEventListener('orientationchange', updateStickyOffsets);
 
-// SUBMODULE: ensureNotObscured @internal - scrollt Fokusfelder unter Header hervor
+// SUBMODULE: ensureNotObscured @public - scrollt Fokusfelder unter Header hervor
 function ensureNotObscured(el) {
   try {
     if (!el) return;
@@ -64,4 +64,3 @@ document.addEventListener(
 const uiLayoutApi = { updateStickyOffsets, ensureNotObscured };
 window.AppModules = window.AppModules || {};
 window.AppModules.uiLayout = uiLayoutApi;
-Object.assign(window, uiLayoutApi);

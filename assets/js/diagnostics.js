@@ -111,13 +111,15 @@ const diag = {
   show() {
     if (!this.el) return;
     this.el.style.display = 'block';
-    focusTrap.activate(this.el);
+    const trap = window.AppModules?.uiCore?.focusTrap;
+    trap?.activate?.(this.el);
     this.open = true;
   },
   hide() {
     if (!this.el) return;
     this.el.style.display = 'none';
-    focusTrap.deactivate();
+    const trap = window.AppModules?.uiCore?.focusTrap;
+    trap?.deactivate?.();
     this.open = false;
   }
 };

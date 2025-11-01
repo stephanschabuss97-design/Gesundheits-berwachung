@@ -47,4 +47,8 @@ function nl2br(s) {
 const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br };
 window.AppModules = window.AppModules || {};
 window.AppModules.utils = utilsApi;
-Object.assign(window, utilsApi);
+for (const [key, value] of Object.entries(utilsApi)) {
+  if (typeof window[key] === 'undefined') {
+    window[key] = value;
+  }
+}
