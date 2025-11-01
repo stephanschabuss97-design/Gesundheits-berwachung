@@ -1608,6 +1608,8 @@ details[hidden] {
 <script src="assets/js/ui-errors.js"></script>
 <!-- @refactor: moved to assets/js/utils.js -->
 <script src="assets/js/utils.js"></script>
+<!-- @refactor: moved to assets/js/ui-tabs.js -->
+<script src="assets/js/ui-tabs.js"></script>
 
 <script>
 /** MODULE: CONFIG
@@ -5819,70 +5821,7 @@ function flashButtonOk(btn, successHtml){
  * notes: Fortsetzung der Navigations-Hooks nach dem Chart-Block; keine DOM-Aenderungen
  */
 /* ===== Tabs / Segments ===== */
-// SUBMODULE: setTab @extract-candidate - steuert Tabwechsel inkl. Auth/Unlock Hooks
-async function setTab(name){
-  if (name !== "doctor" && document.body.classList.contains('app-locked')){
-    __pendingAfterUnlock = null;
-    lockUi(false);
-  }
-  if (name === "doctor"){
-    const logged = await isLoggedInFast();
-    if (!logged){
-      showLoginOverlay(true);
-      return;
-    }
-    if (!__doctorUnlocked){
-      __pendingAfterUnlock = 'doctor';
-      const ok = await requireDoctorUnlock();
-      if (!ok) return;
-      __pendingAfterUnlock = null;
-    }
-  }
-  
-  $$(".view").forEach(v => v.classList.remove("active"));
-  $("#"+name).classList.add("active");
-  $$(".tabs .btn").forEach(b => {
-    const active = b.dataset.tab === name;
-    b.classList.toggle("primary", active);
-    if (active) {
-      b.setAttribute("aria-current", "page");
-    } else {
-      b.removeAttribute("aria-current");
-    }
-  });
-  if (name === "doctor") { await requestUiRefresh({ reason: 'tab:doctor' }); }
-  if (name === "capture") { try { await refreshCaptureIntake(); resetCapturePanels(); updateBpCommentWarnings?.(); } catch(_){} }
-  
-}
-
-function bindTabs(){
-  $$(".tabs .btn").forEach(b =>
-    b.addEventListener("click", async (e) => {
-      const tab = e.currentTarget.dataset.tab;
-      if (tab === "doctor") {
-        const logged = await isLoggedInFast();
-        if (!logged) {
-          showLoginOverlay(true);
-          return;
-        }
-      }
-      setTab(tab);
-    })
-  );
-}
-
-function bindHeaderShadow(){
-  const header = document.querySelector('header');
-  const tabs = document.querySelector('nav.tabs');
-  if (!header) return;
-  const update = () => {
-    const scrolled = window.scrollY > 4;
-    header.classList.toggle('is-elevated', scrolled);
-    if (tabs) tabs.classList.toggle('is-elevated', scrolled);
-  };
-  update();
-  window.addEventListener('scroll', update, { passive: true });
-}
+// @refactor: moved to assets/js/ui-tabs.js (setTab, bindTabs, bindHeaderShadow)
 /** END MODULE */
 
 /** MODULE: CAPTURE (Intake)
