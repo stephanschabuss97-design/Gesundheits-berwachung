@@ -1860,16 +1860,15 @@ function toNumDE(s) {
   if (s == null) return null;
   let v = String(s).trim();
   if (!v) return null;
-  // normalize: drop thousands (., spaces, NBSP, thin space, apostrophe), unify decimal comma
-  // normalize minus
+  // normalize: drop thousands (., spaces, NBSP, thin space, apostrophe), unify decimal comma, normalize minus
   v = v
     .replace(/\u00A0/g, ' ')
     .replace(/[\u2009\u202F]/g, '')
     .replace(/['\s.](?=\d{3}(\D|$))/g, '')
     .replace(/,/g, '.')
-    .replace(/[−–—]/g, '-')
-    // optional units at end (e.g., "cm", "kg", "mmHg", "bpm", "%", currency)
-    .replace(/\s*(?:%|‰|[A-Za-z]+|\u20AC|\$|£)\s*$/u, '');
+    .replace(/[\u2212\u2013\u2014]/g, '-')
+    // optional units at end (e.g., 'cm', 'kg', 'mmHg', 'bpm', '%', currency)
+    .replace(/\s*(?:%|\u2030|[A-Za-z]+|\u20AC|\$|\u00A3)\s*$/u, '');
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -7832,4 +7831,5 @@ if (!window.__bootDone) {
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
+
 
