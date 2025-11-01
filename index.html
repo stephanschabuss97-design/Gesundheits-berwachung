@@ -1860,16 +1860,37 @@ function toNumDE(s) {
   if (s == null) return null;
   let v = String(s).trim();
   if (!v) return null;
-  // normalize: drop thousands (., spaces, NBSP, thin space, apostrophe), unify decimal comma, normalize minus
-  v = v
-    .replace(/\u00A0/g, ' ')
-    .replace(/[\u2009\u202F]/g, '')
-    .replace(/['\s.](?=\d{3}(\D|$))/g, '')
-    .replace(/,/g, '.')
-    .replace(/[\u2212\u2013\u2014]/g, '-')
-    // optional units at end (e.g., 'cm', 'kg', 'mmHg', 'bpm', '%', currency)
-    .replace(/\s*(?:%|\u2030|[A-Za-z]+|\u20AC|\$|\u00A3)\s*$/u, '');
+  // strip trailing units/symbols
+  v = v.replace(/\s*(?:%|\u2030|[A-Za-z]+|\u20AC|\$|\u00A3)\s*$/u, '');
+  // normalize minus and spaces
+  v = v.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[\u00A0\u2009\u202F]/g, ' ').replace(/\s+/g, '');
+  // decide decimal separator
+  const lastComma = v.lastIndexOf(',');
+  const lastDot   = v.lastIndexOf('.');
+  let dec = null;
+  if (lastComma !== -1 && lastDot !== -1) dec = (lastComma > lastDot) ? ',' : '.';
+  else if (lastComma !== -1) dec = (v.length - lastComma - 1) <= 2 ? ',' : null;
+  else if (lastDot   !== -1) dec = (v.length - lastDot   - 1) <= 2 ? '.' : null;
+  if (dec) {
+    // protect the chosen decimal (replace its last occurrence with placeholder)
+    v = v.replace(new RegExp('\\' + dec + '(?=[^' + (dec === '.' ? '\\.' : ',') + ']*$)'), '#');
+  }
+  // remove remaining group separators (.,', and spaces)
+  v = v.replace(/[.,'\s]/g, '');
+  if (dec) v = v.replace('#', '.');
   const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}    // If a comma is present, treat it as the decimal separator:
+    // remove common thousands separators (dots, spaces, etc.), then replace the comma with a dot
+    v = v.replace(grouping, '');
+    v = v.replace(/,/, '.');
+  } else {
+    // No comma: remove grouping spaces/apostrophes but keep dots as decimal separator (if any)
+    v = v.replace(/[\u00A0\u202F\u2009\u200A' ]/g, '');
+  }
+
+  // parse and validate
+  const n = parseFloat(v);
   return Number.isFinite(n) ? n : null;
 }
 
