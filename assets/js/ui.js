@@ -205,3 +205,8 @@ const focusTrap = {
   }
 };
 
+const uiCoreApi = { helpPanel, debounce, setUnderlayInert, focusTrap };
+window.AppModules = window.AppModules || {};
+window.AppModules.uiCore = uiCoreApi;
+Object.assign(window, uiCoreApi);
+

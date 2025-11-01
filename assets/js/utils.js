@@ -44,3 +44,7 @@ function nl2br(s) {
   return esc(s).replace(/\n/g, '<br>');
 }
 
+const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br };
+window.AppModules = window.AppModules || {};
+window.AppModules.utils = utilsApi;
+Object.assign(window, utilsApi);

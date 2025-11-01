@@ -29,3 +29,7 @@ function withBusy(el, on = true) {
   el.disabled = !!on;
 }
 
+const uiErrorApi = { restErrorMessage, uiRestError, withBusy };
+window.AppModules = window.AppModules || {};
+window.AppModules.uiErrors = uiErrorApi;
+Object.assign(window, uiErrorApi);

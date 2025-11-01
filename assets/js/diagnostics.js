@@ -152,3 +152,8 @@ function uiInfo(msg) {
     console.log(msg);
   }
 }
+
+const diagnosticsApi = { diag, recordPerfStat, uiError, uiInfo };
+window.AppModules = window.AppModules || {};
+window.AppModules.diagnostics = diagnosticsApi;
+Object.assign(window, diagnosticsApi);

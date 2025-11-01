@@ -92,3 +92,7 @@ function isWeightOnly(entry) {
   return !hasVitals && entry?.weight != null;
 }
 
+const formatApi = { formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly };
+window.AppModules = window.AppModules || {};
+window.AppModules.format = formatApi;
+Object.assign(window, formatApi);

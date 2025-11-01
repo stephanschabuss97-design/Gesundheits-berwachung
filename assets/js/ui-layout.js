@@ -61,3 +61,7 @@ document.addEventListener(
   true
 );
 
+const uiLayoutApi = { updateStickyOffsets, ensureNotObscured };
+window.AppModules = window.AppModules || {};
+window.AppModules.uiLayout = uiLayoutApi;
+Object.assign(window, uiLayoutApi);

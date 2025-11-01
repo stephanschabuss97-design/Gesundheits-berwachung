@@ -1624,6 +1624,7 @@ details[hidden] {
  * exports: DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES
  * notes: Supabase-Endpoints werden ausschliesslich durch Nutzerkonfiguration gesetzt
  */
+<!-- @refactor: move to assets/js/config.js -->
 /* ===== Dev/Termin Defaults ===== */
 const DEV_ALLOW_DEFAULTS = /^(localhost|127\.0\.0\.1|.*\.local)$/i.test(window?.location?.hostname || "");
 const APPOINTMENT_GRACE_MS = 5 * 60 * 1000;
@@ -1979,8 +1980,6 @@ let __dayHeartbeat = null;
 let __intakeResetDoneFor = null; // Tag, fuer den Reset bereits gelaufen ist (pro Tab)
 let __bpPanesCache = null;
 let __lastUserId = null;
-let __cachedHeaders = null;
-let __cachedHeadersAt = 0;
 // @refactor: moved to assets/js/format.js (formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly)
 
 function setBusy(on){
@@ -2018,70 +2017,176 @@ el.style.outline = '';
  * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
  */
 // SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
-async function getHeaders(){
-  const key = await getConf("webhookKey");
-  if (!key) {
-    diag.add?.('Headers: kein Key (webhookKey)');
-    return null;
-  }
-  if (isServiceRoleKey(key)) {
-    diag.add?.('Headers: service_role Key blockiert');
-    return null;
-  }
-  const anonKey = key.replace(/^Bearer\s+/i, "");
+async function getHeaders({ forceRefresh = false } = {}) {
+  const supaApi = window.SupabaseAPI || {};
+  const maxAgeMs = 5 * 60 * 1000;
 
-  const supa = await ensureSupabaseClient();
-  if (!supa) {
-    diag.add?.('Headers: Supabase-Client fehlt');
-    return null;
-  }
-
-  let timeoutId;
-  let timedOut = false;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      timedOut = true;
-      reject(new Error('getSession-timeout'));
-    }, GET_USER_TIMEOUT_MS);
-  });
-  let sessionInfo = null;
-  try {
-    const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
-    sessionInfo = result?.data?.session ?? null;
-  } catch (err) {
-    if (timedOut) {
-      diag.add?.('[auth] getSession timeout');
-    } else {
-      diag.add?.('[auth] getSession error: ' + (err?.message || err));
+  if (!forceRefresh) {
+    try {
+      const cached = supaApi.getCachedHeaders?.();
+      const cachedAt = supaApi.getCachedHeadersAt?.();
+      if (cached && cachedAt && (Date.now() - cachedAt) < maxAgeMs) {
+        diag.add?.('[headers] cache hit');
+        return cached;
+      }
+    } catch (_) {
+      /* noop */
     }
+    const inflight = supaApi.getHeaderPromise?.();
+    if (inflight) {
+      diag.add?.('[headers] await inflight');
+      return inflight;
+    }
+  }
+
+  const load = (async () => {
+    const key = await getConf("webhookKey");
+    if (!key) {
+      diag.add?.('Headers: kein Key (webhookKey)');
+      supaApi.clearHeaderCache?.();
+      return null;
+    }
+    if (isServiceRoleKey(key)) {
+      diag.add?.('Headers: service_role Key blockiert');
+      supaApi.clearHeaderCache?.();
+      return null;
+    }
+    const anonKey = key.replace(/^Bearer\s+/i, "");
+
+    const supa = await ensureSupabaseClient();
+    if (!supa) {
+      diag.add?.('Headers: Supabase-Client fehlt');
+      supaApi.clearHeaderCache?.();
+      return null;
+    }
+
+    let timeoutId;
+    let timedOut = false;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        timedOut = true;
+        reject(new Error('getSession-timeout'));
+      }, GET_USER_TIMEOUT_MS);
+    });
+    let sessionInfo = null;
+    try {
+      const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
+      sessionInfo = result?.data?.session ?? null;
+    } catch (err) {
+      if (timedOut) {
+        diag.add?.('[auth] getSession timeout');
+      } else {
+        diag.add?.('[auth] getSession error: ' + (err?.message || err));
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (timedOut) {
+      const cached = supaApi.getCachedHeaders?.();
+      const cachedAt = supaApi.getCachedHeadersAt?.();
+      if (cached && cachedAt) {
+        diag.add?.('[headers] fallback cached (timeout)');
+        return cached;
+      }
+    }
+
+    const jwt = sessionInfo?.access_token;
+    if (!anonKey || !jwt) {
+      diag.add?.('Headers: fehlende Session/JWT');
+      supaApi.clearHeaderCache?.();
+      return supaApi.getCachedHeaders?.() ?? null;
+    }
+
+    const headers = {
+      "Content-Type": "application/json",
+      "apikey": anonKey,
+      "Authorization": `Bearer ${jwt}`,
+      "Prefer": "return=representation"
+    };
+    supaApi.cacheHeaders?.(headers);
+    diag.add?.('[headers] ok');
+    return headers;
+  })();
+
+  supaApi.setHeaderPromise?.(load);
+  try {
+    return await load;
   } finally {
-    clearTimeout(timeoutId);
+    supaApi.setHeaderPromise?.(null);
   }
-
-  if (timedOut && __cachedHeaders && __cachedHeadersAt) {
-    diag.add?.('[headers] fallback cached (timeout)');
-    return __cachedHeaders;
-  }
-
-  const jwt = sessionInfo?.access_token;
-  if (!anonKey || !jwt) {
-    diag.add?.('Headers: fehlende Session/JWT');
-    return __cachedHeaders;
-  }
-
-  const headers = {
-    "Content-Type": "application/json",
-    "apikey": anonKey,
-    "Authorization": `Bearer ${jwt}`,
-    "Prefer": "return=representation"
-  };
-  __cachedHeaders = headers;
-  __cachedHeadersAt = Date.now();
-  diag.add?.('[headers] ok');
-  return headers;
 }
 
 /** END MODULE */
+
+const REQUIRED_GLOBALS = [
+  'diag',
+  'recordPerfStat',
+  'uiError',
+  'uiInfo',
+  '$',
+  '$$',
+  'fmtNum',
+  'todayStr',
+  'nl2br',
+  'formatDateTimeDE',
+  'toHealthEvents',
+  'initDB',
+  'getConf',
+  'putConf',
+  'addEntry',
+  'updateEntry',
+  'getAllEntries',
+  'getEntryByRemoteId',
+  'deleteEntryLocal',
+  'fetchWithAuth',
+  'ensureSupabaseClient',
+  'getUserId',
+  'isLoggedInFast',
+  'syncWebhook',
+  'patchDayFlags',
+  'appendNoteRemote',
+  'deleteRemote',
+  'loadIntakeToday',
+  'saveIntakeTotals',
+  'saveIntakeTotalsRpc',
+  'cleanupOldIntake',
+  'loadBpFromView',
+  'loadBodyFromView',
+  'loadFlagsFromView',
+  'syncCaptureToggles',
+  'fetchDailyOverview',
+  'deleteRemoteDay',
+  'setupRealtime',
+  'requireDoctorUnlock',
+  'resumeFromBackground'
+];
+
+function ensureModulesReady() {
+  const missing = REQUIRED_GLOBALS.filter(name => typeof window[name] === "undefined");
+  if (!missing.length) return true;
+  const message = `Fehler: Module fehlen (${missing.join(', ')})`;
+  try {
+    const errBox = document.getElementById('err');
+    if (errBox) {
+      errBox.textContent = message;
+      errBox.style.display = 'block';
+    } else {
+      const div = document.createElement('div');
+      div.textContent = message;
+      div.style.background = 'var(--warn, #ff6b6b)';
+      div.style.color = 'var(--bg, #121417)';
+      div.style.padding = '12px';
+      div.style.margin = '16px';
+      div.style.borderRadius = '8px';
+      document.body?.appendChild(div);
+    }
+  } catch (_) {
+    try { alert(message); } catch (__){ console.error(message); }
+  }
+  console.error(message);
+  return false;
+}
 
 /** MODULE: DATA ACCESS (REST/RPC)
  * intent: kapselt Supabase REST/RPC Zugriffe fuer Intake/Doctor/Sync Flows
@@ -3491,9 +3596,12 @@ const chartPanel = {
   tipSticky: false,
   hoverSeries: null,
   SHOW_BODY_COMP_BARS: true,
+  _abort: null,
+  _ro: null,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
   init() {
+    this.destroy();
     this.el = $("#chart");
     this.svg = $("#chartSvg");
     this.legend = $("#chartLegend");
@@ -3503,9 +3611,22 @@ const chartPanel = {
 
     // Close + Metric-Select
     const closeBtn = $("#chartClose");
-    if (closeBtn) closeBtn.addEventListener("click", () => this.hide());
+    const supportsAbort = typeof AbortController === "function";
+    this._abort = supportsAbort ? new AbortController() : null;
+    if (!supportsAbort) this._listeners = [];
+    const signal = this._abort?.signal || null;
+    const add = (target, type, handler, opts = {}) => {
+      if (!target) return;
+      if (signal) {
+        target.addEventListener(type, handler, { ...opts, signal });
+      } else {
+        target.addEventListener(type, handler, opts);
+        this._listeners?.push({ target, type, handler, opts });
+      }
+    };
+    add(closeBtn, "click", () => this.hide());
     const metricSel = $("#metricSel");
-    if (metricSel) metricSel.addEventListener("change", () => this.draw());
+    add(metricSel, "change", () => this.draw());
 
     // Tooltip (hover/click)
     const contentHost = this.el?.querySelector(".content") || this.el || document.body;
@@ -3538,7 +3659,7 @@ const chartPanel = {
 
     // Interaktivitaet
     if (this.svg) {
-      this.svg.addEventListener("pointermove", (e) => {
+      add(this.svg, "pointermove", (e) => {
         if (this.tipSticky) return;
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
@@ -3552,13 +3673,13 @@ const chartPanel = {
         this.positionTip(e);
       });
 
-      this.svg.addEventListener("pointerleave", () => {
+      add(this.svg, "pointerleave", () => {
         if (this.tipSticky) return;
         this.hideTip();
       });
 
       // Click/Tap: Tooltip toggeln (mobil-freundlich)
-      this.svg.addEventListener("click", (e) => {
+      add(this.svg, "click", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
         const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
@@ -3573,7 +3694,7 @@ const chartPanel = {
       });
 
       // Keyboard: Enter/Space toggelt Tooltip, ESC schliesst
-      this.svg.addEventListener("keydown", (e) => {
+      add(this.svg, "keydown", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
         const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
@@ -3598,7 +3719,7 @@ const chartPanel = {
       ro.observe(this.el);
       this._ro = ro;
     }
-    window.addEventListener("orientationchange", () => {
+    add(window, "orientationchange", () => {
       setTimeout(() => { if (this.open) this.draw(); }, 150);
     });
 
@@ -3633,6 +3754,40 @@ const chartPanel = {
     }
     this.tipSticky = false;
     this.hideTip();
+  },
+  destroy() {
+    if (this._abort) {
+      try { this._abort.abort(); } catch (_) {}
+    }
+    this._abort = null;
+    if (this._listeners?.length) {
+      try {
+        this._listeners.forEach(({ target, type, handler, opts }) => {
+          try { target.removeEventListener(type, handler, opts || false); } catch (_) {}
+        });
+      } catch (_) {
+        /* noop */
+      }
+    }
+    this._listeners = null;
+    if (this._ro) {
+      try { this._ro.disconnect(); } catch (_) {}
+    }
+    this._ro = null;
+    if (this.tip?.parentNode) {
+      this.tip.parentNode.removeChild(this.tip);
+    }
+    if (this.live?.parentNode) {
+      this.live.parentNode.removeChild(this.live);
+    }
+    this.tip = null;
+    this.live = null;
+    this.tipHideTimer = null;
+    this.tipSticky = false;
+    this.hoverSeries = null;
+    this.svg = null;
+    this.el = null;
+    this.legend = null;
   },
   // ----- Helpers -----
   // SUBMODULE: chartPanel.getFiltered @extract-candidate - aggregiert Cloud/Local Daten fuer Zeichnung
@@ -5504,6 +5659,10 @@ if (overlay) overlay.addEventListener('click', (e)=>{
 
 /* ===== Main ===== */
 async function main(){
+  if (!ensureModulesReady()) {
+    console.error('Abbruch: erforderliche Module nicht geladen');
+    return;
+  }
   diag.init(); helpPanel.init(); await initDB();
   updateStickyOffsets();
   bindHeaderShadow();
@@ -6101,5 +6260,7 @@ if (!window.__bootDone) {
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
+
+
 
 

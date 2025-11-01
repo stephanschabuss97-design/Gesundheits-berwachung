@@ -179,3 +179,18 @@ function deleteEntryLocal(id) {
   });
 }
 
+const dataLocalApi = {
+  initDB,
+  putConf,
+  getConf,
+  getTimeZoneOffsetMs,
+  dayIsoToMidnightIso,
+  addEntry,
+  updateEntry,
+  getAllEntries,
+  getEntryByRemoteId,
+  deleteEntryLocal
+};
+window.AppModules = window.AppModules || {};
+window.AppModules.dataLocal = dataLocalApi;
+Object.assign(window, dataLocalApi);
