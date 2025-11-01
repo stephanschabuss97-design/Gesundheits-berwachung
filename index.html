@@ -1606,6 +1606,8 @@ details[hidden] {
 <script src="assets/js/ui-layout.js"></script>
 <!-- @refactor: moved to assets/js/ui-errors.js -->
 <script src="assets/js/ui-errors.js"></script>
+<!-- @refactor: moved to assets/js/utils.js -->
+<script src="assets/js/utils.js"></script>
 
 <script>
 /** MODULE: CONFIG
@@ -1938,14 +1940,7 @@ function setDoctorAccess(enabled){
  * exports: $, $$, fmtNum, todayStr, timeStr, esc, nl2br
  * notes: deterministische Hilfsfunktionen; rein funktional belassen
  */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
-const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? "" : Number(n).toFixed(d);
-const pad2 = n => n.toString().padStart(2,'0');
-const todayStr = () => { const d = new Date(); const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
-const timeStr = () => { const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); };
-function esc(s){ return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nl2br(s){ return esc(s).replace(/\n/g, "<br>"); }
+// @refactor: moved to assets/js/utils.js ($, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br)
 
 /** END MODULE */
 
