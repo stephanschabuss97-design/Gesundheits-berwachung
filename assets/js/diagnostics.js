@@ -45,7 +45,7 @@ const perfStats = (() => {
   const add = (k, ms) => {
     const arr = (buckets[k] ??= []);
     arr.push(ms);
-    if (arr.length > MAX_SAMPLES) arr.shift();
+    if (arr.length >= MAX_SAMPLES) arr.shift();
   };
   const pct = (arr, p) => {
     if (!arr.length) return 0;
