@@ -1608,6 +1608,8 @@ details[hidden] {
 <script src="assets/js/ui-errors.js"></script>
 <!-- @refactor: moved to assets/js/utils.js -->
 <script src="assets/js/utils.js"></script>
+<!-- @refactor: moved to assets/js/format.js -->
+<script src="assets/js/format.js"></script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->
 <script src="assets/js/ui-tabs.js"></script>
 
@@ -1975,86 +1977,7 @@ let __bpPanesCache = null;
 let __lastUserId = null;
 let __cachedHeaders = null;
 let __cachedHeadersAt = 0;
-function formatDateTimeDE(iso){
-  if (!iso) return '\u2014';
-  try {
-    const dt = new Date(iso);
-    if (Number.isNaN(dt.getTime())) return '\u2014';
-    return new Intl.DateTimeFormat('de-AT', {
-      day:'2-digit', month:'2-digit', year:'numeric',
-      hour:'2-digit', minute:'2-digit', hour12:false,
-      timeZone:'Europe/Vienna'
-    }).format(dt);
-  } catch(_) {
-    return '\u2014';
-  }
-}
-
-function calcMAP(sys, dia){ if (sys==null || dia==null) return null; return Number(dia) + (Number(sys)-Number(dia))/3; }
-  // === Mapping: lokaler Erfassungseintrag -> 0..N health_events ===
-// Erzeugt pro Eingabe die noetigen Events (bp/body/day_flags/note)
-// SUBMODULE: toHealthEvents @internal - mappt Capture-Eintrag auf health_events payloads
-function toHealthEvents(entry){
-  const tsIso = entry.dateTime; // ISO Timestamp des Eintrags
-  const out = [];
-
-  // 1) Blutdruck-Messungen (Morgen/Abend)
-  if (entry.context === "Morgen" || entry.context === "Abend"){
-    const hasVitals = (entry.sys != null) || (entry.dia != null) || (entry.pulse != null);
-    if (hasVitals){
-      const payload = {};
-      if (entry.sys   != null) payload.sys   = Number(entry.sys);
-      if (entry.dia   != null) payload.dia   = Number(entry.dia);
-      if (entry.pulse != null) payload.pulse = Number(entry.pulse);
-      payload.ctx = entry.context; // "Morgen" | "Abend"
-      out.push({ ts: tsIso, type: "bp", payload });
-    }
-  }
-
-  // 2) Tageszusammenfassung (Gewicht, Bauchumfang, Flags, Kommentar)
-  if (entry.context === "Tag"){
-    // body (Gewicht + Bauchumfang)
-    const hasBody = (entry.weight != null) || (entry.waist_cm != null);
-    if (hasBody){
-      const payload = {};
-      if (entry.weight   != null) payload.kg = Number(entry.weight);
-      if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
-      if (entry.fat_pct != null) payload.fat_pct = Number(entry.fat_pct);
-      if (entry.muscle_pct != null) payload.muscle_pct = Number(entry.muscle_pct);
-      out.push({ ts: tsIso, type: "body", payload });
-    }
-
-    // day_flags (alle Booleans)
-    const flags = {
-      training:         !!entry.training,
-      sick:             !!entry.sick,
-      low_intake:       !!entry.low_intake,
-      salt_high:        !!entry.salt_high,
-      protein_high90:   !!entry.protein_high90,
-      valsartan_missed: !!entry.valsartan_missed,
-      forxiga_missed:   !!entry.forxiga_missed,
-      nsar_taken:       !!entry.nsar_taken,
-    };
-    const anyFlag = Object.values(flags).some(Boolean);
-    if (anyFlag){
-      out.push({ ts: tsIso, type: "day_flags", payload: flags });
-    }
-
-    // note (optional, 1 Zeile Text)
-    const note = (entry.notes || "").trim();
-    if (note){
-      out.push({ ts: tsIso, type: "note", payload: { text: note } });
-    }
-  }
-
-  return out;
-}
-
-// "Legacy": Measurement Eintrag, der nur Gewicht enthaelt
-function isWeightOnly(e){
-const hasVitals = !!(e?.sys || e?.dia || e?.pulse);
-return !hasVitals && (e?.weight != null);
-}
+// @refactor: moved to assets/js/format.js (formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly)
 
 function setBusy(on){
 const b = document.getElementById('busy');
