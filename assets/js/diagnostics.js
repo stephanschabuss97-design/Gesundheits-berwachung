@@ -14,27 +14,15 @@ window.addEventListener('unhandledrejection', (e) => {
       'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
     const box = document.getElementById('err');
     if (box) {
-      box.setAttribute('role', 'alert');
-      box.setAttribute('aria-live', 'assertive');
       box.style.display = 'block';
       box.textContent = msg;
     } else {
       console.error(msg);
     }
-    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e?.preventDefault === 'function') e.preventDefault();
   } catch (err) {
-    console.error('Error in unhandledrejection handler:', err);
+    console.error('unhandledrejection handler failed', err);
   }
-    const box = document.getElementById('err');
-    if (box) {
-      // only touch the DOM when the element exists
-      box.style.display = 'block';
-      box.textContent = msg;
-    } else {
-      // still surface the error in the console
-      console.error(msg);
-    }
-  } catch (_) {}
 });
 
 /* ===== Diagnostics ===== */
@@ -45,7 +33,7 @@ const perfStats = (() => {
   const add = (k, ms) => {
     const arr = (buckets[k] ??= []);
     arr.push(ms);
-    if (arr.length >= MAX_SAMPLES) arr.shift();
+    if (arr.length > MAX_SAMPLES) arr.shift();
   };
   const pct = (arr, p) => {
     if (!arr.length) return 0;
