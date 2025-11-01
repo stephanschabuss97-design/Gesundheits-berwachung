@@ -1880,21 +1880,9 @@ function toNumDE(s) {
   if (dec) v = v.replace('#', '.');
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
-}    // If a comma is present, treat it as the decimal separator:
-    // remove common thousands separators (dots, spaces, etc.), then replace the comma with a dot
-    v = v.replace(grouping, '');
-    v = v.replace(/,/, '.');
-  } else {
-    // No comma: remove grouping spaces/apostrophes but keep dots as decimal separator (if any)
-    v = v.replace(/[\u00A0\u202F\u2009\u200A' ]/g, '');
-  }
-
-  // parse and validate
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? n : null;
 }
 
-<!-- @refactor: moved to assets/js/diagnostics.js (uiError, uiInfo) -->
+// @refactor: moved to assets/js/diagnostics.js (uiError, uiInfo)
 
 // Utility: debounce to avoid rapid-fire updates (e.g. live regions)
 function debounce(fn, ms = 150) {
