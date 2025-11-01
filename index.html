@@ -1604,6 +1604,8 @@ details[hidden] {
 <script src="assets/js/ui.js"></script>
 <!-- @refactor: moved to assets/js/ui-layout.js -->
 <script src="assets/js/ui-layout.js"></script>
+<!-- @refactor: moved to assets/js/ui-errors.js -->
+<script src="assets/js/ui-errors.js"></script>
 
 <script>
 /** MODULE: CONFIG
@@ -1886,26 +1888,7 @@ function toNumDE(s) {
 
 // @refactor: moved to assets/js/ui.js (focusTrap)
 
-function restErrorMessage(status, details = '') {
-  const norm = String(details || '').trim();
-  if (status === 0) return 'Netzwerkfehler - bitte Verbindung pruefen.';
-  if (status === 401 || status === 403) return 'Bitte erneut anmelden.';
-  if (status === 404) return 'Eintrag nicht gefunden.';
-  if (status === 409) return 'Konflikt: Ein Eintrag existiert bereits.';
-  if (status === 400 || status === 422) return 'Eingaben bitte pruefen.';
-  if (status === 429) return 'Zu viele Anfragen - bitte kurz warten.';
-  if (status >= 500) return 'Serverfehler - bitte spaeter erneut versuchen.';
-  return norm || `Fehler (${status})`;
-}
-
-function uiRestError(status, details, fallback){
-  uiError(fallback || restErrorMessage(status, details));
-}
-
-function withBusy(el, on=true){
-  if (!el) return;
-  el.disabled = !!on;
-}
+// @refactor: moved to assets/js/ui-errors.js (restErrorMessage, uiRestError, withBusy)
   
 /** MODULE: AUTH
  * intent: verwaltet Supabase-Sitzung, legt Auth-Locks frei, bindet Login-Overlay ein
