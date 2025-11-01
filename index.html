@@ -1860,13 +1860,16 @@ function toNumDE(s) {
   if (s == null) return null;
   let v = String(s).trim();
   if (!v) return null;
-  // normalize thousands separators, decimal comma, unicode minus
+  // normalize: drop thousands (., spaces, NBSP, thin space, apostrophe), unify decimal comma
+  // normalize minus
   v = v
     .replace(/\u00A0/g, ' ')
     .replace(/[\u2009\u202F]/g, '')
     .replace(/['\s.](?=\d{3}(\D|$))/g, '')
     .replace(/,/g, '.')
-    .replace(/[−–—]/g, '-');
+    .replace(/[−–—]/g, '-')
+    // optional units at end (e.g., "cm", "kg", "mmHg", "bpm", "%", currency)
+    .replace(/\s*(?:%|‰|[A-Za-z]+|\u20AC|\$|£)\s*$/u, '');
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }

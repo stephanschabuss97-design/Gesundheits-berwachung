@@ -14,12 +14,26 @@ window.addEventListener('unhandledrejection', (e) => {
       'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
     const box = document.getElementById('err');
     if (box) {
+      box.setAttribute('role', 'alert');
+      box.setAttribute('aria-live', 'assertive');
       box.style.display = 'block';
       box.textContent = msg;
     } else {
       console.error(msg);
     }
-    if (typeof e?.preventDefault === 'function') e.preventDefault();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  } catch (err) {
+    console.error('Error in unhandledrejection handler:', err);
+  }
+    const box = document.getElementById('err');
+    if (box) {
+      // only touch the DOM when the element exists
+      box.style.display = 'block';
+      box.textContent = msg;
+    } else {
+      // still surface the error in the console
+      console.error(msg);
+    }
   } catch (_) {}
 });
 
@@ -27,7 +41,12 @@ window.addEventListener('unhandledrejection', (e) => {
 // SUBMODULE: perfStats sampler @internal - records timing buckets for perf telemetry
 const perfStats = (() => {
   const buckets = Object.create(null);
-  const add = (k, ms) => (buckets[k] ??= []).push(ms);
+  const MAX_SAMPLES = 500;
+  const add = (k, ms) => {
+    const arr = (buckets[k] ??= []);
+    arr.push(ms);
+    if (arr.length > MAX_SAMPLES) arr.shift();
+  };
   const pct = (arr, p) => {
     if (!arr.length) return 0;
     const a = [...arr].sort((x, y) => x - y);
@@ -97,11 +116,9 @@ const diag = {
         this.hide();
       }
     };
-    t1.addEventListener('click', toggle);
+    if (t1) t1.addEventListener('click', toggle);
     if (t2) t2.addEventListener('click', toggle);
-    close.addEventListener('click', () => {
-      this.hide();
-    });
+    if (close) close.addEventListener('click', () => this.hide());
   },
   show() {
     if (!this.el) return;
