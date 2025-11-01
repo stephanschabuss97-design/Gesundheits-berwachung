@@ -102,29 +102,17 @@ function setUnderlayInert(active, exceptEl = null) {
   }
 }
 
-// Simple focus trap for modal overlays
+// Focus trap with a simple stack to support nested overlays
 const focusTrap = {
-  current: null,
-  lastFocus: null,
-  handler: null,
-  prevTabIndex: null,
-  getFocusable(root) {
-    return Array.from(
-      root.querySelectorAll(
-        'a[href], button:not([disabled]), input:not([disabled]), ' +
-          'select:not([disabled]), textarea:not([disabled]), ' +
-          '[tabindex]:not([tabindex="-1"])'
-      )
-    ).filter(el => {
-      const style = window.getComputedStyle(el);
-      if (style.visibility === 'hidden' || style.display === 'none') return false;
-      return el.getClientRects().length > 0;
-    });
-  },
-  onKeyDown(e) {
+  // stack of { root, lastFocus, prevTabIndex }
+  stack: [],
+
+  // shared global handler that always operates on the current top of stack
+  globalHandler(e) {
     if (e.key !== 'Tab') return;
-    const root = focusTrap.current;
-    if (!root) return;
+    const top = focusTrap.stack[focusTrap.stack.length - 1];
+    if (!top) return;
+    const root = top.root;
     const items = focusTrap.getFocusable(root);
     if (!items.length) {
       e.preventDefault();
@@ -141,36 +129,76 @@ const focusTrap = {
       first.focus();
     }
   },
+
+  getFocusable(root) {
+    return Array.from(
+      root.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), ' +
+          'select:not([disabled]), textarea:not([disabled]), ' +
+          '[tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(el => {
+      const style = window.getComputedStyle(el);
+      if (style.visibility === 'hidden' || style.display === 'none') return false;
+      return el.getClientRects().length > 0;
+    });
+  },
+
   activate(root) {
     if (!root) return;
-    if (this.current === root) return;
-    this.deactivate();
-    this.current = root;
-    this.lastFocus = document.activeElement || null;
-    this.prevTabIndex = root.hasAttribute('tabindex')
-      ? root.getAttribute('tabindex')
-      : null;
-    if (this.prevTabIndex === null) root.setAttribute('tabindex', '-1');
+    // if already the top, nothing to do
+    const top = this.stack[this.stack.length - 1];
+    if (top && top.root === root) return;
+
+    // if root already in stack (not top), remove it first to re-push as top
+    const existing = this.stack.findIndex(e => e.root === root);
+    if (existing !== -1) this.stack.splice(existing, 1);
+
+    const lastFocus = document.activeElement || null;
+    const prevTabIndex = root.hasAttribute('tabindex') ? root.getAttribute('tabindex') : null;
+    if (prevTabIndex === null) root.setAttribute('tabindex', '-1');
+    // mark this root as modal
     root.setAttribute('aria-modal', 'true');
-    this.handler = this.onKeyDown.bind(this);
-    document.addEventListener('keydown', this.handler, true);
+
+    // push metadata
+    this.stack.push({ root, lastFocus, prevTabIndex });
+
+    // install global handler when first overlay pushed
+    if (this.stack.length === 1) {
+      document.addEventListener('keydown', this.globalHandler, true);
+    }
+
+    // focus first focusable element
     const items = this.getFocusable(root);
     (items[0] || root).focus();
+
+    // set inert on underlay except the current top
     setUnderlayInert(true, root);
   },
+
   deactivate() {
-    const root = this.current;
-    if (!root) return;
-    root.setAttribute('aria-modal', 'false');
-    if (this.handler) document.removeEventListener('keydown', this.handler, true);
-    setUnderlayInert(false);
-    if (this.prevTabIndex === null) root.removeAttribute('tabindex');
-    else root.setAttribute('tabindex', this.prevTabIndex);
-    const last = this.lastFocus;
-    this.current = null;
-    this.lastFocus = null;
-    this.handler = null;
-    this.prevTabIndex = null;
-    if (last && typeof last.focus === 'function') last.focus();
+    if (!this.stack.length) return;
+    // pop the top entry and restore its state
+    const top = this.stack.pop();
+    const { root, lastFocus, prevTabIndex } = top;
+    try { root.setAttribute('aria-modal', 'false'); } catch (_) {}
+    if (prevTabIndex === null) root.removeAttribute('tabindex');
+    else root.setAttribute('tabindex', prevTabIndex);
+    // restore focus to what was focused before this overlay
+    if (lastFocus && typeof lastFocus.focus === 'function') {
+      try { lastFocus.focus(); } catch (_) {}
+    }
+
+    if (this.stack.length === 0) {
+      // no overlays left: remove handler and clear inert
+      document.removeEventListener('keydown', this.globalHandler, true);
+      setUnderlayInert(false);
+      return;
+    }
+
+    // there is a new top overlay: ensure inert applies to it and mark modal
+    const newTop = this.stack[this.stack.length - 1];
+    try { newTop.root.setAttribute('aria-modal', 'true'); } catch (_) {}
+    setUnderlayInert(true, newTop.root);
   }
 };
