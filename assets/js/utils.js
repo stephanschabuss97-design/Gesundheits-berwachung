@@ -11,7 +11,10 @@ const $$ = sel => Array.from(document.querySelectorAll(sel));
 
 // SUBMODULE: formatting helpers @internal - Zahlen/Datum formatieren
 const fmtNum = (n, d = 1) =>
-  n === null || n === undefined || Number.isNaN(Number(n))
+  n === null ||
+  n === undefined ||
+  (typeof n === 'string' && n.trim() === '') ||
+  Number.isNaN(Number(n))
     ? ''
     : Number(n).toFixed(d);
 
