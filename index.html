@@ -1858,9 +1858,16 @@ async function sbSelect({ table, select, filters = [], order = null, limit = nul
 // ANCHOR: num-helper-de
 function toNumDE(s) {
   if (s == null) return null;
-  const v = String(s).trim();
+  let v = String(s).trim();
   if (!v) return null;
-  const n = parseFloat(v.replace(',', '.'));
+  // normalize thousands separators, decimal comma, unicode minus
+  v = v
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u2009\u202F]/g, '')
+    .replace(/['\s.](?=\d{3}(\D|$))/g, '')
+    .replace(/,/g, '.')
+    .replace(/[−–—]/g, '-');
+  const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
 

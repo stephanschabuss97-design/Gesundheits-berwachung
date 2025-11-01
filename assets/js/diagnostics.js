@@ -9,10 +9,18 @@
 /* ===== Fehlerbox ===== */
 // SUBMODULE: unhandled rejection sink @internal - pipes promise rejections to inline toast
 window.addEventListener('unhandledrejection', (e) => {
-  const box = document.getElementById('err');
-  box.style.display = 'block';
-  box.textContent =
-    'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+  try {
+    const msg =
+      'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+    const box = document.getElementById('err');
+    if (box) {
+      box.style.display = 'block';
+      box.textContent = msg;
+    } else {
+      console.error(msg);
+    }
+    if (typeof e?.preventDefault === 'function') e.preventDefault();
+  } catch (_) {}
 });
 
 /* ===== Diagnostics ===== */
