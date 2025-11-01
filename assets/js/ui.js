@@ -1,11 +1,11 @@
-/**
+﻿/**
  * MODULE: UI CORE
  * intent: kapselt Hilfspanele, Fokusfalle und UI-Helfer vom Inline-Script
  * exports: helpPanel, debounce, setUnderlayInert, focusTrap
  * notes: Logik unveraendert aus index.html extrahiert
  */
 
-/* ===== Help panel ===== */
+// SUBMODULE: help-panel overlay @internal - toggles inline support dialog
 const helpPanel = {
   el: null,
   open: false,
@@ -44,6 +44,7 @@ const helpPanel = {
 };
 
 /* ===== Utils ===== */
+// SUBMODULE: debounce util @internal - debounces high-frequency UI updates
 function debounce(fn, ms = 150) {
   let timer = null;
   return (...args) => {
@@ -55,6 +56,7 @@ function debounce(fn, ms = 150) {
   };
 }
 
+// SUBMODULE: setUnderlayInert @internal - disables background while modal active
 function setUnderlayInert(active, exceptEl = null) {
   try {
     const targets = [
@@ -102,7 +104,7 @@ function setUnderlayInert(active, exceptEl = null) {
   }
 }
 
-// Focus trap with a simple stack to support nested overlays
+// SUBMODULE: focus-trap @internal - traps tab focus inside modal overlays
 const focusTrap = {
   // stack of { root, lastFocus, prevTabIndex }
   stack: [],
@@ -202,3 +204,4 @@ const focusTrap = {
     setUnderlayInert(true, newTop.root);
   }
 };
+
