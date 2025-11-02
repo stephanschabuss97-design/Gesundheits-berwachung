@@ -13,7 +13,7 @@ const diag =
 const getConfSafe = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') {
-    diag.add?.('Supabase client: window.getConf is not available');
+    diag.add?.('Supabase Client: window.getConf ist nicht verfuegbar');
     return null;
   }
   return fn(...args);
