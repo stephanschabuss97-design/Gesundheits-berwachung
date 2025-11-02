@@ -1,0 +1,206 @@
+/** MODULE: supabase/auth/ui.js — Overlay & Button Handling @v1.8.1 */
+
+import { supabaseState } from '../core/state.js';
+import { ensureSupabaseClient, isServiceRoleKey } from '../core/client.js';
+import { requireSession } from './core.js';
+
+const globalWindow = typeof window !== 'undefined' ? window : undefined;
+const diag =
+  (globalWindow?.diag ||
+    globalWindow?.AppModules?.diag ||
+    globalWindow?.AppModules?.diagnostics ||
+    { add() {} });
+
+const getConf = (...args) => {
+  const fn = globalWindow?.getConf;
+  if (typeof fn !== 'function') return Promise.resolve(null);
+  try {
+    return Promise.resolve(fn(...args));
+  } catch (err) {
+    return Promise.reject(err);
+  }
+};
+
+const putConf = (...args) => {
+  const fn = globalWindow?.putConf;
+  if (typeof fn !== 'function') return Promise.resolve(null);
+  try {
+    return Promise.resolve(fn(...args));
+  } catch (err) {
+    return Promise.reject(err);
+  }
+};
+
+const restErrorMessage = (...args) => {
+  const fn = globalWindow?.restErrorMessage;
+  if (typeof fn === 'function') {
+    return fn(...args);
+  }
+  const [status, details] = args;
+  return `REST-Fehler (${status || '?'}): ${details || ''}`.trim();
+};
+
+const getUiCore = () => (globalWindow?.AppModules && globalWindow.AppModules.uiCore) || {};
+
+const activateFocusTrap = (root) => {
+  const trap = getUiCore().focusTrap;
+  if (trap && typeof trap.activate === 'function') {
+    trap.activate(root);
+  }
+};
+
+const deactivateFocusTrap = () => {
+  const trap = getUiCore().focusTrap;
+  if (trap && typeof trap.deactivate === 'function') {
+    trap.deactivate();
+  }
+};
+
+export async function prefillSupabaseConfigForm() {
+  try {
+    setConfigStatus('', 'info');
+    const restInput = document.getElementById('configRestUrl');
+    const keyInput = document.getElementById('configAnonKey');
+    const adv = document.getElementById('configAdv');
+    const rest = await getConf('webhookUrl');
+    const keyStored = await getConf('webhookKey');
+    const restStored = rest && String(rest).trim() ? String(rest).trim() : '';
+    const keyClean =
+      keyStored && String(keyStored).trim()
+        ? String(keyStored).replace(/^Bearer\s+/i, '').trim()
+        : '';
+    if (restInput) {
+      const hasUserText = !!(restInput.value && restInput.value.trim());
+      if (!hasUserText && restStored) {
+        restInput.value = restStored;
+      }
+    }
+    if (keyInput) {
+      const hasUserText = !!(keyInput.value && keyInput.value.trim());
+      if (!hasUserText && keyClean) {
+        keyInput.value = keyClean;
+      }
+    }
+    if (adv) {
+      const hasRest = !!restStored;
+      const hasKey = !!keyClean;
+      adv.open = !(hasRest && hasKey);
+    }
+  } catch (_) {
+    /* ignore prefill errors */
+  }
+}
+
+export function setConfigStatus(msg, tone = 'info') {
+  const el = document.getElementById('configStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  const colors = { error: '#f87171', success: '#34d399', info: '#9aa3af' };
+  el.style.color = colors[tone] || colors.info;
+}
+
+const toggleLoginOverlay = (show) => {
+  const ov = document.getElementById('loginOverlay');
+  if (!ov) return;
+  const dialog = ov.querySelector('[role="dialog"]') || ov;
+  if (show) {
+    const alreadyVisible = ov.style.display === 'flex';
+    ov.style.display = 'flex';
+    if (!alreadyVisible) {
+      prefillSupabaseConfigForm();
+    }
+    activateFocusTrap(dialog);
+  } else {
+    ov.style.display = 'none';
+    deactivateFocusTrap();
+  }
+};
+
+export function showLoginOverlay() {
+  toggleLoginOverlay(true);
+}
+
+export function hideLoginOverlay() {
+  toggleLoginOverlay(false);
+}
+
+export function setUserUi(email) {
+  const who = document.getElementById('whoAmI');
+  if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
+}
+
+export function bindAuthButtons() {
+  const googleBtn = document.getElementById('googleLoginBtn');
+  const saveBtn = document.getElementById('configSaveBtn');
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const restInput = document.getElementById('configRestUrl');
+      const keyInput = document.getElementById('configAnonKey');
+      const rawRest = (restInput?.value || '').trim();
+      const rawKey = (keyInput?.value || '').trim();
+      if (!rawRest || !rawKey) {
+        setConfigStatus('Bitte REST-Endpoint und ANON-Key eingeben.', 'error');
+        return;
+      }
+      if (!/\/rest\/v1\//i.test(rawRest)) {
+        setConfigStatus('REST-Endpoint muss /rest/v1/ enthalten.', 'error');
+        return;
+      }
+      if (!/\/rest\/v1\/health_events(?:[/?#]|$)/i.test(rawRest)) {
+        setConfigStatus('Endpoint muss auf /rest/v1/health_events zeigen.', 'error');
+        return;
+      }
+      try {
+        new URL(rawRest);
+      } catch {
+        setConfigStatus('REST-Endpoint ist keine gueltige URL.', 'error');
+        return;
+      }
+      let anonKey = rawKey.startsWith('Bearer ') ? rawKey : `Bearer ${rawKey}`;
+      if (isServiceRoleKey(anonKey)) {
+        setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
+        return;
+      }
+      try {
+        setConfigStatus('Speichere Konfiguration ...', 'info');
+        await putConf('webhookUrl', rawRest);
+        await putConf('webhookKey', anonKey);
+        supabaseState.sbClient = null;
+        await ensureSupabaseClient();
+        await requireSession();
+        setConfigStatus('Konfiguration gespeichert.', 'success');
+      } catch (e) {
+        const message = restErrorMessage(e?.status || 0, e?.details || e?.message || '');
+        setConfigStatus(message, 'error');
+      }
+    });
+  }
+
+  if (googleBtn) {
+    googleBtn.addEventListener('click', async () => {
+      const supa = await ensureSupabaseClient();
+      if (!supa) {
+        setConfigStatus(
+          'Konfiguration fehlt - bitte REST-Endpoint und ANON-Key speichern.',
+          'error'
+        );
+        const adv = document.getElementById('configAdv');
+        if (adv) adv.open = true;
+        const restField = document.getElementById('configRestUrl');
+        if (restField) {
+          restField.focus();
+          restField.select?.();
+        }
+        return;
+      }
+      const { error } = await supa.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
+      });
+      if (error) {
+        setConfigStatus('Google-Login fehlgeschlagen: ' + error.message, 'error');
+      }
+    });
+  }
+}
