@@ -8,22 +8,29 @@
  * notes: Logik unveraendert aus index.html extrahiert
  */
 
-;(function(window) {
-  'use strict';
+import * as state from './supabase/core/state.js';
+import * as client from './supabase/core/client.js';
+import * as http from './supabase/core/http.js';
 
-const supabaseState = {
-  sbClient: null,
-  cachedHeaders: null,
-  cachedHeadersAt: 0,
-  headerPromise: null,
-  intakeRpcDisabled: false,
-  lastLoggedIn: false,
-  authState: 'unauth',
-  authGraceTimer: null,
-  pendingSignOut: null,
-  booted: false,
-  lastUserId: null
-};
+const {
+  supabaseState,
+  cacheHeaders,
+  clearHeaderCache,
+  getCachedHeaders,
+  getCachedHeadersAt,
+  getHeaderPromise,
+  setHeaderPromise
+} = state;
+
+const {
+  baseUrlFromRest,
+  isServiceRoleKey,
+  ensureSupabaseClient,
+  maskUid,
+  setSupabaseDebugPii
+} = client;
+
+const { withRetry, fetchWithAuth } = http;
 
 Object.defineProperties(window, {
   sbClient: {
@@ -42,8 +49,6 @@ Object.defineProperties(window, {
     set(value) { supabaseState.lastLoggedIn = value; }
   }
 });
-
-const supabaseLog = { debugLogPii: false };
 
 const defaultSetupRealtime = async () => undefined;
 const defaultRequireDoctorUnlock = async () => true;
@@ -66,48 +71,6 @@ if (typeof window.teardownRealtime !== 'function') {
 
 if (typeof window.setupRealtime !== 'function') {
   window.setupRealtime = defaultSetupRealtime;
-}
-
-function maskUid(uid) {
-  if (!uid) return 'anon';
-  const str = String(uid);
-  if (supabaseLog.debugLogPii) return str;
-  if (str.length <= 4) return str;
-  const head = str.slice(0, 4);
-  const tail = str.slice(-4);
-  return `${head}-${tail}`;
-}
-
-
-function setSupabaseDebugPii(enabled) {
-  supabaseLog.debugLogPii = !!enabled;
-}
-
-function cacheHeaders(headers) {
-  supabaseState.cachedHeaders = headers;
-  supabaseState.cachedHeadersAt = Date.now();
-}
-
-function clearHeaderCache() {
-  supabaseState.cachedHeaders = null;
-  supabaseState.cachedHeadersAt = 0;
-  supabaseState.headerPromise = null;
-}
-
-function getCachedHeaders() {
-  return supabaseState.cachedHeaders;
-}
-
-function getCachedHeadersAt() {
-  return supabaseState.cachedHeadersAt;
-}
-
-function getHeaderPromise() {
-  return supabaseState.headerPromise;
-}
-
-function setHeaderPromise(promise) {
-  supabaseState.headerPromise = promise;
 }
 
 function getUiCore() {
@@ -3245,8 +3208,9 @@ setConfigStatus('', 'info');
 return supabaseState.sbClient;
 }
 const supabaseApi = {
-  withRetry,
-  fetchWithAuth,
+  ...state,
+  ...client,
+  ...http,
   syncWebhook,
   patchDayFlags,
   appendNoteRemote,
@@ -3272,21 +3236,13 @@ const supabaseApi = {
   resumeFromBackground: (...args) => (window.resumeFromBackground || defaultResumeFromBackground)(...args),
   getUserId,
   isLoggedInFast,
-  cacheHeaders,
-  clearHeaderCache,
-  getCachedHeaders,
-  getCachedHeadersAt,
-  getHeaderPromise,
-  setHeaderPromise,
-  setSupabaseDebugPii,
-  maskUid
 };
+export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
-window.AppModules.supabase = supabaseApi;
-window.SupabaseAPI = supabaseApi;
+window.AppModules.supabase = SupabaseAPI;
+window.SupabaseAPI = SupabaseAPI;
 for (const key of Object.keys(supabaseApi)) {
   if (!(key in window)) {
     window[key] = supabaseApi[key];
   }
 }
-})(window);

@@ -996,3 +996,13 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 - Boot-Validation-Test: Entfernen einzelner Module verhindert Start von `main()` und zeigt klaren Hinweis *„Critical module missing“*.
 - Defer-Order-Test: Alle Module laden synchron oder konsistent deferred; Inline-App-Code läuft erst nach `DOMContentLoaded`.
 
+## v1.8.0 - Supabase Refactor Phase 1
+
+**Smoke**
+- <script type="module" src="assets/js/supabase.js"> l�dt ohne Fehler; window.AppModules.supabase ist definiert und listet Core-Keys wie withRetry und ensureSupabaseClient.
+- Console-Check console.info("Supabase Core ready:", Object.keys(window.AppModules.supabase)); zeigt erwartete Funktionen (HTTP, Client, State) an.
+
+**Sanity**
+- ensureSupabaseClient() nutzt weiterhin gespeicherte REST/Key-Konfiguration und liefert denselben Client (kein mehrfaches Re-Init).
+- etchWithAuth() ruft Requests erfolgreich mit Header-Cache ab (401-Refresh, Timeout-Handling) und nutzt weiter SupabaseAPI-Exporte.
+- aseUrlFromRest, maskUid, Header-Cache-Helper (cacheHeaders etc.) bleiben via SupabaseAPI und globale Window-Bindings erreichbar.
