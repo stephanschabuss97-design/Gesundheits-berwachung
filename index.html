@@ -1612,8 +1612,31 @@ details[hidden] {
 <script src="assets/js/format.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
-<!-- @refactor: moved to assets/js/supabase.js -->
-<script type="module" src="assets/js/supabase.js"></script>
+<!-- @refactor: moved to assets/js/supabase/index.js -->
+<script type="module" src="assets/js/supabase/index.js"></script>
+
+<script type="module">
+  import { SupabaseAPI } from "./assets/js/supabase/index.js";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    SupabaseAPI.initAuth?.({
+      onStatus: (status) => console.info("Auth status:", status),
+      onLoginOverlay: (visible) => {
+        if (visible) {
+          SupabaseAPI.showLoginOverlay?.(true);
+        } else {
+          SupabaseAPI.hideLoginOverlay?.();
+        }
+      },
+      onUserUi: (email) => {
+        SupabaseAPI.setUserUi?.(email || "");
+      },
+      onDoctorAccess: (enabled) => {
+        SupabaseAPI.setDoctorAccess?.(enabled);
+      }
+    });
+  });
+</script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->
 <script src="assets/js/ui-tabs.js"></script>
 
@@ -2231,7 +2254,7 @@ function setCaptureIntakeDisabled(disabled){
   });
 }
 
-// SUBMODULE: clearFieldError @internal - entfernt visuelle Fehlerzustände von Intake-Feldern
+// SUBMODULE: clearFieldError @internal - entfernt visuelle Fehlerzustaende von Intake-Feldern
 function clearFieldError(el){
   if (!el) return;
   el.style.outline = '';
@@ -3021,7 +3044,7 @@ function bindAppointmentsPanel(){
  * exports: setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, clearCaptureIntakeInputs, handleCaptureIntake
  * notes: Fortsetzung des Capture-Logikblocks (Status/Guards)
  */
-// SUBMODULE: clearCaptureIntakeInputs @internal - leert temporäre Intake-Felder vor neuem Save-Lauf
+// SUBMODULE: clearCaptureIntakeInputs @internal - leert temporaere Intake-Felder vor neuem Save-Lauf
 function clearCaptureIntakeInputs(){
   ['water', 'salt', 'protein'].forEach(kind => {
     const input = document.getElementById(`cap-${kind}-add`);
@@ -5051,7 +5074,7 @@ function resetFlagsPanel(opts = {}) {
   if (commentEl) commentEl.value = '';
   if (focus && commentEl) commentEl.focus();
 }
-// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurück
+// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurueck
 function resetCapturePanels(opts = {}) {
   const { focus = true } = opts;
   resetBpPanel('M', { focus: false });
@@ -5069,7 +5092,7 @@ function resetCapturePanels(opts = {}) {
     if (first) first.focus();
   }
 }
-// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkürzel fuer Save-/Reset-Flows
+// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkuerzel fuer Save-/Reset-Flows
 function addCapturePanelKeys(){
   const bind = (selectors, onEnter, onEsc) => {
     document.querySelectorAll(selectors).forEach(el => {

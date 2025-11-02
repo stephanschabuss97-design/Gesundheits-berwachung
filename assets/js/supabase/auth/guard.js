@@ -209,7 +209,7 @@ const configureLockOverlay = ({
       ? ''
       : webAuthnAvailable
       ? 'Bitte zuerst Passkey einrichten.'
-      : 'Passkey/WebAuthn nicht verfügbar.';
+      : 'Passkey/WebAuthn nicht verfuegbar.';
   }
   const setupBtn = document.getElementById('setupPasskeyBtn');
   if (setupBtn) {
@@ -483,7 +483,7 @@ export async function requireDoctorUnlock() {
     configureLockOverlay({
       hasPasskey: true,
       webAuthnAvailable: true,
-      message: 'Entsperren abgebrochen – du kannst Passkey erneut versuchen oder PIN nutzen.'
+      message: 'Entsperren abgebrochen - du kannst Passkey erneut versuchen oder PIN nutzen.'
     });
     lockUi(true);
     return false;
@@ -503,7 +503,7 @@ export async function requireDoctorUnlock() {
   configureLockOverlay({
     hasPasskey,
     webAuthnAvailable: false,
-    message: 'Passkey / Windows Hello ist nicht verfügbar – bitte PIN verwenden.'
+    message: 'Passkey / Windows Hello ist nicht verfuegbar - bitte PIN verwenden.'
   });
   lockUi(true);
   return false;

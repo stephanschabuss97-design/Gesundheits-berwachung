@@ -11,6 +11,9 @@
 import * as state from './supabase/core/state.js';
 import * as client from './supabase/core/client.js';
 import * as http from './supabase/core/http.js';
+import * as authCore from './supabase/auth/core.js';
+import * as authUi from './supabase/auth/ui.js';
+import * as authGuard from './supabase/auth/guard.js';
 
 const {
   supabaseState,
@@ -46,6 +49,15 @@ verifyImport('core/state', 'supabaseState', supabaseState, 'object');
 verifyImport('core/client', 'ensureSupabaseClient', ensureSupabaseClient);
 verifyImport('core/http', 'withRetry', withRetry);
 verifyImport('core/http', 'fetchWithAuth', fetchWithAuth);
+verifyImport('auth/core', 'requireSession', authCore.requireSession);
+verifyImport('auth/core', 'watchAuthState', authCore.watchAuthState);
+verifyImport('auth/ui', 'bindAuthButtons', authUi.bindAuthButtons);
+verifyImport('auth/ui', 'setConfigStatus', authUi.setConfigStatus);
+verifyImport('auth/guard', 'requireDoctorUnlock', authGuard.requireDoctorUnlock);
+verifyImport('auth/core', 'initAuth', authCore.initAuth);
+verifyImport('auth/ui', 'showLoginOverlay', authUi.showLoginOverlay);
+verifyImport('auth/ui', 'hideLoginOverlay', authUi.hideLoginOverlay);
+verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
 
 Object.defineProperties(window, {
   sbClient: {
@@ -354,93 +366,38 @@ async function pushPendingToRemote(){
   return { pushed, failed };
 }
 
-async function prefillSupabaseConfigForm(){
-  try {
-    setConfigStatus('', 'info');
-    const restInput = document.getElementById('configRestUrl');
-    const keyInput = document.getElementById('configAnonKey');
-    const adv = document.getElementById('configAdv');
-    const rest = await getConf('webhookUrl');
-    const keyStored = await getConf('webhookKey');
-    const restStored = rest && String(rest).trim() ? String(rest).trim() : '';
-    const keyClean = keyStored && String(keyStored).trim()
-      ? keyStored.replace(/^Bearer\s+/i, '').trim()
-      : '';
-    if (restInput) {
-      const hasUserText = !!(restInput.value && restInput.value.trim());
-      if (!hasUserText && restStored) {
-        restInput.value = restStored;
-      }
-    }
-    if (keyInput) {
-      const hasUserText = !!(keyInput.value && keyInput.value.trim());
-      if (!hasUserText && keyClean) {
-        keyInput.value = keyClean;
-      }
-    }
-    if (adv) {
-      const hasRest = !!restStored;
-      const hasKey = !!keyClean;
-      adv.open = !(hasRest && hasKey);
-    }
-  } catch(_){ }
+async function prefillSupabaseConfigForm(...args){
+  return authUi.prefillSupabaseConfigForm(...args);
 }
 
-function setConfigStatus(msg, tone = 'info'){
-  const el = document.getElementById('configStatus');
-  if (!el) return;
-  el.textContent = msg || '';
-  const colors = { error: '#f87171', success: '#34d399', info: '#9aa3af' };
-  el.style.color = colors[tone] || colors.info;
+
+function setConfigStatus(...args){
+  return authUi.setConfigStatus(...args);
 }
 window.setConfigStatus = setConfigStatus;
 
-function showLoginOverlay(show){
-  const ov = document.getElementById('loginOverlay');
-  if (!ov) return;
-  const dialog = ov.querySelector('[role="dialog"]') || ov;
-  if (show){
-    const alreadyVisible = ov.style.display === 'flex';
-    ov.style.display = 'flex';
-    if (!alreadyVisible) {
-      prefillSupabaseConfigForm();
-    }
-    activateFocusTrap(dialog);
-  } else {
-    ov.style.display = 'none';
-    deactivateFocusTrap();
+function showLoginOverlay(show = true){
+  if (show) {
+    return authUi.showLoginOverlay();
   }
+  return authUi.hideLoginOverlay();
 }
 window.showLoginOverlay = showLoginOverlay;
-function setUserUi(email){
-  const who = document.getElementById('whoAmI');
-  if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
+function hideLoginOverlay(){
+  return authUi.hideLoginOverlay();
 }
+window.hideLoginOverlay = hideLoginOverlay;
+function setUserUi(email){
+  return authUi.setUserUi(email);
+}
+function setDoctorAccess(enabled){
+  return authGuard.setDoctorAccess(enabled);
+}
+window.setDoctorAccess = setDoctorAccess;
 
 const AUTH_GRACE_MS = 400;
-async function isLoggedInFast({ timeout = 400 } = {}) {
-  if (!supabaseState.sbClient) return supabaseState.lastLoggedIn;
-  let timer = null;
-  try {
-    const sessionPromise = supabaseState.sbClient.auth.getSession();
-    const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error('session-timeout')), timeout);
-    });
-    const { data } = await Promise.race([sessionPromise, timeoutPromise]);
-    if (timer) clearTimeout(timer);
-    const logged = !!data?.session;
-    if (supabaseState.authState === 'unknown' && !logged && supabaseState.lastLoggedIn) {
-      return supabaseState.lastLoggedIn;
-    }
-    supabaseState.lastLoggedIn = logged;
-    if (supabaseState.authState !== 'unknown') {
-      supabaseState.authState = logged ? 'auth' : 'unauth';
-    }
-    return logged;
-  } catch(_){
-    if (timer) clearTimeout(timer);
-    return supabaseState.lastLoggedIn;
-  }
+async function isLoggedInFast(options){
+  return authCore.isLoggedInFast(options ?? {});
 }
 
 function clearAuthGrace(){
@@ -492,154 +449,39 @@ function scheduleAuthGrace(){
 }
 
 // Buttons binden (einmalig, z. B. in main())
-function bindAuthButtons(){
-const gbtn = document.getElementById('googleLoginBtn');
-const saveBtn = document.getElementById('configSaveBtn');
-
-if (saveBtn) saveBtn.addEventListener('click', async ()=>{
-  const restInput = document.getElementById('configRestUrl');
-  const keyInput = document.getElementById('configAnonKey');
-  const rawRest = (restInput?.value || '').trim();
-  const rawKey = (keyInput?.value || '').trim();
-  if (!rawRest || !rawKey){
-    setConfigStatus('Bitte REST-Endpoint und ANON-Key eingeben.', 'error');
-    return;
-  }
-  if (!/\/rest\/v1\//i.test(rawRest)){
-    setConfigStatus('REST-Endpoint muss /rest/v1/ enthalten.', 'error');
-    return;
-  }
-  if (!/\/rest\/v1\/health_events(?:[/?#]|$)/i.test(rawRest)){
-    setConfigStatus('Endpoint muss auf /rest/v1/health_events zeigen.', 'error');
-    return;
-  }
-  try {
-    new URL(rawRest);
-  } catch {
-    setConfigStatus('REST-Endpoint ist keine gueltige URL.', 'error');
-    return;
-  }
-  let anonKey = rawKey.startsWith('Bearer ') ? rawKey : `Bearer ${rawKey}`;
-  if (isServiceRoleKey(anonKey)){
-    setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
-    return;
-  }
-  try {
-    setConfigStatus('Speichere Konfiguration ...', 'info');
-    await putConf('webhookUrl', rawRest);
-    await putConf('webhookKey', anonKey);
-    supabaseState.sbClient = null;
-    await ensureSupabaseClient();
-    await requireSession();
-    setConfigStatus('Konfiguration gespeichert.', 'success');
-  } catch (e){
-    const message = restErrorMessage(e?.status || 0, e?.details || e?.message || '');
-    setConfigStatus(message, 'error');
-  }
-});
-
-if (gbtn) gbtn.addEventListener('click', async ()=>{
-  const supa = await ensureSupabaseClient();
-  if (!supa) {
-    setConfigStatus('Konfiguration fehlt - bitte REST-Endpoint und ANON-Key speichern.', 'error');
-    const adv = document.getElementById('configAdv');
-    if (adv) adv.open = true;
-    const restField = document.getElementById('configRestUrl');
-    if (restField){
-      restField.focus();
-      restField.select?.();
-    }
-    return;
-  }
-  const { error } = await supa.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: `${window.location.origin}${window.location.pathname}` }
-  });
-  if (error) setConfigStatus('Google-Login fehlgeschlagen: ' + error.message, 'error');
-});
+function bindAuthButtons(...args){
+  return authUi.bindAuthButtons(...args);
 }
 
 window.bindAuthButtons = bindAuthButtons;
 
 // Beim Start Session pruefen
-async function requireSession(){
-if(!supabaseState.sbClient){
-setUserUi('');
-showLoginOverlay(true);
-setAuthGuard(false);
-setDoctorAccess(false);
-supabaseState.lastLoggedIn = false;
-return false;
-}
-try{
-const { data: { session } } = await supabaseState.sbClient.auth.getSession();
-const logged = !!session;
-supabaseState.lastLoggedIn = logged;
-setUserUi(session?.user?.email || '');
-if (logged){
-  supabaseState.authState = 'auth';
-  clearAuthGrace();
-} else if (!supabaseState.authGraceTimer){
-  supabaseState.authState = 'unauth';
-}
-applyAuthUi(logged);
-return logged;
-}catch(_){
-return false;
-}
+async function requireSession(...args){
+  return authCore.requireSession(...args);
 }
 
 window.requireSession = requireSession;
+async function requireDoctorUnlock(...args){
+  if (typeof authGuard.requireDoctorUnlock === 'function') {
+    return authGuard.requireDoctorUnlock(...args);
+  }
+  return defaultRequireDoctorUnlock(...args);
+}
+window.requireDoctorUnlock = requireDoctorUnlock;
 
+}
+}
 // Reagiert auch auf spaetere Logins (z. B. nach Redirect)
-function watchAuthState(){
-  supabaseState.sbClient.auth.onAuthStateChange(async (event, session)=>{
-    const logged = !!session;
-    if (logged) {
-      setUserUi(session?.user?.email || '');
-      const newUid = session?.user?.id || null;
-      if (newUid) {
-        supabaseState.lastUserId = newUid;
-        diag.add?.(`[auth] session uid=${maskUid(newUid)}`);
-      }
-      finalizeAuthState(true);
-      await afterLoginBoot();
-      await (window.setupRealtime || defaultSetupRealtime)();
-      requestUiRefresh().catch(err => diag.add?.('ui refresh err: ' + (err?.message || err)));
-      await refreshCaptureIntake();
-      await refreshAppointments();
-      return;
-    }
-
-    setUserUi('');
-    supabaseState.lastLoggedIn = false;
-    if (supabaseState.lastUserId) {
-      diag.add?.('[auth] session cleared');
-      supabaseState.lastUserId = null;
-    }
-    supabaseState.pendingSignOut = async () => {
-      (window.teardownRealtime || noopRealtime)();
-      await refreshCaptureIntake();
-      await refreshAppointments();
-    };
-
-    if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-      finalizeAuthState(false);
-    } else {
-      scheduleAuthGrace();
-    }
-  });
+function watchAuthState(...args){
+  return authCore.watchAuthState(...args);
 }
 
 window.watchAuthState = watchAuthState;
 
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 
-async function afterLoginBoot(){
-  if (supabaseState.booted) return;
-  supabaseState.booted = true;
-  // Keine Auto-Sync/Realtime bis Arzt-Ansicht umgestellt ist
-  requestUiRefresh({ reason: 'boot:afterLogin' }).catch(err => diag.add?.('ui refresh err: ' + (err?.message || err)));
+async function afterLoginBoot(...args){
+  return authCore.afterLoginBoot(...args);
 }
 
 window.afterLoginBoot = afterLoginBoot;
@@ -2274,7 +2116,7 @@ function resetFlagsPanel(opts = {}) {
   if (commentEl) commentEl.value = '';
   if (focus && commentEl) commentEl.focus();
 }
-// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zur├â┬╝ck
+// SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurueck
 function resetCapturePanels(opts = {}) {
   const { focus = true } = opts;
   resetBpPanel('M', { focus: false });
@@ -2292,7 +2134,7 @@ function resetCapturePanels(opts = {}) {
     if (first) first.focus();
   }
 }
-// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturk├â┬╝rzel fuer Save-/Reset-Flows
+// SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkuerzel fuer Save-/Reset-Flows
 function addCapturePanelKeys(){
   const bind = (selectors, onEnter, onEsc) => {
     document.querySelectorAll(selectors).forEach(el => {
@@ -2992,61 +2834,8 @@ window.baseUrlFromRest = baseUrlFromRest;
 
 
 // SUBMODULE: getUserId @public - resolves current Supabase auth user with timeout fallbacks
-async function getUserId(){
-try{
-diag.add?.('[auth] getUserId start');
-const supa = await ensureSupabaseClient();
-if(!supa) {
-  if ((supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') && supabaseState.lastUserId) {
-    diag.add?.(`[auth] getUserId fallback (no client) ${maskUid(supabaseState.lastUserId)}`);
-    return supabaseState.lastUserId;
-  }
-  return null;
-}
-let timeoutId;
-let timedOut = false;
-const timeoutPromise = new Promise((_, reject) => {
-  timeoutId = setTimeout(() => {
-    timedOut = true;
-    reject(new Error('getUser-timeout'));
-  }, GET_USER_TIMEOUT_MS);
-});
-let userInfo = null;
-try {
-  const result = await Promise.race([supa.auth.getUser(), timeoutPromise]);
-  userInfo = result?.data?.user ?? null;
-} catch (err) {
-  if (timedOut) {
-    diag.add?.('[auth] getUserId timeout');
-    if ((supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') && supabaseState.lastUserId) {
-      diag.add?.(`[auth] getUserId fallback (timeout) ${maskUid(supabaseState.lastUserId)}`);
-      return supabaseState.lastUserId;
-    }
-  }
-  throw err;
-} finally {
-  clearTimeout(timeoutId);
-}
-const uid = userInfo?.id ?? null;
-if (uid) {
-  supabaseState.lastUserId = uid;
-  diag.add?.(`[auth] getUserId done ${maskUid(uid)}`);
-  return uid;
-}
-if ((supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') && supabaseState.lastUserId) {
-  diag.add?.(`[auth] getUserId fallback (no uid) ${maskUid(supabaseState.lastUserId)}`);
-  return supabaseState.lastUserId;
-}
-diag.add?.('[auth] getUserId done null');
-return null;
-}catch(e){
-diag.add?.('[auth] getUserId error: ' + (e?.message || e));
-if ((supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') && supabaseState.lastUserId) {
-  diag.add?.(`[auth] getUserId fallback (error) ${maskUid(supabaseState.lastUserId)}`);
-  return supabaseState.lastUserId;
-}
-return null;
-}
+async function getUserId(...args){
+  return authCore.getUserId(...args);
 }
 
 // Public Supabase API surface - intentional exports only
@@ -3081,8 +2870,14 @@ const supabaseApi = {
   afterLoginBoot,
   requireSession,
   watchAuthState,
+  initAuth: authCore.initAuth,
+  showLoginOverlay,
+  hideLoginOverlay,
+  setConfigStatus,
+  setUserUi,
+  setDoctorAccess,
   setupRealtime: (...args) => (window.setupRealtime || defaultSetupRealtime)(...args),
-  requireDoctorUnlock: (...args) => (window.requireDoctorUnlock || defaultRequireDoctorUnlock)(...args),
+  requireDoctorUnlock,
   resumeFromBackground: (...args) => (window.resumeFromBackground || defaultResumeFromBackground)(...args),
   getUserId,
   isLoggedInFast
