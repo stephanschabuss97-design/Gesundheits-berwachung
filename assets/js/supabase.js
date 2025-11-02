@@ -25,10 +25,22 @@ const supabaseState = {
   lastUserId: null
 };
 
-Object.defineProperty(window, 'sbClient', {
-  configurable: true,
-  get() { return supabaseState.sbClient; },
-  set(value) { supabaseState.sbClient = value; }
+Object.defineProperties(window, {
+  sbClient: {
+    configurable: true,
+    get() { return supabaseState.sbClient; },
+    set(value) { supabaseState.sbClient = value; }
+  },
+  __authState: {
+    configurable: true,
+    get() { return supabaseState.authState; },
+    set(value) { supabaseState.authState = value; }
+  },
+  __lastLoggedIn: {
+    configurable: true,
+    get() { return supabaseState.lastLoggedIn; },
+    set(value) { supabaseState.lastLoggedIn = value; }
+  }
 });
 
 const supabaseLog = { debugLogPii: false };
@@ -707,6 +719,8 @@ return logged;
 return false;
 }
 }
+
+window.requireSession = requireSession;
 
 // Reagiert auch auf spaetere Logins (z. B. nach Redirect)
 function watchAuthState(){
@@ -3225,6 +3239,7 @@ const supabaseApi = {
   fetchDailyOverview,
   deleteRemoteDay,
   ensureSupabaseClient,
+  requireSession,
   watchAuthState,
   setupRealtime: (...args) => (window.setupRealtime || defaultSetupRealtime)(...args),
   requireDoctorUnlock: (...args) => (window.requireDoctorUnlock || defaultRequireDoctorUnlock)(...args),
