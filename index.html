@@ -1618,7 +1618,7 @@ details[hidden] {
 <script type="module">
   import { SupabaseAPI } from "./assets/js/supabase/index.js";
 
-  document.addEventListener("DOMContentLoaded", () => {
+  const bootAuth = () => {
     SupabaseAPI.initAuth?.({
       onStatus: (status) => console.info("Auth status:", status),
       onLoginOverlay: (visible) => {
@@ -1635,7 +1635,13 @@ details[hidden] {
         SupabaseAPI.setDoctorAccess?.(enabled);
       }
     });
-  });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootAuth, { once: true });
+  } else {
+    bootAuth();
+  }
 </script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->
 <script src="assets/js/ui-tabs.js"></script>
