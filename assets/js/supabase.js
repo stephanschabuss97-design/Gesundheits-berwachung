@@ -48,6 +48,11 @@ const supabaseLog = { debugLogPii: false };
 const defaultSetupRealtime = async () => undefined;
 const defaultRequireDoctorUnlock = async () => true;
 const defaultResumeFromBackground = async () => undefined;
+const noopRealtime = () => undefined;
+if (typeof window.teardownRealtime !== 'function') {
+  window.teardownRealtime = noopRealtime;
+}
+
 
 if (typeof window.setupRealtime !== 'function') {
   window.setupRealtime = defaultSetupRealtime;
@@ -749,7 +754,7 @@ function watchAuthState(){
       supabaseState.lastUserId = null;
     }
     supabaseState.pendingSignOut = async () => {
-      teardownRealtime();
+      (window.teardownRealtime || noopRealtime)();
       await refreshCaptureIntake();
       await refreshAppointments();
     };
