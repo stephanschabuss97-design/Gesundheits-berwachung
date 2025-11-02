@@ -25,6 +25,12 @@ const supabaseState = {
   lastUserId: null
 };
 
+Object.defineProperty(window, 'sbClient', {
+  configurable: true,
+  get() { return supabaseState.sbClient; },
+  set(value) { supabaseState.sbClient = value; }
+});
+
 const supabaseLog = { debugLogPii: false };
 
 const defaultSetupRealtime = async () => undefined;
