@@ -672,6 +672,8 @@ if (gbtn) gbtn.addEventListener('click', async ()=>{
 });
 }
 
+window.bindAuthButtons = bindAuthButtons;
+
 // Beim Start Session pruefen
 async function requireSession(){
 if(!supabaseState.sbClient){
@@ -3211,6 +3213,7 @@ const supabaseApi = {
   loadBodyFromView,
   loadFlagsFromView,
   syncCaptureToggles,
+  bindAuthButtons,
   fetchDailyOverview,
   deleteRemoteDay,
   ensureSupabaseClient,
