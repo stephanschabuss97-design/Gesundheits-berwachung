@@ -1,4 +1,4 @@
-/** MODULE: supabase/auth/guard.js — Access Control @v1.8.1 */
+﻿/** MODULE: supabase/auth/guard.js â€” Access Control @v1.8.1 */
 
 import { isLoggedInFast } from './core.js';
 import { showLoginOverlay } from './ui.js';
@@ -13,7 +13,9 @@ const diag =
 
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
-  if (typeof fn !== 'function') return Promise.resolve(null);
+  if (typeof fn !== 'function') {
+    return Promise.reject(new Error('Supabase guard: getConf not available'));
+  }
   try {
     return Promise.resolve(fn(...args));
   } catch (err) {
@@ -23,7 +25,9 @@ const getConf = (...args) => {
 
 const putConf = (...args) => {
   const fn = globalWindow?.putConf;
-  if (typeof fn !== 'function') return Promise.resolve(null);
+  if (typeof fn !== 'function') {
+    return Promise.reject(new Error('Supabase guard: putConf not available'));
+  }
   try {
     return Promise.resolve(fn(...args));
   } catch (err) {
@@ -35,24 +39,116 @@ let __doctorUnlocked = false;
 let __pendingAfterUnlock = null;
 
 const u8 = (len) => {
-  const a = new Uint8Array(len);
-  globalWindow?.crypto?.getRandomValues?.(a);
-  return a;
+  if (!Number.isInteger(len) || len <= 0) {
+    throw new Error('Supabase guard: invalid byte length for random data');
+  }
+  const arr = new Uint8Array(len);
+  const webCrypto = globalWindow?.crypto;
+  let filled = false;
+  if (webCrypto?.getRandomValues) {
+    try {
+      webCrypto.getRandomValues(arr);
+      filled = true;
+    } catch (err) {
+      diag.add?.('Supabase guard: getRandomValues failed - ' + (err?.message || err));
+      filled = false;
+    }
+  }
+  if (!filled) {
+    try {
+      const nodeCrypto =
+        (typeof globalThis !== 'undefined' && globalThis.crypto?.randomFillSync)
+          ? globalThis.crypto
+          : typeof require === 'function'
+            ? require('crypto')
+            : null;
+      if (nodeCrypto?.randomFillSync) {
+        nodeCrypto.randomFillSync(arr);
+        filled = true;
+      }
+    } catch (err) {
+      diag.add?.('Supabase guard: randomFillSync fallback failed - ' + (err?.message || err));
+      filled = false;
+    }
+  }
+  if (!filled) {
+    throw new Error('Supabase guard: secure random generator unavailable');
+  }
+  const allZero = arr.every((byte) => byte === 0);
+  if (allZero) {
+    throw new Error('Supabase guard: secure random generator returned zero-filled buffer');
+  }
+  return arr;
+};
+
+const base64Encode = (binary) => {
+  if (typeof binary !== 'string') {
+    throw new Error('Supabase guard: base64 encode expects binary string');
+  }
+  if (typeof globalWindow?.btoa === 'function') {
+    try {
+      return globalWindow.btoa(binary);
+    } catch (err) {
+      throw new Error('Supabase guard: base64 encode failed - ' + (err?.message || err));
+    }
+  }
+  if (typeof Buffer !== 'undefined') {
+    try {
+      return Buffer.from(binary, 'binary').toString('base64');
+    } catch (err) {
+      throw new Error('Supabase guard: base64 encode failed - ' + (err?.message || err));
+    }
+  }
+  throw new Error('Supabase guard: base64 encode not supported in this environment');
+};
+
+const base64Decode = (b64) => {
+  if (typeof b64 !== 'string' || !b64.length) {
+    throw new Error('Supabase guard: base64 decode expects non-empty string');
+  }
+  if (typeof globalWindow?.atob === 'function') {
+    try {
+      return globalWindow.atob(b64);
+    } catch (err) {
+      throw new Error('Supabase guard: base64 decode failed - ' + (err?.message || err));
+    }
+  }
+  if (typeof Buffer !== 'undefined') {
+    try {
+      return Buffer.from(b64, 'base64').toString('binary');
+    } catch (err) {
+      throw new Error('Supabase guard: base64 decode failed - ' + (err?.message || err));
+    }
+  }
+  throw new Error('Supabase guard: base64 decode not supported in this environment');
 };
 
 const b64u = {
-  enc: (buf) =>
-    globalWindow?.btoa
-      ? globalWindow.btoa(String.fromCharCode(...new Uint8Array(buf)))
-          .replace(/\+/g, '-')
-          .replace(/\//g, '_')
-          .replace(/=+$/, '')
-      : '',
-  dec: (str) =>
-    Uint8Array.from(
-      (globalWindow?.atob?.(str.replace(/-/g, '+').replace(/_/g, '/')) || '').split(''),
-      (c) => c.charCodeAt(0)
-    )
+  enc: (buf) => {
+    const view =
+      buf instanceof Uint8Array
+        ? buf
+        : buf instanceof ArrayBuffer
+          ? new Uint8Array(buf)
+          : null;
+    if (!view) {
+      throw new Error('Supabase guard: base64 encode expects ArrayBuffer or Uint8Array');
+    }
+    let binary = '';
+    for (let i = 0; i < view.byteLength; i += 1) {
+      binary += String.fromCharCode(view[i]);
+    }
+    return base64Encode(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  },
+  dec: (str) => {
+    const normalized = str.replace(/\s+/g, '');
+    const binary = base64Decode(normalized.replace(/-/g, '+').replace(/_/g, '/'));
+    const arr = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      arr[i] = binary.charCodeAt(i);
+    }
+    return arr;
+  }
 };
 
 const LOCK_ENABLED_KEY = 'app_lock_enabled';
@@ -71,6 +167,27 @@ const isWebAuthnAvailable = async () => {
   } catch (_) {
     return false;
   }
+};
+
+const resolveRpId = () => {
+  if (typeof location === 'undefined') return null;
+  const hostname = (location.hostname || '').trim();
+  if (!hostname) return null;
+  const lower = hostname.toLowerCase();
+  if (['localhost', '127.0.0.1', '::1'].includes(lower)) return null;
+  const ipv4Pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Pattern = /^[0-9a-f:]+$/i;
+  if (ipv4Pattern.test(hostname) || ipv6Pattern.test(hostname)) return null;
+  return hostname;
+};
+
+const buildRp = () => {
+  const rp = { name: 'Gesundheits-Logger' };
+  const rpId = resolveRpId();
+  if (rpId) {
+    rp.id = rpId;
+  }
+  return rp;
 };
 
 const setLockMsg = (msg) => {
@@ -92,7 +209,7 @@ const configureLockOverlay = ({
       ? ''
       : webAuthnAvailable
       ? 'Bitte zuerst Passkey einrichten.'
-      : 'Passkey/WebAuthn nicht verfügbar.';
+      : 'Passkey/WebAuthn nicht verfÃ¼gbar.';
   }
   const setupBtn = document.getElementById('setupPasskeyBtn');
   if (setupBtn) {
@@ -130,26 +247,203 @@ const lockUi = (on) => {
   }
 };
 
+const focusableSelectors =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+const promptForPin = () =>
+  new Promise((resolve) => {
+    const previousActive = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.style.cssText =
+      'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:2147483600;';
+    overlay.setAttribute('data-supabase-pin-overlay', 'true');
+
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'supabase-pin-title');
+    dialog.setAttribute('aria-describedby', 'supabase-pin-desc');
+    dialog.style.cssText =
+      'background:#fff;color:#111;min-width:280px;max-width:360px;padding:24px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:16px;';
+
+    const title = document.createElement('h2');
+    title.id = 'supabase-pin-title';
+    title.textContent = 'PIN festlegen';
+    title.style.margin = '0';
+    title.style.fontSize = '1.1rem';
+
+    const desc = document.createElement('p');
+    desc.id = 'supabase-pin-desc';
+    desc.textContent = 'Bitte eine 4 bis 10-stellige PIN festlegen. Die PIN wird verschluesselt gespeichert.';
+    desc.style.margin = '0';
+    desc.style.fontSize = '.95rem';
+    desc.style.color = '#374151';
+
+    const form = document.createElement('form');
+    form.style.display = 'flex';
+    form.style.flexDirection = 'column';
+    form.style.gap = '12px';
+
+    const label = document.createElement('label');
+    label.textContent = 'Neue PIN';
+    label.setAttribute('for', 'supabase-pin-input');
+    label.style.fontWeight = '600';
+
+    const input = document.createElement('input');
+    input.id = 'supabase-pin-input';
+    input.type = 'password';
+    input.inputMode = 'numeric';
+    input.autocomplete = 'off';
+    input.pattern = '\\d{4,10}';
+    input.maxLength = 10;
+    input.required = true;
+    input.style.cssText =
+      'padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:1rem;';
+
+    const error = document.createElement('div');
+    error.style.cssText = 'color:#b91c1c;font-size:.85rem;min-height:1em;';
+
+    const buttonRow = document.createElement('div');
+    buttonRow.style.display = 'flex';
+    buttonRow.style.justifyContent = 'flex-end';
+    buttonRow.style.gap = '8px';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Abbrechen';
+    cancelBtn.style.cssText =
+      'padding:8px 14px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111;font-size:.95rem;cursor:pointer;';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'submit';
+    confirmBtn.textContent = 'Speichern';
+    confirmBtn.style.cssText =
+      'padding:8px 14px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:.95rem;cursor:pointer;';
+
+    const trapFocus = (event) => {
+      if (event.key !== 'Tab') return;
+      const focusable = dialog.querySelectorAll(focusableSelectors);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    const close = (result) => {
+      overlay.removeEventListener('keydown', trapFocus);
+      overlay.remove();
+      if (previousActive && typeof previousActive.focus === 'function') {
+        previousActive.focus();
+      }
+      resolve(result);
+    };
+
+    overlay.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(null);
+      }
+    });
+    overlay.addEventListener('keydown', trapFocus);
+
+    cancelBtn.addEventListener('click', () => close(null));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        close(null);
+      }
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const value = input.value.trim();
+      if (!/^\d{4,10}$/.test(value)) {
+        error.textContent = 'PIN muss 4 bis 10 Ziffern enthalten.';
+        input.focus();
+        return;
+      }
+      error.textContent = '';
+      close(value);
+    });
+
+    buttonRow.append(cancelBtn, confirmBtn);
+    form.append(label, input, error, buttonRow);
+    dialog.append(title, desc, form);
+    overlay.append(dialog);
+    document.body.append(overlay);
+    input.focus();
+  });
+const getSubtleCrypto = () => {
+  const cryptoObj =
+    globalWindow?.crypto ||
+    (typeof globalThis !== 'undefined' ? globalThis.crypto : undefined);
+  if (!cryptoObj?.subtle) {
+    throw new Error('Supabase guard: crypto.subtle not available');
+  }
+  return cryptoObj.subtle;
+};
+
 const sha256 = async (text) => {
-  const enc = new TextEncoder().encode(text);
-  const buf = await globalWindow?.crypto?.subtle?.digest('SHA-256', enc);
-  return buf ? b64u.enc(buf) : '';
+  if (typeof text !== 'string') {
+    throw new TypeError('Supabase guard: sha256 input must be a string');
+  }
+  if (typeof TextEncoder !== 'function') {
+    throw new Error('Supabase guard: TextEncoder not available for sha256');
+  }
+  const subtle = getSubtleCrypto();
+  try {
+    const enc = new TextEncoder().encode(text);
+    const buf = await subtle.digest('SHA-256', enc);
+    if (!(buf instanceof ArrayBuffer) || buf.byteLength === 0) {
+      throw new Error('Supabase guard: sha256 produced empty result');
+    }
+    return b64u.enc(buf);
+  } catch (err) {
+    throw new Error('Supabase guard: sha256 failed - ' + (err?.message || err));
+  }
 };
 
 const derivePinHash = async (pin, saltBytes, iterations) => {
-  const material = await globalWindow?.crypto?.subtle?.importKey(
-    'raw',
-    new TextEncoder().encode('pin:' + pin),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveBits']
-  );
-  const bits = await globalWindow?.crypto?.subtle?.deriveBits(
-    { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' },
-    material,
-    256
-  );
-  return bits ? b64u.enc(bits) : '';
+  if (typeof pin !== 'string' || !/^\d{4,10}$/.test(pin)) {
+    throw new Error('Supabase guard: derivePinHash requires 4-10 digit PIN');
+  }
+  if (!(saltBytes instanceof Uint8Array) || saltBytes.byteLength === 0) {
+    throw new Error('Supabase guard: derivePinHash requires Uint8Array salt');
+  }
+  if (!Number.isFinite(iterations) || iterations <= 0) {
+    throw new Error('Supabase guard: derivePinHash requires positive iteration count');
+  }
+  if (typeof TextEncoder !== 'function') {
+    throw new Error('Supabase guard: TextEncoder not available for derivePinHash');
+  }
+  const subtle = getSubtleCrypto();
+  try {
+    const material = await subtle.importKey(
+      'raw',
+      new TextEncoder().encode('pin:' + pin),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    const bits = await subtle.deriveBits(
+      { name: 'PBKDF2', salt: saltBytes, iterations: Math.floor(iterations), hash: 'SHA-256' },
+      material,
+      256
+    );
+    if (!(bits instanceof ArrayBuffer) || bits.byteLength === 0) {
+      throw new Error('Supabase guard: derivePinHash produced empty result');
+    }
+    return b64u.enc(bits);
+  } catch (err) {
+    throw new Error('Supabase guard: derivePinHash failed - ' + (err?.message || err));
+  }
 };
 
 export function setDoctorAccess(enabled) {
@@ -189,7 +483,7 @@ export async function requireDoctorUnlock() {
     configureLockOverlay({
       hasPasskey: true,
       webAuthnAvailable: true,
-      message: 'Entsperren abgebrochen – du kannst Passkey erneut versuchen oder PIN nutzen.'
+      message: 'Entsperren abgebrochen â€“ du kannst Passkey erneut versuchen oder PIN nutzen.'
     });
     lockUi(true);
     return false;
@@ -209,7 +503,7 @@ export async function requireDoctorUnlock() {
   configureLockOverlay({
     hasPasskey,
     webAuthnAvailable: false,
-    message: 'Passkey / Windows Hello ist nicht verfügbar. Bitte PIN verwenden.'
+    message: 'Passkey / Windows Hello ist nicht verfÃ¼gbar. Bitte PIN verwenden.'
   });
   lockUi(true);
   return false;
@@ -239,13 +533,13 @@ export async function resumeAfterUnlock(intent) {
 
 const registerPasskey = async () => {
   try {
-    const rpId = location.hostname;
     const challenge = u8(32);
     const userId = u8(16);
+    const rp = buildRp();
     const cred = await globalWindow?.navigator?.credentials?.create({
       publicKey: {
         challenge,
-        rp: { name: 'Gesundheits-Logger', id: rpId },
+        rp,
         user: { id: userId, name: 'local-user', displayName: 'Local User' },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 },
@@ -287,15 +581,17 @@ const unlockWithPasskey = async () => {
     }
     const allow = [{ type: 'public-key', id: b64u.dec(credId) }];
     const challenge = u8(32);
-    const assertion = await globalWindow?.navigator?.credentials?.get({
-      publicKey: {
-        challenge,
-        rpId: location.hostname,
-        timeout: 60000,
-        allowCredentials: allow,
-        userVerification: 'preferred'
-      }
-    });
+    const publicKey = {
+      challenge,
+      timeout: 60000,
+      allowCredentials: allow,
+      userVerification: 'preferred'
+    };
+    const rpId = resolveRpId();
+    if (rpId) {
+      publicKey.rpId = rpId;
+    }
+    const assertion = await globalWindow?.navigator?.credentials?.get({ publicKey });
     if (!assertion) throw new Error('Abgebrochen.');
     await putConf(LOCK_LAST_OK_KEY, Date.now());
     __doctorUnlocked = true;
@@ -311,9 +607,8 @@ const unlockWithPasskey = async () => {
 };
 
 const setPinInteractive = async () => {
-  const pin = prompt('Neue PIN (4-10 Ziffern):') || '';
-  if (!/^\d{4,10}$/.test(pin)) {
-    alert('Ungültige PIN.');
+  const pin = await promptForPin();
+  if (!pin) {
     return false;
   }
   const saltBytes = u8(16);
@@ -334,10 +629,16 @@ const unlockWithPin = async () => {
     setLockMsg('PIN eingeben.');
     return false;
   }
+  if (!/^\d{4,10}$/.test(pin)) {
+    setLockMsg('PIN muss 4 bis 10 Ziffern enthalten.');
+    input?.focus?.();
+    return false;
+  }
   const storedHash = await getConf(LOCK_PIN_KDF_KEY);
   const storedSaltB64 = await getConf(LOCK_PIN_SALT_KEY);
   const storedIter = await getConf(LOCK_PIN_ITER_KEY);
   let ok = false;
+  let verificationError = false;
   if (storedHash && storedSaltB64 && storedIter) {
     try {
       const saltBytes = b64u.dec(storedSaltB64);
@@ -348,28 +649,39 @@ const unlockWithPin = async () => {
       );
       ok = derived === storedHash;
     } catch (err) {
-      console.error('PIN derive error', err);
+      diag.add?.('PIN derive error: ' + (err?.message || err));
+      setLockMsg('PIN konnte nicht verifiziert werden.');
+      verificationError = true;
       ok = false;
     }
   } else {
-    const legacy = await getConf(LOCK_PIN_HASH_KEY);
-    if (!legacy) {
-      setLockMsg('Keine PIN hinterlegt.');
-      return false;
-    }
-    const legacyHash = await sha256('pin:' + pin);
-    ok = legacyHash === legacy;
-    if (ok) {
-      const saltBytes = u8(16);
-      const newHash = await derivePinHash(pin, saltBytes, LOCK_PIN_DEFAULT_ITER);
-      await putConf(LOCK_PIN_KDF_KEY, newHash);
-      await putConf(LOCK_PIN_SALT_KEY, b64u.enc(saltBytes));
-      await putConf(LOCK_PIN_ITER_KEY, LOCK_PIN_DEFAULT_ITER);
-      await putConf(LOCK_PIN_HASH_KEY, null);
+    try {
+      const legacy = await getConf(LOCK_PIN_HASH_KEY);
+      if (!legacy) {
+        setLockMsg('Keine PIN hinterlegt.');
+        return false;
+      }
+      const legacyHash = await sha256('pin:' + pin);
+      ok = legacyHash === legacy;
+      if (ok) {
+        const saltBytes = u8(16);
+        const newHash = await derivePinHash(pin, saltBytes, LOCK_PIN_DEFAULT_ITER);
+        await putConf(LOCK_PIN_KDF_KEY, newHash);
+        await putConf(LOCK_PIN_SALT_KEY, b64u.enc(saltBytes));
+        await putConf(LOCK_PIN_ITER_KEY, LOCK_PIN_DEFAULT_ITER);
+        await putConf(LOCK_PIN_HASH_KEY, null);
+      }
+    } catch (err) {
+      diag.add?.('Legacy PIN verification error: ' + (err?.message || err));
+      setLockMsg('PIN konnte nicht verifiziert werden.');
+      verificationError = true;
+      ok = false;
     }
   }
   if (!ok) {
-    setLockMsg('PIN falsch.');
+    if (!verificationError) {
+      setLockMsg('PIN falsch.');
+    }
     return false;
   }
   await putConf(LOCK_LAST_OK_KEY, Date.now());
@@ -445,3 +757,7 @@ export const authGuardState = {
     __pendingAfterUnlock = val;
   }
 };
+
+
+
+

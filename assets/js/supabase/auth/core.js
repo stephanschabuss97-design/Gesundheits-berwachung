@@ -17,6 +17,24 @@ const defaultSetupRealtime = async () => undefined;
 const defaultResumeFromBackground = async () => undefined;
 const noopRealtime = () => undefined;
 
+const fallbackUserId = (variant) => {
+  if (
+    (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
+    supabaseState.lastUserId
+  ) {
+    const labelMap = {
+      noClient: 'fallback (no client)',
+      timeout: 'fallback (timeout)',
+      noUid: 'fallback (no uid)',
+      error: 'fallback (error)'
+    };
+    const label = labelMap[variant] || 'fallback';
+    diag.add?.(`[auth] getUserId ${label} ${maskUid(supabaseState.lastUserId)}`);
+    return supabaseState.lastUserId;
+  }
+  return null;
+};
+
 const authHooks = {
   onStatus: null,
   onLoginOverlay: null,
@@ -38,6 +56,7 @@ const callLoginOverlay = (visible) => {
   if (typeof authHooks.onLoginOverlay === 'function') {
     try {
       authHooks.onLoginOverlay(!!visible);
+      return;
     } catch (err) {
       diag.add?.('[auth] overlay hook error: ' + (err?.message || err));
     }
@@ -197,12 +216,13 @@ export async function isLoggedInFast({ timeout = 400 } = {}) {
 export function watchAuthState() {
   if (!supabaseState.sbClient) return;
   if (!supabaseState.sbClient.auth?.onAuthStateChange) return;
-  supabaseState.sbClient.auth.onAuthStateChange(async (event, session) => {
-    const logged = !!session;
-    if (logged) {
-      callUserUi(session?.user?.email || '');
-      const newUid = session?.user?.id || null;
-      if (newUid) {
+  const { data: { subscription } = {} } =
+    supabaseState.sbClient.auth.onAuthStateChange(async (event, session) => {
+      const logged = !!session;
+      if (logged) {
+        callUserUi(session?.user?.email || '');
+        const newUid = session?.user?.id || null;
+        if (newUid) {
         supabaseState.lastUserId = newUid;
         diag.add?.(`[auth] session uid=${maskUid(newUid)}`);
       }
@@ -235,6 +255,7 @@ export function watchAuthState() {
       scheduleAuthGrace();
     }
   });
+  return subscription || null;
 }
 
 export async function afterLoginBoot() {
@@ -250,16 +271,8 @@ export async function getUserId() {
     diag.add?.('[auth] getUserId start');
     const supa = await ensureSupabaseClient();
     if (!supa) {
-      if (
-        (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
-        supabaseState.lastUserId
-      ) {
-        diag.add?.(
-          `[auth] getUserId fallback (no client) ${maskUid(supabaseState.lastUserId)}`
-        );
-        return supabaseState.lastUserId;
-      }
-      return null;
+      const fallback = fallbackUserId('noClient');
+      return fallback ?? null;
     }
     let timeoutId;
     let timedOut = false;
@@ -276,15 +289,8 @@ export async function getUserId() {
     } catch (err) {
       if (timedOut) {
         diag.add?.('[auth] getUserId timeout');
-        if (
-          (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
-          supabaseState.lastUserId
-        ) {
-          diag.add?.(
-            `[auth] getUserId fallback (timeout) ${maskUid(supabaseState.lastUserId)}`
-          );
-          return supabaseState.lastUserId;
-        }
+        const fallback = fallbackUserId('timeout');
+        if (fallback) return fallback;
       }
       throw err;
     } finally {
@@ -296,24 +302,14 @@ export async function getUserId() {
       diag.add?.(`[auth] getUserId done ${maskUid(uid)}`);
       return uid;
     }
-    if (
-      (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
-      supabaseState.lastUserId
-    ) {
-      diag.add?.(`[auth] getUserId fallback (no uid) ${maskUid(supabaseState.lastUserId)}`);
-      return supabaseState.lastUserId;
-    }
+    const fallbackNoUid = fallbackUserId('noUid');
+    if (fallbackNoUid) return fallbackNoUid;
     diag.add?.('[auth] getUserId done null');
     return null;
   } catch (e) {
     diag.add?.('[auth] getUserId error: ' + (e?.message || e));
-    if (
-      (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
-      supabaseState.lastUserId
-    ) {
-      diag.add?.(`[auth] getUserId fallback (error) ${maskUid(supabaseState.lastUserId)}`);
-      return supabaseState.lastUserId;
-    }
+    const fallbackError = fallbackUserId('error');
+    if (fallbackError) return fallbackError;
     return null;
   }
 }
