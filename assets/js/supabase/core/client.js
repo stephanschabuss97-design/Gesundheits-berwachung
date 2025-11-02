@@ -12,9 +12,7 @@ const diag =
 
 const getConfSafe = (...args) => {
   const fn = globalWindow?.getConf;
-  if (typeof fn !== 'function') {
-    throw new Error('Supabase client dependency missing: window.getConf');
-  }
+  if (typeof fn !== 'function') return null;
   return fn(...args);
 };
 
