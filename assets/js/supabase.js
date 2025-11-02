@@ -2988,11 +2988,6 @@ async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
 }
 
 // SUBMODULE: baseUrlFromRest @internal - strips /rest prefix to find Supabase base URL
-function baseUrlFromRest(restUrl){
-if(!restUrl) return null;
-const i = restUrl.indexOf("/rest/");
-return i>0 ? restUrl.slice(0, i) : null;
-}
 window.baseUrlFromRest = baseUrlFromRest;
 
 
