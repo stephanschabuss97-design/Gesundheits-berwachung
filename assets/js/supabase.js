@@ -748,6 +748,8 @@ function watchAuthState(){
   });
 }
 
+window.watchAuthState = watchAuthState;
+
 // Alles, was NACH Login laufen soll (deine bestehende Logik)
 
 async function afterLoginBoot(){
@@ -3223,6 +3225,7 @@ const supabaseApi = {
   fetchDailyOverview,
   deleteRemoteDay,
   ensureSupabaseClient,
+  watchAuthState,
   setupRealtime: (...args) => (window.setupRealtime || defaultSetupRealtime)(...args),
   requireDoctorUnlock: (...args) => (window.requireDoctorUnlock || defaultRequireDoctorUnlock)(...args),
   resumeFromBackground: (...args) => (window.resumeFromBackground || defaultResumeFromBackground)(...args),
