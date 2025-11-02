@@ -4,20 +4,29 @@ Added:
 - Inline JS-Blöcke vollständig in modulare Dateien überführt (`assets/js/data-local.js`, `diagnostics.js`, `format.js`, `supabase.js`, `ui.js`, `ui-errors.js`, `ui-layout.js`, `ui-tabs.js`, `utils.js`); `index.html` lädt nur noch fertige Module und kommentierte Referenzanker.
 - Bridging-Layer (`SupabaseAPI`, `window.*`) exportiert die notwendigen globalen Funktionen (`watchAuthState`, `requireSession`, `bindAuthButtons`, `ensureSupabaseClient`, etc.) und stellt Fallbacks (`setupRealtime`, `teardownRealtime`, `requireDoctorUnlock`) bereit, damit bestehende Aufrufe funktionsfähig bleiben.
 - Boot-Gate `ensureModulesReady()` prüft kritische Globals/Module, zeigt Fehlermeldungen nur nach DOM-Ready an und verhindert inkonsistente Starts.
+- Neues PII-Debug-Flag `debugLogPii` eingeführt; UID-Logs in `diag.add()` werden standardmäßig pseudonymisiert (Maskierung/Hash), Originalwerte nur bei aktivem Debug-Modus.
+- `chartPanel.destroy()`-Methode ergänzt, um ResizeObserver und Pointer-Listener sauber zu entfernen; optional über `AbortController` abgesichert.
 
 Changed:
 - Supabase-Clientmodul refaktoriert: State lebt im `supabaseState`-Singleton, Header-Cache mit Promise-Lock, UID/Headers-Getter liefern maskierte IDs; focusTrap-Aufrufe laufen über optionale Module.
+- Globale Variablen (`sbClient`, `__cachedHeaders`, `__authState`, `__intakeRpcDisabled`) in Modul-Singleton gekapselt; Zugriff ausschließlich über Methoden (`getClient()`, `getHeaders(forceRefresh)`, `clearCache()`, `setAuthState()`).
+- Doppelte Funktionsdefinitionen (`withRetry`, `fetchWithAuth`, `syncWebhook`) entfernt, um Referenzkonflikte zu vermeiden.
 - Konfiguration erzwingt `/rest/v1/health_events` als REST-Endpoint; Hilfsfunktion `toEventsUrl()` normalisiert ggf. falsche Pfade.
-- cleanupOldIntake nutzt die normalisierte Events-URL und bleibt idempotent, selbst wenn keine Einträge vorhanden sind.
-- Kommentaranmerkungen (`@refactor`) in `index.html` wurden konsolidiert (Script-Blöcke → `//`, Markup → `<!-- -->`) damit sie nicht im UI auftauchen.
+- `ensureModulesReady()` validiert zusätzlich Supabase- und Local-Module (`initDB`, `getConf`, `fetchWithAuth`, `ensureSupabaseClient`); App-Start wird blockiert, falls kritische Module fehlen.
+- Script-Load-Reihenfolge vereinheitlicht: Module (`diagnostics.js`, `ui.js`, `ui-layout.js`) laden ohne `defer`; Inline-App-Block startet erst nach `DOMContentLoaded`.
+- Kommentaranmerkungen (`@refactor`) in `index.html` konsolidiert (Script-Blöcke → `//`, Markup → `<!-- -->`), damit sie nicht im UI erscheinen.
 
 Fixed:
 - 404 beim DELETE von Intake-Events (Cleanup) dank korrektem Endpoint.
 - Globale Zugriffe auf `sbClient`, `__authState`, `__lastLoggedIn`, `afterLoginBoot`, `watchAuthState`, `baseUrlFromRest` funktionieren wieder wie vor der Modul-Auslagerung.
-- capture-Panel zeigt keine Entwicklungs-Kommentare mehr an; Supabase-Boot verursacht keine `ReferenceError` mehr (setupRealtime/teardownRealtime/requireSession).
+- Supabase-Boot verursacht keine `ReferenceError` mehr (`setupRealtime`/`teardownRealtime`/`requireSession`).
+- Chart-Panel mehrfach init/destroy → keine Memory-Leaks oder Ghost-Listener mehr.
+- capture-Panel zeigt keine Entwicklungs-Kommentare mehr an.
 
 Notes:
-- Quellstruktur vorbereitet für weitere Teil-Refactors (Module mit @refactor-Ankern). Funktional keine Änderungen an Business-Logik/Speicherpfaden außer der robusteren Supabase-Anbindung.
+- Quellstruktur vollständig modularisiert; alle UI-/Helper-/Supabase-Komponenten laufen über klar definierte Module mit `SUBMODULE:`-Headern.
+- Fallback-Handling im Boot-Prozess fängt fehlende Module oder fehlerhafte Skriptimporte ab.
+- Funktional keine Änderungen an Business-Logik oder Speicherpfaden; Fokus auf Stabilität, Sicherheit und Testbarkeit.
 
 ## v1.7.5.7 (PATCH)
 

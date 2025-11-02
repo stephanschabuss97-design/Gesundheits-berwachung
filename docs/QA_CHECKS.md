@@ -952,23 +952,6 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 - Gewicht/Body-Bars + Hits klickbar; Zielb�nder greifen nur bei BP.
 - Keine �nderung an Datenberechnung oder Realtime.
 
-## v1.7.6 - Modul-Refactor & Supabase Guards
-
-**Smoke**
-- App bootet Ã¼ber `ensureModulesReady()` nur nach erfolgreichem Laden aller Skripte; Login-Overlay und `main()` starten ohne Console-Errors.
-- Supabase-Login/Logout (Google) funktioniert; Capture- und Arzt-Ansicht lassen sich bedienen, inklusive Tabs/Charts nach Modul-Auslagerung.
-- Chart-Panel lÃ¤sst sich wiederholt Ã¶ffnen/schliessen, ResizeObserver und Pointer-Listener werden bereinigt (keine Memory-Warnungen).
-
-**Sanity**
-- `SupabaseAPI`-Singleton liefert Client/Auth-Status Ã¼ber `ensureSupabaseClient()`, `watchAuthState()`, `requireSession()`; Header-Cache (`getHeaders()`) erneuert Tokens nur einmal parallel.
-- `cleanupOldIntake()` nutzt die normalisierte Events-URL (`toEventsUrl()`), toleriert 404-Responses und bleibt idempotent.
-- `ensureModulesReady()` prÃ¼ft alle benoetigten Globals (`bindAuthButtons`, `watchAuthState`, `updateStickyOffsets`, `fmtDE`, etc.) und zeigt Fehler erst nach DOMContentLoaded an.
-
-**Regression**
-- Alle extrahierten Module (`data-local`, `diagnostics`, `format`, `supabase`, `ui`, `ui-errors`, `ui-layout`, `ui-tabs`, `utils`) exportieren ihre Ã¶ffentlichen APIs Ã¼ber `window.AppModules.*`; Legacy-Aufrufer finden weiterhin die erwarteten Globs.
-- Capture-Save/Load, Doctor-Refresh und Appointments-Calls liefern identische Ergebnisse wie in v1.7.5.7; Logs geben UID nur noch maskiert aus (PII-Flag standardmÃ¤ÃŸig aus).
-- Inline-Kommentare (`@refactor`) erscheinen nicht mehr im sichtbaren UI; Script-Lade-Reihenfolge (diagnostics/ui/ui-layout) bleibt stabil.
-
 ## v1.7.5.7 - Koerper-Chart Palette & Capture Layout
 
 **Smoke**
@@ -986,3 +969,30 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 - BP-Chart, Realtime-Update und Save-Flows funktionieren unveraendert.
 - Arzttermine CRUD + Flash-Feedback unveraendert; Done/Speichern stoeren einander nicht.
 - Keine DOM-ID-Aenderungen; Tests/Bookmarks bleiben gueltig.
+
+## v1.7.6 - Modul-Refactor & Supabase Guards
+
+**Smoke**
+- App bootet über `ensureModulesReady()` nur nach erfolgreichem Laden aller Skripte; Login-Overlay und `main()` starten ohne Console-Errors.
+- Supabase-Login/Logout (Google) funktioniert; Capture- und Arzt-Ansicht lassen sich bedienen, inklusive Tabs/Charts nach Modul-Auslagerung.
+- Chart-Panel lässt sich wiederholt öffnen/schließen, ResizeObserver und Pointer-Listener werden bereinigt (keine Memory-Warnungen).
+- Boot bleibt stabil, auch wenn einzelne Module (z. B. `ui-layout.js`) verzögert laden – Fallback-Meldung im Overlay anstatt Crash.
+
+**Sanity**
+- `SupabaseAPI`-Singleton liefert Client/Auth-Status über `ensureSupabaseClient()`, `watchAuthState()`, `requireSession()`; Header-Cache (`getHeaders()`) erneuert Tokens nur einmal parallel (Promise-Lock).
+- `cleanupOldIntake()` nutzt die normalisierte Events-URL (`toEventsUrl()`), toleriert 404-Responses und bleibt idempotent.
+- `ensureModulesReady()` prüft alle benötigten Globals (`bindAuthButtons`, `watchAuthState`, `updateStickyOffsets`, `fmtDE`, `initDB`, `fetchWithAuth`, `ensureSupabaseClient`) und zeigt Fehler erst nach DOMContentLoaded an.
+- PII-Logs: `diag.add()` zeigt keine vollständigen UIDs mehr; `debugLogPii = true` gibt Original-IDs aus, `false` nur Hash/Mask.
+
+**Regression**
+- Alle extrahierten Module (`data-local`, `diagnostics`, `format`, `supabase`, `ui`, `ui-errors`, `ui-layout`, `ui-tabs`, `utils`) exportieren ihre öffentlichen APIs über `window.AppModules.*`; Legacy-Aufrufer finden weiterhin die erwarteten Globs.
+- Capture-Save/Load, Doctor-Refresh und Appointments-Calls liefern identische Ergebnisse wie in v1.7.5.7.
+- Inline-Kommentare (`@refactor`) erscheinen nicht mehr im sichtbaren UI; Script-Lade-Reihenfolge (`diagnostics` → `ui` → `ui-layout`) bleibt stabil.
+
+**Integrity**
+- Supabase.js enthält keine doppelten Funktionsdefinitionen (`grep -n "function withRetry"` → max. 1 Treffer).
+- Singleton/Encapsulation-Test: Mehrfacher `getHeaders()`-Aufruf liefert konsistente Ergebnisse ohne Race-Conditions.
+- Memory-Leak-Test: Mehrfaches `chartPanel.init()`/`destroy()` verändert Listener-Zahl (`getEventListeners(window)`) nicht.
+- Boot-Validation-Test: Entfernen einzelner Module verhindert Start von `main()` und zeigt klaren Hinweis *„Critical module missing“*.
+- Defer-Order-Test: Alle Module laden synchron oder konsistent deferred; Inline-App-Code läuft erst nach `DOMContentLoaded`.
+
