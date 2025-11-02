@@ -1,4 +1,24 @@
-[CHANGELOG.md](https://github.com/user-attachments/files/23197047/CHANGELOG.md)
+## v1.7.6 (PATCH)
+
+Added:
+- Inline JS-Blöcke vollständig in modulare Dateien überführt (`assets/js/data-local.js`, `diagnostics.js`, `format.js`, `supabase.js`, `ui.js`, `ui-errors.js`, `ui-layout.js`, `ui-tabs.js`, `utils.js`); `index.html` lädt nur noch fertige Module und kommentierte Referenzanker.
+- Bridging-Layer (`SupabaseAPI`, `window.*`) exportiert die notwendigen globalen Funktionen (`watchAuthState`, `requireSession`, `bindAuthButtons`, `ensureSupabaseClient`, etc.) und stellt Fallbacks (`setupRealtime`, `teardownRealtime`, `requireDoctorUnlock`) bereit, damit bestehende Aufrufe funktionsfähig bleiben.
+- Boot-Gate `ensureModulesReady()` prüft kritische Globals/Module, zeigt Fehlermeldungen nur nach DOM-Ready an und verhindert inkonsistente Starts.
+
+Changed:
+- Supabase-Clientmodul refaktoriert: State lebt im `supabaseState`-Singleton, Header-Cache mit Promise-Lock, UID/Headers-Getter liefern maskierte IDs; focusTrap-Aufrufe laufen über optionale Module.
+- Konfiguration erzwingt `/rest/v1/health_events` als REST-Endpoint; Hilfsfunktion `toEventsUrl()` normalisiert ggf. falsche Pfade.
+- cleanupOldIntake nutzt die normalisierte Events-URL und bleibt idempotent, selbst wenn keine Einträge vorhanden sind.
+- Kommentaranmerkungen (`@refactor`) in `index.html` wurden konsolidiert (Script-Blöcke → `//`, Markup → `<!-- -->`) damit sie nicht im UI auftauchen.
+
+Fixed:
+- 404 beim DELETE von Intake-Events (Cleanup) dank korrektem Endpoint.
+- Globale Zugriffe auf `sbClient`, `__authState`, `__lastLoggedIn`, `afterLoginBoot`, `watchAuthState`, `baseUrlFromRest` funktionieren wieder wie vor der Modul-Auslagerung.
+- capture-Panel zeigt keine Entwicklungs-Kommentare mehr an; Supabase-Boot verursacht keine `ReferenceError` mehr (setupRealtime/teardownRealtime/requireSession).
+
+Notes:
+- Quellstruktur vorbereitet für weitere Teil-Refactors (Module mit @refactor-Ankern). Funktional keine Änderungen an Business-Logik/Speicherpfaden außer der robusteren Supabase-Anbindung.
+
 ## v1.7.5.7 (PATCH)
 
 Added:

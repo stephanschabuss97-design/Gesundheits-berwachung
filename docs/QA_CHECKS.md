@@ -952,6 +952,23 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 - Gewicht/Body-Bars + Hits klickbar; Zielb�nder greifen nur bei BP.
 - Keine �nderung an Datenberechnung oder Realtime.
 
+## v1.7.6 - Modul-Refactor & Supabase Guards
+
+**Smoke**
+- App bootet Ã¼ber `ensureModulesReady()` nur nach erfolgreichem Laden aller Skripte; Login-Overlay und `main()` starten ohne Console-Errors.
+- Supabase-Login/Logout (Google) funktioniert; Capture- und Arzt-Ansicht lassen sich bedienen, inklusive Tabs/Charts nach Modul-Auslagerung.
+- Chart-Panel lÃ¤sst sich wiederholt Ã¶ffnen/schliessen, ResizeObserver und Pointer-Listener werden bereinigt (keine Memory-Warnungen).
+
+**Sanity**
+- `SupabaseAPI`-Singleton liefert Client/Auth-Status Ã¼ber `ensureSupabaseClient()`, `watchAuthState()`, `requireSession()`; Header-Cache (`getHeaders()`) erneuert Tokens nur einmal parallel.
+- `cleanupOldIntake()` nutzt die normalisierte Events-URL (`toEventsUrl()`), toleriert 404-Responses und bleibt idempotent.
+- `ensureModulesReady()` prÃ¼ft alle benoetigten Globals (`bindAuthButtons`, `watchAuthState`, `updateStickyOffsets`, `fmtDE`, etc.) und zeigt Fehler erst nach DOMContentLoaded an.
+
+**Regression**
+- Alle extrahierten Module (`data-local`, `diagnostics`, `format`, `supabase`, `ui`, `ui-errors`, `ui-layout`, `ui-tabs`, `utils`) exportieren ihre Ã¶ffentlichen APIs Ã¼ber `window.AppModules.*`; Legacy-Aufrufer finden weiterhin die erwarteten Globs.
+- Capture-Save/Load, Doctor-Refresh und Appointments-Calls liefern identische Ergebnisse wie in v1.7.5.7; Logs geben UID nur noch maskiert aus (PII-Flag standardmÃ¤ÃŸig aus).
+- Inline-Kommentare (`@refactor`) erscheinen nicht mehr im sichtbaren UI; Script-Lade-Reihenfolge (diagnostics/ui/ui-layout) bleibt stabil.
+
 ## v1.7.5.7 - Koerper-Chart Palette & Capture Layout
 
 **Smoke**
