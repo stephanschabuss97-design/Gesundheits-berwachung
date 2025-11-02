@@ -10,19 +10,31 @@ import {
   clearHeaderCache
 } from './state.js';
 
+const globalWindow = typeof window !== 'undefined' ? window : undefined;
+const diag =
+  (globalWindow?.diag ||
+    globalWindow?.AppModules?.diag ||
+    globalWindow?.AppModules?.diagnostics ||
+    { add() {} });
+
+const sleep = (ms = 0) =>
+  new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+
 export async function withRetry(fn, { tries = 3, base = 300 } = {}) {
+  let attempts = Number.isFinite(tries) ? Math.floor(tries) : 0;
+  if (attempts <= 0) attempts = 1;
   let lastErr;
-  for (let i = 0; i < tries; i++) {
+  for (let i = 0; i < attempts; i++) {
     try {
       return await fn();
     } catch (e) {
       const code = e?.status ?? e?.response?.status ?? 0;
       if (!(code >= 500 && code < 600)) throw e;
-      await new Promise((r) => setTimeout(r, base * Math.pow(2, i)));
+      await sleep(base * Math.pow(2, i));
       lastErr = e;
     }
   }
-  throw lastErr;
+  throw lastErr ?? new Error('withRetry: all attempts failed');
 }
 
 export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {

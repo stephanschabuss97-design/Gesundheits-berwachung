@@ -32,6 +32,21 @@ const {
 
 const { withRetry, fetchWithAuth } = http;
 
+const verifyImport = (moduleName, name, value, type = 'function') => {
+  const ok =
+    type === 'object'
+      ? value && typeof value === 'object'
+      : typeof value === type;
+  if (!ok) {
+    throw new Error(`Supabase module ${moduleName} missing export: ${name}`);
+  }
+};
+
+verifyImport('core/state', 'supabaseState', supabaseState, 'object');
+verifyImport('core/client', 'ensureSupabaseClient', ensureSupabaseClient);
+verifyImport('core/http', 'withRetry', withRetry);
+verifyImport('core/http', 'fetchWithAuth', fetchWithAuth);
+
 Object.defineProperties(window, {
   sbClient: {
     configurable: true,
@@ -91,136 +106,6 @@ function deactivateFocusTrap() {
   }
 }
 
-// SUBMODULE: withRetry @internal - retries transient 5xx requests with exponential backoff
-async function withRetry(fn, {tries=3, base=300}={}) {
-let lastErr;
-for (let i=0;i<tries;i++){
-try { return await fn(); }
-catch (e) {
-const code = e?.status ?? e?.response?.status ?? 0;
-if (!(code >= 500 && code < 600)) throw e;
-await new Promise(r => setTimeout(r, base * Math.pow(2,i)));
-lastErr = e;
-}
-}
-throw lastErr;
-}
-
-// SUBMODULE: fetchWithAuth @extract-candidate - wraps fetch with Supabase session headers and auto refresh
-async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {
-  const supa = await ensureSupabaseClient();
-  if (!supa) {
-    const err = new Error('auth-client-missing');
-    err.status = 401;
-    try { showLoginOverlay(true); } catch(_) {}
-    throw err;
-  }
-
-  const signalAuth = () => {
-    try { showLoginOverlay(true); } catch(_) {}
-  };
-
-  const loadHeaders = async (forceRefresh = false) => {
-    if (forceRefresh) {
-      diag.add?.(`[auth] refresh start ${tag || 'request'}`);
-      try {
-        await supa.auth.refreshSession();
-      } catch (refreshErr) {
-        diag.add?.(`[auth] refresh error: ${refreshErr?.message || refreshErr}`);
-      }
-      diag.add?.(`[auth] refresh end ${tag || 'request'}`);
-    }
-    const cachedHeaders = getCachedHeaders();
-    const cachedAt = getCachedHeadersAt();
-    if (!forceRefresh && cachedHeaders && cachedAt && (Date.now() - cachedAt) < 5 * 60 * 1000) {
-      diag.add?.('[headers] cache hit');
-      return cachedHeaders;
-    }
-    return await getHeaders();
-  };
-
-  let headers = await loadHeaders(false);
-  if (!headers) {
-    headers = await loadHeaders(true);
-  }
-  if (!headers) {
-    const err = new Error('auth-headers-missing');
-    err.status = 401;
-    signalAuth();
-    throw err;
-  }
-
-  let attempts = 0;
-  let refreshed = false;
-  const max = Math.max(0, maxAttempts);
-
-  while (true) {
-    let res;
-    try {
-      // Per-request soft timeout to avoid hanging saves (e.g., after resume)
-      const REQ_TIMEOUT_MS = 10000;
-      const reqStart = (typeof performance!=="undefined" && typeof performance.now==="function") ? performance.now() : Date.now();
-      diag.add?.(`[auth] request start ${tag || 'request'}`);
-      let timeoutId; let timedOut = false;
-      const timeoutPromise = new Promise((_,reject)=>{
-        timeoutId = setTimeout(()=>{ timedOut = true; reject(new Error('request-timeout')); }, REQ_TIMEOUT_MS);
-      });
-      const fetchPromise = (async ()=>{
-        try { return await makeRequest(headers); }
-        catch(err){ if (!timedOut) throw err; diag.add?.(`[auth] late error ${tag || 'request'}: ${err?.message || err}`); return null; }
-      })();
-      try {
-        res = await Promise.race([fetchPromise, timeoutPromise]);
-      } finally {
-        clearTimeout(timeoutId);
-        const dur = (typeof performance!=="undefined" && typeof performance.now==="function") ? (performance.now()-reqStart) : (Date.now()-reqStart);
-        if (timedOut) { diag.add?.(`[auth] ${tag || 'request'} timeout (${Math.round(dur)} ms)`); }
-      }
-    } catch (err) {
-      if (attempts < max) {
-        attempts += 1;
-        await sleep(200 * attempts);
-        continue;
-      }
-      throw err;
-    }
-
-    if (!res || typeof res.status !== 'number') {
-      const err = new Error('invalid-response');
-      err.status = 0;
-      throw err;
-    }
-
-    if (res.status === 401 || res.status === 403) {
-      if (retry401 && !refreshed) {
-        refreshed = true;
-        diag.add?.(`[auth] ${tag || 'request'} ${res.status} -> refresh`);
-        headers = await loadHeaders(true);
-        if (!headers) {
-          const err = new Error('auth-headers-missing');
-          err.status = res.status;
-          signalAuth();
-          throw err;
-        }
-        attempts = 0;
-        continue;
-      }
-      const err = new Error('auth-http');
-      err.status = res.status;
-      err.response = res;
-      signalAuth();
-      throw err;
-    }
-
-    if (res.status >= 500 && res.status < 600 && attempts < max) {
-      attempts += 1;
-      await sleep(200 * attempts);
-      continue;
-    }
-
-    return res;
-  }
-}
   
 // SUBMODULE: syncWebhook @extract-candidate - posts capture events batch to Supabase with fallbacks
 async function syncWebhook(entry, localId){
@@ -508,6 +393,7 @@ function setConfigStatus(msg, tone = 'info'){
   const colors = { error: '#f87171', success: '#34d399', info: '#9aa3af' };
   el.style.color = colors[tone] || colors.info;
 }
+window.setConfigStatus = setConfigStatus;
 
 function showLoginOverlay(show){
   const ov = document.getElementById('loginOverlay');
@@ -525,6 +411,7 @@ function showLoginOverlay(show){
     deactivateFocusTrap();
   }
 }
+window.showLoginOverlay = showLoginOverlay;
 function setUserUi(email){
   const who = document.getElementById('whoAmI');
   if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
@@ -3167,50 +3054,20 @@ return null;
 }
 }
 
-// SUBMODULE: ensureSupabaseClient @extract-candidate - lazy-inits Supabase client with config guards
-async function ensureSupabaseClient(){
-if (supabaseState.sbClient) return supabaseState.sbClient;
-
-const rest = await getConf("webhookUrl");
-const keyConf = await getConf("webhookKey"); // ANON key (nicht service_role)
-if (!rest || !keyConf) {
-  setConfigStatus('Bitte REST-Endpoint und ANON-Key speichern.', 'error');
-  diag.add("Supabase Auth: fehlende Konfiguration");
-  return null;
-}
-
-// NEU: niemals mit service_role starten
-const trimmedKey = String(keyConf || '').trim();
-if (isServiceRoleKey(trimmedKey)) {
-  setConfigStatus('service_role Schluessel sind nicht erlaubt.', 'error');
-  diag.add("Sicherheitsblock: service_role Key erkannt - Abbruch");
-  return null;
-}
-
-const supabaseUrl = baseUrlFromRest(rest);
-const anonKey = trimmedKey.replace(/^Bearer\s+/i,"");
-if (!supabaseUrl) {
-  setConfigStatus('REST-Endpoint ist ungueltig.', 'error');
-  diag.add("Supabase Auth: ungueltige URL");
-  return null;
-}
-if (!anonKey) {
-  setConfigStatus('ANON-Key ist ungueltig.', 'error');
-  diag.add("Supabase Auth: ungueltiger Key");
-  return null;
-}
-
-supabaseState.sbClient = window.supabase.createClient(supabaseUrl, anonKey, {
-auth: { persistSession:false, autoRefreshToken:true, detectSessionInUrl:true } // Session nur im RAM
-});
-diag.add("Supabase: Client (Auth) initialisiert");
-setConfigStatus('', 'info');
-return supabaseState.sbClient;
-}
+// Public Supabase API surface - intentional exports only
 const supabaseApi = {
-  ...state,
-  ...client,
-  ...http,
+  withRetry,
+  fetchWithAuth,
+  cacheHeaders,
+  clearHeaderCache,
+  getCachedHeaders,
+  getCachedHeadersAt,
+  getHeaderPromise,
+  setHeaderPromise,
+  setSupabaseDebugPii,
+  maskUid,
+  baseUrlFromRest,
+  ensureSupabaseClient,
   syncWebhook,
   patchDayFlags,
   appendNoteRemote,
@@ -3225,9 +3082,7 @@ const supabaseApi = {
   syncCaptureToggles,
   bindAuthButtons,
   fetchDailyOverview,
-  baseUrlFromRest,
   deleteRemoteDay,
-  ensureSupabaseClient,
   afterLoginBoot,
   requireSession,
   watchAuthState,
@@ -3235,7 +3090,7 @@ const supabaseApi = {
   requireDoctorUnlock: (...args) => (window.requireDoctorUnlock || defaultRequireDoctorUnlock)(...args),
   resumeFromBackground: (...args) => (window.resumeFromBackground || defaultResumeFromBackground)(...args),
   getUserId,
-  isLoggedInFast,
+  isLoggedInFast
 };
 export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
