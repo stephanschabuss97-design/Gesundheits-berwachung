@@ -1,4 +1,4 @@
-﻿/** MODULE: supabase/auth/guard.js â€” Access Control @v1.8.1 */
+/** MODULE: supabase/auth/guard.js - Access Control @v1.8.1 */
 
 import { isLoggedInFast } from './core.js';
 import { showLoginOverlay } from './ui.js';
@@ -209,7 +209,7 @@ const configureLockOverlay = ({
       ? ''
       : webAuthnAvailable
       ? 'Bitte zuerst Passkey einrichten.'
-      : 'Passkey/WebAuthn nicht verfÃ¼gbar.';
+      : 'Passkey/WebAuthn nicht verfügbar.';
   }
   const setupBtn = document.getElementById('setupPasskeyBtn');
   if (setupBtn) {
@@ -483,7 +483,7 @@ export async function requireDoctorUnlock() {
     configureLockOverlay({
       hasPasskey: true,
       webAuthnAvailable: true,
-      message: 'Entsperren abgebrochen â€“ du kannst Passkey erneut versuchen oder PIN nutzen.'
+      message: 'Entsperren abgebrochen – du kannst Passkey erneut versuchen oder PIN nutzen.'
     });
     lockUi(true);
     return false;
@@ -503,7 +503,7 @@ export async function requireDoctorUnlock() {
   configureLockOverlay({
     hasPasskey,
     webAuthnAvailable: false,
-    message: 'Passkey / Windows Hello ist nicht verfÃ¼gbar. Bitte PIN verwenden.'
+    message: 'Passkey / Windows Hello ist nicht verfügbar – bitte PIN verwenden.'
   });
   lockUi(true);
   return false;
@@ -757,7 +757,3 @@ export const authGuardState = {
     __pendingAfterUnlock = val;
   }
 };
-
-
-
-
