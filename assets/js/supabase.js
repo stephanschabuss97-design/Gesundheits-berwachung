@@ -773,6 +773,8 @@ async function afterLoginBoot(){
   requestUiRefresh({ reason: 'boot:afterLogin' }).catch(err => diag.add?.('ui refresh err: ' + (err?.message || err)));
 }
 
+window.afterLoginBoot = afterLoginBoot;
+
 /* ===== CSV/JSON export (Daily) ===== */
 function dl(filename, content, mime){
 const a = document.createElement("a");
@@ -3121,6 +3123,8 @@ if(!restUrl) return null;
 const i = restUrl.indexOf("/rest/");
 return i>0 ? restUrl.slice(0, i) : null;
 }
+window.baseUrlFromRest = baseUrlFromRest;
+
 
 // SUBMODULE: getUserId @public - resolves current Supabase auth user with timeout fallbacks
 async function getUserId(){
@@ -3237,8 +3241,10 @@ const supabaseApi = {
   syncCaptureToggles,
   bindAuthButtons,
   fetchDailyOverview,
+  baseUrlFromRest,
   deleteRemoteDay,
   ensureSupabaseClient,
+  afterLoginBoot,
   requireSession,
   watchAuthState,
   setupRealtime: (...args) => (window.setupRealtime || defaultSetupRealtime)(...args),
