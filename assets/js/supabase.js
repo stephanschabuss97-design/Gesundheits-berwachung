@@ -48,6 +48,16 @@ const supabaseLog = { debugLogPii: false };
 const defaultSetupRealtime = async () => undefined;
 const defaultRequireDoctorUnlock = async () => true;
 const defaultResumeFromBackground = async () => undefined;
+function toEventsUrl(restUrl) {
+  try {
+    const url = String(restUrl || '').trim();
+    if (!url) return null;
+    return url.replace(/(\/rest\/v1\/)[^/?#]+/i, '$1health_events');
+  } catch (_) {
+    return restUrl;
+  }
+}
+
 const noopRealtime = () => undefined;
 if (typeof window.teardownRealtime !== 'function') {
   window.teardownRealtime = noopRealtime;
@@ -647,6 +657,10 @@ if (saveBtn) saveBtn.addEventListener('click', async ()=>{
   }
   if (!/\/rest\/v1\//i.test(rawRest)){
     setConfigStatus('REST-Endpoint muss /rest/v1/ enthalten.', 'error');
+    return;
+  }
+  if (!/\/rest\/v1\/health_events(?:[/?#]|$)/i.test(rawRest)){
+    setConfigStatus('Endpoint muss auf /rest/v1/health_events zeigen.', 'error');
     return;
   }
   try {
@@ -2877,7 +2891,8 @@ async function saveIntakeTotalsRpc({ dayIso, totals }){
 // SUBMODULE: cleanupOldIntake @internal - prunes stale intake events prior to today
 async function cleanupOldIntake(){
   try{
-    const url = await getConf('webhookUrl');
+    const rawUrl = await getConf('webhookUrl');
+    const url = toEventsUrl(rawUrl);
     const uid = await getUserId();
     if (!url || !uid) return;
     const today = todayStr();
