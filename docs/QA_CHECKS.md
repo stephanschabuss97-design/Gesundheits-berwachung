@@ -1004,3 +1004,24 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 - `ensureSupabaseClient()` nutzt weiterhin gespeicherte REST/Key-Konfiguration und liefert denselben Client (kein mehrfaches Re-Init).
 - `fetchWithAuth()` führt Requests durch und verwendet weiterhin den Header-Cache (401-Refresh, Timeout-Handling) über `SupabaseAPI`.
 - `baseUrlFromRest`, `maskUid`, Header-Cache-Helfer (`cacheHeaders` etc.) bleiben via `SupabaseAPI` und globale Window-Bindings erreichbar.
+
+## v1.8.0 – Supabase Refactor (Phase 1–2)
+
+Smoke
+- App bootet fehlerfrei mit `type="module"`-Skripten in `index.html`.
+- `SupabaseAPI` verfügbar: `Object.keys(window.AppModules.supabase)` zeigt Core- und Auth-Keys.
+- `ensureSupabaseClient()` und `fetchWithAuth()` funktionieren; Requests laufen mit gültigen Headern.
+- Auth: `watchAuthState()` feuert und `requireSession()` schützt geschützte Views; Overlay-Hooks werden getriggert.
+
+Sanity
+- Core-Module trennen Zustände/Client/HTTP: `core/state.js`, `core/client.js`, `core/http.js` exportieren nur öffentliche Symbole.
+- `getConfSafe()` gibt `null` zurück, wenn `window.getConf` fehlt, und warnt klar; `createClient` wird nur bei vorhandenem `window.supabase` aufgerufen.
+- `withRetry(tries)` validiert Eingaben; bei Fehlschlag wird eine aussagekräftige Fehlermeldung geworfen (kein `undefined`).
+- `http.js` verfügt über `sleep()` und einen sicheren `diag`-Fallback, sodass `diag.add?.(...)` nicht crasht.
+- Auth-Hooks: `initAuth({ onStatus, onLoginOverlay, onUserUi })` initialisiert sauber; `watchAuthState()` liefert ein Subscription-Objekt (Unsubscribe möglich).
+
+Regression
+- Keine Logikänderungen: Funktionsnamen und Verhalten unverändert; Kompatibilitäts-Proxies in `supabase.js` halten bestehende Aufrufer stabil.
+- Keine doppelten Definitionen mehr (z. B. `baseUrlFromRest`, `withRetry`, `fetchWithAuth`).
+- UTF‑8-Kodierung der UI-Texte korrigiert (z. B. „lädt“, „verfügbar“) und fehlerhafte Trennstriche ersetzt.
+- WebAuthn- und Guard-Hilfsfunktionen verhalten sich sicher: RNG/Hashing werfen bei fehlender Plattformunterstützung.

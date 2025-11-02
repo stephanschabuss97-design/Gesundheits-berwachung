@@ -1,3 +1,27 @@
+## v1.8.0 – Supabase Refactor (Phase 1–2)
+
+Added:
+- Core-Layer extrahiert aus `assets/js/supabase.js` in `assets/js/supabase/core/{state.js, client.js, http.js}` mit sauberen Exports und Header-Kommentaren.
+- Auth-Layer modularisiert unter `assets/js/supabase/auth/{core.js, ui.js, guard.js, index.js}`; `initAuth(hooks)` eingeführt (onStatus/onLoginOverlay/onUserUi).
+- Neues Barrel `assets/js/supabase/index.js` bündelt Core + Auth und spiegelt `SupabaseAPI` unter `window.AppModules.supabase`.
+- `index.html` auf ES-Module umgestellt und Boot-Init mit `readyState`-Fallback umgesetzt (`SupabaseAPI.initAuth(...)`).
+
+Changed:
+- `assets/js/supabase.js` zu ESM konvertiert; interne Core-/Auth-Blöcke entfernt und durch Proxies auf die neuen Module ersetzt (keine Logikänderungen, keine Umbenennungen).
+- Öffentliche API explizit weitergereicht: `ensureSupabaseClient`, `fetchWithAuth`, `withRetry`, `isLoggedInFast`, `requireSession`, `watchAuthState`, `getUserId`, `bindAuthButtons`, `requireDoctorUnlock`, `setDoctorAccess` u. a.
+- Robustere Initialisierung: Laufzeit-Checks auf benötigte Exporte und hilfreiche Fehlermeldungen anstatt stummer Fehler.
+
+Fixed:
+- Doppelte Definitionen/Kollisionen (z. B. `baseUrlFromRest`, `withRetry`, `fetchWithAuth`) entfernt; Syntaxfehler (überzählige `}`) bereinigt.
+- `withRetry` validiert `tries` und wirft stets eine aussagekräftige Exception; fehlendes `sleep` ergänzt; `diag`-Fallback eingeführt.
+- `client.js`: fehlende Imports/Guards ergänzt (`getConfSafe` gibt `null` zurück und warnt, `window.supabase`-Check vor `createClient`).
+- Auth-Core: `watchAuthState` gibt Subscription zurück (Unsubscribe möglich), `callLoginOverlay` stoppt Fallback nach erfolgreichem Hook.
+- Auth-Guard: sichere RNG-Prüfung für `u8()`, strikte Fehler bei `base64`/`sha256`/`derivePinHash`, WebAuthn `rp.id` nur bei validen Domains, Texte mit korrektem UTF‑8.
+
+Notes:
+- Phase 3 (API + Realtime) ist vorbereitet: Barrel-Struktur steht; Proxies in `supabase.js` ermöglichen nahtloses Nachziehen ohne Downtime.
+- Keine Business-Logik geändert; ausschließlich Struktur, Exports/Imports und Robustheit verbessert.
+
 ## v1.7.6 (PATCH)
 
 Added:
