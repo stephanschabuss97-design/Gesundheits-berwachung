@@ -1647,7 +1647,14 @@ details[hidden] {
 <script src="assets/js/ui-tabs.js"></script>
 
 <script>
-const getSupabaseApi = () => window.SupabaseAPI || {};
+const getSupabaseApi = () => {
+  const api = window.SupabaseAPI;
+  if (!api) {
+    console.error('[BOOT] SupabaseAPI nicht geladen – prüfe assets/js/supabase/index.js / Script-Reihenfolge.');
+    return null;
+  }
+  return api;
+};
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
   const fn = getSupabaseApi()?.[name];
