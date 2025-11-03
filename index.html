@@ -1683,6 +1683,7 @@ const requireSession = createSupabaseFn('requireSession');
 const watchAuthState = createSupabaseFn('watchAuthState');
 const bindAuthButtons = createSupabaseFn('bindAuthButtons');
 const afterLoginBoot = createSupabaseFn('afterLoginBoot');
+const baseUrlFromRest = createSupabaseFn('baseUrlFromRest');
 
 /** MODULE: CONFIG
  * intent: Laufzeit-Defaults fuer Feature-Toggles und Termin-Rollen der App
@@ -1894,38 +1895,6 @@ function isServiceRoleKey(raw){
   }
 }
 
-// ANKER: sb-rest
-// SUBMODULE: sbSelect @internal - abstracts Supabase REST GET with auth headers
-async function sbSelect({ table, select, filters = [], order = null, limit = null }) {
-  // Basis-URL aus gespeicherter REST-URL ableiten (z. B. .../rest/v1/health_events)
-  const restUrl = await getConf("webhookUrl");
-  const base    = baseUrlFromRest(restUrl);
-  if (!base) {
-    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
-    const err = new Error("REST-Basis fehlt");
-    err.status = 0;
-    throw err;
-  }
-
-  const url = new URL(`${base}/rest/v1/${table}`);
-  if (select) url.searchParams.set('select', select);
-  for (const [k, v] of filters) url.searchParams.set(k, v);
-  if (order) url.searchParams.set('order', order);
-  if (limit) url.searchParams.set('limit', String(limit));
-
-  // WICHTIG: mit User-JWT lesen (RLS)!
-  const res = await fetchWithAuth(
-    headers => fetch(url.toString(), { headers }),
-    { tag: `sbSelect:${table}`, maxAttempts: 2 }
-  );
-  if (!res.ok) {
-    let details = '';
-    try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
-    throw new Error(`REST ${table} failed ${res.status} - ${details}`);
-  }
-  return await res.json();
-}
-  
 // ANCHOR: num-helper-de
 function toNumDE(s) {
   if (s == null) return null;
@@ -2234,7 +2203,8 @@ const REQUIRED_SUPABASE_EXPORTS = [
   'requireSession',
   'watchAuthState',
   'bindAuthButtons',
-  'afterLoginBoot'
+  'afterLoginBoot',
+  'baseUrlFromRest'
 ];
 
 function resolveGlobal(path) {

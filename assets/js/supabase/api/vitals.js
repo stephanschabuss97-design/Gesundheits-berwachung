@@ -1,9 +1,7 @@
 /** MODULE: supabase/api/vitals.js — extracted from supabase.js @v1.8.1 */
 
-import { baseUrlFromRest } from '../core/client.js';
-import { fetchWithAuth } from '../core/http.js';
-import { setConfigStatus } from '../auth/ui.js';
 import { getUserId } from '../auth/core.js';
+import { sbSelect } from './select.js';
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
@@ -11,16 +9,6 @@ const diag =
     globalWindow?.AppModules?.diag ||
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
-
-const getConf = (...args) => {
-  const fn = globalWindow?.getConf;
-  if (typeof fn !== 'function') return Promise.resolve(null);
-  try {
-    return Promise.resolve(fn(...args));
-  } catch (err) {
-    return Promise.reject(err);
-  }
-};
 
 const calcMAPValue = (sys, dia) => {
   const fn = globalWindow?.calcMAP;
@@ -35,39 +23,6 @@ const calcMAPValue = (sys, dia) => {
     console.warn('Supabase vitals calcMAP error', { sys, dia, error: err });
     return null;
   }
-};
-
-const sbSelect = async ({ table, select, filters = [], order = null, limit = null }) => {
-  const restUrl = await getConf('webhookUrl');
-  const base = baseUrlFromRest(restUrl);
-  if (!base) {
-    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
-    const err = new Error('REST-Basis fehlt');
-    err.status = 0;
-    throw err;
-  }
-
-  const url = new URL(`${base}/rest/v1/${table}`);
-  if (select) url.searchParams.set('select', select);
-  for (const [key, value] of filters) url.searchParams.set(key, value);
-  if (order) url.searchParams.set('order', order);
-  if (limit) url.searchParams.set('limit', String(limit));
-
-  const res = await fetchWithAuth(
-    (headers) => fetch(url.toString(), { headers }),
-    { tag: `sbSelect:${table}`, maxAttempts: 2 }
-  );
-  if (!res.ok) {
-    let details = '';
-    try {
-      const errJson = await res.json();
-      details = errJson?.message || errJson?.details || '';
-    } catch (_) {
-      /* ignore */
-    }
-    throw new Error(`REST ${table} failed ${res.status} - ${details}`);
-  }
-  return await res.json();
 };
 
 export async function loadBpFromView({ user_id, from, to }) {

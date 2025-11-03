@@ -10,6 +10,7 @@ import * as realtime from './realtime/index.js';
 import * as intake from './api/intake.js';
 import * as vitals from './api/vitals.js';
 import * as notes from './api/notes.js';
+import * as select from './api/select.js';
 
 const MODULE_SOURCES = [
   ['legacy', LegacySupabaseAPI],
@@ -20,7 +21,8 @@ const MODULE_SOURCES = [
   ['realtime', realtime],
   ['intake', intake],
   ['vitals', vitals],
-  ['notes', notes]
+  ['notes', notes],
+  ['select', select]
 ];
 
 const owners = Object.create(null);
