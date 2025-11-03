@@ -1647,6 +1647,36 @@ details[hidden] {
 <script src="assets/js/ui-tabs.js"></script>
 
 <script>
+const getSupabaseApi = () => window.SupabaseAPI || {};
+const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
+const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
+  const fn = getSupabaseApi()?.[name];
+  if (typeof fn !== 'function') {
+    if (optional) return undefined;
+    throw new Error(`SupabaseAPI.${name} fehlt`);
+  }
+  return fn(...args);
+};
+
+const fetchWithAuth = createSupabaseFn('fetchWithAuth');
+const ensureSupabaseClient = createSupabaseFn('ensureSupabaseClient');
+const getUserId = createSupabaseFn('getUserId');
+const isLoggedInFast = createSupabaseFn('isLoggedInFast');
+const syncWebhook = createSupabaseFn('syncWebhook');
+const loadIntakeToday = createSupabaseFn('loadIntakeToday');
+const saveIntakeTotalsRpc = createSupabaseFn('saveIntakeTotalsRpc');
+const cleanupOldIntake = createSupabaseFn('cleanupOldIntake');
+const fetchDailyOverview = createSupabaseFn('fetchDailyOverview');
+const deleteRemoteDay = createSupabaseFn('deleteRemoteDay');
+const syncCaptureToggles = createSupabaseFn('syncCaptureToggles');
+const setupRealtime = createSupabaseFn('setupRealtime');
+const setConfigStatus = createSupabaseFn('setConfigStatus');
+const showLoginOverlay = createSupabaseFn('showLoginOverlay');
+const requireSession = createSupabaseFn('requireSession');
+const watchAuthState = createSupabaseFn('watchAuthState');
+const bindAuthButtons = createSupabaseFn('bindAuthButtons');
+const afterLoginBoot = createSupabaseFn('afterLoginBoot');
+
 /** MODULE: CONFIG
  * intent: Laufzeit-Defaults fuer Feature-Toggles und Termin-Rollen der App
  * contracts: stellt DEV_ALLOW_DEFAULTS und APPOINTMENT_ROLES fuer AUTH, DATA ACCESS, UI bereit
@@ -2046,9 +2076,9 @@ el.style.outline = '';
  * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
  */
 // SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
-// Dep: expects SupabaseAPI helpers (assets/js/supabase.js) to be registered on window.
+// Dep: expects SupabaseAPI helpers (assets/js/supabase/index.js) to be ready.
 async function getHeaders({ forceRefresh = false } = {}) {
-  const supaApi = window.SupabaseAPI || {};
+  const supaApi = getSupabaseApi();
   const maxAgeMs = 5 * 60 * 1000;
 
   if (!forceRefresh) {
@@ -2169,28 +2199,6 @@ const REQUIRED_GLOBALS = [
   'getAllEntries',
   'getEntryByRemoteId',
   'deleteEntryLocal',
-  'SupabaseAPI',
-  'fetchWithAuth',
-  'ensureSupabaseClient',
-  'getUserId',
-  'isLoggedInFast',
-  'syncWebhook',
-  'patchDayFlags',
-  'appendNoteRemote',
-  'deleteRemote',
-  'loadIntakeToday',
-  'saveIntakeTotals',
-  'saveIntakeTotalsRpc',
-  'cleanupOldIntake',
-  'loadBpFromView',
-  'loadBodyFromView',
-  'loadFlagsFromView',
-  'syncCaptureToggles',
-  'fetchDailyOverview',
-  'deleteRemoteDay',
-  'setupRealtime',
-  'requireDoctorUnlock',
-  'resumeFromBackground',
   'fmtDE',
   'updateLifestyleBars',
   'AppModules.uiCore.helpPanel',
@@ -2201,6 +2209,27 @@ const REQUIRED_GLOBALS = [
   'AppModules.uiLayout.ensureNotObscured'
 ];
 
+const REQUIRED_SUPABASE_EXPORTS = [
+  'fetchWithAuth',
+  'ensureSupabaseClient',
+  'getUserId',
+  'isLoggedInFast',
+  'syncWebhook',
+  'loadIntakeToday',
+  'saveIntakeTotalsRpc',
+  'cleanupOldIntake',
+  'fetchDailyOverview',
+  'deleteRemoteDay',
+  'syncCaptureToggles',
+  'setupRealtime',
+  'setConfigStatus',
+  'showLoginOverlay',
+  'requireSession',
+  'watchAuthState',
+  'bindAuthButtons',
+  'afterLoginBoot'
+];
+
 function resolveGlobal(path) {
   return path.split('.').reduce((acc, part) => {
     if (acc == null) return undefined;
@@ -2209,7 +2238,10 @@ function resolveGlobal(path) {
 }
 
 function ensureModulesReady() {
-  const missing = REQUIRED_GLOBALS.filter((name) => typeof resolveGlobal(name) === "undefined");
+  const missingGlobals = REQUIRED_GLOBALS.filter((name) => typeof resolveGlobal(name) === "undefined");
+  const missingSupa = REQUIRED_SUPABASE_EXPORTS.filter((name) => !hasSupabaseFn(name))
+    .map((name) => `SupabaseAPI.${name}`);
+  const missing = [...missingGlobals, ...missingSupa];
   if (!missing.length) return true;
   const message = `Fehler: Module fehlen (${missing.join(', ')})`;
   let displayed = false;
