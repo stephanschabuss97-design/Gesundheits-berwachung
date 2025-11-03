@@ -14,6 +14,10 @@ import * as http from './supabase/core/http.js';
 import * as authCore from './supabase/auth/core.js';
 import * as authUi from './supabase/auth/ui.js';
 import * as authGuard from './supabase/auth/guard.js';
+import * as intake from './supabase/api/intake.js';
+import * as vitals from './supabase/api/vitals.js';
+import * as notes from './supabase/api/notes.js';
+import * as realtime from './supabase/realtime/index.js';
 
 const {
   supabaseState,
@@ -59,6 +63,27 @@ verifyImport('auth/ui', 'showLoginOverlay', authUi.showLoginOverlay);
 verifyImport('auth/ui', 'hideLoginOverlay', authUi.hideLoginOverlay);
 verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
 
+const syncWebhook = (...args) => notes.syncWebhook(...args);
+const patchDayFlags = (...args) => notes.patchDayFlags(...args);
+const appendNoteRemote = (...args) => notes.appendNoteRemote(...args);
+const deleteRemote = (...args) => notes.deleteRemote(...args);
+const deleteRemoteDay = (...args) => notes.deleteRemoteDay(...args);
+
+const loadIntakeToday = (...args) => intake.loadIntakeToday(...args);
+const saveIntakeTotals = (...args) => intake.saveIntakeTotals(...args);
+const saveIntakeTotalsRpc = (...args) => intake.saveIntakeTotalsRpc(...args);
+const cleanupOldIntake = (...args) => intake.cleanupOldIntake(...args);
+
+const loadBpFromView = (...args) => vitals.loadBpFromView(...args);
+const loadBodyFromView = (...args) => vitals.loadBodyFromView(...args);
+const loadFlagsFromView = (...args) => vitals.loadFlagsFromView(...args);
+const fetchDailyOverview = (...args) => vitals.fetchDailyOverview(...args);
+
+const setupRealtimeProxy = (...args) => realtime.setupRealtime(...args);
+const teardownRealtimeProxy = (...args) => realtime.teardownRealtime(...args);
+const resumeFromBackgroundProxy = (...args) => realtime.resumeFromBackground(...args);
+const toEventsUrl = (...args) => realtime.toEventsUrl(...args);
+
 Object.defineProperties(window, {
   sbClient: {
     configurable: true,
@@ -77,28 +102,7 @@ Object.defineProperties(window, {
   }
 });
 
-const defaultSetupRealtime = async () => undefined;
 const defaultRequireDoctorUnlock = async () => true;
-const defaultResumeFromBackground = async () => undefined;
-function toEventsUrl(restUrl) {
-  try {
-    const url = String(restUrl || '').trim();
-    if (!url) return null;
-    return url.replace(/(\/rest\/v1\/)[^/?#]+/i, '$1health_events');
-  } catch (_) {
-    return restUrl;
-  }
-}
-
-const noopRealtime = () => undefined;
-if (typeof window.teardownRealtime !== 'function') {
-  window.teardownRealtime = noopRealtime;
-}
-
-
-if (typeof window.setupRealtime !== 'function') {
-  window.setupRealtime = defaultSetupRealtime;
-}
 
 function getUiCore() {
   return (window.AppModules && window.AppModules.uiCore) || {};
@@ -120,193 +124,6 @@ function deactivateFocusTrap() {
 
   
 // SUBMODULE: syncWebhook @extract-candidate - posts capture events batch to Supabase with fallbacks
-async function syncWebhook(entry, localId){
-  const url = await getConf("webhookUrl");
-  if(!url){
-    const err = new Error("syncWebhook: missing webhookUrl");
-    err.status = 401;
-    showLoginOverlay(true);
-    throw err;
-  }
-
-  try{
-    const uid = await getUserId();
-    const events = toHealthEvents(entry);
-    if (!events.length){
-      diag.add("Webhook: keine Events zu senden");
-      return;
-    }
-
-    const payload = events.map(ev => (uid ? { ...ev, user_id: uid } : ev));
-    const res = await fetchWithAuth(
-      headers => fetch(url, { method:"POST", headers, body: JSON.stringify(payload) }),
-      { tag: 'webhook:post', maxAttempts: 2 }
-    );
-
-    if(!res.ok){
-      let details = "";
-      try {
-        const e = await res.clone().json();
-        details = (e?.message || e?.details || "");
-      } catch { /* plain text? */ }
-
-      if (res.status === 409 || /duplicate|unique/i.test(details)) {
-        const flagsEv = events.find(ev => ev.type === 'day_flags');
-        try {
-          if (flagsEv && uid) {
-            const dayIso = entry.date;
-            await patchDayFlags({ user_id: uid, dayIso, flags: flagsEv.payload });
-            const others = events.filter(ev => ev.type !== 'day_flags');
-            if (others.length) {
-              const res2 = await fetchWithAuth(
-                headers => fetch(url, { method: "POST", headers, body: JSON.stringify(others.map(ev => ({ ...ev, user_id: uid }))) }),
-                { tag: 'webhook:fallback', maxAttempts: 2 }
-              );
-              if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
-            }
-            uiInfo("Flags aktualisiert.");
-            diag.add("Fallback: day_flags via PATCH");
-            return;
-          }
-        } catch (_) { /* fallback failed */ }
-        const noteEv = events.find(ev => ev.type === 'note');
-        try {
-          if (noteEv && uid) {
-            const dayIso = entry.date;
-            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent: noteEv });
-            await updateEntry(localId, { remote_id: merged?.id ?? -1 });
-            uiInfo('Kommentar aktualisiert.');
-            diag.add('Fallback: note via PATCH');
-            return;
-          }
-        } catch (_) { /* fallback failed */ }
-      }
-
-      if (res.status === 409 || /duplicate|unique/i.test(details)) {
-        uiError("Es gibt bereits einen Eintrag fuer diesen Tag/Kontext.");
-      } else if (res.status === 422 || /invalid|range|pflicht|check constraint/i.test(details)) {
-        uiError("Eingaben ungueltig - bitte Wertebereiche/Pflichtfelder pruefen.");
-      } else {
-        uiError(`Speichern fehlgeschlagen (HTTP ${res.status}).`);
-      }
-
-      diag.add(`Webhook-Fehler ${res.status}: ${details || "-"}`);
-      const err = new Error(`save-failed-${res.status}`);
-      err.status = res.status;
-      err.details = details;
-      throw err;
-    }
-
-    const json = await res.json();
-    const firstId = json?.[0]?.id ?? null;
-    if(firstId != null){
-      await updateEntry(localId, { remote_id: firstId });
-      uiInfo("Gespeichert.");
-      diag.add(`Webhook: OK (${events.length} Event(s))`);
-    } else {
-      uiError("Unerwartete Antwort vom Server - kein Datensatz zurueckgegeben.");
-    }
-  }catch(e){
-    if (e?.status === 401 || e?.status === 403) {
-      uiError("Bitte erneut anmelden, um weiter zu speichern.");
-    } else {
-      uiError("Netzwerkfehler beim Speichern. Bitte spaeter erneut versuchen.");
-    }
-    diag.add("Webhook: Netzwerkfehler");
-    throw e;
-  }
-}
-
-// SUBMODULE: patchDayFlags @internal - updates day_flags row for given user/day with new payload
-async function patchDayFlags({ user_id, dayIso, flags }){
-  const url = await getConf("webhookUrl");
-  if (!url || !user_id || !dayIso) {
-    const err = new Error('patchDayFlags: missing params');
-    err.status = 401;
-    throw err;
-  }
-
-  const from = `${dayIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.day_flags`+
-            `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  const res = await fetchWithAuth(
-    headers => fetch(q, { method: 'PATCH', headers, body: JSON.stringify({ payload: flags }) }),
-    { tag: 'flags:patch', maxAttempts: 2 }
-  );
-  if (!res.ok) {
-    let details = '';
-    try { const e = await res.json(); details = e?.message || e?.details || ''; } catch {}
-    throw new Error(`patch day_flags failed ${res.status} - ${details}`);
-  }
-  return await res.json();
-}
-
-// SUBMODULE: appendNoteRemote @internal - upserts note events for a day via REST
-async function appendNoteRemote(opts){
-  const { user_id, dayIso, noteEvent } = opts || {};
-  const url = await getConf("webhookUrl");
-  if (!url || !user_id || !dayIso) {
-    const err = new Error('appendNoteRemote: missing params');
-    err.status = 401;
-    throw err;
-  }
-
-  const from = `${dayIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate() + 1);
-  const toIso = toNext.toISOString().slice(0, 10);
-  const baseQuery = `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.note`
-                  + `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-
-  const resGet = await fetchWithAuth(
-    headers => fetch(baseQuery, { method: 'GET', headers }),
-    { tag: 'note:get', maxAttempts: 2 }
-  );
-  if (!resGet.ok) throw new Error(`note-get-failed-${resGet.status}`);
-  const rows = await resGet.json();
-  const existing = Array.isArray(rows) && rows[0] ? rows[0] : null;
-
-  const addition = (noteEvent?.payload?.text || '').trim();
-  if (!addition) {
-    return existing ? { id: existing.id, text: existing?.payload?.text || '' } : { id: null, text: '' };
-  }
-
-  const combineText = (prev, add) => {
-    if (!prev) return add;
-    return `${prev.trim()}
-${add}`.trim();
-  };
-
-  if (existing) {
-    const combined = combineText(existing?.payload?.text || '', addition);
-    const patchRes = await fetchWithAuth(
-      headers => fetch(`${url}?id=eq.${encodeURIComponent(existing.id)}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ payload: { text: combined } })
-      }),
-      { tag: 'note:patch', maxAttempts: 2 }
-    );
-    if (!patchRes.ok) throw new Error(`note-patch-failed-${patchRes.status}`);
-    const patched = await patchRes.json().catch(() => null);
-    const patchedId = patched?.[0]?.id ?? existing.id;
-    return { id: patchedId, text: combined };
-  }
-
-  const body = [{ ...noteEvent, user_id }];
-  const postRes = await fetchWithAuth(
-    headers => fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }),
-    { tag: 'note:post', maxAttempts: 2 }
-  );
-  if (!postRes.ok) throw new Error(`note-post-failed-${postRes.status}`);
-  const created = await postRes.json().catch(() => null);
-  const newId = created?.[0]?.id ?? null;
-  return { id: newId, text: addition };
-}
-
-// SUBMODULE: pushPendingToRemote @internal - flushes unsynced local entries to Supabase
 async function pushPendingToRemote(){
   const url = await getConf("webhookUrl");
   if(!url) return { pushed:0, failed:0 };
@@ -2344,224 +2161,6 @@ return saved;
 
 
 // SUBMODULE: deleteRemote @internal - deletes single health_event via REST endpoint
-async function deleteRemote(remote_id){
-  const url = await getConf("webhookUrl");
-  if(!url || !remote_id) return {ok:false};
-  const q = `${url}?id=eq.${encodeURIComponent(remote_id)}`;
-  try{
-    const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete', maxAttempts: 2 });
-    return {ok: res.ok, status: res.status};
-  }catch(e){
-    return {ok:false, status: e?.status ?? 0};
-  }
-}
-
-// SUBMODULE: loadIntakeToday @internal - holt Tagesintake via REST health_events view
-async function loadIntakeToday({ user_id, dayIso }){
-  if (!user_id) return null;
-  diag.add?.(`[capture] loadIntakeToday start uid=${maskUid(user_id)} day=${dayIso||''}`);
-  const baseDay = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso || '')) ? dayIso : todayStr();
-
-  const rows = await sbSelect({
-    table: 'health_events',
-    select: 'id,payload',
-    filters: [
-      ['user_id', `eq.${user_id}`],
-      ['type', 'eq.intake'],
-      ['day', `eq.${baseDay}`]
-    ],
-    order: 'ts.desc',
-    limit: 1
-  });
-  const r = Array.isArray(rows) && rows.length ? rows[0] : null;
-  const p = r?.payload || {};
-  diag.add?.(`[capture] loadIntakeToday done id=${r?.id || 'null'} payload=${JSON.stringify(p)}`);
-  return {
-    id: r?.id ?? null,
-    water_ml: Number(p.water_ml || 0),
-    salt_g: Number(p.salt_g || 0),
-    protein_g: Number(p.protein_g || 0)
-  };
-}
-
-// SUBMODULE: saveIntakeTotals @public - legacy POST fallback wenn RPC fehlt
-async function saveIntakeTotals({ dayIso, totals }){
-  const url = await getConf("webhookUrl");
-  const uid = await getUserId();
-  if (!url || !uid) {
-    const errMissing = new Error("saveIntakeTotals: missing config/auth");
-    errMissing.status = 401;
-    throw errMissing;
-  }
-
-  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||"")) ? dayIso : todayStr();
-  const ts = dayIsoToMidnightIso(dayIsoNorm) || new Date().toISOString();
-  const payloadTotals = {
-    water_ml: Number(totals?.water_ml || 0),
-    salt_g: Number(totals?.salt_g || 0),
-    protein_g: Number(totals?.protein_g || 0),
-  };
-  const payload = [{ ts, type: 'intake', payload: payloadTotals, user_id: uid }];
-
-  diag.add?.('[capture] fetch start intake:post');
-  const res = await fetchWithAuth(
-    headers => fetch(url, { method:'POST', headers, body: JSON.stringify(payload) }),
-    { tag: 'intake:post', maxAttempts: 2 }
-  );
-
-  if (res.ok) {
-    return await res.json();
-  }
-
-  let details = '';
-  try { const e = await res.clone().json(); details = e?.message || e?.details || ''; } catch{}
-
-  if (!(res.status === 409 || /duplicate|unique/i.test(details))) {
-    diag.add?.(`[intake] POST failed ${res.status} ${details||''}`);
-    const errRes = new Error('intake-post-failed');
-    errRes.status = res.status;
-    errRes.details = details;
-    throw errRes;
-  }
-
-  const patchUrl = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`
-            + `&day=eq.${encodeURIComponent(dayIsoNorm)}`;
-  diag.add?.('[capture] fetch start intake:patch');
-  const res2 = await fetchWithAuth(
-    headers => fetch(patchUrl, { method:'PATCH', headers, body: JSON.stringify({ payload: payloadTotals }) }),
-    { tag: 'intake:patch', maxAttempts: 2 }
-  );
-  if (!res2.ok){
-    let d2='';
-    try{ const e2 = await res2.clone().json(); d2 = e2?.message || e2?.details || ''; }catch{}
-    const errPatch = new Error('intake-patch-failed');
-    errPatch.status = res2.status;
-    errPatch.details = d2;
-    throw errPatch;
-  }
-  return await res2.json();
-}
-
-// Neuer atomarer RPC/UPSERT-Save (ein Request)
-// SUBMODULE: saveIntakeTotalsRpc @public - RPC upsert_intake Pfad fuer Intake-Summen
-async function saveIntakeTotalsRpc({ dayIso, totals }){
-  const restUrl = await getConf("webhookUrl");
-  const base    = baseUrlFromRest(restUrl);
-  if (!base) {
-    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
-    const err = new Error("REST-Basis fehlt");
-    err.status = 0;
-    throw err;
-  }
-
-  if (supabaseState.intakeRpcDisabled) {
-    diag.add?.('[capture] rpc missing, fallback to legacy');
-    return await saveIntakeTotals({ dayIso, totals });
-  }
-
-  const dayIsoNorm = /^\d{4}-\d{2}-\d{2}$/.test(String(dayIso||"")) ? dayIso : todayStr();
-  const payloadTotals = {
-    water_ml: Number(totals?.water_ml || 0),
-    salt_g: Number(totals?.salt_g || 0),
-    protein_g: Number(totals?.protein_g || 0),
-  };
-
-  const url = new URL(`${base}/rest/v1/rpc/upsert_intake`);
-  const body = JSON.stringify({
-    p_day: dayIsoNorm,
-    p_water_ml: payloadTotals.water_ml,
-    p_salt_g: payloadTotals.salt_g,
-    p_protein_g: payloadTotals.protein_g,
-  });
-
-  diag.add?.('[capture] fetch start intake:rpc');
-  const res = await fetchWithAuth(
-    headers => fetch(url.toString(), { method: 'POST', headers, body }),
-    { tag: 'intake:rpc', maxAttempts: 2 }
-  );
-
-  if (res.status === 404 || res.status === 405) {
-    supabaseState.intakeRpcDisabled = true;
-    diag.add?.('[capture] rpc missing, fallback to legacy');
-    return await saveIntakeTotals({ dayIso: dayIsoNorm, totals: payloadTotals });
-  }
-
-  if (!res.ok) {
-    let details = '';
-    try { const e = await res.clone().json(); details = e?.message || e?.details || ''; } catch{}
-    const err = new Error('intake-rpc-failed');
-    err.status = res.status;
-    err.details = details;
-    throw err;
-  }
-
-  let json;
-  try { json = await res.json(); } catch { json = null; }
-  const row = Array.isArray(json) ? (json?.[0] ?? null) : (json || null);
-  if (!row || typeof row !== 'object') {
-    const err = new Error('rpc-empty');
-    err.status = 200;
-    throw err;
-  }
-  return row;
-}
-
-// SUBMODULE: cleanupOldIntake @internal - prunes stale intake events prior to today
-async function cleanupOldIntake(){
-  try{
-    const rawUrl = await getConf('webhookUrl');
-    const url = toEventsUrl(rawUrl);
-    const uid = await getUserId();
-    if (!url || !uid) return;
-    const today = todayStr();
-    const q = `${url}?user_id=eq.${encodeURIComponent(uid)}&type=eq.intake`+
-              `&ts=lt.${encodeURIComponent(today)}T00:00:00Z`;
-    await fetchWithAuth(headers => fetch(q, { method:'DELETE', headers }), { tag: 'intake:cleanup', maxAttempts: 2 });
-  }catch(e){
-    diag.add?.('cleanupOldIntake error: ' + (e?.message || e));
-  }
-}
-
-/* === Remote-Fetch Arzt-Ansicht (Views) === */
-// SUBMODULE: loadBpFromView @internal - queries v_events_bp view for doctor data
-async function loadBpFromView({ user_id, from, to }) {
-  const filters = [['user_id', `eq.${user_id}`]];
-  if (from) filters.push(['day', `gte.${from}`]);
-  if (to)   filters.push(['day', `lte.${to}`]);
-  return await sbSelect({
-    table: 'v_events_bp',
-    select: 'day,ctx,sys,dia,pulse',
-    filters,
-    order: 'day.asc'
-  });
-}
-
-// SUBMODULE: loadBodyFromView @internal - reads body composition view entries
-async function loadBodyFromView({ user_id, from, to }) {
-  const filters = [['user_id', `eq.${user_id}`]];
-  if (from) filters.push(['day', `gte.${from}`]);
-  if (to)   filters.push(['day', `lte.${to}`]);
-  return await sbSelect({
-    table: 'v_events_body',
-    select: 'day,kg,cm,fat_pct,muscle_pct,fat_kg,muscle_kg',
-    filters,
-    order: 'day.asc'
-  });
-}
-
-// SUBMODULE: loadFlagsFromView @internal - fetches daily flag states from view
-async function loadFlagsFromView({ user_id, from, to }) {
-  const filters = [['user_id', `eq.${user_id}`]];
-  if (from) filters.push(['day', `gte.${from}`]);
-  if (to)   filters.push(['day', `lte.${to}`]);
-  return await sbSelect({
-    table: 'v_events_day_flags',
-    select: 'day,training,sick,low_intake,salt_high,protein_high90,valsartan_missed,forxiga_missed,nsar_taken',
-    filters,
-    order: 'day.asc'
-  });
-}
-
 // Sync capture toggles with existing day flags from the cloud for the selected date
 // SUBMODULE: syncCaptureToggles @internal - aligns capture toggles with remote day flags
 async function syncCaptureToggles(){
@@ -2619,142 +2218,8 @@ async function prefillBodyInputs(){
   }
 }
 
-/* Optional: Notes (aus health_events, falls keine View v_events_note existiert) */
-// SUBMODULE: loadNotesLastPerDay @internal - grabs latest note per day for doctor exports
-async function loadNotesLastPerDay({ user_id, from, to }) {
-  const filters = [['user_id', `eq.${user_id}`], ['type', 'eq.note']];
-  if (from) filters.push(['day', `gte.${from}`]);
-  if (to)   filters.push(['day', `lte.${to}`]);
-  const rows = await sbSelect({
-    table: 'health_events',
-    select: 'day,ts,payload',
-    filters,
-    order: 'ts.asc',
-  });
-  const grouped = new Map();
-  for (const r of rows) {
-    const text = (r?.payload?.text || '').trim();
-    if (!text) continue;
-    if (!grouped.has(r.day)) grouped.set(r.day, []);
-    grouped.get(r.day).push({ ts: r.ts, text });
-  }
-  const out = [];
-  for (const [day, entries] of grouped.entries()) {
-    entries.sort((a,b)=> (a.ts||0) - (b.ts||0));
-    const lastTs = entries.length ? entries[entries.length-1].ts : null;
-    out.push({ day, ts: lastTs, text: entries.map(e=>e.text).join(' ') });
-  }
-  return out;
-}
-// SUBMODULE: joinViewsToDaily @internal - merges view rows into doctor daily aggregate shape
-/* View-Zeilen  Tagesobjekte (kompatibel zu renderDoctor/chartPanel) */
-function joinViewsToDaily({ bp, body, flags, notes = [] }) {
-  const days = new Map();
-  const ensure = (day) => {
-    let d = days.get(day);
-    if (!d) {
-      d = {
-        date: day,
-        morning: { sys:null, dia:null, pulse:null, map:null },
-        evening: { sys:null, dia:null, pulse:null, map:null },
-        weight: null,
-        waist_cm: null,
-        fat_pct: null,
-        muscle_pct: null,
-        fat_kg: null,
-        muscle_kg: null,
-        notes: "",
-        flags: { water_lt2:false, salt_gt5:false, protein_ge90:false, sick:false, meds:false, training:false },
-        remoteIds: [],
-        hasCloud: true
-      };
-      days.set(day, d);
-    }
-    return d;
-  };
-
-  // body (1x/Tag)
-  for (const r of body) {
-    const d = ensure(r.day);
-    if (r.kg != null) d.weight   = Number(r.kg);
-    if (r.cm != null) d.waist_cm = Number(r.cm);
-    if (r.fat_pct != null) d.fat_pct = Number(r.fat_pct);
-    if (r.muscle_pct != null) d.muscle_pct = Number(r.muscle_pct);
-    if (r.fat_kg != null) d.fat_kg = Number(r.fat_kg);
-    if (r.muscle_kg != null) d.muscle_kg = Number(r.muscle_kg);
-  }
-
-  // bp (max 2x/Tag - Morgen/Abend)
-  for (const r of bp) {
-    const d = ensure(r.day);
-    const blk = r.ctx === 'Morgen' ? d.morning : (r.ctx === 'Abend' ? d.evening : null);
-    if (blk) {
-      if (r.sys   != null) blk.sys   = Number(r.sys);
-      if (r.dia   != null) blk.dia   = Number(r.dia);
-      if (r.pulse != null) blk.pulse = Number(r.pulse);
-      if (blk.sys != null && blk.dia != null) blk.map = calcMAP(blk.sys, blk.dia);
-    }
-  }
-
-  // flags (1x/Tag)
-  for (const r of flags) {
-    const d = ensure(r.day);
-    d.flags.training   = !!r.training;
-    d.flags.sick       = !!r.sick;
-    d.flags.water_lt2  = !!r.low_intake;
-    d.flags.salt_gt5   = !!r.salt_high;
-    d.flags.protein_ge90 = !!r.protein_high90;
-    d.flags.meds       = !!(r.valsartan_missed || r.forxiga_missed || r.nsar_taken);
-    // Detail-Medikamentenflags (fuer Tooltip)
-    d.flags.valsartan_missed = !!r.valsartan_missed;
-    d.flags.forxiga_missed   = !!r.forxiga_missed;
-    d.flags.nsar_taken       = !!r.nsar_taken;
-  }
-
-  // notes: alle Texte eines Tages zusammenfassen
-  for (const n of notes) {
-    const d = ensure(n.day);
-    d.notes = n.text || "";
-  }
-
-  return Array.from(days.values()).sort((a,b)=> b.date.localeCompare(a.date));
-}
-
-/* Neues fetchDailyOverview: liest direkt aus den Views */
-// SUBMODULE: fetchDailyOverview @public - kombiniert Views fuer Arzt-Daily UIs
-async function fetchDailyOverview(fromIso, toIso){
-  const user_id = await getUserId();
-  if (!user_id) return [];
-
-  const [bp, body, flags, notes] = await Promise.all([
-    loadBpFromView({ user_id, from: fromIso, to: toIso }),
-    loadBodyFromView({ user_id, from: fromIso, to: toIso }),
-    loadFlagsFromView({ user_id, from: fromIso, to: toIso }),
-    loadNotesLastPerDay({ user_id, from: fromIso, to: toIso }) // optional
-  ]);
-
-  return joinViewsToDaily({ bp, body, flags, notes });
-}
-
 /* Server: alle Events eines Tages loeschen (RLS: nur eigene Records) */
 // SUBMODULE: deleteRemoteDay @internal - entfernt alle Events eines Tages serverseitig
-async function deleteRemoteDay(dateIso /*YYYY-MM-DD*/){
-  const url = await getConf("webhookUrl");
-  if (!url) return { ok:false, status:0 };
-
-  const from = `${dateIso}T00:00:00Z`;
-  const toNext = new Date(from); toNext.setUTCDate(toNext.getUTCDate()+1);
-  const toIso = toNext.toISOString().slice(0,10);
-
-  const q = `${url}?ts=gte.${encodeURIComponent(dateIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  try{
-    const res = await fetchWithAuth(headers => fetch(q, { method:"DELETE", headers }), { tag: 'remote:delete-day', maxAttempts: 2 });
-    return { ok: res.ok, status: res.status };
-  }catch(e){
-    return { ok:false, status: e?.status ?? 0 };
-  }
-}
-
 // SUBMODULE: baseUrlFromRest @internal - strips /rest prefix to find Supabase base URL
 window.baseUrlFromRest = baseUrlFromRest;
 
@@ -2802,9 +2267,10 @@ const supabaseApi = {
   setConfigStatus,
   setUserUi,
   setDoctorAccess,
-  setupRealtime: (...args) => (window.setupRealtime || defaultSetupRealtime)(...args),
+  setupRealtime: setupRealtimeProxy,
+  teardownRealtime: teardownRealtimeProxy,
   requireDoctorUnlock,
-  resumeFromBackground: (...args) => (window.resumeFromBackground || defaultResumeFromBackground)(...args),
+  resumeFromBackground: resumeFromBackgroundProxy,
   getUserId,
   isLoggedInFast
 };

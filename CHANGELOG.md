@@ -717,3 +717,19 @@ Notes:
 
 
 
+## v1.8.1 – Supabase Auth+API+Realtime Refactor (Phase 2–3)
+
+Added:
+- API-Layer modularisiert: `assets/js/supabase/api/{intake.js,vitals.js,notes.js}` inkl. Header-Kommentare und gemeinsamer Fetch-/Config-Hooks.
+- Realtime-Barrel `assets/js/supabase/realtime/index.js` kapselt bestehende Browser-Hooks (`setupRealtime`, `teardownRealtime`, `resumeFromBackground`, `toEventsUrl`).
+- Neues Barrel `assets/js/supabase/index.js` bündelt Legacy-SupabaseAPI mit Core/Auth/API/Realtime-Modulen und spiegelte Exporte auf `window.AppModules.supabase`.
+
+Changed:
+- `assets/js/supabase.js` entfernt Duplikate (syncWebhook, Intake/Vitals/Notes, Realtime) und delegiert über saubere Proxy-Funktionen an die neuen Module.
+- Laufzeit-Loop exponiert weiterhin alle bisherigen Globals (`loadIntakeToday`, `fetchDailyOverview`, `setupRealtime`, `deleteRemoteDay`, `syncCaptureToggles`) – inklusive neu aufgenommenem `teardownRealtime`.
+- Barrel-Initialisierung kombiniert Legacy-API mit modularen Exports, sodass Downstream-Code unverändert bleibt, aber Baum modular geladen wird.
+
+Fixed:
+- Verhindert Drift zwischen alter und neuer Implementierung (nur eine Quelle in den Modulen); SupabaseAPI liefert wieder konsistente References.
+- `cleanupOldIntake` nutzt das neue `toEventsUrl` aus dem Realtime-Modul; Realtime-Hooks fallen sauber auf vorhandene Legacy-Funktionen zurück.
+- Window-Kompatibilität gesichert: `Object.keys(window.AppModules.supabase)` enthält weiterhin Auth-, API- und Realtime-Methoden aus Phase 1–2.
