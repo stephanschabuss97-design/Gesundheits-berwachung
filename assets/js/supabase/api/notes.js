@@ -119,8 +119,17 @@ export async function syncWebhook(entry, localId) {
             diag.add('Fallback: day_flags via PATCH');
             return;
           }
-        } catch (_) {
-          /* fallback failed */
+        } catch (errFallback) {
+          diag.add?.(
+            `[webhook] day_flags fallback failed uid=${uid || 'null'} day=${entry?.date || 'null'}: ${
+              errFallback?.message || errFallback
+            }`
+          );
+          console.error('Supabase notes fallback error (day_flags)', {
+            uid,
+            dayIso: entry?.date,
+            error: errFallback
+          });
         }
 
         const noteEvent = events.find((ev) => ev.type === 'note');
@@ -133,8 +142,18 @@ export async function syncWebhook(entry, localId) {
             diag.add('Fallback: note via PATCH');
             return;
           }
-        } catch (_) {
-          /* fallback failed */
+        } catch (errNoteFallback) {
+          diag.add?.(
+            `[webhook] note fallback failed uid=${uid || 'null'} day=${entry?.date || 'null'} localId=${
+              localId ?? 'null'
+            }: ${errNoteFallback?.message || errNoteFallback}`
+          );
+          console.error('Supabase notes fallback error (note patch)', {
+            uid,
+            dayIso: entry?.date,
+            localId,
+            error: errNoteFallback
+          });
         }
       }
 
@@ -313,4 +332,3 @@ export async function deleteRemoteDay(dateIso) {
     return { ok: false, status: err?.status ?? 0 };
   }
 }
-

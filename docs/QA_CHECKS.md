@@ -421,28 +421,6 @@ Bestehende Flags (Training, Krank, NSAR usw.) funktionieren unveraendert. Auto-S
 
 ---
 
-# QA Checklists
-
-## v1.8.1 – Supabase API + Realtime Refactor
-
-Smoke
-- `assets/js/supabase/index.js` bündelt core/auth/api/realtime; Browser lädt Barrel via `type="module"`.
-- `Object.keys(window.AppModules.supabase)` zeigt Intake/Vitals/Notes/Realtime-Funktionen (`loadIntakeToday`, `fetchDailyOverview`, `setupRealtime`).
-- `SupabaseAPI.setupRealtime()` und `SupabaseAPI.resumeFromBackground()` verwenden vorhandene Legacy-Hooks oder fallbacken sauber.
-- `SupabaseAPI.fetchWithAuth()` und `SupabaseAPI.loadIntakeToday()` funktionieren nach dem Modul-Split unverändert.
-
-Sanity
-- `supabase.js` delegiert Sync-/Intake-/Vitals-/Notes-Funktionen ausschließlich an die neuen Module; keine doppelten Implementierungen mehr.
-- `syncCaptureToggles()` und `prefillBodyInputs()` nutzen die proxied `loadFlagsFromView`/`loadBodyFromView` Varianten aus den API-Modulen.
-- Realtime-Barrel konserviert alte Browser-Funktionen (`window.setupRealtime/teardownRealtime/resumeFromBackground`) über captured Fallbacks.
-- Barrel `index.js` merged Legacy-SupabaseAPI mit Modulen, sodass Zusatzfunktionen (`syncCaptureToggles`, `afterLoginBoot`) bestehen bleiben.
-
-Regression
-- Alle bisherigen Globals (`loadIntakeToday`, `saveIntakeTotalsRpc`, `deleteRemoteDay`, `appendNoteRemote`) bleiben via `window` erreichbar.
-- `cleanupOldIntake()` nutzt `toEventsUrl` aus dem Realtime-Modul; keine direkten Zugriffe mehr auf inkonsistente Helper.
-- `SupabaseAPI` enthält weiter Auth-Funktionen (`requireSession`, `watchAuthState`, `bindAuthButtons`) plus neue API/Realtime-Methoden ohne Name-Clashes.
-- Keine Business-Logik Änderungen; neue Dateien speichern UTF-8, Header-Kommentare dokumentieren Herkunft.
-
 ## v1.4.9 - BP Panel Save, UnlockÃ¢â‚¬â€˜Flow, UIÃ¢â‚¬â€˜Refresh
 
 **Smoke**
@@ -809,7 +787,7 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 **Regression**
 - Keine Ãƒâ€žnderung an Auth-/Cache-Mechanik; Save bleibt 1 Request (RPC-first, einmaliger Legacy-Fallback).
 
-## v1.7.4 Ã¢â‚¬â€œ Cleanup & Vereinheitlichung
+## v1.7.4 Cleanup & Vereinheitlichung
 
 **Smoke**
 - Legacy-Fallback setzt `ts` auf lokales Mitternacht (Europe/Vienna) und patcht via `day=eq` statt Zeitfenster.
@@ -821,7 +799,7 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 
 **Regression**
 - Keine AbhÃƒÂ¤ngigkeiten zu Doctor-/Appointment-Modulen; UI bleibt responsiv.
-- RLS/Unique-Index verhindern Duplikate/Datenverlust; `user_id` wird im RPC serverseitig gesetzt.`r`n`r`n
+- RLS/Unique-Index verhindern Duplikate/Datenverlust; `user_id` wird im RPC serverseitig gesetzt.
 
 ## v1.7.5 - Arzt DESC & Koerper-Bar-Hover
 
@@ -1029,20 +1007,19 @@ Siehe v1.5.4 Erg  nzung: Fokus auf Timeout-Fixes und Session-Fallback (Smoke/San
 ## v1.8.1 – Supabase API + Realtime Refactor
 
 Smoke
-- ssets/js/supabase/index.js bündelt core/auth/api/realtime; Browser lädt Barrel via 	ype="module".
-- Object.keys(window.AppModules.supabase) enthält Intake/Vitals/Notes/Realtime-Funktionen (loadIntakeToday, etchDailyOverview, setupRealtime).
-- SupabaseAPI.setupRealtime() und SupabaseAPI.resumeFromBackground() rufen die vorhandenen Legacy-Hooks (oder Fallbacks) fehlerfrei auf.
-- SupabaseAPI.fetchWithAuth() und SupabaseAPI.loadIntakeToday() arbeiten nach Modul-Split unverändert.
+- `assets/js/supabase/index.js` bündelt core/auth/api/realtime; Browser lädt Barrel via `type="module"`.
+- `Object.keys(window.AppModules.supabase)` zeigt Intake/Vitals/Notes/Realtime-Funktionen (`loadIntakeToday`, `fetchDailyOverview`, `setupRealtime`).
+- `SupabaseAPI.setupRealtime()` und `SupabaseAPI.resumeFromBackground()` verwenden vorhandene Legacy-Hooks oder fallbacken sauber.
+- `SupabaseAPI.fetchWithAuth()` und `SupabaseAPI.loadIntakeToday()` funktionieren nach dem Modul-Split unverändert.
 
 Sanity
-- supabase.js leitet Sync-/Intake-/Vitals-/Notes-Funktionen ausschließlich über die neuen Module; keine verbleibenden Doppelimplementierungen.
-- syncCaptureToggles() und prefillBodyInputs() verwenden die modulare loadFlagsFromView/loadBodyFromView-Proxy-Varianten.
-- Realtime-Barrel konserviert bestehende Browser-Funktionen (captured Legacy window.setupRealtime/teardownRealtime/resumeFromBackground).
-- Barrel index.js merged Legacy-API mit Modulen, sodass Zusatzfunktionen (syncCaptureToggles, fterLoginBoot) erhalten bleiben.
+- `supabase.js` delegiert Sync-/Intake-/Vitals-/Notes-Funktionen ausschließlich an die neuen Module; keine doppelten Implementierungen mehr.
+- `syncCaptureToggles()` und `prefillBodyInputs()` nutzen die proxied `loadFlagsFromView`/`loadBodyFromView` Varianten aus den API-Modulen.
+- Realtime-Barrel konserviert alte Browser-Funktionen (`window.setupRealtime/teardownRealtime/resumeFromBackground`) über captured Fallbacks.
+- Barrel `index.js` merged Legacy-SupabaseAPI mit Modulen, sodass Zusatzfunktionen (`syncCaptureToggles`, `afterLoginBoot`) bestehen bleiben.
 
 Regression
-- Alle bisherigen Globals (loadIntakeToday, saveIntakeTotalsRpc, deleteRemoteDay, ppendNoteRemote) bleiben via window verfügbar.
-- cleanupOldIntake() nutzt 	oEventsUrl aus dem Realtime-Modul; kein direkter Zugriff mehr auf inkonsistente Helper.
-- SupabaseAPI enthält weiterhin Auth-Funktionen (
-equireSession, watchAuthState, indAuthButtons) und neue API-Funktionen ohne Namenskonflikte.
-- Keine ungewollten Änderungen an Business-Logik; alle neuen Dateien speichern in UTF-8 und behalten Header-Kommentare bei.
+- Alle bisherigen Globals (`loadIntakeToday`, `saveIntakeTotalsRpc`, `deleteRemoteDay`, `appendNoteRemote`) bleiben via `window` erreichbar.
+- `cleanupOldIntake()` nutzt `toEventsUrl` aus dem Realtime-Modul; keine direkten Zugriffe mehr auf inkonsistente Helper.
+- `SupabaseAPI` enthält weiter Auth-Funktionen (`requireSession`, `watchAuthState`, `bindAuthButtons`) plus neue API/Realtime-Methoden ohne Name-Clashes.
+- Keine Business-Logik Änderungen; neue Dateien speichern UTF-8, Header-Kommentare dokumentieren Herkunft.

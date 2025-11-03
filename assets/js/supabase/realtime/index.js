@@ -39,7 +39,6 @@ export function toEventsUrl(restUrl) {
     if (!url) return null;
     return url.replace(/(\/rest\/v1\/)[^/?#]+/i, '$1health_events');
   } catch (_) {
-    return restUrl;
+    return null;
   }
 }
-

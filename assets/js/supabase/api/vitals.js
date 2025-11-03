@@ -6,6 +6,11 @@ import { setConfigStatus } from '../auth/ui.js';
 import { getUserId } from '../auth/core.js';
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
+const diag =
+  (globalWindow?.diag ||
+    globalWindow?.AppModules?.diag ||
+    globalWindow?.AppModules?.diagnostics ||
+    { add() {} });
 
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
@@ -20,9 +25,16 @@ const getConf = (...args) => {
 const calcMAPValue = (sys, dia) => {
   const fn = globalWindow?.calcMAP;
   if (typeof fn !== 'function') {
-    throw new Error('calcMAP is not available');
+    diag.add?.('[vitals] calcMAP not available on window');
+    return null;
   }
-  return fn(sys, dia);
+  try {
+    return fn(sys, dia);
+  } catch (err) {
+    diag.add?.(`[vitals] calcMAP threw: ${err?.message || err}`);
+    console.warn('Supabase vitals calcMAP error', { sys, dia, error: err });
+    return null;
+  }
 };
 
 const sbSelect = async ({ table, select, filters = [], order = null, limit = null }) => {
@@ -173,7 +185,23 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
       if (row.sys != null) block.sys = Number(row.sys);
       if (row.dia != null) block.dia = Number(row.dia);
       if (row.pulse != null) block.pulse = Number(row.pulse);
-      if (block.sys != null && block.dia != null) block.map = calcMAPValue(block.sys, block.dia);
+      if (block.sys != null && block.dia != null) {
+        let mapValue = null;
+        try {
+          mapValue = calcMAPValue(block.sys, block.dia);
+        } catch (err) {
+          // calcMAPValue should already guard, but keep this to be defensive
+          diag.add?.(
+            `[vitals] calcMAPValue error for day=${row.day} ctx=${row.ctx}: ${err?.message || err}`
+          );
+          console.warn('Supabase vitals map calculation failed', {
+            day: row.day,
+            ctx: row.ctx,
+            error: err
+          });
+        }
+        block.map = mapValue ?? null;
+      }
     }
   }
 
@@ -211,4 +239,3 @@ export async function fetchDailyOverview(fromIso, toIso) {
 
   return joinViewsToDaily({ bp, body, flags, notes });
 }
-
