@@ -3,9 +3,9 @@
  * MODULE: uiCore
  * intent: Kapselt UI-Helfer (Help-Panel, Debounce, Focus-Trap, Underlay-Inert) aus dem Monolith-Inline-Skript
  * exports: helpPanel, debounce, setUnderlayInert, focusTrap
- * version: 1.3
+ * version: 1.4
  * compat: Hybrid (Monolith + window.AppModules), Legacy-Global-Shims read-only
- * notes: Verhalten beibehalten; Coderabbit Fixes (focus safety, cache, scoped observer)
+ * notes: Verhalten beibehalten; Coderabbit-Fixes: focus safety, cache, scoped observer, direct root invalidation + attribute observation
  */
 
 (function (global) {
@@ -126,7 +126,7 @@
 
   // SUBMODULE: focus-trap @internal - traps tab focus inside modal overlays
   const focusTrap = (() => {
-    const cache = new WeakMap(); // cached focusable elements per root
+    const cache = new WeakMap();     // root -> focusable elements[]
     const observers = new WeakMap(); // root -> MutationObserver
 
     const self = {
@@ -176,27 +176,24 @@
 
       observeRoot(root) {
         if (observers.has(root)) return;
-        const mo = new global.MutationObserver((mutations) => {
-          for (const m of mutations) {
-            let node = m.target;
-            while (node && !cache.has(node)) {
-              node = node.parentElement;
-            }
-            if (node && cache.has(node)) {
-              cache.delete(node);
-            }
-          }
+        const mo = new global.MutationObserver(() => {
+          // direct invalidation: cache holds only roots → delete by root
+          cache.delete(root);
         });
-        mo.observe(root, { childList: true, subtree: true });
+        mo.observe(root, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          // Attribute-Änderungen, die die Fokusfähigkeit typischerweise beeinflussen:
+          attributeFilter: ['disabled', 'tabindex']
+        });
         observers.set(root, mo);
       },
 
       unobserveRoot(root) {
         const mo = observers.get(root);
         if (mo) {
-          try {
-            mo.disconnect();
-          } catch (_) {}
+          try { mo.disconnect(); } catch (_) {}
           observers.delete(root);
         }
       },
@@ -224,16 +221,12 @@
           d.addEventListener('keydown', self.globalHandler, true);
         }
 
-        // safer focus handling
         const items = self.getFocusable(root);
         const target = items[0] || root;
         if (target && typeof target.focus === 'function') {
-          try {
-            target.focus();
-          } catch (_) {}
+          try { target.focus(); } catch (_) {}
         }
 
-        // observe root-specific changes
         self.observeRoot(root);
         setUnderlayInert(true, root);
       },
@@ -243,20 +236,15 @@
         const top = self.stack.pop();
         const { root, lastFocus, prevTabIndex } = top;
 
-        try {
-          root.setAttribute('aria-modal', 'false');
-        } catch (_) {}
+        try { root.setAttribute('aria-modal', 'false'); } catch (_) {}
 
         if (prevTabIndex === null) root.removeAttribute('tabindex');
         else root.setAttribute('tabindex', prevTabIndex);
 
         if (lastFocus && typeof lastFocus.focus === 'function') {
-          try {
-            lastFocus.focus();
-          } catch (_) {}
+          try { lastFocus.focus(); } catch (_) {}
         }
 
-        // stop observing root when closed
         self.unobserveRoot(root);
 
         const d = global.document;
@@ -267,9 +255,7 @@
         }
 
         const newTop = self.stack[self.stack.length - 1];
-        try {
-          newTop.root.setAttribute('aria-modal', 'true');
-        } catch (_) {}
+        try { newTop.root.setAttribute('aria-modal', 'true'); } catch (_) {}
         setUnderlayInert(true, newTop.root);
       }
     };
