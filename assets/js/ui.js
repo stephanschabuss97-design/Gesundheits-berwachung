@@ -3,9 +3,9 @@
  * MODULE: uiCore
  * intent: Kapselt UI-Helfer (Help-Panel, Debounce, Focus-Trap, Underlay-Inert) aus dem Monolith-Inline-Skript
  * exports: helpPanel, debounce, setUnderlayInert, focusTrap
- * version: 1.2
+ * version: 1.3
  * compat: Hybrid (Monolith + window.AppModules), Legacy-Global-Shims read-only
- * notes: Verhalten beibehalten; Guards, IIFE, Header, Coderabbit-Nitpicks korrigiert
+ * notes: Verhalten beibehalten; Coderabbit Fixes (focus safety, cache, scoped observer)
  */
 
 (function (global) {
@@ -19,7 +19,6 @@
 
     init() {
       const el = global.document.getElementById('help');
-      // fix: Guard for missing #help element
       if (!el) {
         console.warn('[uiCore:helpPanel] Missing element with id="help" — panel init skipped.');
         return;
@@ -127,7 +126,8 @@
 
   // SUBMODULE: focus-trap @internal - traps tab focus inside modal overlays
   const focusTrap = (() => {
-    const cache = new WeakMap(); // fix: lightweight cache for getFocusable()
+    const cache = new WeakMap(); // cached focusable elements per root
+    const observers = new WeakMap(); // root -> MutationObserver
 
     const self = {
       stack: [],
@@ -159,7 +159,6 @@
       },
 
       getFocusable(root, refresh = false) {
-        // fix: faster visibility check + optional cache
         if (!refresh && cache.has(root)) return cache.get(root);
 
         const selector =
@@ -167,13 +166,39 @@
           'select:not([disabled]), textarea:not([disabled]), ' +
           '[tabindex]:not([tabindex="-1"])';
 
-        const items = Array.from(root.querySelectorAll(selector)).filter((el) => {
-          // simple visibility check instead of getComputedStyle/getClientRects
-          return el.offsetParent !== null;
-        });
+        const items = Array.from(root.querySelectorAll(selector)).filter(
+          (el) => el.offsetParent !== null
+        );
 
         cache.set(root, items);
         return items;
+      },
+
+      observeRoot(root) {
+        if (observers.has(root)) return;
+        const mo = new global.MutationObserver((mutations) => {
+          for (const m of mutations) {
+            let node = m.target;
+            while (node && !cache.has(node)) {
+              node = node.parentElement;
+            }
+            if (node && cache.has(node)) {
+              cache.delete(node);
+            }
+          }
+        });
+        mo.observe(root, { childList: true, subtree: true });
+        observers.set(root, mo);
+      },
+
+      unobserveRoot(root) {
+        const mo = observers.get(root);
+        if (mo) {
+          try {
+            mo.disconnect();
+          } catch (_) {}
+          observers.delete(root);
+        }
       },
 
       activate(root) {
@@ -199,17 +224,17 @@
           d.addEventListener('keydown', self.globalHandler, true);
         }
 
-        // fix: safer focus call with type check
+        // safer focus handling
         const items = self.getFocusable(root);
         const target = items[0] || root;
         if (target && typeof target.focus === 'function') {
           try {
             target.focus();
-          } catch (_) {
-            /* noop */
-          }
+          } catch (_) {}
         }
 
+        // observe root-specific changes
+        self.observeRoot(root);
         setUnderlayInert(true, root);
       },
 
@@ -231,6 +256,9 @@
           } catch (_) {}
         }
 
+        // stop observing root when closed
+        self.unobserveRoot(root);
+
         const d = global.document;
         if (self.stack.length === 0) {
           d.removeEventListener('keydown', self.globalHandler, true);
@@ -245,14 +273,6 @@
         setUnderlayInert(true, newTop.root);
       }
     };
-
-    // optional DOM watcher to auto-invalidate cache if root changes
-    const mo = new global.MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        if (cache.has(m.target)) cache.delete(m.target);
-      });
-    });
-    mo.observe(global.document.body, { childList: true, subtree: true });
 
     return self;
   })();
