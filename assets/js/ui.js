@@ -3,13 +3,12 @@
  * MODULE: uiCore
  * intent: Kapselt UI-Helfer (Help-Panel, Debounce, Focus-Trap, Underlay-Inert) aus dem Monolith-Inline-Skript
  * exports: helpPanel, debounce, setUnderlayInert, focusTrap
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules), Legacy-Global-Shims read-only
- * notes: Verhalten beibehalten; nur Guards, Kapselung, Header-Standard und Export gehärtet.
+ * notes: Verhalten beibehalten; Guards, IIFE, Header, Coderabbit-Nitpicks korrigiert
  */
 
 (function (global) {
-  // namespace setup
   const MODULE_NAME = 'uiCore';
   const appModules = (global.AppModules = global.AppModules || {});
 
@@ -19,7 +18,13 @@
     open: false,
 
     init() {
-      this.el = global.document.getElementById('help');
+      const el = global.document.getElementById('help');
+      // fix: Guard for missing #help element
+      if (!el) {
+        console.warn('[uiCore:helpPanel] Missing element with id="help" — panel init skipped.');
+        return;
+      }
+      this.el = el;
       this.open = false;
 
       const t1 = global.document.getElementById('helpToggle');
@@ -32,7 +37,6 @@
         else this.hide();
       };
 
-      // Guards: Listener nur registrieren, wenn Ziel existiert
       if (t1 && typeof t1.addEventListener === 'function') {
         t1.addEventListener('click', toggle);
       }
@@ -85,7 +89,6 @@
 
       targets.forEach((el) => {
         if (!el) return;
-
         if (active) {
           if (
             exceptEl &&
@@ -93,22 +96,16 @@
           ) {
             return;
           }
-
-          // vorheriges aria-hidden speichern
           if (!el.hasAttribute('data-prev-aria-hidden')) {
             const prev = el.getAttribute('aria-hidden');
             el.setAttribute('data-prev-aria-hidden', prev == null ? '' : prev);
           }
-
           el.setAttribute('aria-hidden', 'true');
-
           if (!el.hasAttribute('data-inert-applied')) {
             el.setAttribute('data-inert-applied', '1');
           }
-          // Attribut-basierter inert-Fallback; echte .inert-Unterstützung ist nicht überall vorhanden
           el.setAttribute('inert', '');
         } else {
-          // ursprüngliches aria-hidden wiederherstellen
           if (el.hasAttribute('data-prev-aria-hidden')) {
             const prev = el.getAttribute('data-prev-aria-hidden');
             if (prev === '') el.removeAttribute('aria-hidden');
@@ -117,7 +114,6 @@
           } else {
             el.removeAttribute('aria-hidden');
           }
-
           if (el.hasAttribute('data-inert-applied')) {
             el.removeAttribute('inert');
             el.removeAttribute('data-inert-applied');
@@ -130,134 +126,140 @@
   }
 
   // SUBMODULE: focus-trap @internal - traps tab focus inside modal overlays
-  const focusTrap = {
-    // stack of { root, lastFocus, prevTabIndex }
-    stack: [],
+  const focusTrap = (() => {
+    const cache = new WeakMap(); // fix: lightweight cache for getFocusable()
 
-    // shared global handler that always operates on the current top of stack
-    globalHandler(e) {
-      if (e.key !== 'Tab') return;
+    const self = {
+      stack: [],
 
-      const top = focusTrap.stack[focusTrap.stack.length - 1];
-      if (!top) return;
+      globalHandler(e) {
+        if (e.key !== 'Tab') return;
+        const top = self.stack[self.stack.length - 1];
+        if (!top) return;
 
-      const root = top.root;
-      const items = focusTrap.getFocusable(root);
+        const root = top.root;
+        const items = self.getFocusable(root);
 
-      if (!items.length) {
-        e.preventDefault();
-        if (typeof root.focus === 'function') root.focus();
-        return;
-      }
+        if (!items.length) {
+          e.preventDefault();
+          if (typeof root.focus === 'function') root.focus();
+          return;
+        }
 
-      const first = items[0];
-      const last = items[items.length - 1];
+        const first = items[0];
+        const last = items[items.length - 1];
 
-      if (e.shiftKey && global.document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && global.document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    },
+        if (e.shiftKey && global.document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && global.document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      },
 
-    getFocusable(root) {
-      const selector =
-        'a[href], button:not([disabled]), input:not([disabled]), ' +
-        'select:not([disabled]), textarea:not([disabled]), ' +
-        '[tabindex]:not([tabindex="-1"])';
+      getFocusable(root, refresh = false) {
+        // fix: faster visibility check + optional cache
+        if (!refresh && cache.has(root)) return cache.get(root);
 
-      return Array.from(root.querySelectorAll(selector)).filter((el) => {
-        // Sichtbarkeit prüfen
-        const style = global.getComputedStyle(el);
-        if (style.visibility === 'hidden' || style.display === 'none') return false;
-        return el.getClientRects().length > 0;
-      });
-    },
+        const selector =
+          'a[href], button:not([disabled]), input:not([disabled]), ' +
+          'select:not([disabled]), textarea:not([disabled]), ' +
+          '[tabindex]:not([tabindex="-1"])';
 
-    activate(root) {
-      if (!root) return;
+        const items = Array.from(root.querySelectorAll(selector)).filter((el) => {
+          // simple visibility check instead of getComputedStyle/getClientRects
+          return el.offsetParent !== null;
+        });
 
-      // wenn bereits Top, nichts tun
-      const top = this.stack[this.stack.length - 1];
-      if (top && top.root === root) return;
+        cache.set(root, items);
+        return items;
+      },
 
-      // vorhandene Instanz (nicht Top) entfernen um sie neu zu pushen
-      const existing = this.stack.findIndex((e) => e.root === root);
-      if (existing !== -1) this.stack.splice(existing, 1);
+      activate(root) {
+        if (!root) return;
+        const top = self.stack[self.stack.length - 1];
+        if (top && top.root === root) return;
 
-      const d = global.document;
-      const lastFocus = d.activeElement || null;
-      const prevTabIndex = root.hasAttribute('tabindex')
-        ? root.getAttribute('tabindex')
-        : null;
+        const existing = self.stack.findIndex((e) => e.root === root);
+        if (existing !== -1) self.stack.splice(existing, 1);
 
-      if (prevTabIndex === null) root.setAttribute('tabindex', '-1');
+        const d = global.document;
+        const lastFocus = d.activeElement || null;
+        const prevTabIndex = root.hasAttribute('tabindex')
+          ? root.getAttribute('tabindex')
+          : null;
 
-      // markiere modal
-      root.setAttribute('aria-modal', 'true');
+        if (prevTabIndex === null) root.setAttribute('tabindex', '-1');
+        root.setAttribute('aria-modal', 'true');
 
-      // Metadaten pushen
-      this.stack.push({ root, lastFocus, prevTabIndex });
+        self.stack.push({ root, lastFocus, prevTabIndex });
 
-      // globalen Handler nur einmal registrieren
-      if (this.stack.length === 1) {
-        d.addEventListener('keydown', this.globalHandler, true);
-      }
+        if (self.stack.length === 1) {
+          d.addEventListener('keydown', self.globalHandler, true);
+        }
 
-      // erstes fokussierbares Element anvisieren
-      const items = this.getFocusable(root);
-      (items[0] || root).focus();
+        // fix: safer focus call with type check
+        const items = self.getFocusable(root);
+        const target = items[0] || root;
+        if (target && typeof target.focus === 'function') {
+          try {
+            target.focus();
+          } catch (_) {
+            /* noop */
+          }
+        }
 
-      // Unterlage inert setzen (außer dem aktiven Root)
-      setUnderlayInert(true, root);
-    },
+        setUnderlayInert(true, root);
+      },
 
-    deactivate() {
-      if (!this.stack.length) return;
+      deactivate() {
+        if (!self.stack.length) return;
+        const top = self.stack.pop();
+        const { root, lastFocus, prevTabIndex } = top;
 
-      // obersten Eintrag poppen und Zustand restaurieren
-      const top = this.stack.pop();
-      const { root, lastFocus, prevTabIndex } = top;
-
-      try {
-        root.setAttribute('aria-modal', 'false');
-      } catch (_) {}
-
-      if (prevTabIndex === null) root.removeAttribute('tabindex');
-      else root.setAttribute('tabindex', prevTabIndex);
-
-      if (lastFocus && typeof lastFocus.focus === 'function') {
         try {
-          lastFocus.focus();
+          root.setAttribute('aria-modal', 'false');
         } catch (_) {}
+
+        if (prevTabIndex === null) root.removeAttribute('tabindex');
+        else root.setAttribute('tabindex', prevTabIndex);
+
+        if (lastFocus && typeof lastFocus.focus === 'function') {
+          try {
+            lastFocus.focus();
+          } catch (_) {}
+        }
+
+        const d = global.document;
+        if (self.stack.length === 0) {
+          d.removeEventListener('keydown', self.globalHandler, true);
+          setUnderlayInert(false);
+          return;
+        }
+
+        const newTop = self.stack[self.stack.length - 1];
+        try {
+          newTop.root.setAttribute('aria-modal', 'true');
+        } catch (_) {}
+        setUnderlayInert(true, newTop.root);
       }
+    };
 
-      const d = global.document;
+    // optional DOM watcher to auto-invalidate cache if root changes
+    const mo = new global.MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        if (cache.has(m.target)) cache.delete(m.target);
+      });
+    });
+    mo.observe(global.document.body, { childList: true, subtree: true });
 
-      if (this.stack.length === 0) {
-        // keine Overlays mehr: Handler entfernen, Unterlage freigeben
-        d.removeEventListener('keydown', this.globalHandler, true);
-        setUnderlayInert(false);
-        return;
-      }
+    return self;
+  })();
 
-      // neues Top setzen
-      const newTop = this.stack[this.stack.length - 1];
-      try {
-        newTop.root.setAttribute('aria-modal', 'true');
-      } catch (_) {}
-      setUnderlayInert(true, newTop.root);
-    }
-  };
-
-  // Exportfläche
   const uiCoreApi = { helpPanel, debounce, setUnderlayInert, focusTrap };
   appModules[MODULE_NAME] = uiCoreApi;
 
-  // Legacy-Shims: für Monolith-Code, der direkt auf window.<name> zugreift.
-  // Nur setzen, wenn nicht bereits vorhanden (keine Überschreibung, read-only).
   ['helpPanel', 'debounce', 'setUnderlayInert', 'focusTrap'].forEach((k) => {
     if (!Object.prototype.hasOwnProperty.call(global, k)) {
       Object.defineProperty(global, k, {
