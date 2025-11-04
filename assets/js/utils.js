@@ -1,54 +1,65 @@
+'use strict';
+
 /**
- * MODULE: UTILITIES
- * intent: generische DOM/Format Helper fuer das Monolith-Skript
+ * MODULE: UTILITIES (v1.2)
+ * intent: generische DOM/Format Helper für den M.I.D.A.S.-Monolith
  * exports: $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br
- * notes: Logik unveraendert aus index.html extrahiert
+ * compat: 100 % rückwärtskompatibel zu window.AppModules.utils
  */
 
-// SUBMODULE: query helpers @internal - schnelle DOM-Shortcuts
+// === DOM QUERY HELPERS ===
+// Schnelle, sichere DOM-Abfragen
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
-// SUBMODULE: formatting helpers @internal - Zahlen/Datum formatieren
-const fmtNum = (n, d = 1) =>
-  n === null ||
-  n === undefined ||
-  (typeof n === 'string' && n.trim() === '') ||
-  Number.isNaN(Number(n))
-    ? ''
-    : Number(n).toFixed(d);
-
-const pad2 = n => n.toString().padStart(2, '0');
-
-const todayStr = () => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+// === NUMBER / DATE FORMATTING ===
+/**
+ * Formatiert eine Zahl auf d Nachkommastellen.
+ * Gibt '' zurück, wenn Wert ungültig ist.
+ */
+const fmtNum = (n, d = 1) => {
+  const num = Number(n);
+  return Number.isFinite(num) ? num.toFixed(d) : '';
 };
 
-const timeStr = () => {
-  const d = new Date();
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+/** Füllt Zahl links mit 0 auf zwei Stellen */
+const pad2 = n => String(n).padStart(2, '0');
+
+/** Liefert aktuelles Datum als YYYY-MM-DD */
+const todayStr = (date = new Date()) => {
+  const y = date.getFullYear();
+  const m = pad2(date.getMonth() + 1);
+  const d = pad2(date.getDate());
+  return `${y}-${m}-${d}`;
 };
 
-// SUBMODULE: string escape helpers @internal - escaped HTML und Zeilenumbrueche
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c =>
+/** Liefert aktuelle Uhrzeit als HH:MM */
+const timeStr = (date = new Date()) =>
+  `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+
+// === STRING ESCAPE HELPERS ===
+/** Ersetzt HTML-kritische Zeichen durch Entitäten */
+const esc = s =>
+  String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
-}
 
-function nl2br(s) {
-  return esc(s).replace(/\n/g, '<br>');
-}
+/** Wandelt Zeilenumbrüche in <br> um (nach Escape) */
+const nl2br = s => esc(s).replace(/\n/g, '<br>');
 
-const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br };
-window.AppModules = window.AppModules || {};
-window.AppModules.utils = utilsApi;
-for (const [key, value] of Object.entries(utilsApi)) {
-  if (typeof window[key] === 'undefined') {
-    window[key] = value;
-  }
-}
+// === EXPORT / GLOBAL REGISTRATION ===
+(() => {
+  const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br };
+
+  // Namespace sichern
+  window.AppModules = window.AppModules || {};
+  window.AppModules.utils = utilsApi;
+
+  // Globale Shortcuts nur setzen, wenn noch nicht vorhanden
+  Object.entries(utilsApi).forEach(([key, fn]) => {
+    if (!(key in window)) window[key] = fn;
+  });
+
+  // Debug-Ausgabe (optional, auskommentieren im Release)
+  // console.debug('[Utils] geladen:', Object.keys(utilsApi).join(', '));
+})();
