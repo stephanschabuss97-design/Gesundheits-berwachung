@@ -3,9 +3,9 @@
  * MODULE: uiLayout
  * intent: Verwaltet Sticky-Offsets und stellt sicher, dass Eingabefelder nicht verdeckt werden
  * exports: updateStickyOffsets, ensureNotObscured
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Verhalten unverändert, modernisiert & gekapselt
+ * notes: Init-Offsets sofort setzen; modernisierte hasOwn-GLOBAL-Fallback
  */
 
 (function (global) {
@@ -86,14 +86,20 @@
   // Initialisierung
   bindResizeEvents();
   bindAutoFocusScroll();
+  // fix: Offsets sofort beim Initial-Render berechnen
+  updateStickyOffsets();
 
   // Exportfläche
   const uiLayoutApi = { updateStickyOffsets, ensureNotObscured };
   appModules.uiLayout = uiLayoutApi;
 
-  // Legacy read-only globals
+  // Legacy read-only globals (mit ES2022 hasOwn, Fallback für ältere Runtimes)
+  const hasOwn = Object.hasOwn
+    ? Object.hasOwn
+    : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
+
   ['updateStickyOffsets', 'ensureNotObscured'].forEach((k) => {
-    if (!Object.prototype.hasOwnProperty.call(global, k)) {
+    if (!hasOwn(global, k)) {
       Object.defineProperty(global, k, {
         value: uiLayoutApi[k],
         writable: false,
