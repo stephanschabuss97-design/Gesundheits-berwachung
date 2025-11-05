@@ -3,9 +3,9 @@
  * MODULE: uiErrors
  * intent: Zentrale REST-Fehlertexte, UI-Error-Handler & Busy-State-Helper
  * exports: restErrorMessage, uiRestError, withBusy
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Verhalten unverändert; Kapselung & Logging ergänzt
+ * notes: Nitpick fix – inline details trim, Verhalten unverändert
  */
 
 (function (global) {
@@ -13,7 +13,6 @@
 
   // SUBMODULE: restErrorMessage @public - mappt HTTP-Status auf Nutzertexte
   function restErrorMessage(status, details = '') {
-    const norm = String(details || '').trim();
     if (status === 0) return 'Netzwerkfehler – bitte Verbindung prüfen.';
     if (status === 401 || status === 403) return 'Bitte erneut anmelden.';
     if (status === 404) return 'Eintrag nicht gefunden.';
@@ -21,7 +20,7 @@
     if (status === 400 || status === 422) return 'Eingaben bitte prüfen.';
     if (status === 429) return 'Zu viele Anfragen – bitte kurz warten.';
     if (status >= 500) return 'Serverfehler – bitte später erneut versuchen.';
-    return norm || `Fehler (${status})`;
+    return String(details || '').trim() || `Fehler (${status})`;
   }
 
   // SUBMODULE: uiRestError @public - zeigt REST-Fehler via uiError an
