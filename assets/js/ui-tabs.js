@@ -3,23 +3,20 @@
  * MODULE: uiTabs
  * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
  * exports: setTab, bindTabs, bindHeaderShadow
- * version: 1.4
+ * version: 1.5
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Auth-State intern gekapselt; Queue-Fehler abgefangen; keine globalen Race-Risiken
+ * notes: Fehler-Propagation + atomare Auth-Queue für Doctor-Unlock
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
-
   const $ = (sel) => global.document.querySelector(sel);
   const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
 
   // SUBMODULE: authState @internal – kapselt globale Auth-Flags sicher
   const authState = (() => {
-    // Private Werte, synchronisiert nur bei Setter in die alten Globals
     let doctorUnlockedVal = Boolean(global.__doctorUnlocked);
     let pendingAfterUnlockVal = global.__pendingAfterUnlock || null;
-
     let lock = Promise.resolve();
 
     const state = {
@@ -28,23 +25,22 @@
       },
       set doctorUnlocked(v) {
         doctorUnlockedVal = !!v;
-        global.__doctorUnlocked = doctorUnlockedVal; // Legacy-Sync
+        global.__doctorUnlocked = doctorUnlockedVal;
       },
-
       get pendingAfterUnlock() {
         return pendingAfterUnlockVal;
       },
       set pendingAfterUnlock(v) {
         pendingAfterUnlockVal = v ?? null;
-        global.__pendingAfterUnlock = pendingAfterUnlockVal; // Legacy-Sync
+        global.__pendingAfterUnlock = pendingAfterUnlockVal;
       },
-
       async updateSafely(fn) {
         lock = lock.then(async () => {
           try {
-            await fn(state);
+            return await fn(state);
           } catch (err) {
             console.error('[uiTabs:authState] updateSafely failed:', err);
+            throw err; // ← Fehler wird jetzt propagiert
           }
         });
         return lock;
@@ -57,6 +53,7 @@
   async function setTab(name) {
     if (!name || typeof name !== 'string') return;
 
+    // Unlock bei gesperrter UI zurücksetzen
     if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
       await authState.updateSafely(async (s) => {
         s.pendingAfterUnlock = null;
@@ -72,28 +69,37 @@
           return;
         }
 
-        if (!authState.doctorUnlocked) {
-          await authState.updateSafely(async (s) => {
-            s.pendingAfterUnlock = 'doctor';
-          });
+        // Atomare Entscheidung im Queue-Kontext
+        const needPrompt = await authState.updateSafely(async (s) => {
+          if (s.doctorUnlocked) return false;       // schon offen → kein Prompt
+          if (s.pendingAfterUnlock === 'doctor') return false; // bereits in Bearbeitung
+          s.pendingAfterUnlock = 'doctor';          // Flag setzen
+          return true;                              // Prompt nötig
+        });
+
+        if (needPrompt) {
           const ok = await global.requireDoctorUnlock?.();
           if (!ok) return;
+          // Nach erfolgreichem Unlock Status updaten
           await authState.updateSafely(async (s) => {
             s.pendingAfterUnlock = null;
             s.doctorUnlocked = true;
           });
         }
+
       } catch (err) {
         console.warn('[uiTabs:setTab] Doctor auth failed:', err);
         return;
       }
     }
 
+    // View-Wechsel
     $$('.view').forEach((v) => v.classList.remove('active'));
     const viewEl = $('#' + name);
     if (viewEl) viewEl.classList.add('active');
     else console.warn(`[uiTabs:setTab] View element #${name} not found.`);
 
+    // Tabs aktualisieren
     $$('.tabs .btn').forEach((b) => {
       const active = b.dataset.tab === name;
       b.classList.toggle('primary', active);
@@ -101,6 +107,7 @@
       else b.removeAttribute('aria-current');
     });
 
+    // Optional Refresh je nach Tab
     if (name === 'doctor') {
       await global.requestUiRefresh?.({ reason: 'tab:doctor' });
     } else if (name === 'capture') {
@@ -148,7 +155,7 @@
     global.addEventListener('scroll', update, { passive: true });
   }
 
-  // Export – authState bleibt intern!
+  // Export (authState bleibt intern)
   const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
   appModules['uiTabs'] = uiTabsApi;
 
