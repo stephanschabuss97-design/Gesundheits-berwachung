@@ -3,38 +3,49 @@
  * MODULE: uiTabs
  * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
  * exports: setTab, bindTabs, bindHeaderShadow
- * version: 1.3
+ * version: 1.4
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Kapselung des globalen Auth-States (__doctorUnlocked / __pendingAfterUnlock)
+ * notes: Auth-State intern gekapselt; Queue-Fehler abgefangen; keine globalen Race-Risiken
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // Hilfs-Shortcuts
   const $ = (sel) => global.document.querySelector(sel);
   const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
 
-  // SUBMODULE: authState @internal - kapselt globale Auth-Flags sicher
+  // SUBMODULE: authState @internal – kapselt globale Auth-Flags sicher
   const authState = (() => {
-    let lock = Promise.resolve(); // einfache Queue zur Serialisierung
+    // Private Werte, synchronisiert nur bei Setter in die alten Globals
+    let doctorUnlockedVal = Boolean(global.__doctorUnlocked);
+    let pendingAfterUnlockVal = global.__pendingAfterUnlock || null;
+
+    let lock = Promise.resolve();
+
     const state = {
       get doctorUnlocked() {
-        return Boolean(global.__doctorUnlocked);
+        return doctorUnlockedVal;
       },
       set doctorUnlocked(v) {
-        global.__doctorUnlocked = !!v;
+        doctorUnlockedVal = !!v;
+        global.__doctorUnlocked = doctorUnlockedVal; // Legacy-Sync
       },
+
       get pendingAfterUnlock() {
-        return global.__pendingAfterUnlock || null;
+        return pendingAfterUnlockVal;
       },
       set pendingAfterUnlock(v) {
-        global.__pendingAfterUnlock = v ?? null;
+        pendingAfterUnlockVal = v ?? null;
+        global.__pendingAfterUnlock = pendingAfterUnlockVal; // Legacy-Sync
       },
+
       async updateSafely(fn) {
-        // garantiert sequentielle Updates
         lock = lock.then(async () => {
-          await fn(state);
+          try {
+            await fn(state);
+          } catch (err) {
+            console.error('[uiTabs:authState] updateSafely failed:', err);
+          }
         });
         return lock;
       }
@@ -42,7 +53,7 @@
     return state;
   })();
 
-  // SUBMODULE: setTab @internal - steuert Tabwechsel inkl. Auth/Unlock Hooks
+  // SUBMODULE: setTab @internal – steuert Tabwechsel inkl. Auth/Unlock Hooks
   async function setTab(name) {
     if (!name || typeof name !== 'string') return;
 
@@ -61,8 +72,7 @@
           return;
         }
 
-        const unlocked = authState.doctorUnlocked;
-        if (!unlocked) {
+        if (!authState.doctorUnlocked) {
           await authState.updateSafely(async (s) => {
             s.pendingAfterUnlock = 'doctor';
           });
@@ -80,7 +90,6 @@
     }
 
     $$('.view').forEach((v) => v.classList.remove('active'));
-
     const viewEl = $('#' + name);
     if (viewEl) viewEl.classList.add('active');
     else console.warn(`[uiTabs:setTab] View element #${name} not found.`);
@@ -88,11 +97,8 @@
     $$('.tabs .btn').forEach((b) => {
       const active = b.dataset.tab === name;
       b.classList.toggle('primary', active);
-      if (active) {
-        b.setAttribute('aria-current', 'page');
-      } else {
-        b.removeAttribute('aria-current');
-      }
+      if (active) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
     });
 
     if (name === 'doctor') {
@@ -108,7 +114,7 @@
     }
   }
 
-  // SUBMODULE: bindTabs @internal - verbindet Tabbuttons mit setTab
+  // SUBMODULE: bindTabs @internal – verbindet Tabbuttons mit setTab
   function bindTabs() {
     const btns = $$('.tabs .btn');
     if (!btns.length) return;
@@ -126,7 +132,7 @@
     );
   }
 
-  // SUBMODULE: bindHeaderShadow @internal - toggelt Schatten bei Scroll
+  // SUBMODULE: bindHeaderShadow @internal – toggelt Schatten bei Scroll
   function bindHeaderShadow() {
     const header = global.document.querySelector('header');
     const tabs = global.document.querySelector('nav.tabs');
@@ -142,8 +148,8 @@
     global.addEventListener('scroll', update, { passive: true });
   }
 
-  // Export
-  const uiTabsApi = { setTab, bindTabs, bindHeaderShadow, authState };
+  // Export – authState bleibt intern!
+  const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
   appModules['uiTabs'] = uiTabsApi;
 
   ['setTab', 'bindTabs', 'bindHeaderShadow'].forEach((k) => {
