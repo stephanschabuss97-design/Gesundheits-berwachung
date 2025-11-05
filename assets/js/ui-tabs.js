@@ -1,80 +1,140 @@
+'use strict';
 /**
- * MODULE: UI TABS
- * intent: Tab-Umschaltung, Header-Schatten und Bindings fuer Hauptansichten
+ * MODULE: uiTabs
+ * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
  * exports: setTab, bindTabs, bindHeaderShadow
- * notes: Logik unveraendert aus index.html extrahiert
+ * version: 1.1
+ * compat: Hybrid (Monolith + window.AppModules)
+ * notes: Verhalten beibehalten; Guards & Kapselung ergänzt
  */
 
-// SUBMODULE: setTab @internal - steuert Tabwechsel inkl. Auth/Unlock Hooks
-async function setTab(name) {
-  if (name !== 'doctor' && document.body.classList.contains('app-locked')) {
-    __pendingAfterUnlock = null;
-    lockUi(false);
-  }
-  if (name === 'doctor') {
-    const logged = await isLoggedInFast();
-    if (!logged) {
-      showLoginOverlay(true);
-      return;
-    }
-    if (!__doctorUnlocked) {
-      __pendingAfterUnlock = 'doctor';
-      const ok = await requireDoctorUnlock();
-      if (!ok) return;
-      __pendingAfterUnlock = null;
-    }
-  }
+(function (global) {
+  const MODULE_NAME = 'uiTabs';
+  const appModules = (global.AppModules = global.AppModules || {});
 
-  $$('.view').forEach(v => v.classList.remove('active'));
-  $('#'+name).classList.add('active');
-  $$('.tabs .btn').forEach(b => {
-    const active = b.dataset.tab === name;
-    b.classList.toggle('primary', active);
-    if (active) {
-      b.setAttribute('aria-current', 'page');
-    } else {
-      b.removeAttribute('aria-current');
-    }
-  });
-  if (name === 'doctor') {
-    await requestUiRefresh({ reason: 'tab:doctor' });
-  }
-  if (name === 'capture') {
-    try {
-      await refreshCaptureIntake();
-      resetCapturePanels();
-      updateBpCommentWarnings?.();
-    } catch (_) {}
-  }
-}
+  // Hilfs-Shortcuts mit Safety-Fallback
+  const $ = (sel) => global.document.querySelector(sel);
+  const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
 
-// SUBMODULE: bindTabs @internal - verbindet Tabbuttons mit setTab
-function bindTabs() {
-  $$('.tabs .btn').forEach(b =>
-    b.addEventListener('click', async e => {
-      const tab = e.currentTarget.dataset.tab;
-      if (tab === 'doctor') {
-        const logged = await isLoggedInFast();
+  // SUBMODULE: setTab @internal - steuert Tabwechsel inkl. Auth/Unlock Hooks
+  async function setTab(name) {
+    if (!name || typeof name !== 'string') return;
+
+    // safety check: UI locked?
+    if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
+      global.__pendingAfterUnlock = null;
+      try {
+        global.lockUi?.(false);
+      } catch (_) {}
+    }
+
+    // doctor-tab: requires login/unlock
+    if (name === 'doctor') {
+      try {
+        const logged = await global.isLoggedInFast?.();
         if (!logged) {
-          showLoginOverlay(true);
+          global.showLoginOverlay?.(true);
           return;
         }
+        if (!global.__doctorUnlocked) {
+          global.__pendingAfterUnlock = 'doctor';
+          const ok = await global.requireDoctorUnlock?.();
+          if (!ok) return;
+          global.__pendingAfterUnlock = null;
+        }
+      } catch (err) {
+        console.warn('[uiTabs:setTab] Doctor auth failed:', err);
+        return;
       }
-      setTab(tab);
-    })
-  );
-}
+    }
 
-// SUBMODULE: bindHeaderShadow @internal - toggelt Schatten bei Scroll
-function bindHeaderShadow() {
-  const header = document.querySelector('header');
-  const tabs = document.querySelector('nav.tabs');
-  if (!header) return;
-  const update = () => {
-    const scrolled = window.scrollY > 4;
-    header.classList.toggle('is-elevated', scrolled);
-    if (tabs) tabs.classList.toggle('is-elevated', scrolled);
-  };
-  update();
-  window.addEventListener('scroll', update, { passive: true });
-}
+    // deactivate all views
+    $$('.view').forEach((v) => v.classList.remove('active'));
+
+    // activate selected tab view
+    const viewEl = $('#' + name);
+    if (viewEl) viewEl.classList.add('active');
+    else console.warn(`[uiTabs:setTab] View element #${name} not found.`);
+
+    // update tab buttons
+    $$('.tabs .btn').forEach((b) => {
+      const active = b.dataset.tab === name;
+      b.classList.toggle('primary', active);
+      if (active) {
+        b.setAttribute('aria-current', 'page');
+      } else {
+        b.removeAttribute('aria-current');
+      }
+    });
+
+    // optional refresh logic per tab
+    if (name === 'doctor') {
+      await global.requestUiRefresh?.({ reason: 'tab:doctor' });
+    } else if (name === 'capture') {
+      try {
+        await global.refreshCaptureIntake?.();
+        global.resetCapturePanels?.();
+        global.updateBpCommentWarnings?.();
+      } catch (err) {
+        console.warn('[uiTabs:setTab] Capture refresh failed:', err);
+      }
+    }
+  }
+
+  // SUBMODULE: bindTabs @internal - verbindet Tabbuttons mit setTab
+  function bindTabs() {
+    const btns = $$('.tabs .btn');
+    if (!btns.length) return;
+
+    btns.forEach((b) =>
+      b.addEventListener('click', async (e) => {
+        const tab = e.currentTarget?.dataset?.tab;
+        if (!tab) return;
+        try {
+          if (tab === 'doctor') {
+            const logged = await global.isLoggedInFast?.();
+            if (!logged) {
+              global.showLoginOverlay?.(true);
+              return;
+            }
+          }
+          await setTab(tab);
+        } catch (err) {
+          console.error('[uiTabs:bindTabs] Tab click error:', err);
+        }
+      })
+    );
+  }
+
+  // SUBMODULE: bindHeaderShadow @internal - toggelt Schatten bei Scroll
+  function bindHeaderShadow() {
+    const header = global.document.querySelector('header');
+    const tabs = global.document.querySelector('nav.tabs');
+    if (!header) return;
+
+    const update = () => {
+      const scrolled = global.scrollY > 4;
+      header.classList.toggle('is-elevated', scrolled);
+      if (tabs) tabs.classList.toggle('is-elevated', scrolled);
+    };
+
+    update();
+    global.addEventListener('scroll', update, { passive: true });
+  }
+
+  // Exportfläche
+  const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
+  appModules[MODULE_NAME] = uiTabsApi;
+
+  // Optional: read-only Legacy-Globals
+  ['setTab', 'bindTabs', 'bindHeaderShadow'].forEach((k) => {
+    if (!Object.prototype.hasOwnProperty.call(global, k)) {
+      Object.defineProperty(global, k, {
+        value: uiTabsApi[k],
+        writable: false,
+        configurable: true,
+        enumerable: false
+      });
+    }
+  });
+})(window);
