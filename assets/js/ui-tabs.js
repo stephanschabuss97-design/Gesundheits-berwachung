@@ -3,27 +3,54 @@
  * MODULE: uiTabs
  * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
  * exports: setTab, bindTabs, bindHeaderShadow
- * version: 1.2
+ * version: 1.3
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Verhalten beibehalten; Guards & Kapselung ergänzt, CodeRabbit-Nitpicks bereinigt
+ * notes: Kapselung des globalen Auth-States (__doctorUnlocked / __pendingAfterUnlock)
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // Hilfs-Shortcuts mit Safety-Fallback
+  // Hilfs-Shortcuts
   const $ = (sel) => global.document.querySelector(sel);
   const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
+
+  // SUBMODULE: authState @internal - kapselt globale Auth-Flags sicher
+  const authState = (() => {
+    let lock = Promise.resolve(); // einfache Queue zur Serialisierung
+    const state = {
+      get doctorUnlocked() {
+        return Boolean(global.__doctorUnlocked);
+      },
+      set doctorUnlocked(v) {
+        global.__doctorUnlocked = !!v;
+      },
+      get pendingAfterUnlock() {
+        return global.__pendingAfterUnlock || null;
+      },
+      set pendingAfterUnlock(v) {
+        global.__pendingAfterUnlock = v ?? null;
+      },
+      async updateSafely(fn) {
+        // garantiert sequentielle Updates
+        lock = lock.then(async () => {
+          await fn(state);
+        });
+        return lock;
+      }
+    };
+    return state;
+  })();
 
   // SUBMODULE: setTab @internal - steuert Tabwechsel inkl. Auth/Unlock Hooks
   async function setTab(name) {
     if (!name || typeof name !== 'string') return;
 
     if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
-      global.__pendingAfterUnlock = null;
-      try {
+      await authState.updateSafely(async (s) => {
+        s.pendingAfterUnlock = null;
         global.lockUi?.(false);
-      } catch (_) {}
+      });
     }
 
     if (name === 'doctor') {
@@ -33,11 +60,18 @@
           global.showLoginOverlay?.(true);
           return;
         }
-        if (!global.__doctorUnlocked) {
-          global.__pendingAfterUnlock = 'doctor';
+
+        const unlocked = authState.doctorUnlocked;
+        if (!unlocked) {
+          await authState.updateSafely(async (s) => {
+            s.pendingAfterUnlock = 'doctor';
+          });
           const ok = await global.requireDoctorUnlock?.();
           if (!ok) return;
-          global.__pendingAfterUnlock = null;
+          await authState.updateSafely(async (s) => {
+            s.pendingAfterUnlock = null;
+            s.doctorUnlocked = true;
+          });
         }
       } catch (err) {
         console.warn('[uiTabs:setTab] Doctor auth failed:', err);
@@ -84,7 +118,7 @@
         const tab = e.currentTarget?.dataset?.tab;
         if (!tab) return;
         try {
-          await setTab(tab); // fix: redundant login-check entfernt
+          await setTab(tab);
         } catch (err) {
           console.error('[uiTabs:bindTabs] Tab click error:', err);
         }
@@ -108,11 +142,10 @@
     global.addEventListener('scroll', update, { passive: true });
   }
 
-  // Exportfläche
-  const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
-  appModules['uiTabs'] = uiTabsApi; // fix: MODULE_NAME entfernt, direkter Literal-Export
+  // Export
+  const uiTabsApi = { setTab, bindTabs, bindHeaderShadow, authState };
+  appModules['uiTabs'] = uiTabsApi;
 
-  // Optional: read-only Legacy-Globals
   ['setTab', 'bindTabs', 'bindHeaderShadow'].forEach((k) => {
     if (!Object.prototype.hasOwnProperty.call(global, k)) {
       Object.defineProperty(global, k, {
