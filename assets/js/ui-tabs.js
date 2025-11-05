@@ -3,13 +3,12 @@
  * MODULE: uiTabs
  * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
  * exports: setTab, bindTabs, bindHeaderShadow
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Verhalten beibehalten; Guards & Kapselung ergänzt
+ * notes: Verhalten beibehalten; Guards & Kapselung ergänzt, CodeRabbit-Nitpicks bereinigt
  */
 
 (function (global) {
-  const MODULE_NAME = 'uiTabs';
   const appModules = (global.AppModules = global.AppModules || {});
 
   // Hilfs-Shortcuts mit Safety-Fallback
@@ -20,7 +19,6 @@
   async function setTab(name) {
     if (!name || typeof name !== 'string') return;
 
-    // safety check: UI locked?
     if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
       global.__pendingAfterUnlock = null;
       try {
@@ -28,7 +26,6 @@
       } catch (_) {}
     }
 
-    // doctor-tab: requires login/unlock
     if (name === 'doctor') {
       try {
         const logged = await global.isLoggedInFast?.();
@@ -48,15 +45,12 @@
       }
     }
 
-    // deactivate all views
     $$('.view').forEach((v) => v.classList.remove('active'));
 
-    // activate selected tab view
     const viewEl = $('#' + name);
     if (viewEl) viewEl.classList.add('active');
     else console.warn(`[uiTabs:setTab] View element #${name} not found.`);
 
-    // update tab buttons
     $$('.tabs .btn').forEach((b) => {
       const active = b.dataset.tab === name;
       b.classList.toggle('primary', active);
@@ -67,7 +61,6 @@
       }
     });
 
-    // optional refresh logic per tab
     if (name === 'doctor') {
       await global.requestUiRefresh?.({ reason: 'tab:doctor' });
     } else if (name === 'capture') {
@@ -91,14 +84,7 @@
         const tab = e.currentTarget?.dataset?.tab;
         if (!tab) return;
         try {
-          if (tab === 'doctor') {
-            const logged = await global.isLoggedInFast?.();
-            if (!logged) {
-              global.showLoginOverlay?.(true);
-              return;
-            }
-          }
-          await setTab(tab);
+          await setTab(tab); // fix: redundant login-check entfernt
         } catch (err) {
           console.error('[uiTabs:bindTabs] Tab click error:', err);
         }
@@ -124,7 +110,7 @@
 
   // Exportfläche
   const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
-  appModules[MODULE_NAME] = uiTabsApi;
+  appModules['uiTabs'] = uiTabsApi; // fix: MODULE_NAME entfernt, direkter Literal-Export
 
   // Optional: read-only Legacy-Globals
   ['setTab', 'bindTabs', 'bindHeaderShadow'].forEach((k) => {
