@@ -3,9 +3,9 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.2
+ * version: 1.3
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Getrennte Error/Info-Boxen, bessere Perf-Logs, Warnungen bei Exportkonflikten
+ * notes: Separate Error/Info-Boxen, listener-dup guard, safe text handling
  */
 
 (function (global) {
@@ -13,24 +13,29 @@
 
   // SUBMODULE: unhandled rejection sink @internal
   try {
-    global.addEventListener('unhandledrejection', (e) => {
-      try {
-        const msg =
-          'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
-        // Separate Error Box verwenden, Fallback auf alte Struktur
-        const box =
-          document.getElementById('errBox') || document.getElementById('err');
-        if (box) {
-          box.style.display = 'block';
-          box.textContent = msg;
-        } else {
-          console.error('[diagnostics:unhandledrejection]', msg);
+    // prevent duplicate listener registration on reloads
+    if (!global.__diagnosticsListenerAdded) {
+      global.__diagnosticsListenerAdded = true;
+      global.addEventListener('unhandledrejection', (e) => {
+        try {
+          const errBox =
+            document.getElementById('errBox') || document.getElementById('err');
+          const message =
+            'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
+
+          if (errBox) {
+            errBox.style.display = 'block';
+            // always use textContent for safety
+            errBox.textContent = message;
+          } else {
+            console.error('[diagnostics:unhandledrejection]', message);
+          }
+          e?.preventDefault?.();
+        } catch (err) {
+          console.error('[diagnostics] unhandledrejection handler failed', err);
         }
-        e?.preventDefault?.();
-      } catch (err) {
-        console.error('[diagnostics] unhandledrejection handler failed', err);
-      }
-    });
+      });
+    }
   } catch (err) {
     console.error('[diagnostics] failed to register unhandledrejection listener', err);
   }
@@ -76,7 +81,7 @@
       if (snap && snap.count % 25 === 0) {
         diag.add?.(
           `[perf] ${key} p50=${Math.floor(snap.p50 || 0)}ms ` +
-          `p90=${Math.floor(snap.p90 || 0)}ms p95=${Math.floor(snap.p95 || 0)}ms`
+            `p90=${Math.floor(snap.p90 || 0)}ms p95=${Math.floor(snap.p95 || 0)}ms`
         );
       }
     } catch (err) {
@@ -137,16 +142,16 @@
 
   // SUBMODULE: uiError @public
   function uiError(msg) {
-    const box =
+    const errBox =
       document.getElementById('errBox') || document.getElementById('err');
     const text = String(msg || 'Fehler');
-    if (box) {
-      box.setAttribute('role', 'alert');
-      box.setAttribute('aria-live', 'assertive');
-      box.textContent = text;
-      box.style.display = 'block';
+    if (errBox) {
+      errBox.setAttribute('role', 'alert');
+      errBox.setAttribute('aria-live', 'assertive');
+      errBox.textContent = text;
+      errBox.style.display = 'block';
       setTimeout(() => {
-        box.style.display = 'none';
+        errBox.style.display = 'none';
       }, 5000);
     } else {
       console.error('[uiError]', text);
@@ -155,16 +160,15 @@
 
   // SUBMODULE: uiInfo @public
   function uiInfo(msg) {
-    const box =
-      document.getElementById('infoBox') || document.getElementById('err');
+    const infoBox = document.getElementById('infoBox');
     const text = String(msg || 'OK');
-    if (box) {
-      box.setAttribute('role', 'status');
-      box.setAttribute('aria-live', 'polite');
-      box.textContent = text;
-      box.style.display = 'block';
+    if (infoBox) {
+      infoBox.setAttribute('role', 'status');
+      infoBox.setAttribute('aria-live', 'polite');
+      infoBox.textContent = text;
+      infoBox.style.display = 'block';
       setTimeout(() => {
-        box.style.display = 'none';
+        infoBox.style.display = 'none';
       }, 2000);
     } else {
       console.log('[uiInfo]', text);
