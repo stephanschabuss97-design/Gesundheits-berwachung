@@ -3,13 +3,19 @@
  * MODULE: format
  * intent: Formatiert Werte und mappt Capture-Einträge auf health_events
  * exports: formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Logik unverändert, aber kapsuliert und vereinheitlicht
+ * notes: Null-safe checks, NaN filter, immutable global export
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
+
+  // Helper: konvertiert Eingaben zu Zahl oder null, falls ungültig
+  function toNumberOrNull(val) {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : null;
+  }
 
   // SUBMODULE: formatDateTimeDE @public - formatiert ISO-Zeitstempel für Arzt-Ansicht
   function formatDateTimeDE(iso) {
@@ -48,12 +54,16 @@
     try {
       // Blutdruck & Puls
       if (entry.context === 'Morgen' || entry.context === 'Abend') {
-        const hasVitals = entry.sys != null || entry.dia != null || entry.pulse != null;
+        const hasVitals =
+          entry.sys != null || entry.dia != null || entry.pulse != null;
         if (hasVitals) {
           const payload = {};
-          if (entry.sys != null) payload.sys = Number(entry.sys);
-          if (entry.dia != null) payload.dia = Number(entry.dia);
-          if (entry.pulse != null) payload.pulse = Number(entry.pulse);
+          const sys = toNumberOrNull(entry.sys);
+          const dia = toNumberOrNull(entry.dia);
+          const pulse = toNumberOrNull(entry.pulse);
+          if (sys !== null) payload.sys = sys;
+          if (dia !== null) payload.dia = dia;
+          if (pulse !== null) payload.pulse = pulse;
           payload.ctx = entry.context;
           out.push({ ts: tsIso, type: 'bp', payload });
         }
@@ -64,10 +74,14 @@
         const hasBody = entry.weight != null || entry.waist_cm != null;
         if (hasBody) {
           const payload = {};
-          if (entry.weight != null) payload.kg = Number(entry.weight);
-          if (entry.waist_cm != null) payload.cm = Number(entry.waist_cm);
-          if (entry.fat_pct != null) payload.fat_pct = Number(entry.fat_pct);
-          if (entry.muscle_pct != null) payload.muscle_pct = Number(entry.muscle_pct);
+          const weight = toNumberOrNull(entry.weight);
+          const waist = toNumberOrNull(entry.waist_cm);
+          const fat = toNumberOrNull(entry.fat_pct);
+          const muscle = toNumberOrNull(entry.muscle_pct);
+          if (weight !== null) payload.kg = weight;
+          if (waist !== null) payload.cm = waist;
+          if (fat !== null) payload.fat_pct = fat;
+          if (muscle !== null) payload.muscle_pct = muscle;
           out.push({ ts: tsIso, type: 'body', payload });
         }
 
@@ -97,7 +111,8 @@
   // SUBMODULE: isWeightOnly @public - erkennt reine Gewichts-Einträge
   function isWeightOnly(entry) {
     if (!entry) return false;
-    const hasVitals = !!(entry.sys || entry.dia || entry.pulse);
+    const hasVitals =
+      entry.sys != null || entry.dia != null || entry.pulse != null;
     return !hasVitals && entry.weight != null;
   }
 
@@ -105,7 +120,7 @@
   const formatApi = { formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly };
   appModules.format = formatApi;
 
-  // Legacy read-only globals (mit modernem hasOwn)
+  // Legacy read-only globals (modern hasOwn, immutable)
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
@@ -115,7 +130,7 @@
       Object.defineProperty(global, key, {
         value,
         writable: false,
-        configurable: true,
+        configurable: false, // fix: fully immutable
         enumerable: false
       });
     }
