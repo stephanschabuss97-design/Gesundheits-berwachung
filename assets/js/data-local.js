@@ -4,40 +4,83 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.5
+ * version: 1.6
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Kein rethrow bei Index-Fehlern, klarer Kommentar bei putReq,
- *        settled-Pattern bleibt bewusst inline (stabiler bei Debug)
+ * notes: Atomare Transaktionen (resolve nur bei Commit), zentraler Helper wrapIDBRequest(),
+ *        vollständige SUBMODULE-Dokumentation
  */
 
 /* ===== IndexedDB Setup ===== */
-let db;
-const DB_NAME = 'healthlog_db';
-const STORE = 'entries';
-const CONF = 'config';
-const DB_VERSION = 5;
 
-/** Einheitliches Logging + Reject */
+// SUBMODULE: fail @internal - vereinheitlicht Fehlerlogging
 function fail(reject, e, msg) {
   const err = e?.target?.error || e || new Error('unknown');
   console.error(`[dataLocal] ${msg}`, err);
   reject(err);
 }
 
-/** Prüft, ob DB initialisiert ist */
+// SUBMODULE: ensureDbReady @internal - prüft ob Datenbank initialisiert ist
 function ensureDbReady() {
   if (!db) throw new Error('IndexedDB not initialized. Call initDB() first.');
 }
 
-/** Initialisiert IndexedDB und legt ObjectStores an (entries/config) */
+/* --- Konstanten --- */
+let db;
+const DB_NAME = 'healthlog_db';
+const STORE = 'entries';
+const CONF = 'config';
+const DB_VERSION = 5;
+
+// SUBMODULE: wrapIDBRequest @internal - generischer Handler für IDB Request/Transaktions-Fluss
+function wrapIDBRequest(tx, req, { onSuccess, actionName }) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    req.onsuccess = e => {
+      try {
+        if (settled) return;
+        const value = typeof onSuccess === 'function' ? onSuccess(e, req) : undefined;
+        tx.oncomplete = () => {
+          if (!settled) {
+            settled = true;
+            resolve(value);
+          }
+        };
+      } catch (err) {
+        if (!settled) {
+          settled = true;
+          fail(reject, err, `${actionName} success handler failed`);
+        }
+      }
+    };
+
+    req.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(reject, e, `${actionName} request failed`);
+    };
+
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(reject, e, `${actionName} aborted`);
+    };
+
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(reject, e, `${actionName} failed`);
+    };
+  });
+}
+
+// SUBMODULE: initDB @internal - initialisiert IndexedDB Stores und Indizes
 function initDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
 
     req.onupgradeneeded = e => {
       db = e.target.result;
-
-      // === Entries Store ===
       if (!db.objectStoreNames.contains(STORE)) {
         const s = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
         s.createIndex('byDateTime', 'dateTime', { unique: false });
@@ -45,32 +88,16 @@ function initDB() {
       } else {
         const s = e.target.transaction.objectStore(STORE);
         const idxNames = Array.from(s.indexNames);
-
-        // create missing indexes; log but do not throw on error
         if (!idxNames.includes('byDateTime')) {
-          try {
-            s.createIndex('byDateTime', 'dateTime', { unique: false });
-          } catch (err) {
-            if (err.name !== 'ConstraintError') {
-              console.warn('[dataLocal] Failed to create index byDateTime:', err);
-            }
-          }
+          try { s.createIndex('byDateTime', 'dateTime', { unique: false }); }
+          catch (err) { if (err.name !== 'ConstraintError') console.warn('[dataLocal] Failed to create index byDateTime:', err); }
         }
         if (!idxNames.includes('byRemote')) {
-          try {
-            s.createIndex('byRemote', 'remote_id', { unique: false });
-          } catch (err) {
-            if (err.name !== 'ConstraintError') {
-              console.warn('[dataLocal] Failed to create index byRemote:', err);
-            }
-          }
+          try { s.createIndex('byRemote', 'remote_id', { unique: false }); }
+          catch (err) { if (err.name !== 'ConstraintError') console.warn('[dataLocal] Failed to create index byRemote:', err); }
         }
       }
-
-      // === Config Store ===
-      if (!db.objectStoreNames.contains(CONF)) {
-        db.createObjectStore(CONF, { keyPath: 'key' });
-      }
+      if (!db.objectStoreNames.contains(CONF)) db.createObjectStore(CONF, { keyPath: 'key' });
     };
 
     req.onsuccess = e => {
@@ -85,80 +112,37 @@ function initDB() {
 
 /* ===== Config Store ===== */
 
-/** Schreibt Konfigurationseintrag */
+// SUBMODULE: putConf @public - schreibt Konfigurationseintrag in Store
 function putConf(key, value) {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(CONF, 'readwrite');
-    const store = tx.objectStore(CONF);
-
-    const req = store.put({ key, value });
-    req.onsuccess = () => {
-      if (settled) return;
-      settled = true;
-      res();
-    };
-    req.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'putConf request failed');
-    };
-
-    tx.oncomplete = () => {
-      if (settled) return;
-      settled = true;
-      res();
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'putConf aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'putConf failed');
-    };
+  const tx = db.transaction(CONF, 'readwrite');
+  const store = tx.objectStore(CONF);
+  const req = store.put({ key, value });
+  return wrapIDBRequest(tx, req, {
+    actionName: 'putConf',
+    onSuccess: () => undefined
   });
 }
 
-/** Liest Konfigurationseintrag */
+// SUBMODULE: getConf @public - liest Konfigurationseintrag aus Store
 function getConf(key) {
   ensureDbReady();
   diag.add?.(`[conf] getConf start ${key}`);
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(CONF, 'readonly');
-    const rq = tx.objectStore(CONF).get(key);
-
-    rq.onsuccess = () => {
-      if (settled) return;
-      settled = true;
+  const tx = db.transaction(CONF, 'readonly');
+  const req = tx.objectStore(CONF).get(key);
+  return wrapIDBRequest(tx, req, {
+    actionName: 'getConf',
+    onSuccess: (_, rq) => {
       const val = rq.result?.value ?? null;
       diag.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
-      res(val);
-    };
-    rq.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, `getConf error ${key}`);
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, `getConf aborted ${key}`);
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, `getConf failed ${key}`);
-    };
+      return val;
+    }
   });
 }
 
 /* ===== Timezone Helpers ===== */
 
+// SUBMODULE: getTimeZoneOffsetMs @internal - berechnet Zeitzonenoffset für Mitternachtstransformation
 function getTimeZoneOffsetMs(timeZone, referenceDate) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -174,19 +158,20 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
     const parts = dtf.formatToParts(referenceDate);
     const bucket = {};
     for (const part of parts) {
-      if (part.type === 'literal') continue;
-      bucket[part.type] = part.value;
+      if (part.type !== 'literal') bucket[part.type] = part.value;
     }
-    const nums = ['year', 'month', 'day', 'hour', 'minute', 'second'].map(k => Number(bucket[k]));
-    if (nums.some(n => !Number.isFinite(n))) return 0;
-    const [year, month, day, hour, minute, second] = nums;
+    const [year, month, day, hour, minute, second] = [
+      bucket.year, bucket.month, bucket.day, bucket.hour, bucket.minute, bucket.second
+    ].map(Number);
+    if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) return 0;
     const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
     return asUtc - referenceDate.getTime();
-  } catch (_) {
+  } catch {
     return 0;
   }
 }
 
+// SUBMODULE: dayIsoToMidnightIso @internal - wandelt Tages-ISO in UTC-Midnight-Zeitstempel
 function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
   try {
     const normalized = String(dayIso || '').trim();
@@ -195,47 +180,26 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
     if (![y, m, d].every(Number.isFinite)) return null;
     const ref = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
     const offset = getTimeZoneOffsetMs(timeZone, ref);
-    const utcMillis = ref.getTime() - offset;
-    return new Date(utcMillis).toISOString();
-  } catch (_) {
+    return new Date(ref.getTime() - offset).toISOString();
+  } catch {
     return null;
   }
 }
 
 /* ===== Entry Store ===== */
 
+// SUBMODULE: addEntry @public - fügt lokalen Eintrag hinzu
 function addEntry(obj) {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
-    const rq = store.add(obj);
-
-    rq.onsuccess = () => {
-      if (settled) return;
-      settled = true;
-      res(rq.result);
-    };
-    rq.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'addEntry request failed');
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'addEntry aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'addEntry failed');
-    };
+  const tx = db.transaction(STORE, 'readwrite');
+  const req = tx.objectStore(STORE).add(obj);
+  return wrapIDBRequest(tx, req, {
+    actionName: 'addEntry',
+    onSuccess: (_, rq) => rq.result
   });
 }
 
-/** Aktualisiert bestehenden Eintrag */
+// SUBMODULE: updateEntry @public - aktualisiert bestehenden Eintrag (manualAbort geschützt)
 function updateEntry(id, patch) {
   ensureDbReady();
   return new Promise((res, rej) => {
@@ -249,14 +213,13 @@ function updateEntry(id, patch) {
       const cur = get.result;
       if (!cur) {
         manualAbort = true;
-        try { tx.abort(); } catch (_) {}
+        try { tx.abort(); } catch {}
         if (!settled) {
           settled = true;
           res(false);
         }
         return;
       }
-
       const putReq = store.put({ ...cur, ...patch });
       putReq.onsuccess = () => {}; // Success via tx.oncomplete
       putReq.onerror = e => {
@@ -291,93 +254,37 @@ function updateEntry(id, patch) {
   });
 }
 
+// SUBMODULE: getAllEntries @public - gibt alle Einträge aus Store zurück
 function getAllEntries() {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(STORE, 'readonly');
-    const rq = tx.objectStore(STORE).getAll();
-    rq.onsuccess = () => {
-      if (settled) return;
-      settled = true;
-      res(rq.result || []);
-    };
-    rq.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getAllEntries request failed');
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getAllEntries aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getAllEntries failed');
-    };
+  const tx = db.transaction(STORE, 'readonly');
+  const req = tx.objectStore(STORE).getAll();
+  return wrapIDBRequest(tx, req, {
+    actionName: 'getAllEntries',
+    onSuccess: (_, rq) => rq.result || []
   });
 }
 
+// SUBMODULE: getEntryByRemoteId @public - findet Eintrag anhand remote_id
 function getEntryByRemoteId(remoteId) {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(STORE, 'readonly');
-    const idx = tx.objectStore(STORE).index('byRemote');
-    const rq = idx.get(remoteId);
-
-    rq.onsuccess = () => {
-      if (settled) return;
-      settled = true;
-      res(rq.result ?? null);
-    };
-    rq.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getEntryByRemoteId request failed');
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getEntryByRemoteId aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'getEntryByRemoteId failed');
-    };
+  const tx = db.transaction(STORE, 'readonly');
+  const idx = tx.objectStore(STORE).index('byRemote');
+  const req = idx.get(remoteId);
+  return wrapIDBRequest(tx, req, {
+    actionName: 'getEntryByRemoteId',
+    onSuccess: (_, rq) => rq.result ?? null
   });
 }
 
+// SUBMODULE: deleteEntryLocal @public - löscht lokalen Eintrag
 function deleteEntryLocal(id) {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    let settled = false;
-    const tx = db.transaction(STORE, 'readwrite');
-    const rq = tx.objectStore(STORE).delete(id);
-
-    rq.onsuccess = () => {
-      if (settled) return;
-      settled = true;
-      res();
-    };
-    rq.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'deleteEntryLocal request failed');
-    };
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'deleteEntryLocal aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'deleteEntryLocal failed');
-    };
+  const tx = db.transaction(STORE, 'readwrite');
+  const req = tx.objectStore(STORE).delete(id);
+  return wrapIDBRequest(tx, req, {
+    actionName: 'deleteEntryLocal',
+    onSuccess: () => undefined
   });
 }
 
