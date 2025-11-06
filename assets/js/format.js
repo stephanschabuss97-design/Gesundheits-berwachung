@@ -3,9 +3,9 @@
  * MODULE: format
  * intent: Formatiert Werte und mappt Capture-Einträge auf health_events
  * exports: formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly
- * version: 1.3
+ * version: 1.4
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Null-safe checks, NaN filter, immutable global export; calcMAP nutzt toNumberOrNull
+ * notes: Null-safe checks, NaN filter, immutable global export; calcMAP mit medizinischer Plausibilitätsprüfung
  */
 
 (function (global) {
@@ -38,11 +38,24 @@
     }
   }
 
-  // SUBMODULE: calcMAP @public - mittlerer arterieller Druck aus Sys/Dia
+  // SUBMODULE: calcMAP @public - mittlerer arterieller Druck aus Sys/Dia (mit Plausibilitäts-Check)
   function calcMAP(sys, dia) {
     const s = toNumberOrNull(sys);
     const d = toNumberOrNull(dia);
     if (s === null || d === null) return null;
+
+    // Medizinische Plausibilitätsprüfung
+    const valid =
+      s > d &&
+      s > 0 &&
+      d > 0 &&
+      s >= 50 &&
+      s <= 300 &&
+      d >= 30 &&
+      d <= 200;
+
+    if (!valid) return null;
+
     return d + (s - d) / 3;
   }
 
