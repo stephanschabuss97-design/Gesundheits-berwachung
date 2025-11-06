@@ -3,21 +3,23 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.1
+ * version: 1.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Logik unverändert, aber vollständig gekapselt, safe & AppModules-konform
+ * notes: Getrennte Error/Info-Boxen, bessere Perf-Logs, Warnungen bei Exportkonflikten
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // SUBMODULE: unhandled rejection sink @internal - pipes promise rejections to inline toast
+  // SUBMODULE: unhandled rejection sink @internal
   try {
     global.addEventListener('unhandledrejection', (e) => {
       try {
         const msg =
           'Fehler: ' + (e.reason?.message || e.reason || 'Unbekannter Fehler');
-        const box = document.getElementById('err');
+        // Separate Error Box verwenden, Fallback auf alte Struktur
+        const box =
+          document.getElementById('errBox') || document.getElementById('err');
         if (box) {
           box.style.display = 'block';
           box.textContent = msg;
@@ -33,7 +35,7 @@
     console.error('[diagnostics] failed to register unhandledrejection listener', err);
   }
 
-  // SUBMODULE: perfStats sampler @internal - records timing buckets for perf telemetry
+  // SUBMODULE: perfStats sampler @internal
   const perfStats = (() => {
     const buckets = Object.create(null);
     const MAX_SAMPLES = 500;
@@ -62,7 +64,7 @@
     return { add, snap };
   })();
 
-  // SUBMODULE: recordPerfStat @public - logs perf telemetry stats
+  // SUBMODULE: recordPerfStat @public
   function recordPerfStat(key, startedAt) {
     if (startedAt == null) return;
     const hasPerf =
@@ -73,7 +75,8 @@
       const snap = perfStats?.snap?.(key);
       if (snap && snap.count % 25 === 0) {
         diag.add?.(
-          `[perf] ${key} p50=${snap.p50 | 0}ms p90=${snap.p90 | 0}ms p95=${snap.p95 | 0}ms`
+          `[perf] ${key} p50=${Math.floor(snap.p50 || 0)}ms ` +
+          `p90=${Math.floor(snap.p90 || 0)}ms p95=${Math.floor(snap.p95 || 0)}ms`
         );
       }
     } catch (err) {
@@ -81,7 +84,7 @@
     }
   }
 
-  // SUBMODULE: diag logger @public - hält Diagnosepanel und Log-Einträge
+  // SUBMODULE: diag logger @public
   const diag = {
     el: null,
     logEl: null,
@@ -132,13 +135,14 @@
     }
   };
 
-  // SUBMODULE: uiError @public - zeigt REST-/UI-Fehler
+  // SUBMODULE: uiError @public
   function uiError(msg) {
-    const box = document.getElementById('err');
+    const box =
+      document.getElementById('errBox') || document.getElementById('err');
     const text = String(msg || 'Fehler');
     if (box) {
-      box.setAttribute('role', 'status');
-      box.setAttribute('aria-live', 'polite');
+      box.setAttribute('role', 'alert');
+      box.setAttribute('aria-live', 'assertive');
       box.textContent = text;
       box.style.display = 'block';
       setTimeout(() => {
@@ -149,9 +153,10 @@
     }
   }
 
-  // SUBMODULE: uiInfo @public - zeigt Statusmeldungen
+  // SUBMODULE: uiInfo @public
   function uiInfo(msg) {
-    const box = document.getElementById('err');
+    const box =
+      document.getElementById('infoBox') || document.getElementById('err');
     const text = String(msg || 'OK');
     if (box) {
       box.setAttribute('role', 'status');
@@ -170,19 +175,23 @@
   const diagnosticsApi = { diag, recordPerfStat, uiError, uiInfo };
   appModules.diagnostics = diagnosticsApi;
 
-  // Legacy read-only globals (modern hasOwn)
+  // Legacy read-only globals (modern hasOwn, warn on conflict)
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
   Object.entries(diagnosticsApi).forEach(([key, value]) => {
-    if (!hasOwn(global, key)) {
-      Object.defineProperty(global, key, {
-        value,
-        writable: false,
-        configurable: false,
-        enumerable: false
-      });
+    if (hasOwn(global, key)) {
+      console.warn(
+        `[diagnostics] global property conflict: '${key}' already defined as ${typeof global[key]}`
+      );
+      return;
     }
+    Object.defineProperty(global, key, {
+      value,
+      writable: false,
+      configurable: false,
+      enumerable: false
+    });
   });
 })(window);
