@@ -4,10 +4,9 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.6
+ * version: 1.6.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Atomare Transaktionen (resolve nur bei Commit), zentraler Helper wrapIDBRequest(),
- *        vollständige SUBMODULE-Dokumentation
+ * notes: Kleine Optimierungen für Logging und transaktionale Klarheit
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -166,7 +165,8 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
     if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) return 0;
     const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
     return asUtc - referenceDate.getTime();
-  } catch {
+  } catch (err) {
+    console.warn('[dataLocal] getTimeZoneOffsetMs failed:', err, { timeZone, referenceDate });
     return 0;
   }
 }
@@ -199,58 +199,30 @@ function addEntry(obj) {
   });
 }
 
-// SUBMODULE: updateEntry @public - aktualisiert bestehenden Eintrag (manualAbort geschützt)
+// SUBMODULE: updateEntry @public - aktualisiert bestehenden Eintrag (vereinfacht)
 function updateEntry(id, patch) {
   ensureDbReady();
   return new Promise((res, rej) => {
-    let settled = false;
-    let manualAbort = false;
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
-    const get = store.get(id);
+    let entryFound = false;
 
-    get.onsuccess = () => {
-      const cur = get.result;
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const cur = getReq.result;
       if (!cur) {
-        manualAbort = true;
-        try { tx.abort(); } catch {}
-        if (!settled) {
-          settled = true;
-          res(false);
-        }
+        tx.abort();
         return;
       }
-      const putReq = store.put({ ...cur, ...patch });
-      putReq.onsuccess = () => {}; // Success via tx.oncomplete
-      putReq.onerror = e => {
-        if (settled) return;
-        settled = true;
-        fail(rej, e, 'updateEntry request failed');
-      };
+      entryFound = true;
+      store.put({ ...cur, ...patch });
     };
 
-    get.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'updateEntry get failed');
-    };
-
-    tx.oncomplete = () => {
-      if (settled) return;
-      settled = true;
-      res(true);
-    };
-    tx.onabort = e => {
-      if (manualAbort) return;
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'updateEntry aborted');
-    };
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(rej, e, 'updateEntry failed');
-    };
+    getReq.onerror = e => fail(rej, e, 'updateEntry get failed');
+    tx.oncomplete = () => res(entryFound);
+    tx.onabort = () => res(false);
+    tx.onerror = e => fail(rej, e, 'updateEntry transaction failed');
   });
 }
 
