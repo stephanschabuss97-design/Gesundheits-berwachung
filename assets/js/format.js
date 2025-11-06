@@ -3,9 +3,9 @@
  * MODULE: format
  * intent: Formatiert Werte und mappt Capture-Einträge auf health_events
  * exports: formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly
- * version: 1.2
+ * version: 1.3
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Null-safe checks, NaN filter, immutable global export
+ * notes: Null-safe checks, NaN filter, immutable global export; calcMAP nutzt toNumberOrNull
  */
 
 (function (global) {
@@ -40,8 +40,10 @@
 
   // SUBMODULE: calcMAP @public - mittlerer arterieller Druck aus Sys/Dia
   function calcMAP(sys, dia) {
-    if (sys == null || dia == null) return null;
-    return Number(dia) + (Number(sys) - Number(dia)) / 3;
+    const s = toNumberOrNull(sys);
+    const d = toNumberOrNull(dia);
+    if (s === null || d === null) return null;
+    return d + (s - d) / 3;
   }
 
   // SUBMODULE: toHealthEvents @public - mappt Capture-Eintrag auf health_events-Payloads
@@ -130,7 +132,7 @@
       Object.defineProperty(global, key, {
         value,
         writable: false,
-        configurable: false, // fix: fully immutable
+        configurable: false,
         enumerable: false
       });
     }
