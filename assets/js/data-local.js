@@ -4,9 +4,10 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.6.2
+ * version: 1.7.0
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Kleine Optimierungen für Logging und transaktionale Klarheit
+ * notes: getTimeZoneOffsetMs gibt null bei Fehlern; wrapIDBRequest registriert tx-Handler früh
+ *        und unterstützt resolveOn ('request'|'txcomplete') + onAbortResolve; updateEntry nutzt Wrapper
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -31,25 +32,56 @@ const CONF = 'config';
 const DB_VERSION = 5;
 
 // SUBMODULE: wrapIDBRequest @internal - generischer Handler für IDB Request/Transaktions-Fluss
-function wrapIDBRequest(tx, req, { onSuccess, actionName }) {
+/**
+ * @param {IDBTransaction} tx
+ * @param {IDBRequest} req
+ * @param {{ onSuccess?: (e: Event, req: IDBRequest) => any,
+ *           actionName: string,
+ *           resolveOn?: 'request' | 'txcomplete',
+ *           onAbortResolve?: any }} opts
+ * @returns {Promise<any>}
+ */
+function wrapIDBRequest(tx, req, { onSuccess, actionName, resolveOn = 'request', onAbortResolve } = {}) {
   return new Promise((resolve, reject) => {
     let settled = false;
+    let lastValue;
+
+    // Register transaction handlers immediately to never miss events
+    tx.oncomplete = () => {
+      if (settled) return;
+      settled = true;
+      resolve(resolveOn === 'txcomplete' ? lastValue : lastValue);
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      if (Object.prototype.hasOwnProperty.call(arguments.callee, 'dummy')) {} // keep linter calm
+      if (arguments.length && onAbortResolve !== undefined) {
+        // Map abort (z.B. "not found") auf definierten Resolve-Wert
+        resolve(onAbortResolve);
+      } else {
+        fail(reject, e, `${actionName} aborted`);
+      }
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(reject, e, `${actionName} failed`);
+    };
 
     req.onsuccess = e => {
       try {
-        if (settled) return;
-        const value = typeof onSuccess === 'function' ? onSuccess(e, req) : undefined;
-        tx.oncomplete = () => {
-          if (!settled) {
-            settled = true;
-            resolve(value);
-          }
-        };
-      } catch (err) {
-        if (!settled) {
+        lastValue = typeof onSuccess === 'function' ? onSuccess(e, req) : undefined;
+        if (resolveOn === 'request') {
+          if (settled) return;
           settled = true;
-          fail(reject, err, `${actionName} success handler failed`);
+          resolve(lastValue);
         }
+        // if resolveOn === 'txcomplete', we just store lastValue and let tx.oncomplete resolve
+      } catch (err) {
+        if (settled) return;
+        settled = true;
+        fail(reject, err, `${actionName} success handler failed`);
       }
     };
 
@@ -57,18 +89,6 @@ function wrapIDBRequest(tx, req, { onSuccess, actionName }) {
       if (settled) return;
       settled = true;
       fail(reject, e, `${actionName} request failed`);
-    };
-
-    tx.onabort = e => {
-      if (settled) return;
-      settled = true;
-      fail(reject, e, `${actionName} aborted`);
-    };
-
-    tx.onerror = e => {
-      if (settled) return;
-      settled = true;
-      fail(reject, e, `${actionName} failed`);
     };
   });
 }
@@ -119,7 +139,9 @@ function putConf(key, value) {
   const req = store.put({ key, value });
   return wrapIDBRequest(tx, req, {
     actionName: 'putConf',
-    onSuccess: () => undefined
+    onSuccess: () => undefined,
+    // für Writes: resolveOn 'request' genügt; tx-Handler fungieren als Fallback
+    resolveOn: 'request'
   });
 }
 
@@ -135,13 +157,17 @@ function getConf(key) {
       const val = rq.result?.value ?? null;
       diag.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
       return val;
-    }
+    },
+    resolveOn: 'request'
   });
 }
 
 /* ===== Timezone Helpers ===== */
 
 // SUBMODULE: getTimeZoneOffsetMs @internal - berechnet Zeitzonenoffset für Mitternachtstransformation
+/**
+ * @returns {number|null} Offset in Millisekunden oder null bei Fehler
+ */
 function getTimeZoneOffsetMs(timeZone, referenceDate) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -162,12 +188,12 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
     const [year, month, day, hour, minute, second] = [
       bucket.year, bucket.month, bucket.day, bucket.hour, bucket.minute, bucket.second
     ].map(Number);
-    if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) return 0;
+    if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) return null;
     const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
     return asUtc - referenceDate.getTime();
   } catch (err) {
     console.warn('[dataLocal] getTimeZoneOffsetMs failed:', err, { timeZone, referenceDate });
-    return 0;
+    return null;
   }
 }
 
@@ -180,6 +206,10 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
     if (![y, m, d].every(Number.isFinite)) return null;
     const ref = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
     const offset = getTimeZoneOffsetMs(timeZone, ref);
+    if (offset == null) {
+      console.warn('[dataLocal] dayIsoToMidnightIso: timezone offset unavailable, returning null', { dayIso, timeZone });
+      return null;
+    }
     return new Date(ref.getTime() - offset).toISOString();
   } catch {
     return null;
@@ -195,34 +225,34 @@ function addEntry(obj) {
   const req = tx.objectStore(STORE).add(obj);
   return wrapIDBRequest(tx, req, {
     actionName: 'addEntry',
-    onSuccess: (_, rq) => rq.result
+    onSuccess: (_, rq) => rq.result,
+    resolveOn: 'request'
   });
 }
 
-// SUBMODULE: updateEntry @public - aktualisiert bestehenden Eintrag (vereinfacht)
+// SUBMODULE: updateEntry @public - aktualisiert bestehenden Eintrag (Wrapper-basiert)
 function updateEntry(id, patch) {
   ensureDbReady();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
-    let entryFound = false;
+  const tx = db.transaction(STORE, 'readwrite');
+  const store = tx.objectStore(STORE);
+  const getReq = store.get(id);
 
-    const getReq = store.get(id);
-
-    getReq.onsuccess = () => {
-      const cur = getReq.result;
+  // Im onSuccess des GET: wenn vorhanden, PUT ausführen; wenn nicht, tx.abort()
+  // Resolve erfolgt NACH Commit (resolveOn: 'txcomplete'); Abbruch (not found) -> resolve(false)
+  return wrapIDBRequest(tx, getReq, {
+    actionName: 'updateEntry',
+    resolveOn: 'txcomplete',
+    onAbortResolve: false, // „not found“ führt zu Abort -> liefere false
+    onSuccess: (_, rq) => {
+      const cur = rq.result;
       if (!cur) {
         tx.abort();
-        return;
+        return false;
       }
-      entryFound = true;
       store.put({ ...cur, ...patch });
-    };
-
-    getReq.onerror = e => fail(rej, e, 'updateEntry get failed');
-    tx.oncomplete = () => res(entryFound);
-    tx.onabort = () => res(false);
-    tx.onerror = e => fail(rej, e, 'updateEntry transaction failed');
+      // Wert, der bei tx.oncomplete zurückkommt:
+      return true;
+    }
   });
 }
 
@@ -233,7 +263,8 @@ function getAllEntries() {
   const req = tx.objectStore(STORE).getAll();
   return wrapIDBRequest(tx, req, {
     actionName: 'getAllEntries',
-    onSuccess: (_, rq) => rq.result || []
+    onSuccess: (_, rq) => rq.result || [],
+    resolveOn: 'request'
   });
 }
 
@@ -245,7 +276,8 @@ function getEntryByRemoteId(remoteId) {
   const req = idx.get(remoteId);
   return wrapIDBRequest(tx, req, {
     actionName: 'getEntryByRemoteId',
-    onSuccess: (_, rq) => rq.result ?? null
+    onSuccess: (_, rq) => rq.result ?? null,
+    resolveOn: 'request'
   });
 }
 
@@ -256,7 +288,8 @@ function deleteEntryLocal(id) {
   const req = tx.objectStore(STORE).delete(id);
   return wrapIDBRequest(tx, req, {
     actionName: 'deleteEntryLocal',
-    onSuccess: () => undefined
+    onSuccess: () => undefined,
+    resolveOn: 'request'
   });
 }
 
