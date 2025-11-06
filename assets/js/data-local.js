@@ -55,8 +55,7 @@ function wrapIDBRequest(tx, req, { onSuccess, actionName, resolveOn = 'request',
     tx.onabort = e => {
       if (settled) return;
       settled = true;
-      if (Object.prototype.hasOwnProperty.call(arguments.callee, 'dummy')) {} // keep linter calm
-      if (arguments.length && onAbortResolve !== undefined) {
+      if (onAbortResolve !== undefined) {
         // Map abort (z.B. "not found") auf definierten Resolve-Wert
         resolve(onAbortResolve);
       } else {
