@@ -4,10 +4,10 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.4
+ * version: 1.5
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Guards, onabort-Handler, safer updateEntry, request-level handling,
- *        double-settle prevention, robust index creation with validation
+ * notes: Kein rethrow bei Index-Fehlern, klarer Kommentar bei putReq,
+ *        settled-Pattern bleibt bewusst inline (stabiler bei Debug)
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -46,14 +46,13 @@ function initDB() {
         const s = e.target.transaction.objectStore(STORE);
         const idxNames = Array.from(s.indexNames);
 
-        // create missing indexes, log unexpected errors
+        // create missing indexes; log but do not throw on error
         if (!idxNames.includes('byDateTime')) {
           try {
             s.createIndex('byDateTime', 'dateTime', { unique: false });
           } catch (err) {
             if (err.name !== 'ConstraintError') {
               console.warn('[dataLocal] Failed to create index byDateTime:', err);
-              throw err;
             }
           }
         }
@@ -63,7 +62,6 @@ function initDB() {
           } catch (err) {
             if (err.name !== 'ConstraintError') {
               console.warn('[dataLocal] Failed to create index byRemote:', err);
-              throw err;
             }
           }
         }
@@ -161,7 +159,6 @@ function getConf(key) {
 
 /* ===== Timezone Helpers ===== */
 
-/** Ermittelt Offset für dayIsoToMidnightIso (in Millisekunden) */
 function getTimeZoneOffsetMs(timeZone, referenceDate) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -180,15 +177,9 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
       if (part.type === 'literal') continue;
       bucket[part.type] = part.value;
     }
-    const year = Number(bucket.year);
-    const month = Number(bucket.month);
-    const day = Number(bucket.day);
-    const hour = Number(bucket.hour);
-    const minute = Number(bucket.minute);
-    const second = Number(bucket.second);
-    if ([year, month, day, hour, minute, second].some(n => !Number.isFinite(n))) {
-      return 0;
-    }
+    const nums = ['year', 'month', 'day', 'hour', 'minute', 'second'].map(k => Number(bucket[k]));
+    if (nums.some(n => !Number.isFinite(n))) return 0;
+    const [year, month, day, hour, minute, second] = nums;
     const asUtc = Date.UTC(year, month - 1, day, hour, minute, second);
     return asUtc - referenceDate.getTime();
   } catch (_) {
@@ -196,7 +187,6 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
   }
 }
 
-/** Wandelt YYYY-MM-DD ISO-String in Mitternachts-ISO-Zeitstempel (lokale Zone) */
 function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
   try {
     const normalized = String(dayIso || '').trim();
@@ -214,7 +204,6 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
 
 /* ===== Entry Store ===== */
 
-/** Fügt neuen Eintrag hinzu (Capture-Daten) */
 function addEntry(obj) {
   ensureDbReady();
   return new Promise((res, rej) => {
@@ -269,7 +258,7 @@ function updateEntry(id, patch) {
       }
 
       const putReq = store.put({ ...cur, ...patch });
-      putReq.onsuccess = () => {};
+      putReq.onsuccess = () => {}; // Success via tx.oncomplete
       putReq.onerror = e => {
         if (settled) return;
         settled = true;
@@ -302,7 +291,6 @@ function updateEntry(id, patch) {
   });
 }
 
-/** Holt alle gespeicherten Einträge */
 function getAllEntries() {
   ensureDbReady();
   return new Promise((res, rej) => {
@@ -332,7 +320,6 @@ function getAllEntries() {
   });
 }
 
-/** Holt Eintrag anhand der remote_id */
 function getEntryByRemoteId(remoteId) {
   ensureDbReady();
   return new Promise((res, rej) => {
@@ -364,7 +351,6 @@ function getEntryByRemoteId(remoteId) {
   });
 }
 
-/** Löscht Eintrag lokal */
 function deleteEntryLocal(id) {
   ensureDbReady();
   return new Promise((res, rej) => {
