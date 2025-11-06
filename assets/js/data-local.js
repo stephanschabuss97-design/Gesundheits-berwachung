@@ -1,21 +1,43 @@
+'use strict';
 /**
- * MODULE: DATA ACCESS (IndexedDB)
- * intent: lokale IndexedDB- und Konfig-Hilfen fuer Intake-/Doctor-Features
+ * MODULE: dataLocal
+ * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * notes: Logik unveraendert aus index.html extrahiert
+ * version: 1.2
+ * compat: Hybrid (Monolith + window.AppModules)
+ * notes: Guards, onabort-Handler, safer updateEntry, unified error handling
  */
 
-/* ===== IndexedDB ===== */
+/* ===== IndexedDB Setup ===== */
 let db;
 const DB_NAME = 'healthlog_db';
 const STORE = 'entries';
 const CONF = 'config';
+const DB_VERSION = 5;
 
-// SUBMODULE: initDB @internal - initialisiert IndexedDB Stores (entries/config)
+/**
+ * Kleine Hilfsfunktion für einheitliches Logging + Rejects
+ */
+function fail(reject, e, msg) {
+  const err = e?.target?.error || e || new Error('unknown');
+  console.error(`[dataLocal] ${msg}`, err);
+  reject(err);
+}
+
+/**
+ * Prüft, ob DB initialisiert ist
+ */
+function ensureDbReady() {
+  if (!db) throw new Error('IndexedDB not initialized. Call initDB() first.');
+}
+
+/**
+ * Initialisiert IndexedDB und legt ObjectStores an (entries/config)
+ */
 function initDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 5);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
 
     req.onupgradeneeded = e => {
       db = e.target.result;
@@ -25,12 +47,8 @@ function initDB() {
         s.createIndex('byRemote', 'remote_id', { unique: false });
       } else {
         const s = e.target.transaction.objectStore(STORE);
-        try {
-          s.createIndex('byDateTime', 'dateTime', { unique: false });
-        } catch (_) {}
-        try {
-          s.createIndex('byRemote', 'remote_id', { unique: false });
-        } catch (_) {}
+        try { s.createIndex('byDateTime', 'dateTime', { unique: false }); } catch (_) {}
+        try { s.createIndex('byRemote', 'remote_id', { unique: false }); } catch (_) {}
       }
       if (!db.objectStoreNames.contains(CONF)) {
         db.createObjectStore(CONF, { keyPath: 'key' });
@@ -42,21 +60,32 @@ function initDB() {
       db.onversionchange = () => db?.close?.();
       resolve();
     };
-    req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    req.onerror = e => fail(reject, e, 'IndexedDB open failed');
   });
 }
 
-/* --- IDB Helpers (global) --- */
+/* ===== Config Store ===== */
+
+/**
+ * Schreibt Konfigurationseintrag
+ */
 function putConf(key, value) {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(CONF, 'readwrite');
-    tx.objectStore(CONF).put({ key, value });
+    const store = tx.objectStore(CONF);
+    store.put({ key, value });
     tx.oncomplete = () => res();
-    tx.onerror = e => rej(e);
+    tx.onabort = e => fail(rej, e, 'putConf aborted');
+    tx.onerror = e => fail(rej, e, 'putConf failed');
   });
 }
 
+/**
+ * Liest Konfigurationseintrag
+ */
 function getConf(key) {
+  ensureDbReady();
   diag.add?.(`[conf] getConf start ${key}`);
   return new Promise((res, rej) => {
     const tx = db.transaction(CONF, 'readonly');
@@ -66,14 +95,17 @@ function getConf(key) {
       diag.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
       res(val);
     };
-    rq.onerror = e => {
-      diag.add?.(`[conf] getConf error ${key}: ${e?.target?.error || e}`);
-      rej(e);
-    };
+    rq.onerror = e => fail(rej, e, `getConf error ${key}`);
+    tx.onabort = e => fail(rej, e, `getConf aborted ${key}`);
   });
 }
 
-// SUBMODULE: getTimeZoneOffsetMs @internal - ermittelt Offset fuer dayIsoToMidnightIso
+/* ===== Timezone Helpers ===== */
+
+/**
+ * Ermittelt Offset für dayIsoToMidnightIso (in Millisekunden)
+ * Note: Safari hat minor Intl edge cases außerhalb ±14h, safe für Europe/Vienna
+ */
 function getTimeZoneOffsetMs(timeZone, referenceDate) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -108,6 +140,9 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
   }
 }
 
+/**
+ * Wandelt YYYY-MM-DD ISO-String in Mitternachts-ISO-Zeitstempel (lokale Zone)
+ */
 function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
   try {
     const normalized = String(dayIso || '').trim();
@@ -123,62 +158,92 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
   }
 }
 
-// SUBMODULE: addEntry @internal - persistiert Capture-Eintrag lokal vor Sync
+/* ===== Entry Store ===== */
+
+/**
+ * Fügt neuen Eintrag hinzu (Capture-Daten)
+ */
 function addEntry(obj) {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, 'readwrite');
     const rq = tx.objectStore(STORE).add(obj);
     rq.onsuccess = () => res(rq.result);
-    rq.onerror = e => rej(e);
+    rq.onerror = e => fail(rej, e, 'addEntry failed');
+    tx.onabort = e => fail(rej, e, 'addEntry aborted');
   });
 }
 
+/**
+ * Aktualisiert bestehenden Eintrag
+ */
 function updateEntry(id, patch) {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const get = store.get(id);
+
     get.onsuccess = () => {
       const cur = get.result;
       if (!cur) {
+        tx.abort();
         res(false);
         return;
       }
-      store.put(Object.assign({}, cur, patch));
+      store.put({ ...cur, ...patch });
     };
+
     tx.oncomplete = () => res(true);
-    tx.onerror = e => rej(e);
+    tx.onabort = e => fail(rej, e, 'updateEntry aborted');
+    tx.onerror = e => fail(rej, e, 'updateEntry failed');
   });
 }
 
+/**
+ * Holt alle gespeicherten Einträge
+ */
 function getAllEntries() {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, 'readonly');
     const rq = tx.objectStore(STORE).getAll();
     rq.onsuccess = () => res(rq.result || []);
-    rq.onerror = e => rej(e);
+    rq.onerror = e => fail(rej, e, 'getAllEntries failed');
+    tx.onabort = e => fail(rej, e, 'getAllEntries aborted');
   });
 }
 
+/**
+ * Holt Eintrag anhand der remote_id
+ */
 function getEntryByRemoteId(remoteId) {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, 'readonly');
     const idx = tx.objectStore(STORE).index('byRemote');
-    const rq = idx.getAll(remoteId);
-    rq.onsuccess = () => res(rq.result?.[0] ?? null);
-    rq.onerror = e => rej(e);
+    const rq = idx.get(remoteId); // get() statt getAll() für Performance
+    rq.onsuccess = () => res(rq.result ?? null);
+    rq.onerror = e => fail(rej, e, 'getEntryByRemoteId failed');
+    tx.onabort = e => fail(rej, e, 'getEntryByRemoteId aborted');
   });
 }
 
+/**
+ * Löscht Eintrag lokal
+ */
 function deleteEntryLocal(id) {
+  ensureDbReady();
   return new Promise((res, rej) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).delete(id);
     tx.oncomplete = () => res();
-    tx.onerror = e => rej(e);
+    tx.onabort = e => fail(rej, e, 'deleteEntryLocal aborted');
+    tx.onerror = e => fail(rej, e, 'deleteEntryLocal failed');
   });
 }
 
+/* ===== Export ===== */
 const dataLocalApi = {
   initDB,
   putConf,
@@ -191,8 +256,11 @@ const dataLocalApi = {
   getEntryByRemoteId,
   deleteEntryLocal
 };
+
 window.AppModules = window.AppModules || {};
 window.AppModules.dataLocal = dataLocalApi;
+
+// Legacy-safe globals (nur definieren, wenn nicht vorhanden)
 for (const [key, value] of Object.entries(dataLocalApi)) {
   if (typeof window[key] === 'undefined') {
     window[key] = value;
