@@ -4,9 +4,10 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.3
+ * version: 1.4
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Guards, onabort-Handler, safer updateEntry, request-level handling, double-settle prevention
+ * notes: Guards, onabort-Handler, safer updateEntry, request-level handling,
+ *        double-settle prevention, robust index creation with validation
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -35,15 +36,40 @@ function initDB() {
 
     req.onupgradeneeded = e => {
       db = e.target.result;
+
+      // === Entries Store ===
       if (!db.objectStoreNames.contains(STORE)) {
         const s = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
         s.createIndex('byDateTime', 'dateTime', { unique: false });
         s.createIndex('byRemote', 'remote_id', { unique: false });
       } else {
         const s = e.target.transaction.objectStore(STORE);
-        try { s.createIndex('byDateTime', 'dateTime', { unique: false }); } catch (_) {}
-        try { s.createIndex('byRemote', 'remote_id', { unique: false }); } catch (_) {}
+        const idxNames = Array.from(s.indexNames);
+
+        // create missing indexes, log unexpected errors
+        if (!idxNames.includes('byDateTime')) {
+          try {
+            s.createIndex('byDateTime', 'dateTime', { unique: false });
+          } catch (err) {
+            if (err.name !== 'ConstraintError') {
+              console.warn('[dataLocal] Failed to create index byDateTime:', err);
+              throw err;
+            }
+          }
+        }
+        if (!idxNames.includes('byRemote')) {
+          try {
+            s.createIndex('byRemote', 'remote_id', { unique: false });
+          } catch (err) {
+            if (err.name !== 'ConstraintError') {
+              console.warn('[dataLocal] Failed to create index byRemote:', err);
+              throw err;
+            }
+          }
+        }
       }
+
+      // === Config Store ===
       if (!db.objectStoreNames.contains(CONF)) {
         db.createObjectStore(CONF, { keyPath: 'key' });
       }
@@ -54,6 +80,7 @@ function initDB() {
       db.onversionchange = () => db?.close?.();
       resolve();
     };
+
     req.onerror = e => fail(reject, e, 'IndexedDB open failed');
   });
 }
@@ -68,12 +95,10 @@ function putConf(key, value) {
     const tx = db.transaction(CONF, 'readwrite');
     const store = tx.objectStore(CONF);
 
-    // request-level handling (deterministisch)
     const req = store.put({ key, value });
     req.onsuccess = () => {
       if (settled) return;
       settled = true;
-      // optional: req.result zurückgeben (hier nicht benötigt)
       res();
     };
     req.onerror = e => {
@@ -82,7 +107,6 @@ function putConf(key, value) {
       fail(rej, e, 'putConf request failed');
     };
 
-    // transaction-level redundancy (falls request nicht feuert)
     tx.oncomplete = () => {
       if (settled) return;
       settled = true;
@@ -227,7 +251,7 @@ function updateEntry(id, patch) {
   ensureDbReady();
   return new Promise((res, rej) => {
     let settled = false;
-    let manualAbort = false; // verhindert double-settle bei "not found"
+    let manualAbort = false;
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const get = store.get(id);
@@ -239,15 +263,13 @@ function updateEntry(id, patch) {
         try { tx.abort(); } catch (_) {}
         if (!settled) {
           settled = true;
-          res(false); // not found → kein Update
+          res(false);
         }
         return;
       }
-      // put req explizit behandeln
+
       const putReq = store.put({ ...cur, ...patch });
-      putReq.onsuccess = () => {
-        // Wir lassen tx.oncomplete final resolven (true), falls noch nicht settled
-      };
+      putReq.onsuccess = () => {};
       putReq.onerror = e => {
         if (settled) return;
         settled = true;
@@ -267,10 +289,7 @@ function updateEntry(id, patch) {
       res(true);
     };
     tx.onabort = e => {
-      if (manualAbort) {
-        // erwarteter Abort (not found) → bereits resolved(false)
-        return;
-      }
+      if (manualAbort) return;
       if (settled) return;
       settled = true;
       fail(rej, e, 'updateEntry aborted');
@@ -320,7 +339,7 @@ function getEntryByRemoteId(remoteId) {
     let settled = false;
     const tx = db.transaction(STORE, 'readonly');
     const idx = tx.objectStore(STORE).index('byRemote');
-    const rq = idx.get(remoteId); // get() statt getAll()
+    const rq = idx.get(remoteId);
 
     rq.onsuccess = () => {
       if (settled) return;
@@ -393,7 +412,6 @@ const dataLocalApi = {
 window.AppModules = window.AppModules || {};
 window.AppModules.dataLocal = dataLocalApi;
 
-// Legacy-safe globals (nur definieren, wenn nicht vorhanden)
 for (const [key, value] of Object.entries(dataLocalApi)) {
   if (typeof window[key] === 'undefined') {
     window[key] = value;
