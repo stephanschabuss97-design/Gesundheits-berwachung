@@ -3,19 +3,19 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.3
+ * version: 1.4
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Separate Error/Info-Boxen, listener-dup guard, safe text handling
+ * notes: Module-lokaler Listener-Guard, kein global leak, cleaned preventDefault
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
+  let diagnosticsListenerAdded = false; // module-local guard
 
   // SUBMODULE: unhandled rejection sink @internal
   try {
-    // prevent duplicate listener registration on reloads
-    if (!global.__diagnosticsListenerAdded) {
-      global.__diagnosticsListenerAdded = true;
+    if (!diagnosticsListenerAdded) {
+      diagnosticsListenerAdded = true;
       global.addEventListener('unhandledrejection', (e) => {
         try {
           const errBox =
@@ -30,7 +30,7 @@
           } else {
             console.error('[diagnostics:unhandledrejection]', message);
           }
-          e?.preventDefault?.();
+          e.preventDefault(); // cleaner and guaranteed safe
         } catch (err) {
           console.error('[diagnostics] unhandledrejection handler failed', err);
         }
