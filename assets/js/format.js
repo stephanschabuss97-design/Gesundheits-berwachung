@@ -47,8 +47,6 @@
     // Medizinische Plausibilitätsprüfung
     const valid =
       s > d &&
-      s > 0 &&
-      d > 0 &&
       s >= 50 &&
       s <= 300 &&
       d >= 30 &&
