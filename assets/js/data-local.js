@@ -4,9 +4,9 @@
  * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
  * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
  *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.2
+ * version: 1.3
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Guards, onabort-Handler, safer updateEntry, unified error handling
+ * notes: Guards, onabort-Handler, safer updateEntry, request-level handling, double-settle prevention
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -16,25 +16,19 @@ const STORE = 'entries';
 const CONF = 'config';
 const DB_VERSION = 5;
 
-/**
- * Kleine Hilfsfunktion für einheitliches Logging + Rejects
- */
+/** Einheitliches Logging + Reject */
 function fail(reject, e, msg) {
   const err = e?.target?.error || e || new Error('unknown');
   console.error(`[dataLocal] ${msg}`, err);
   reject(err);
 }
 
-/**
- * Prüft, ob DB initialisiert ist
- */
+/** Prüft, ob DB initialisiert ist */
 function ensureDbReady() {
   if (!db) throw new Error('IndexedDB not initialized. Call initDB() first.');
 }
 
-/**
- * Initialisiert IndexedDB und legt ObjectStores an (entries/config)
- */
+/** Initialisiert IndexedDB und legt ObjectStores an (entries/config) */
 function initDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -66,46 +60,84 @@ function initDB() {
 
 /* ===== Config Store ===== */
 
-/**
- * Schreibt Konfigurationseintrag
- */
+/** Schreibt Konfigurationseintrag */
 function putConf(key, value) {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(CONF, 'readwrite');
     const store = tx.objectStore(CONF);
-    store.put({ key, value });
-    tx.oncomplete = () => res();
-    tx.onabort = e => fail(rej, e, 'putConf aborted');
-    tx.onerror = e => fail(rej, e, 'putConf failed');
+
+    // request-level handling (deterministisch)
+    const req = store.put({ key, value });
+    req.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      // optional: req.result zurückgeben (hier nicht benötigt)
+      res();
+    };
+    req.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'putConf request failed');
+    };
+
+    // transaction-level redundancy (falls request nicht feuert)
+    tx.oncomplete = () => {
+      if (settled) return;
+      settled = true;
+      res();
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'putConf aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'putConf failed');
+    };
   });
 }
 
-/**
- * Liest Konfigurationseintrag
- */
+/** Liest Konfigurationseintrag */
 function getConf(key) {
   ensureDbReady();
   diag.add?.(`[conf] getConf start ${key}`);
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(CONF, 'readonly');
     const rq = tx.objectStore(CONF).get(key);
+
     rq.onsuccess = () => {
+      if (settled) return;
+      settled = true;
       const val = rq.result?.value ?? null;
       diag.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
       res(val);
     };
-    rq.onerror = e => fail(rej, e, `getConf error ${key}`);
-    tx.onabort = e => fail(rej, e, `getConf aborted ${key}`);
+    rq.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, `getConf error ${key}`);
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, `getConf aborted ${key}`);
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, `getConf failed ${key}`);
+    };
   });
 }
 
 /* ===== Timezone Helpers ===== */
 
-/**
- * Ermittelt Offset für dayIsoToMidnightIso (in Millisekunden)
- * Note: Safari hat minor Intl edge cases außerhalb ±14h, safe für Europe/Vienna
- */
+/** Ermittelt Offset für dayIsoToMidnightIso (in Millisekunden) */
 function getTimeZoneOffsetMs(timeZone, referenceDate) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -140,9 +172,7 @@ function getTimeZoneOffsetMs(timeZone, referenceDate) {
   }
 }
 
-/**
- * Wandelt YYYY-MM-DD ISO-String in Mitternachts-ISO-Zeitstempel (lokale Zone)
- */
+/** Wandelt YYYY-MM-DD ISO-String in Mitternachts-ISO-Zeitstempel (lokale Zone) */
 function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
   try {
     const normalized = String(dayIso || '').trim();
@@ -160,26 +190,44 @@ function dayIsoToMidnightIso(dayIso, timeZone = 'Europe/Vienna') {
 
 /* ===== Entry Store ===== */
 
-/**
- * Fügt neuen Eintrag hinzu (Capture-Daten)
- */
+/** Fügt neuen Eintrag hinzu (Capture-Daten) */
 function addEntry(obj) {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(STORE, 'readwrite');
-    const rq = tx.objectStore(STORE).add(obj);
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = e => fail(rej, e, 'addEntry failed');
-    tx.onabort = e => fail(rej, e, 'addEntry aborted');
+    const store = tx.objectStore(STORE);
+    const rq = store.add(obj);
+
+    rq.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      res(rq.result);
+    };
+    rq.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'addEntry request failed');
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'addEntry aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'addEntry failed');
+    };
   });
 }
 
-/**
- * Aktualisiert bestehenden Eintrag
- */
+/** Aktualisiert bestehenden Eintrag */
 function updateEntry(id, patch) {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
+    let manualAbort = false; // verhindert double-settle bei "not found"
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
     const get = store.get(id);
@@ -187,59 +235,144 @@ function updateEntry(id, patch) {
     get.onsuccess = () => {
       const cur = get.result;
       if (!cur) {
-        tx.abort();
-        res(false);
+        manualAbort = true;
+        try { tx.abort(); } catch (_) {}
+        if (!settled) {
+          settled = true;
+          res(false); // not found → kein Update
+        }
         return;
       }
-      store.put({ ...cur, ...patch });
+      // put req explizit behandeln
+      const putReq = store.put({ ...cur, ...patch });
+      putReq.onsuccess = () => {
+        // Wir lassen tx.oncomplete final resolven (true), falls noch nicht settled
+      };
+      putReq.onerror = e => {
+        if (settled) return;
+        settled = true;
+        fail(rej, e, 'updateEntry request failed');
+      };
     };
 
-    tx.oncomplete = () => res(true);
-    tx.onabort = e => fail(rej, e, 'updateEntry aborted');
-    tx.onerror = e => fail(rej, e, 'updateEntry failed');
+    get.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'updateEntry get failed');
+    };
+
+    tx.oncomplete = () => {
+      if (settled) return;
+      settled = true;
+      res(true);
+    };
+    tx.onabort = e => {
+      if (manualAbort) {
+        // erwarteter Abort (not found) → bereits resolved(false)
+        return;
+      }
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'updateEntry aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'updateEntry failed');
+    };
   });
 }
 
-/**
- * Holt alle gespeicherten Einträge
- */
+/** Holt alle gespeicherten Einträge */
 function getAllEntries() {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(STORE, 'readonly');
     const rq = tx.objectStore(STORE).getAll();
-    rq.onsuccess = () => res(rq.result || []);
-    rq.onerror = e => fail(rej, e, 'getAllEntries failed');
-    tx.onabort = e => fail(rej, e, 'getAllEntries aborted');
+    rq.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      res(rq.result || []);
+    };
+    rq.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getAllEntries request failed');
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getAllEntries aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getAllEntries failed');
+    };
   });
 }
 
-/**
- * Holt Eintrag anhand der remote_id
- */
+/** Holt Eintrag anhand der remote_id */
 function getEntryByRemoteId(remoteId) {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(STORE, 'readonly');
     const idx = tx.objectStore(STORE).index('byRemote');
-    const rq = idx.get(remoteId); // get() statt getAll() für Performance
-    rq.onsuccess = () => res(rq.result ?? null);
-    rq.onerror = e => fail(rej, e, 'getEntryByRemoteId failed');
-    tx.onabort = e => fail(rej, e, 'getEntryByRemoteId aborted');
+    const rq = idx.get(remoteId); // get() statt getAll()
+
+    rq.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      res(rq.result ?? null);
+    };
+    rq.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getEntryByRemoteId request failed');
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getEntryByRemoteId aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'getEntryByRemoteId failed');
+    };
   });
 }
 
-/**
- * Löscht Eintrag lokal
- */
+/** Löscht Eintrag lokal */
 function deleteEntryLocal(id) {
   ensureDbReady();
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).delete(id);
-    tx.oncomplete = () => res();
-    tx.onabort = e => fail(rej, e, 'deleteEntryLocal aborted');
-    tx.onerror = e => fail(rej, e, 'deleteEntryLocal failed');
+    const rq = tx.objectStore(STORE).delete(id);
+
+    rq.onsuccess = () => {
+      if (settled) return;
+      settled = true;
+      res();
+    };
+    rq.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'deleteEntryLocal request failed');
+    };
+    tx.onabort = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'deleteEntryLocal aborted');
+    };
+    tx.onerror = e => {
+      if (settled) return;
+      settled = true;
+      fail(rej, e, 'deleteEntryLocal failed');
+    };
   });
 }
 
