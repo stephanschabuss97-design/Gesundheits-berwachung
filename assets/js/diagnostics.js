@@ -25,12 +25,11 @@
 
           if (errBox) {
             errBox.style.display = 'block';
-            // always use textContent for safety
             errBox.textContent = message;
           } else {
             console.error('[diagnostics:unhandledrejection]', message);
           }
-          e.preventDefault(); // cleaner and guaranteed safe
+          e.preventDefault();
         } catch (err) {
           console.error('[diagnostics] unhandledrejection handler failed', err);
         }
@@ -198,4 +197,11 @@
       enumerable: false
     });
   });
+
+  // ✅ Variante A – globaler Hook für Chart-Kompatibilität
+  if (!global.perfStats) {
+    global.perfStats = perfStats;
+  } else {
+    console.warn('[diagnostics] global perfStats already defined, keeping existing reference');
+  }
 })(window);
