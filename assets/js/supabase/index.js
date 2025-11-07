@@ -1,5 +1,17 @@
-/** MODULE: supabase/index.js — Barrel @v1.8.1 */
+/**
+ * MODULE: supabase/index.js
+ * intent: Zentraler Barrel für Supabase-APIs (Core, Auth, Realtime, API-Layer)
+ * exports: SupabaseAPI (aggregated)
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Aggregiert alle Submodule aus core/, api/, auth/, realtime/
+ *   - Prüft Konflikte bei gleichnamigen Exports und loggt Warnungen
+ *   - Bindet SupabaseAPI global unter window.AppModules.supabase für Legacy-Kompatibilität
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - bindet Supabase-Submodule (Core, Auth, API)
 import { SupabaseAPI as LegacySupabaseAPI } from '../supabase.js';
 
 import * as state from './core/state.js';
@@ -12,6 +24,7 @@ import * as vitals from './api/vitals.js';
 import * as notes from './api/notes.js';
 import * as select from './api/select.js';
 
+// SUBMODULE: aggregation @internal - kombiniert Exporte, erkennt Konflikte
 const MODULE_SOURCES = [
   ['legacy', LegacySupabaseAPI],
   ['state', state],
@@ -49,6 +62,7 @@ if (conflicts.length) {
   console.warn(`[supabase/index] Duplicate export keys detected: ${summary}`);
 }
 
+// SUBMODULE: export @public - zentraler Aggregat-Export & globale Bindung
 export const SupabaseAPI = aggregated;
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
