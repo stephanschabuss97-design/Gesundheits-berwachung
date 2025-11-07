@@ -3,14 +3,16 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.5.1
+ * version: 1.5.2
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: perfStats read-only Exposure (snap-only) + non-writable global property
+ * notes: perfStats hardened (key/bucket logging, delta validation)
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
   let diagnosticsListenerAdded = false;
+
+  const MAX_ALLOWED_DIFF_MS = 60_000; // 1 minute sanity limit for perf samples
 
   // SUBMODULE: unhandled rejection sink @internal
   try {
@@ -44,13 +46,25 @@
     const buckets = Object.create(null);
     const MAX_SAMPLES = 500;
     const MAX_BUCKETS = 50;
+    let bucketCount = 0;
 
     const add = (k, ms) => {
       if (typeof ms !== 'number' || !Number.isFinite(ms)) return;
-      if (typeof k !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(k)) return;
-      if (!buckets[k] && Object.keys(buckets).length >= MAX_BUCKETS) return;
+      if (typeof k !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(k)) {
+        console.warn('[perfStats] invalid key skipped:', k);
+        return;
+      }
+      if (!buckets[k] && bucketCount >= MAX_BUCKETS) {
+        console.warn('[perfStats] bucket limit reached, discarding key:', k);
+        return;
+      }
 
-      const arr = (buckets[k] ??= []);
+      if (!buckets[k]) {
+        buckets[k] = [];
+        bucketCount++;
+      }
+
+      const arr = buckets[k];
       arr.push(ms);
       if (arr.length >= MAX_SAMPLES) arr.shift();
     };
@@ -83,7 +97,17 @@
       typeof performance !== 'undefined' && typeof performance.now === 'function';
     if (!hasPerf) return;
     try {
-      perfStats.add(key, Math.max(0, performance.now() - startedAt));
+      const delta = performance.now() - startedAt;
+      if (!Number.isFinite(delta) || delta < 0) {
+        console.warn('[perfStats] invalid delta for', key, '→', delta);
+        return;
+      }
+      if (delta > MAX_ALLOWED_DIFF_MS) {
+        console.warn('[perfStats] excessive delta for', key, '→', delta, 'ms (skipped)');
+        return;
+      }
+      const deltaClamped = Math.max(0, delta);
+      perfStats.add(key, deltaClamped);
       const snap = perfStats.snap(key);
       if (snap && snap.count % 25 === 0) {
         diag.add?.(
@@ -186,7 +210,6 @@
   const diagnosticsApi = { diag, recordPerfStat, uiError, uiInfo };
   appModules.diagnostics = diagnosticsApi;
 
-  // Legacy read-only globals (modern hasOwn, warn on conflict)
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
