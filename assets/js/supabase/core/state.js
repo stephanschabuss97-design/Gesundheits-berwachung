@@ -1,5 +1,17 @@
-/** MODULE: supabase/core/state.js — extracted from supabase.js @v1.8.0 */
+/**
+ * MODULE: supabase/core/state.js
+ * intent: Zentraler In-Memory-State für Supabase-Client, Auth-Status und Header-Cache
+ * exports: supabaseState, cacheHeaders, clearHeaderCache, getCachedHeaders, getCachedHeadersAt, getHeaderPromise, setHeaderPromise
+ * version: 1.8.2
+ * compat: Runtime (Browser / Node / PWA)
+ * notes:
+ *   - Enthält alle Supabase-Session- und Header-Informationen im RAM
+ *   - Wird von client.js, http.js und auth/core.js gemeinsam genutzt
+ *   - Kein permanenter Storage – volatile, resetbar per clearHeaderCache()
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: state @internal - globaler Supabase-Zustand (Auth + Header + Session)
 export const supabaseState = {
   sbClient: null,
   cachedHeaders: null,
@@ -14,6 +26,7 @@ export const supabaseState = {
   lastUserId: null
 };
 
+// SUBMODULE: header cache utilities @public - Verwaltung von Auth-Headern
 export function cacheHeaders(headers) {
   supabaseState.cachedHeaders = headers;
   supabaseState.cachedHeadersAt = Date.now();

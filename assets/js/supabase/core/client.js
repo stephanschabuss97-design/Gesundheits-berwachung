@@ -1,7 +1,20 @@
-/** MODULE: supabase/core/client.js — extracted from supabase.js @v1.8.0 */
+/**
+ * MODULE: supabase/core/client.js
+ * intent: Initialisierung und Verwaltung des Supabase-Clients (Auth + REST-Basis)
+ * exports: maskUid, setSupabaseDebugPii, baseUrlFromRest, isServiceRoleKey, ensureSupabaseClient
+ * version: 1.8.2
+ * compat: Browser / PWA / TWA / Node-fallback
+ * notes:
+ *   - Handhabt sichere Initialisierung des Supabase-Clients
+ *   - Prüft Konfiguration auf service_role Keys
+ *   - Nutzt lokale diag.add Hooks für Logging
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase State-Verwaltung
 import { supabaseState } from './state.js';
 
+// SUBMODULE: constants & globals @internal - globale Handles und Log-Objekt
 const supabaseLog = { debugLogPii: false };
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
@@ -9,6 +22,7 @@ const diag =
     globalWindow?.AppModules?.diag ||
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
+
 
 const getConfSafe = (...args) => {
   const fn = globalWindow?.getConf;
@@ -28,6 +42,7 @@ const setConfigStatusSafe = (msg, tone = 'info') => {
   }
 };
 
+// SUBMODULE: maskUid @public - schützt User-IDs vor vollständigem Logging
 export function maskUid(uid) {
   if (!uid) return 'anon';
   const str = String(uid);
@@ -38,16 +53,19 @@ export function maskUid(uid) {
   return `${head}-${tail}`;
 }
 
+// SUBMODULE: setSupabaseDebugPii @public - toggelt Logging sensibler Daten
 export function setSupabaseDebugPii(enabled) {
   supabaseLog.debugLogPii = !!enabled;
 }
 
+// SUBMODULE: baseUrlFromRest @public - extrahiert Basis-URL aus REST-Endpunkt
 export function baseUrlFromRest(restUrl) {
   if (!restUrl) return null;
   const i = restUrl.indexOf('/rest/');
   return i > 0 ? restUrl.slice(0, i) : null;
 }
 
+// SUBMODULE: isServiceRoleKey @public - prüft JWT Payload auf service_role
 export function isServiceRoleKey(raw) {
   const tok = String(raw || '').trim().replace(/^Bearer\s+/i, '');
   try {
@@ -58,6 +76,7 @@ export function isServiceRoleKey(raw) {
   }
 }
 
+// SUBMODULE: ensureSupabaseClient @public - erstellt oder cached den Supabase-Client
 export async function ensureSupabaseClient() {
   if (supabaseState.sbClient) return supabaseState.sbClient;
 

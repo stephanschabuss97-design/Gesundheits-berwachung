@@ -1,5 +1,17 @@
-/** MODULE: supabase/core/http.js — extracted from supabase.js @v1.8.0 */
+/**
+ * MODULE: supabase/core/http.js
+ * intent: Einheitliches, fehlertolerantes Fetch- und Auth-Handling für REST-Requests
+ * exports: withRetry, fetchWithAuth
+ * version: 1.8.2
+ * compat: Browser / PWA / TWA
+ * notes:
+ *   - Implementiert robustes Fetch mit Auth-Header-Cache und automatischem Refresh
+ *   - Enthält Exponential-Backoff bei 5xx-Fehlern und Session-Retry bei 401
+ *   - Zentraler Baustein für alle Supabase REST-Aufrufe in API-Modulen
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase Client und Header Cache Utilities
 import { ensureSupabaseClient } from './client.js';
 import {
   getCachedHeaders,
@@ -10,6 +22,7 @@ import {
   clearHeaderCache
 } from './state.js';
 
+// SUBMODULE: globals @internal - Diagnose und Window Binding
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -17,9 +30,11 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+    // SUBMODULE: util - Hilfsfunktionen (sleep)
 const sleep = (ms = 0) =>
   new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
+// SUBMODULE: retry-wrapper @public - generische Wiederholungslogik mit Exponential Backoff
 export async function withRetry(fn, { tries = 3, base = 300 } = {}) {
   let attempts = Number.isFinite(tries) ? Math.floor(tries) : 0;
   if (attempts <= 0) attempts = 1;
@@ -37,6 +52,7 @@ export async function withRetry(fn, { tries = 3, base = 300 } = {}) {
   throw lastErr ?? new Error('withRetry: all attempts failed');
 }
 
+// SUBMODULE: fetchWithAuth @public - authentifiziertes Fetch mit Header-Cache und Retry-Strategien
 export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {
   const supa = await ensureSupabaseClient();
   if (!supa) {
