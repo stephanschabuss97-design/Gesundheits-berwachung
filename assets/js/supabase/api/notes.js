@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/api/notes.js
  * intent: Verwaltung und Synchronisierung von Notizen- und Tages-Flags-Einträgen über Supabase REST

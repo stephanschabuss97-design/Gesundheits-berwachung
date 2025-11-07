@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/auth/index.js
  * intent: Zentraler Barrel für alle Authentifizierungs-Module (Core, UI, Guard)

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/core/http.js
  * intent: Einheitliches, fehlertolerantes Fetch- und Auth-Handling für REST-Requests

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/auth/guard.js
  * intent: Zugriffsschutz, PIN-/Passkey-Handling und Doctor-Lock-Freischaltung

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/core/state.js
  * intent: Zentraler In-Memory-State für Supabase-Client, Auth-Status und Header-Cache

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/api/vitals.js
  * intent: Aggregiert Vitaldaten (Blutdruck, Körperwerte, Flags, Notizen) aus Supabase-Views

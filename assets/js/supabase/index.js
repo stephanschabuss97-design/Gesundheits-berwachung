@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/index.js
  * intent: Zentraler Barrel für Supabase-APIs (Core, Auth, Realtime, API-Layer)

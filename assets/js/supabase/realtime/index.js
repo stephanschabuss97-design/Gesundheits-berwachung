@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/realtime/index.js
  * intent: Delegations-Wrapper für Realtime-Setup, Teardown und Background-Resume

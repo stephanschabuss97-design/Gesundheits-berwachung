@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/api/select.js
  * intent: Generische REST-Abfrage-Schnittstelle (sbSelect) für Supabase-Tabellen

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/auth/core.js
  * intent: Steuerung des Authentifizierungs- und Session-Status (Login, Hooks, Grace Period)

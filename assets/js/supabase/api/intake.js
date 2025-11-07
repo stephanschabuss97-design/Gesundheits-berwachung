@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/api/intake.js
  * intent: Intakes-API für Wasser-, Salz- und Proteinwerte; kommuniziert mit Supabase REST-Endpoint

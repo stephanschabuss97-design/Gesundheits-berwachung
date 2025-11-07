@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/auth/ui.js
  * intent: UI-Handling für Authentifizierungsprozesse (Login-Overlay, Config-Form, Buttons)

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * MODULE: supabase/core/client.js
  * intent: Initialisierung und Verwaltung des Supabase-Clients (Auth + REST-Basis)
