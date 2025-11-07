@@ -1,5 +1,17 @@
-/** MODULE: supabase/api/intake.js — extracted from supabase.js @v1.8.1 */
+/**
+ * MODULE: supabase/api/intake.js
+ * intent: Intakes-API für Wasser-, Salz- und Proteinwerte; kommuniziert mit Supabase REST-Endpoint
+ * exports: loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, cleanupOldIntake
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Bindeglied zwischen App-Frontend und Supabase-Backend (health_events)
+ *   - Unterstützt Fallbacks (RPC → Legacy REST) und automatische Wiederholung bei Fehlversuchen
+ *   - Nutzt globale Hilfen (getConf, todayStr, dayIsoToMidnightIso) aus dataLocal
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - API- und Core-Abhängigkeiten
 import { supabaseState } from '../core/state.js';
 import { baseUrlFromRest, maskUid } from '../core/client.js';
 import { fetchWithAuth } from '../core/http.js';
@@ -8,6 +20,7 @@ import { getUserId } from '../auth/core.js';
 import { toEventsUrl } from '../realtime/index.js';
 import { sbSelect } from './select.js';
 
+// SUBMODULE: globals @internal - globale Diagnose- und Utility-Hooks
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -43,6 +56,7 @@ const dayIsoToMidnightIso = (dayIso, timeZone) => {
 
 const isValidDayIso = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
+// SUBMODULE: loadIntakeToday @public - lädt Intake-Daten für aktuellen Tag
 export async function loadIntakeToday({ user_id, dayIso }) {
   if (!user_id) return null;
   diag.add?.(`[capture] loadIntakeToday start uid=${maskUid(user_id)} day=${dayIso || ''}`);
@@ -72,6 +86,7 @@ export async function loadIntakeToday({ user_id, dayIso }) {
   };
 }
 
+// SUBMODULE: saveIntakeTotals @public - speichert aktuelle Intake-Daten via REST/POST+PATCH
 export async function saveIntakeTotals({ dayIso, totals }) {
   const url = await getConf('webhookUrl');
   const uid = await getUserId();
@@ -143,6 +158,7 @@ export async function saveIntakeTotals({ dayIso, totals }) {
   return await res2.json();
 }
 
+// SUBMODULE: saveIntakeTotalsRpc @public - speichert Intake-Daten via Supabase-RPC upsert_intake
 export async function saveIntakeTotalsRpc({ dayIso, totals }) {
   const restUrl = await getConf('webhookUrl');
   const base = baseUrlFromRest(restUrl);
@@ -214,6 +230,7 @@ export async function saveIntakeTotalsRpc({ dayIso, totals }) {
   return row;
 }
 
+// SUBMODULE: cleanupOldIntake @public - entfernt alte Intake-Einträge vor aktuellem Tag
 export async function cleanupOldIntake() {
   try {
     const rawUrl = await getConf('webhookUrl');

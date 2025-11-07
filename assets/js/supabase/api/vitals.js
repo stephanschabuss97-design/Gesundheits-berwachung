@@ -1,8 +1,22 @@
-/** MODULE: supabase/api/vitals.js — extracted from supabase.js @v1.8.1 */
+/**
+ * MODULE: supabase/api/vitals.js
+ * intent: Aggregiert Vitaldaten (Blutdruck, Körperwerte, Flags, Notizen) aus Supabase-Views
+ * exports: loadBpFromView, loadBodyFromView, loadFlagsFromView, fetchDailyOverview
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Liest v_events_* Views (bp/body/day_flags) und health_events (notes)
+ *   - Kombiniert Ergebnisse zu tagesweisen Einträgen (joinViewsToDaily)
+ *   - Berechnet mittleren arteriellen Druck (MAP) mit globaler calcMAP()
+ *   - Wird vom Arzt-/Übersichtsbereich für den Chart-Aufbau genutzt
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase-Core und Hilfsfunktionen
 import { getUserId } from '../auth/core.js';
 import { sbSelect } from './select.js';
 
+// SUBMODULE: globals @internal - Diagnose-Hook
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -10,6 +24,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+    // SUBMODULE: calcMAPValue @internal - Wrapper um globale calcMAP mit Fehlerabsicherung
 const calcMAPValue = (sys, dia) => {
   const fn = globalWindow?.calcMAP;
   if (typeof fn !== 'function') {
@@ -25,6 +40,7 @@ const calcMAPValue = (sys, dia) => {
   }
 };
 
+// SUBMODULE: loadBpFromView @public - liest Blutdruckwerte aus v_events_bp
 export async function loadBpFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -37,6 +53,7 @@ export async function loadBpFromView({ user_id, from, to }) {
   });
 }
 
+// SUBMODULE: loadBodyFromView @public - liest Körperdaten aus v_events_body
 export async function loadBodyFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -49,6 +66,7 @@ export async function loadBodyFromView({ user_id, from, to }) {
   });
 }
 
+// SUBMODULE: loadFlagsFromView @public - liest Tages-Flags aus v_events_day_flags
 export async function loadFlagsFromView({ user_id, from, to }) {
   const filters = [['user_id', `eq.${user_id}`]];
   if (from) filters.push(['day', `gte.${from}`]);
@@ -62,6 +80,7 @@ export async function loadFlagsFromView({ user_id, from, to }) {
   });
 }
 
+// SUBMODULE: loadNotesLastPerDay @internal - extrahiert letzte Notizen pro Tag
 const loadNotesLastPerDay = async ({ user_id, from, to }) => {
   const filters = [
     ['user_id', `eq.${user_id}`],
@@ -91,6 +110,7 @@ const loadNotesLastPerDay = async ({ user_id, from, to }) => {
   return out;
 };
 
+// SUBMODULE: joinViewsToDaily @internal - fusioniert View-Ergebnisse zu Tagesobjekten
 const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
   const days = new Map();
   const ensure = (day) => {
@@ -133,6 +153,7 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
     if (row.muscle_kg != null) entry.muscle_kg = Number(row.muscle_kg);
   }
 
+  // Body metrics
   for (const row of bp) {
     const entry = ensure(row.day);
     const block = row.ctx === 'Morgen' ? entry.morning : row.ctx === 'Abend' ? entry.evening : null;
@@ -160,6 +181,7 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
     }
   }
 
+    // Flags
   for (const row of flags) {
     const entry = ensure(row.day);
     entry.flags.training = !!row.training;
@@ -173,6 +195,7 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
     entry.flags.nsar_taken = !!row.nsar_taken;
   }
 
+    // Notes
   for (const note of notes) {
     const entry = ensure(note.day);
     entry.notes = note.text || '';
@@ -181,6 +204,7 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
   return Array.from(days.values()).sort((a, b) => b.date.localeCompare(a.date));
 };
 
+// SUBMODULE: fetchDailyOverview @public - Hauptschnittstelle für Tagesübersicht
 export async function fetchDailyOverview(fromIso, toIso) {
   const userId = await getUserId();
   if (!userId) return [];

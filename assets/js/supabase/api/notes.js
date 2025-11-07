@@ -1,9 +1,23 @@
-/** MODULE: supabase/api/notes.js — extracted from supabase.js @v1.8.1 */
+/**
+ * MODULE: supabase/api/notes.js
+ * intent: Verwaltung und Synchronisierung von Notizen- und Tages-Flags-Einträgen über Supabase REST
+ * exports: syncWebhook, patchDayFlags, appendNoteRemote, deleteRemote, deleteRemoteDay
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Synchronisiert lokale "note" und "day_flags" Events mit dem Supabase-Backend
+ *   - Nutzt Webhook-POST/PATCH-Fallbacks bei Konflikten oder Duplikaten
+ *   - Integriert UI-Feedback (uiInfo/uiError) und lokale DB-Updates (updateEntry)
+ *   - Unterstützt automatisches Entfernen alter Einträge per DELETE
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase Core- und Auth-Abhängigkeiten
 import { fetchWithAuth } from '../core/http.js';
 import { getUserId } from '../auth/core.js';
 import { showLoginOverlay, hideLoginOverlay } from '../auth/ui.js';
 
+// SUBMODULE: globals @internal - globale Hilfsfunktionen und Diagnose-Hooks
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -64,6 +78,7 @@ const toggleLoginOverlay = (visible) => {
   }
 };
 
+// SUBMODULE: syncWebhook @public - sendet lokale Einträge an Supabase (inkl. Fallback-Handling)
 export async function syncWebhook(entry, localId) {
   const url = await getConf('webhookUrl');
   if (!url) {
@@ -96,6 +111,7 @@ export async function syncWebhook(entry, localId) {
         /* plain text */
       }
 
+// SUBMODULE: fallback-day_flags @internal - PATCH fallback für day_flags
       if (res.status === 409 || /duplicate|unique/i.test(details)) {
         const flagsEvent = events.find((ev) => ev.type === 'day_flags');
         try {
@@ -132,6 +148,7 @@ export async function syncWebhook(entry, localId) {
           });
         }
 
+        // SUBMODULE: fallback-note @internal - PATCH fallback für note
         const noteEvent = events.find((ev) => ev.type === 'note');
         try {
           if (noteEvent && uid) {
@@ -192,6 +209,7 @@ export async function syncWebhook(entry, localId) {
   }
 }
 
+// SUBMODULE: patchDayFlags @public - aktualisiert day_flags eines bestimmten Tages
 export async function patchDayFlags({ user_id, dayIso, flags }) {
   const url = await getConf('webhookUrl');
   if (!url || !user_id || !dayIso) {
@@ -230,6 +248,7 @@ export async function patchDayFlags({ user_id, dayIso, flags }) {
   return await res.json();
 }
 
+// SUBMODULE: appendNoteRemote @public - hängt neue Text-Notiz an bestehenden Tageskommentar an
 export async function appendNoteRemote(opts) {
   const { user_id, dayIso, noteEvent } = opts || {};
   const url = await getConf('webhookUrl');
@@ -295,6 +314,7 @@ export async function appendNoteRemote(opts) {
   return { id: newId, text: addition };
 }
 
+// SUBMODULE: deleteRemote @public - löscht einzelnen Remote-Eintrag anhand ID
 export async function deleteRemote(remoteId) {
   const url = await getConf('webhookUrl');
   if (!url || !remoteId) return { ok: false };
@@ -310,6 +330,7 @@ export async function deleteRemote(remoteId) {
   }
 }
 
+// SUBMODULE: deleteRemoteDay @public - löscht alle Remote-Einträge eines bestimmten Tages
 export async function deleteRemoteDay(dateIso) {
   const url = await getConf('webhookUrl');
   if (!url) return { ok: false, status: 0 };
