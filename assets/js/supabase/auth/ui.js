@@ -1,9 +1,22 @@
-/** MODULE: supabase/auth/ui.js — Overlay & Button Handling @v1.8.1 */
+/**
+ * MODULE: supabase/auth/ui.js
+ * intent: UI-Handling für Authentifizierungsprozesse (Login-Overlay, Config-Form, Buttons)
+ * exports: prefillSupabaseConfigForm, setConfigStatus, showLoginOverlay, hideLoginOverlay, setUserUi, bindAuthButtons
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Verwaltet Login-Overlay und Fokussteuerung
+ *   - Liest und speichert REST/ANON-Konfiguration (getConf/putConf)
+ *   - Bindet UI-Buttons für Google-OAuth & Config-Save
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase Core-State & Helpers
 import { supabaseState } from '../core/state.js';
 import { ensureSupabaseClient, isServiceRoleKey } from '../core/client.js';
 import { requireSession } from './core.js';
 
+// SUBMODULE: globals @internal - Window-Handle & Diagnostics
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -11,6 +24,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+    // SUBMODULE: config accessors @internal - getConf/putConf aus globalWindow
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') return Promise.resolve(null);
@@ -31,6 +45,7 @@ const putConf = (...args) => {
   }
 };
 
+// SUBMODULE: restErrorMessage @internal - Fehlermeldung für REST-Operationen
 const restErrorMessage = (...args) => {
   const fn = globalWindow?.restErrorMessage;
   if (typeof fn === 'function') {
@@ -40,6 +55,7 @@ const restErrorMessage = (...args) => {
   return `REST-Fehler (${status || '?'}): ${details || ''}`.trim();
 };
 
+// SUBMODULE: uiCore @internal - Zugriff auf globale UI-Funktionen (Focus Trap)
 const getUiCore = () => (globalWindow?.AppModules && globalWindow.AppModules.uiCore) || {};
 
 const activateFocusTrap = (root) => {
@@ -56,6 +72,7 @@ const deactivateFocusTrap = () => {
   }
 };
 
+// SUBMODULE: prefillSupabaseConfigForm @public - liest gespeicherte REST/Key-Werte ein
 export async function prefillSupabaseConfigForm() {
   try {
     setConfigStatus('', 'info');
@@ -91,6 +108,7 @@ export async function prefillSupabaseConfigForm() {
   }
 }
 
+// SUBMODULE: setConfigStatus @public - zeigt Statusnachrichten in der UI an
 export function setConfigStatus(msg, tone = 'info') {
   const el = document.getElementById('configStatus');
   if (!el) return;
@@ -99,6 +117,7 @@ export function setConfigStatus(msg, tone = 'info') {
   el.style.color = colors[tone] || colors.info;
 }
 
+// SUBMODULE: toggleLoginOverlay @internal - zeigt/versteckt das Login-Overlay
 const toggleLoginOverlay = (show) => {
   const ov = document.getElementById('loginOverlay');
   if (!ov) return;
@@ -116,6 +135,7 @@ const toggleLoginOverlay = (show) => {
   }
 };
 
+// SUBMODULE: show/hide overlay @public - öffnet oder schließt Login-Overlay
 export function showLoginOverlay() {
   toggleLoginOverlay(true);
 }
@@ -124,11 +144,13 @@ export function hideLoginOverlay() {
   toggleLoginOverlay(false);
 }
 
+// SUBMODULE: setUserUi @public - aktualisiert Anzeige des eingeloggten Users
 export function setUserUi(email) {
   const who = document.getElementById('whoAmI');
   if (who) who.textContent = email ? `Angemeldet als: ${email}` : '';
 }
 
+// SUBMODULE: bindAuthButtons @public - Initialisiert Button-Events (Save + Google OAuth)
 export function bindAuthButtons() {
   const googleBtn = document.getElementById('googleLoginBtn');
   const saveBtn = document.getElementById('configSaveBtn');

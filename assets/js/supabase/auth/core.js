@@ -1,8 +1,21 @@
-/** MODULE: supabase/auth/core.js — Session & Auth State @v1.8.1 */
+/**
+ * MODULE: supabase/auth/core.js
+ * intent: Steuerung des Authentifizierungs- und Session-Status (Login, Hooks, Grace Period)
+ * exports: requireSession, isLoggedInFast, watchAuthState, afterLoginBoot, getUserId, initAuth, resetAuthHooks
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Verwaltet Supabase-Sessionzustand über supabaseState
+ *   - Bindet UI-Hooks (Overlay, Status, DoctorAccess) und globale Realtime-Events
+ *   - Enthält Fallback-Mechanismen bei Timeouts und Client-Fehlern
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Supabase Core-State & Client-Helfer
 import { supabaseState } from '../core/state.js';
 import { ensureSupabaseClient, maskUid } from '../core/client.js';
 
+// SUBMODULE: globals @internal - Diagnose- und Window-Hilfen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -10,6 +23,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+    // SUBMODULE: constants @internal - Authentifizierungs-Timing & Defaults
 const AUTH_GRACE_MS = 400;
 const GET_USER_TIMEOUT_MS = globalWindow?.GET_USER_TIMEOUT_MS ?? 2000;
 
@@ -17,6 +31,7 @@ const defaultSetupRealtime = async () => undefined;
 const defaultResumeFromBackground = async () => undefined;
 const noopRealtime = () => undefined;
 
+// SUBMODULE: fallbackUserId @internal - Rückfall bei Fehlern/Timeouts
 const fallbackUserId = (variant) => {
   if (
     (supabaseState.authState === 'auth' || supabaseState.authState === 'unknown') &&
@@ -35,6 +50,7 @@ const fallbackUserId = (variant) => {
   return null;
 };
 
+// SUBMODULE: authHooks @internal - Hook-Verwaltung für UI/Status
 const authHooks = {
   onStatus: null,
   onLoginOverlay: null,
@@ -42,6 +58,7 @@ const authHooks = {
   onDoctorAccess: null
 };
 
+// SUBMODULE: Hook-Call-Handler @internal - sichere Ausführung aller Hook-Typen
 const callStatus = (state) => {
   if (typeof authHooks.onStatus === 'function') {
     try {
@@ -107,6 +124,7 @@ const callAuthGuard = (enabled) => {
   }
 };
 
+// SUBMODULE: authGrace @internal - Grace-Period-Handling und Finalisierung
 const clearAuthGrace = () => {
   if (supabaseState.authGraceTimer) {
     clearTimeout(supabaseState.authGraceTimer);
@@ -160,6 +178,7 @@ const scheduleAuthGrace = () => {
   }, AUTH_GRACE_MS);
 };
 
+// SUBMODULE: requireSession @public - prüft aktuelle Session und aktualisiert UI
 export async function requireSession() {
   if (!supabaseState.sbClient) {
     callUserUi('');
@@ -188,6 +207,7 @@ export async function requireSession() {
   }
 }
 
+// SUBMODULE: isLoggedInFast @public - schnelle Login-Prüfung mit Timeout
 export async function isLoggedInFast({ timeout = 400 } = {}) {
   if (!supabaseState.sbClient) return supabaseState.lastLoggedIn;
   let timer = null;
@@ -213,6 +233,7 @@ export async function isLoggedInFast({ timeout = 400 } = {}) {
   }
 }
 
+// SUBMODULE: watchAuthState @public - registriert Realtime-Auth-State-Listener
 export function watchAuthState() {
   if (!supabaseState.sbClient) return;
   if (!supabaseState.sbClient.auth?.onAuthStateChange) return;
@@ -258,6 +279,7 @@ export function watchAuthState() {
   return subscription || null;
 }
 
+// SUBMODULE: afterLoginBoot @public - führt Initialisierung nach Login aus
 export async function afterLoginBoot() {
   if (supabaseState.booted) return;
   supabaseState.booted = true;
@@ -266,6 +288,7 @@ export async function afterLoginBoot() {
     .catch((err) => diag.add?.('ui refresh err: ' + (err?.message || err)));
 }
 
+// SUBMODULE: getUserId @public - ermittelt aktuelle User-ID mit Timeout & Fallbacks
 export async function getUserId() {
   try {
     diag.add?.('[auth] getUserId start');
@@ -314,6 +337,7 @@ export async function getUserId() {
   }
 }
 
+// SUBMODULE: initAuth @public - setzt optionale Hook-Handler für UI & Status
 export function initAuth(hooks = {}) {
   authHooks.onStatus =
     typeof hooks.onStatus === 'function' ? hooks.onStatus : authHooks.onStatus;
@@ -332,6 +356,7 @@ export function initAuth(hooks = {}) {
   }
 }
 
+// SUBMODULE: resetAuthHooks @public - entfernt alle gesetzten Hook-Handler
 export function resetAuthHooks() {
   authHooks.onStatus = null;
   authHooks.onLoginOverlay = null;

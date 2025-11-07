@@ -1,8 +1,22 @@
-/** MODULE: supabase/auth/guard.js - Access Control @v1.8.1 */
+/**
+ * MODULE: supabase/auth/guard.js
+ * intent: Zugriffsschutz, PIN-/Passkey-Handling und Doctor-Lock-Freischaltung
+ * exports: setDoctorAccess, requireDoctorUnlock, resumeAfterUnlock, bindAppLockButtons, authGuardState
+ * version: 1.8.2
+ * compat: ESM + Monolith (Hybrid)
+ * notes:
+ *   - Implementiert AppLock-System (PIN + Passkey/WebAuthn)
+ *   - Verwaltet UI-Lock, Secure Random, Hashing (SHA-256, PBKDF2)
+ *   - Steuert Zugriffsfreigabe auf Arztbereich (DoctorTab, Chart)
+ *   - Nutzt Konfigurations-API (getConf/putConf) als Speicher
+ * author: System Integration Layer (M.I.D.A.S. v1.8)
+ */
 
+// SUBMODULE: imports @internal - Auth Core und UI-Overlay
 import { isLoggedInFast } from './core.js';
 import { showLoginOverlay } from './ui.js';
 
+// SUBMODULE: globals @internal - Diagnosezugang & Window-Hilfen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 
 const diag =
@@ -11,6 +25,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+// SUBMODULE: config accessors @internal - getConf/putConf aus globalWindow
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') {
@@ -23,6 +38,7 @@ const getConf = (...args) => {
   }
 };
 
+// SUBMODULE: config accessors @internal - getConf/putConf aus globalWindow
 const putConf = (...args) => {
   const fn = globalWindow?.putConf;
   if (typeof fn !== 'function') {
@@ -35,9 +51,11 @@ const putConf = (...args) => {
   }
 };
 
+// SUBMODULE: state @internal - interne Flags für Lock-Zustände
 let __doctorUnlocked = false;
 let __pendingAfterUnlock = null;
 
+// SUBMODULE: random utils @internal - sichere Zufallsbytes
 const u8 = (len) => {
   if (!Number.isInteger(len) || len <= 0) {
     throw new Error('Supabase guard: invalid byte length for random data');
@@ -81,6 +99,7 @@ const u8 = (len) => {
   return arr;
 };
 
+// SUBMODULE: base64 utils @internal - Basis- und URL-sichere Codierung
 const base64Encode = (binary) => {
   if (typeof binary !== 'string') {
     throw new Error('Supabase guard: base64 encode expects binary string');
@@ -102,6 +121,7 @@ const base64Encode = (binary) => {
   throw new Error('Supabase guard: base64 encode not supported in this environment');
 };
 
+// SUBMODULE: base64 utils @internal - Basis- und URL-sichere Codierung
 const base64Decode = (b64) => {
   if (typeof b64 !== 'string' || !b64.length) {
     throw new Error('Supabase guard: base64 decode expects non-empty string');
@@ -151,6 +171,7 @@ const b64u = {
   }
 };
 
+// SUBMODULE: constants @internal - Schlüssel und Parameter
 const LOCK_ENABLED_KEY = 'app_lock_enabled';
 const LOCK_CRED_ID_KEY = 'lock_cred_id';
 const LOCK_PIN_HASH_KEY = 'lock_pin_hash';
@@ -160,6 +181,7 @@ const LOCK_PIN_ITER_KEY = 'lock_pin_iter';
 const LOCK_LAST_OK_KEY = 'lock_last_ok';
 const LOCK_PIN_DEFAULT_ITER = 120000;
 
+// SUBMODULE: WebAuthn helpers @internal - RP-Domain-Auflösung & Check
 const isWebAuthnAvailable = async () => {
   if (!globalWindow?.PublicKeyCredential) return false;
   try {
@@ -190,6 +212,7 @@ const buildRp = () => {
   return rp;
 };
 
+// SUBMODULE: UI helpers @internal - Overlay-Steuerung und Messages
 const setLockMsg = (msg) => {
   const el = document.getElementById('lockMsg');
   if (el) el.textContent = msg || '';
@@ -247,6 +270,7 @@ const lockUi = (on) => {
   }
 };
 
+// SUBMODULE: promptForPin @internal - modaler PIN-Eingabedialog
 const focusableSelectors =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -380,6 +404,8 @@ const promptForPin = () =>
     document.body.append(overlay);
     input.focus();
   });
+
+  // SUBMODULE: crypto utils @internal - SubtleCrypto, SHA-256, PBKDF2
 const getSubtleCrypto = () => {
   const cryptoObj =
     globalWindow?.crypto ||
@@ -446,6 +472,7 @@ const derivePinHash = async (pin, saltBytes, iterations) => {
   }
 };
 
+// SUBMODULE: setDoctorAccess @public - UI-Aktivierung des Arztbereichs
 export function setDoctorAccess(enabled) {
   const tabBtn = document.getElementById('tab-doctor');
   if (tabBtn) {
@@ -460,6 +487,7 @@ export function setDoctorAccess(enabled) {
   }
 }
 
+// SUBMODULE: requireDoctorUnlock @public - prüft Login + Passkey/PIN-Entsperrung
 export async function requireDoctorUnlock() {
   if (!(await isLoggedInFast())) {
     showLoginOverlay();
@@ -509,6 +537,7 @@ export async function requireDoctorUnlock() {
   return false;
 }
 
+// SUBMODULE: resumeAfterUnlock @public - führt beabsichtigte Aktion nach Entsperrung aus
 export async function resumeAfterUnlock(intent) {
   const target = intent || __pendingAfterUnlock || 'doctor';
   __pendingAfterUnlock = null;
@@ -531,6 +560,7 @@ export async function resumeAfterUnlock(intent) {
   await globalWindow?.setTab?.('doctor');
 }
 
+// SUBMODULE: registerPasskey @internal - legt neuen Passkey via WebAuthn an
 const registerPasskey = async () => {
   try {
     const challenge = u8(32);
@@ -572,6 +602,7 @@ const registerPasskey = async () => {
   }
 };
 
+// SUBMODULE: unlockWithPasskey @internal - Entsperrung via WebAuthn
 const unlockWithPasskey = async () => {
   try {
     const credId = await getConf(LOCK_CRED_ID_KEY);
@@ -606,6 +637,7 @@ const unlockWithPasskey = async () => {
   }
 };
 
+// SUBMODULE: setPinInteractive @internal - Interaktive PIN-Erstellung
 const setPinInteractive = async () => {
   const pin = await promptForPin();
   if (!pin) {
@@ -622,6 +654,7 @@ const setPinInteractive = async () => {
   return true;
 };
 
+// SUBMODULE: unlockWithPin @internal - Entsperrung via lokaler PIN
 const unlockWithPin = async () => {
   const input = document.getElementById('pinInput');
   const pin = (input?.value || '').trim();
@@ -694,6 +727,7 @@ const unlockWithPin = async () => {
   return true;
 };
 
+// SUBMODULE: bindAppLockButtons @public - Initialisiert UI-Buttons und Events
 export function bindAppLockButtons() {
   const btnPass = document.getElementById('unlockPasskeyBtn');
   const btnPin = document.getElementById('unlockPinBtn');
@@ -743,6 +777,7 @@ export function bindAppLockButtons() {
   }
 }
 
+// SUBMODULE: authGuardState @public - Getter/Setter für Lock-Zustände
 export const authGuardState = {
   get doctorUnlocked() {
     return __doctorUnlocked;
