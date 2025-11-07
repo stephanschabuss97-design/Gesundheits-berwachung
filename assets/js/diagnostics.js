@@ -3,14 +3,14 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.4
+ * version: 1.5.1
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: Module-lokaler Listener-Guard, kein global leak, cleaned preventDefault
+ * notes: perfStats read-only Exposure (snap-only) + non-writable global property
  */
 
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
-  let diagnosticsListenerAdded = false; // module-local guard
+  let diagnosticsListenerAdded = false;
 
   // SUBMODULE: unhandled rejection sink @internal
   try {
@@ -43,18 +43,25 @@
   const perfStats = (() => {
     const buckets = Object.create(null);
     const MAX_SAMPLES = 500;
+    const MAX_BUCKETS = 50;
+
     const add = (k, ms) => {
       if (typeof ms !== 'number' || !Number.isFinite(ms)) return;
+      if (typeof k !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(k)) return;
+      if (!buckets[k] && Object.keys(buckets).length >= MAX_BUCKETS) return;
+
       const arr = (buckets[k] ??= []);
       arr.push(ms);
       if (arr.length >= MAX_SAMPLES) arr.shift();
     };
+
     const pct = (arr, p) => {
       if (!arr.length) return 0;
       const sorted = [...arr].sort((x, y) => x - y);
       const i = Math.ceil((p / 100) * sorted.length) - 1;
       return sorted[Math.max(0, Math.min(i, sorted.length - 1))];
     };
+
     const snap = (k) => {
       const arr = buckets[k] || [];
       return {
@@ -65,6 +72,7 @@
         p99: pct(arr, 99)
       };
     };
+
     return { add, snap };
   })();
 
@@ -75,8 +83,8 @@
       typeof performance !== 'undefined' && typeof performance.now === 'function';
     if (!hasPerf) return;
     try {
-      perfStats?.add?.(key, Math.max(0, performance.now() - startedAt));
-      const snap = perfStats?.snap?.(key);
+      perfStats.add(key, Math.max(0, performance.now() - startedAt));
+      const snap = perfStats.snap(key);
       if (snap && snap.count % 25 === 0) {
         diag.add?.(
           `[perf] ${key} p50=${Math.floor(snap.p50 || 0)}ms ` +
@@ -198,9 +206,15 @@
     });
   });
 
-  // ✅ Variante A – globaler Hook für Chart-Kompatibilität
-  if (!global.perfStats) {
-    global.perfStats = perfStats;
+  // ✅ Safe global export: readonly wrapper for chart compatibility
+  if (!hasOwn(global, 'perfStats')) {
+    const ro = Object.freeze({ snap: (key) => perfStats.snap(key) });
+    Object.defineProperty(global, 'perfStats', {
+      value: ro,
+      writable: false,
+      configurable: false,
+      enumerable: false
+    });
   } else {
     console.warn('[diagnostics] global perfStats already defined, keeping existing reference');
   }
