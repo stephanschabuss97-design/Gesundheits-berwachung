@@ -3,9 +3,9 @@
  * MODULE: diagnostics
  * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
  * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.5.2
+ * version: 1.5.3
  * compat: Hybrid (Monolith + window.AppModules)
- * notes: perfStats hardened (key/bucket logging, delta validation)
+ * notes: perfStats hardened (key length + reasoned warnings), no redundant delta clamp
  */
 
 (function (global) {
@@ -46,14 +46,24 @@
     const buckets = Object.create(null);
     const MAX_SAMPLES = 500;
     const MAX_BUCKETS = 50;
+    const MAX_KEY_LEN = 255;
     let bucketCount = 0;
 
     const add = (k, ms) => {
       if (typeof ms !== 'number' || !Number.isFinite(ms)) return;
-      if (typeof k !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(k)) {
-        console.warn('[perfStats] invalid key skipped:', k);
+
+      // key validation with explicit reason
+      let reason = null;
+      if (typeof k !== 'string') reason = 'non-string';
+      else if (k.length === 0) reason = 'empty';
+      else if (k.length > MAX_KEY_LEN) reason = `too-long(${k.length}>${MAX_KEY_LEN})`;
+      else if (!/^[a-zA-Z0-9_-]+$/.test(k)) reason = 'invalid-format';
+
+      if (reason) {
+        console.warn('[perfStats] invalid key skipped:', k, `(reason: ${reason})`);
         return;
       }
+
       if (!buckets[k] && bucketCount >= MAX_BUCKETS) {
         console.warn('[perfStats] bucket limit reached, discarding key:', k);
         return;
@@ -106,8 +116,9 @@
         console.warn('[perfStats] excessive delta for', key, '→', delta, 'ms (skipped)');
         return;
       }
-      const deltaClamped = Math.max(0, delta);
-      perfStats.add(key, deltaClamped);
+
+      // no redundant clamping; we already validated non-negative
+      perfStats.add(key, delta);
       const snap = perfStats.snap(key);
       if (snap && snap.count % 25 === 0) {
         diag.add?.(
