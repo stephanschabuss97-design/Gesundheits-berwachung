@@ -46,8 +46,15 @@ const conflicts = [];
 for (const [label, mod] of MODULE_SOURCES) {
   for (const [exportName, exportValue] of Object.entries(mod)) {
     if (exportName in aggregated) {
+      const existingOwner = owners[exportName];
+      // Neuere Module dürfen Legacy-Exports überschreiben, ohne Konfliktmeldung.
+      if (existingOwner === 'legacy' && label !== 'legacy') {
+        aggregated[exportName] = exportValue;
+        owners[exportName] = label;
+        continue;
+      }
       if (aggregated[exportName] !== exportValue) {
-        conflicts.push({ key: exportName, existingOwner: owners[exportName], incomingOwner: label });
+        conflicts.push({ key: exportName, existingOwner, incomingOwner: label });
       }
       continue;
     }
