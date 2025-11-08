@@ -1612,6 +1612,8 @@ details[hidden] {
 <script src="assets/js/format.js"></script>
 <!-- @refactor: moved to assets/js/config.js -->
 <script src="assets/js/config.js"></script>
+<!-- @refactor: moved to assets/js/capture/globals.js -->
+<script src="assets/js/capture/globals.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
 <!-- @refactor: moved to assets/js/supabase/index.js -->
@@ -2032,46 +2034,6 @@ function setDoctorAccess(enabled){
  * exports: refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus
  * notes: spiegelt CAPTURE UI Modul; reine Logik
  */
-/* ===== Capture/Lifestyle Defaults ===== */
-const LS_WATER_GOAL = 3000;    // Milliliter Zielbereich
-const LS_SALT_MAX   = 10;      // Gramm obere Grenze
-const LS_PROTEIN_GOAL = 120;   // Gramm Zielbereich
-const LS_INTAKE_RESET_DONE_KEY = 'healthlog_intake_reset_done';
-
-let captureIntakeState = {
-  logged: false,
-  dayIso: todayStr(),
-  totals: { water_ml: 0, salt_g: 0, protein_g: 0 }
-};
-let __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 };
-let __dateUserSelected = false;
-let __lastKnownToday = todayStr();
-let __bpUserOverride = false;
-let __midnightTimer = null;
-let __noonTimer = null;
-let __dayHeartbeat = null;
-let __intakeResetDoneFor = null; // Tag, fuer den Reset bereits gelaufen ist (pro Tab)
-let __bpPanesCache = null;
-let __lastUserId = null;
-// @refactor: moved to assets/js/format.js (formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly)
-
-function setBusy(on){
-const b = document.getElementById('busy');
-if (b) b.style.display = on ? 'flex' : 'none';
-}
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function softWarnRange(el, min, max){
-const v = Number(el.value);
-if (!isNaN(v) && (v < min || v > max)) {
-el.style.outline = '2px solid var(--warn)';
-} else {
-el.style.outline = '';
-}
-}
-
-/** END MODULE */
-
 /** MODULE: DATA ACCESS (IndexedDB)
  * intent: lokale IndexedDB- und Konfig-Hilfen fuer Intake-/Doctor-Features
  * contracts: stellt initDB, Config-Lese/Schreibhelfer sowie Entry-Stores fuer CAPTURE/BP bereit
