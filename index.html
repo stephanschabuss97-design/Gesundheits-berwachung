@@ -28,8 +28,119 @@
 </style>
 
 <script>
-/* Duplicate block removed. Canonical definitions earlier in the file are kept. */
-/** END MODULE */
+let supabaseMissingLogged = false;
+const getSupabaseApi = () => {
+  const api = window.SupabaseAPI;
+  if (!api) {
+    if (!supabaseMissingLogged) {
+      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe assets/js/supabase/index.js / Script-Reihenfolge.');
+      supabaseMissingLogged = true;
+    }
+    return null;
+  }
+  supabaseMissingLogged = false;
+  return api;
+};
+const SUPABASE_READY_EVENT = 'supabase:ready';
+const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
+const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
+  const fn = getSupabaseApi()?.[name];
+  if (typeof fn !== 'function') {
+    if (optional) return undefined;
+    throw new Error(`SupabaseAPI.${name} fehlt`);
+  }
+  return fn(...args);
+};
+
+const fetchWithAuth = createSupabaseFn('fetchWithAuth');
+const ensureSupabaseClient = createSupabaseFn('ensureSupabaseClient');
+const getUserId = createSupabaseFn('getUserId');
+const isLoggedInFast = createSupabaseFn('isLoggedInFast');
+const syncWebhook = createSupabaseFn('syncWebhook');
+const loadIntakeToday = createSupabaseFn('loadIntakeToday');
+const saveIntakeTotalsRpc = createSupabaseFn('saveIntakeTotalsRpc');
+const cleanupOldIntake = createSupabaseFn('cleanupOldIntake');
+const fetchDailyOverview = createSupabaseFn('fetchDailyOverview');
+const deleteRemoteDay = createSupabaseFn('deleteRemoteDay');
+const syncCaptureToggles = createSupabaseFn('syncCaptureToggles');
+const setupRealtime = createSupabaseFn('setupRealtime');
+const setConfigStatus = createSupabaseFn('setConfigStatus');
+const showLoginOverlay = createSupabaseFn('showLoginOverlay');
+const requireSession = createSupabaseFn('requireSession');
+const watchAuthState = createSupabaseFn('watchAuthState');
+const bindAuthButtons = createSupabaseFn('bindAuthButtons');
+const afterLoginBoot = createSupabaseFn('afterLoginBoot');
+const baseUrlFromRest = createSupabaseFn('baseUrlFromRest');
+const requireDoctorUnlock = createSupabaseFn('requireDoctorUnlock');
+const bindAppLockButtons = createSupabaseFn('bindAppLockButtons');
+const resumeFromBackground = createSupabaseFn('resumeFromBackground');
+
+const getLockUi = () => {
+  const fn = getSupabaseApi()?.lockUi;
+  return typeof fn === 'function' ? fn : null;
+};
+const getAuthGuardState = () => {
+  const state = getSupabaseApi()?.authGuardState;
+  return state && typeof state === 'object' ? state : null;
+};
+const isDoctorUnlocked = () => !!getAuthGuardState()?.doctorUnlocked;
+const setAuthPendingAfterUnlock = (value) => {
+  const state = getAuthGuardState();
+  if (state) {
+    state.pendingAfterUnlock = value ?? null;
+  }
+};
+const debounce =
+  window.debounce ||
+  window.AppModules?.uiCore?.debounce ||
+  ((fn, ms = 150) => {
+    let timer = null;
+    return (...args) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        fn(...args);
+      }, ms);
+    };
+  });
+
+const waitForSupabaseApi = (() => {
+  let pendingPromise = null;
+  return ({ timeout = 6000, pollInterval = 25 } = {}) => {
+    const ready = getSupabaseApi();
+    if (ready) return Promise.resolve(ready);
+    if (pendingPromise) return pendingPromise;
+
+    pendingPromise = new Promise((resolve, reject) => {
+      let settled = false;
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        document.removeEventListener(SUPABASE_READY_EVENT, onReady);
+        clearInterval(pollId);
+        if (timeoutId) clearTimeout(timeoutId);
+        pendingPromise = null;
+      };
+      const onReady = () => {
+        const api = getSupabaseApi();
+        if (!api) return;
+        cleanup();
+        resolve(api);
+      };
+      const pollId = setInterval(onReady, pollInterval);
+      document.addEventListener(SUPABASE_READY_EVENT, onReady, { once: false });
+      let timeoutId = null;
+      if (timeout > 0) {
+        timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error('SupabaseAPI not ready within timeout'));
+        }, timeout);
+      }
+      onReady();
+    });
+    return pendingPromise;
+  };
+})();
 
 /** MODULE: CAPTURE (Intake)
  * intent: steuert Intake-State, Mitternachts-Resets und Bindings fuer die Tageserfassung
