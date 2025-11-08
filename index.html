@@ -5750,7 +5750,8 @@ const resumeEventHandler = (source) => {
       diag.add?.(`[resume] handler error ${source}: ${err?.message || err}`);
     }
   })();
-};document.addEventListener('visibilitychange', () => {
+};
+document.addEventListener('visibilitychange', () => {
   diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
   resumeEventHandler('visibility');

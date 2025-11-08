@@ -62,7 +62,6 @@ verifyImport('auth/core', 'initAuth', authCore.initAuth);
 verifyImport('auth/ui', 'showLoginOverlay', authUi.showLoginOverlay);
 verifyImport('auth/ui', 'hideLoginOverlay', authUi.hideLoginOverlay);
 verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
-verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
 verifyImport('auth/guard', 'resumeAfterUnlock', authGuard.resumeAfterUnlock);
 verifyImport('auth/guard', 'bindAppLockButtons', authGuard.bindAppLockButtons);
 verifyImport('auth/guard', 'authGuardState', authGuard.authGuardState, 'object');
