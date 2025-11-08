@@ -207,7 +207,7 @@ export function toEventsUrl(restUrl) {
   try {
     const url = String(restUrl || '').trim();
     if (!url) return null;
-    return url.replace(/(\\/rest\\/v1\\/)[^/?#]+/i, '$1health_events');
+    return url.replace(/(\/rest\/v1\/)[^/?#]+/i, '$1health_events');
   } catch (_) {
     return null;
   }
