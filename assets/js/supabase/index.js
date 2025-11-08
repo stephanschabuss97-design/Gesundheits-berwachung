@@ -82,3 +82,26 @@ if (globalWindow) {
     });
   }
 }
+
+const notifySupabaseReady = () => {
+  const doc = globalWindow?.document;
+  if (!doc || typeof doc.dispatchEvent !== 'function') return;
+  const eventName = 'supabase:ready';
+  try {
+    doc.dispatchEvent(new CustomEvent(eventName));
+    return;
+  } catch (_) {
+    // Fallback for browsers without CustomEvent constructor support
+  }
+  if (typeof doc.createEvent === 'function') {
+    try {
+      const evt = doc.createEvent('Event');
+      evt.initEvent(eventName, false, false);
+      doc.dispatchEvent(evt);
+    } catch (_) {
+      // ignore
+    }
+  }
+};
+
+notifySupabaseReady();
