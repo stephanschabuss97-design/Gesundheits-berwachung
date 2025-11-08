@@ -87,11 +87,15 @@ const notifySupabaseReady = () => {
   const doc = globalWindow?.document;
   if (!doc || typeof doc.dispatchEvent !== 'function') return;
   const eventName = 'supabase:ready';
+  const eventName = 'supabase:ready';
   try {
     doc.dispatchEvent(new CustomEvent(eventName));
     return;
-  } catch (_) {
-    // Fallback for browsers without CustomEvent constructor support
+  } catch (err) {
+    globalWindow?.console?.debug?.(
+      '[supabase/index] CustomEvent constructor missing, falling back to createEvent',
+      err
+    );
   }
   if (typeof doc.createEvent === 'function') {
     try {
@@ -104,4 +108,24 @@ const notifySupabaseReady = () => {
   }
 };
 
-notifySupabaseReady();
+const enqueueReadyDispatch = (callback) => {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(callback);
+    return;
+  }
+  Promise.resolve().then(callback);
+};
+
+const scheduleSupabaseReady = () => {
+  if (!globalWindow) return;
+  SupabaseAPI.isReady = true;
+  const doc = globalWindow.document;
+  const dispatch = () => enqueueReadyDispatch(notifySupabaseReady);
+  if (doc?.readyState === 'loading') {
+    doc.addEventListener('DOMContentLoaded', dispatch, { once: true });
+  } else {
+    dispatch();
+  }
+};
+
+scheduleSupabaseReady();

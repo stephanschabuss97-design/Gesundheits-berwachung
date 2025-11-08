@@ -1706,7 +1706,8 @@ const isDoctorUnlocked = () => !!getAuthGuardState()?.doctorUnlocked;
 const setAuthPendingAfterUnlock = (value) => {
   const state = getAuthGuardState();
   if (state) {
-    state.pendingAfterUnlock = value ?? null;
+    // Konsistent null statt undefined speichern (Guard-Modul erwartet string|null).
+    state.pendingAfterUnlock = value == null ? null : value;
   }
 };
 
@@ -1719,27 +1720,43 @@ const waitForSupabaseApi = (() => {
 
     pendingPromise = new Promise((resolve, reject) => {
       let settled = false;
+      let pollId = null;
+      let timeoutId = null;
+
       const cleanup = () => {
-        if (settled) return;
-        settled = true;
         document.removeEventListener(SUPABASE_READY_EVENT, onReady);
-        clearInterval(pollId);
+        if (pollId) clearInterval(pollId);
         if (timeoutId) clearTimeout(timeoutId);
         pendingPromise = null;
       };
-      const onReady = () => {
-        const api = getSupabaseApi();
-        if (!api) return;
+
+      const settle = (cb) => (value) => {
+        if (settled) return;
+        settled = true;
         cleanup();
-        resolve(api);
+        cb(value);
       };
-      const pollId = setInterval(onReady, pollInterval);
+
+      const resolveOnce = settle(resolve);
+      const rejectOnce = settle(reject);
+
+      const onReady = () => {
+        if (settled) return;
+        try {
+          const api = getSupabaseApi();
+          if (!api) return;
+          resolveOnce(api);
+        } catch (err) {
+          rejectOnce(err instanceof Error ? err : new Error(String(err)));
+        }
+      };
+
+      pollId = setInterval(onReady, pollInterval);
+      // Listener intentionally NOT once:true – subsequent waiters reuse the same dispatch.
       document.addEventListener(SUPABASE_READY_EVENT, onReady, { once: false });
-      let timeoutId = null;
       if (timeout > 0) {
         timeoutId = setTimeout(() => {
-          cleanup();
-          reject(new Error('SupabaseAPI not ready within timeout'));
+          rejectOnce(new Error('SupabaseAPI not ready within timeout'));
         }, timeout);
       }
       // immediate check in case API became ready between Promise creation and listener setup
@@ -2293,6 +2310,7 @@ async function ensureModulesReady() {
   }
 
   const missingGlobals = REQUIRED_GLOBALS.filter((name) => typeof resolveGlobal(name) === "undefined");
+  // Wenn SupabaseAPI gar nicht geladen wird, melden wir das Gesamtmodul statt dutzender Einzel-Exports.
   const missingSupa = supabaseReady
     ? REQUIRED_SUPABASE_EXPORTS.filter((name) => !hasSupabaseFn(name)).map((name) => `SupabaseAPI.${name}`)
     : ['SupabaseAPI'];
@@ -5488,7 +5506,9 @@ async function main(){
       document.addEventListener('DOMContentLoaded', resolve, { once: true });
     });
   }
-  if (!(await ensureModulesReady())) {
+  const modulesReady = await ensureModulesReady();
+  if (!modulesReady) {
+    console.error('[BOOT] ensureModulesReady failed; aborting main');
     return;
   }
   diag.init();
