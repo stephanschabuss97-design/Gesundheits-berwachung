@@ -46,30 +46,44 @@
 <script type="module">
   import { SupabaseAPI } from "./assets/js/supabase/index.js";
 
-  const bootAuth = () => {
-    SupabaseAPI.initAuth?.({
-      onStatus: (status) => console.info("Auth status:", status),
-      onLoginOverlay: (visible) => {
-        if (visible) {
-          SupabaseAPI.showLoginOverlay?.(true);
-        } else {
-          SupabaseAPI.hideLoginOverlay?.();
-        }
-      },
-      onUserUi: (email) => {
-        SupabaseAPI.setUserUi?.(email || "");
-      },
-      onDoctorAccess: (enabled) => {
-        SupabaseAPI.setDoctorAccess?.(enabled);
+const bootAuth = () => {
+  if (window.__bootAuthDone) return;
+  window.__bootAuthDone = true;
+  SupabaseAPI.initAuth?.({
+    onStatus: (status) => console.info("Auth status:", status),
+    onLoginOverlay: (visible) => {
+      if (visible) {
+        SupabaseAPI.showLoginOverlay?.(true);
+      } else {
+        SupabaseAPI.hideLoginOverlay?.();
       }
-    });
-  };
+    },
+    onUserUi: (email) => {
+      SupabaseAPI.setUserUi?.(email || "");
+    },
+    onDoctorAccess: (enabled) => {
+      SupabaseAPI.setDoctorAccess?.(enabled);
+    }
+  });
+};
 
+const appInitPromise = (async () => {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootAuth, { once: true });
-  } else {
-    bootAuth();
+    await new Promise((resolve) =>
+      document.addEventListener("DOMContentLoaded", resolve, { once: true })
+    );
   }
+  await main();
+})();
+
+appInitPromise.then(() => bootAuth()).catch((err) => {
+  console.error('[BOOT] app initialization failed', err);
+});
+window.__appInitPromise = appInitPromise;
+
+window.addEventListener('focus', () => {
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+});
 </script>
 
 <script>
@@ -3643,20 +3657,6 @@ if (typeof reconcileFromRemote === 'function') {
 }
 
 resetAppointmentsUi();
-
-/* boot */
-if (!window.__bootDone) {
-  window.__bootDone = true;
-  if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", main);
-
-    window.addEventListener('focus', () => {
-      try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
-    });
-  } else {
-    main();
-  }
-}
 
 /** MODULE: FUTURE (placeholders)
  * intent: haelt geplante Assist/PWA/BLE-Refactors fuer die Zeit nach dem Annotations-Pass bereit
