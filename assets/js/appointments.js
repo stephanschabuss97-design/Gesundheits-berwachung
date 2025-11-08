@@ -116,10 +116,39 @@
     if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
       return { ok: false, error: 'time' };
     }
-    const dt = new Date(`${date}T${time}:00`);
-    if (Number.isNaN(dt.getTime())) {
+    // Parse numeric parts and create a UTC Date to avoid local-timezone shifts.
+    const dateParts = date.split('-').map((p) => Number(p));
+    const timeParts = time.split(':').map((p) => Number(p));
+    const [year, month, day] = dateParts;
+    const [hour, minute] = timeParts;
+
+    // Basic numeric validation
+    if (
+      !Number.isFinite(year) ||
+      !Number.isFinite(month) ||
+      !Number.isFinite(day) ||
+      !Number.isFinite(hour) ||
+      !Number.isFinite(minute)
+    ) {
       return { ok: false, error: 'invalid' };
     }
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return { ok: false, error: 'invalid' };
+    }
+
+    // Construct UTC date and verify components to reject overflowed dates like 2021-02-30
+    const dt = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+    if (Number.isNaN(dt.getTime())) return { ok: false, error: 'invalid' };
+    if (
+      dt.getUTCFullYear() !== year ||
+      dt.getUTCMonth() !== (month - 1) ||
+      dt.getUTCDate() !== day ||
+      dt.getUTCHours() !== hour ||
+      dt.getUTCMinutes() !== minute
+    ) {
+      return { ok: false, error: 'invalid' };
+    }
+
     return { ok: true, iso: dt.toISOString() };
   }
 
@@ -308,10 +337,10 @@
 
       let saved = false;
       if (hasScheduled) {
-      const res = await requireFn('fetchWithAuth')(
-        (headers) => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }),
-        { tag: 'appt:patch', maxAttempts: 2 }
-      );
+        const res = await requireFn('fetchWithAuth')(
+          (headers) => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }),
+          { tag: 'appt:patch', maxAttempts: 2 }
+        );
         if (!res.ok) {
           let details = '';
           try {
