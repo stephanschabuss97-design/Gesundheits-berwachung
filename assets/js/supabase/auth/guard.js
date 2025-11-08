@@ -244,7 +244,7 @@ const configureLockOverlay = ({
   setLockMsg(message);
 };
 
-const lockUi = (on) => {
+export function lockUi(on) {
   document.body.classList.toggle('app-locked', !!on);
   const ov = document.getElementById('appLock');
   if (!ov) return;
@@ -269,7 +269,7 @@ const lockUi = (on) => {
     const pin = document.getElementById('pinInput');
     if (pin && typeof pin.blur === 'function') pin.blur();
   }
-};
+}
 
 // SUBMODULE: promptForPin @internal - modaler PIN-Eingabedialog
 const focusableSelectors =

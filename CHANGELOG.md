@@ -1,3 +1,18 @@
+## v1.8.2 - Guard/Resume Cleanup
+
+Added:
+- Supabase Guard exportiert jetzt `bindAppLockButtons`, `resumeAfterUnlock`, `authGuardState` sowie `lockUi`; `SupabaseAPI` spiegelt die Funktionen inkl. Legacy-`window.*`-Bindings.
+- Realtime-Barrel (`assets/js/supabase/realtime/index.js`) enthält die komplette `resumeFromBackground`-Logik (Auth-Refresh, Realtime-Reconnect, UI-Refresh, Fokus-Reparatur) anstelle des Inline-Skripts.
+
+Changed:
+- `index.html` nutzt ausschließlich `SupabaseAPI.requireDoctorUnlock()`/`authGuardState` für Doctor-Chart/Export-Gates; Pending-Intents und Unlock-Status werden nicht mehr als lokale Variablen geführt.
+- App-Lock-Overlay (Buttons, ESC-Close) verwendet `SupabaseAPI.bindAppLockButtons()` und `SupabaseAPI.lockUi()`; Inline-Implementierungen (Passkey/PIN) wurden entfernt.
+- Visibility/PageShow/Focus-Listener triggern `SupabaseAPI.resumeFromBackground({ source })`; das vorherige Inline-Resume inkl. Cooldown-Flags entfällt.
+
+Fixed:
+- Guard/Resume-Implementierungen existieren nur noch an einem Ort, wodurch Unlock-/Resume-Flows nach Reload/Fokus nicht mehr auseinanderlaufen können.
+- `Object.keys(window.AppModules.supabase)` umfasst nun alle Guard/Realtime-Schlüssel aus den Akzeptanzkriterien; Boot-Checks validieren `requireDoctorUnlock`, `bindAppLockButtons`, `resumeFromBackground`.
+
 ## v1.8.0 – Supabase Refactor (Phase 1–2)
 
 Added:

@@ -1023,3 +1023,20 @@ Regression
 - `cleanupOldIntake()` nutzt `toEventsUrl` aus dem Realtime-Modul; keine direkten Zugriffe mehr auf inkonsistente Helper.
 - `SupabaseAPI` enthält weiter Auth-Funktionen (`requireSession`, `watchAuthState`, `bindAuthButtons`) plus neue API/Realtime-Methoden ohne Name-Clashes.
 - Keine Business-Logik Änderungen; neue Dateien speichern UTF-8, Header-Kommentare dokumentieren Herkunft.
+
+## v1.8.2 - Guard/Resume Cleanup
+
+Smoke
+- `Object.keys(window.AppModules.supabase)` listet Guard-Funktionen (`requireDoctorUnlock`, `resumeAfterUnlock`, `bindAppLockButtons`, `authGuardState`, `lockUi`) sowie Realtime `resumeFromBackground`.
+- Sichtbarkeits-/PageShow-/Focus-Events triggern `SupabaseAPI.resumeFromBackground()`; keine Inline-Funktion mehr in `index.html`.
+- App-Lock-Buttons werden ausschließlich über `SupabaseAPI.bindAppLockButtons()` initialisiert; Inline-Duplikate entfernt.
+
+Sanity
+- Chart/Export-Flows setzen Freigabe über `SupabaseAPI.authGuardState` (pending + unlock), Doctor-Tab bleibt gesperrt bis Guard-API Erfolg meldet.
+- ESC-Schließen des Lock-Overlays ruft `SupabaseAPI.lockUi(false)` (Fallback: DOM-Hide) und setzt Pending-Intents zurück.
+- Realtime-Resume in `assets/js/supabase/realtime/index.js` führt Refresh/Realtime-Setup/Focus-Fix identisch zum vormals inline Code aus.
+
+Regression
+- `bindAppLockButtons`, `requireDoctorUnlock` & Co. bleiben via `window` verfügbar (Legacy Scripts wie `ui-tabs.js`).
+- Diag-Logs (`[resume] ...`) erscheinen weiter bei Visibility/Focus-Resume; Cooldown/Race-Gates verhindern Doppel-Resume.
+- Guard/Resume-APIs nutzen weiterhin `scheduleAuthGrace`, `requestUiRefresh`, `setupRealtime` etc., so dass bestehende Flows unverändert bleiben.

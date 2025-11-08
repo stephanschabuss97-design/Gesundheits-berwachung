@@ -2270,6 +2270,10 @@ const supabaseApi = {
   setupRealtime: setupRealtimeProxy,
   teardownRealtime: teardownRealtimeProxy,
   requireDoctorUnlock,
+  resumeAfterUnlock: authGuard.resumeAfterUnlock,
+  bindAppLockButtons: authGuard.bindAppLockButtons,
+  authGuardState: authGuard.authGuardState,
+  lockUi: authGuard.lockUi,
   resumeFromBackground: resumeFromBackgroundProxy,
   getUserId,
   isLoggedInFast
