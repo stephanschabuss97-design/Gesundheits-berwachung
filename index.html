@@ -1610,6 +1610,8 @@ details[hidden] {
 <script src="assets/js/utils.js"></script>
 <!-- @refactor: moved to assets/js/format.js -->
 <script src="assets/js/format.js"></script>
+<!-- @refactor: moved to assets/js/config.js -->
+<script src="assets/js/config.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
 <!-- @refactor: moved to assets/js/supabase/index.js -->
@@ -1748,34 +1750,6 @@ const waitForSupabaseApi = (() => {
     return pendingPromise;
   };
 })();
-
-/** MODULE: CONFIG
- * intent: Laufzeit-Defaults fuer Feature-Toggles und Termin-Rollen der App
- * contracts: stellt DEV_ALLOW_DEFAULTS und APPOINTMENT_ROLES fuer AUTH, DATA ACCESS, UI bereit
- * exports: DEV_ALLOW_DEFAULTS, APPOINTMENT_ROLES
- * notes: Supabase-Endpoints werden ausschliesslich durch Nutzerkonfiguration gesetzt
- */
-<!-- @refactor: move to assets/js/config.js -->
-/* ===== Dev/Termin Defaults ===== */
-const DEV_ALLOW_DEFAULTS = /^(localhost|127\.0\.0\.1|.*\.local)$/i.test(window?.location?.hostname || "");
-const APPOINTMENT_GRACE_MS = 5 * 60 * 1000;
-const APPOINTMENT_ROLES = [
-  { code: 'nephro', label: 'Nephrologe' },
-  { code: 'internal', label: 'Internist' },
-  { code: 'urology', label: 'Urologe' },
-  { code: 'dentist', label: 'Zahnarzt' },
-  { code: 'ophtha', label: 'Augenarzt' },
-  { code: 'physio', label: 'Physiotherapie' },
-];
-
-const appointmentsState = {
-  data: Object.create(null),
-  loading: false,
-  loaded: false,
-  next: null,
-};
-
-/** END MODULE */
 
 /** MODULE: LOGGING & DIAGNOSTICS
  * intent: sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
