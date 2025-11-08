@@ -5745,14 +5745,12 @@ document.addEventListener('keydown', (e)=>{
 const resumeEventHandler = (source) => {
   (async () => {
     try {
-      await resumeFromBackground({ source });
+      await resumeFromBackground(source);
     } catch (err) {
       diag.add?.(`[resume] handler error ${source}: ${err?.message || err}`);
     }
   })();
-};
-
-document.addEventListener('visibilitychange', () => {
+};document.addEventListener('visibilitychange', () => {
   diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
   resumeEventHandler('visibility');

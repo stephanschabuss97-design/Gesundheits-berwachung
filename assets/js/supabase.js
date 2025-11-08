@@ -62,6 +62,11 @@ verifyImport('auth/core', 'initAuth', authCore.initAuth);
 verifyImport('auth/ui', 'showLoginOverlay', authUi.showLoginOverlay);
 verifyImport('auth/ui', 'hideLoginOverlay', authUi.hideLoginOverlay);
 verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
+verifyImport('auth/guard', 'setDoctorAccess', authGuard.setDoctorAccess);
+verifyImport('auth/guard', 'resumeAfterUnlock', authGuard.resumeAfterUnlock);
+verifyImport('auth/guard', 'bindAppLockButtons', authGuard.bindAppLockButtons);
+verifyImport('auth/guard', 'authGuardState', authGuard.authGuardState, 'object');
+verifyImport('auth/guard', 'lockUi', authGuard.lockUi);
 
 const syncWebhook = (...args) => notes.syncWebhook(...args);
 const patchDayFlags = (...args) => notes.patchDayFlags(...args);
