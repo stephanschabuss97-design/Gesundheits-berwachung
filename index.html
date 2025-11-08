@@ -23,68 +23,1632 @@
     gap: 16px;
     align-items: center;
     margin-left: 16px;
+    color: var(--text, #e5e7eb);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  #chart .controls .kpis .sep { opacity: .6; }
+  
+body.auth-locked main{ opacity:.6; }
+:root {
+  --bg:#121417;
+  --card:#1c1e22;
+  --card-layer2:#202225;
+  --fg:#e8eaec;
+  --muted:#b0b3b8;
+  --disabled:#6c6e70;
+  --accent:#3a3dff;
+  --warn:#ff6b6b;
+  --ok:#2ecc71;
+  --danger:#ff6b6b;
+  --border-subtle:rgba(255,255,255,0.06);
+  --shadow-soft:0 8px 24px rgba(0,0,0,.25);
+  --surface-elevated:rgba(255,255,255,0.03);
+  --chart-line-primary:#3a3dff;
+  --chart-line-primary-soft:#7d81ff;
+  --chart-line-secondary:#b0b3ff;
+  --chart-line-tertiary:#c6c9ff;
+  --chart-line-dia:#ff87b5;
+  --chart-line-weight:#7d81ff;
+  --chart-line-waist:#a9afb7;
+  --chart-bar-muscle:#3a3dff;
+  --chart-bar-fat:#cfa24a;
+  --chart-goal-sys:rgba(58,61,255,0.12);
+  --chart-goal-dia:rgba(176,179,184,0.16);
+  --chart-tooltip-bg:rgba(20,23,28,0.96);
+  --header-h:56px;
+  --tabs-h:48px;
+}
+*{box-sizing:border-box}
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior-y:none}
+header{
+  position:sticky;
+  top:0;
+  background:linear-gradient(180deg,rgba(18,20,23,.95),rgba(18,20,23,.75));
+  backdrop-filter:blur(6px);
+  z-index:10;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:box-shadow .25s ease, border-color .25s ease, background .25s ease;
+}
+header.is-elevated{
+  box-shadow:0 12px 28px rgba(0,0,0,0.35);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg,rgba(18,20,23,1),rgba(18,20,23,0.85));
+}
+h1{margin:0;font-size:20px}
+nav.tabs{
+  display:flex;
+  gap:8px;
+  padding:8px 12px 14px;
+  position:sticky;
+  top:var(--header-h,56px);
+  background:rgba(18,20,23,0.92);
+  backdrop-filter:blur(6px);
+  z-index:11;
+  transition:box-shadow .25s ease, background .25s ease;
+}
+nav.tabs.is-elevated{
+  box-shadow:0 10px 24px rgba(0,0,0,0.28);
+  background:rgba(18,20,23,0.96);
+}
+nav.tabs button{flex:1;min-width:100px;touch-action:manipulation}
+main{padding:12px;position:relative;z-index:1;padding-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px)}
+.card{
+  --panel-bg:var(--card);
+  background:var(--panel-bg);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  padding:24px 20px;
+  margin-bottom:24px;
+  box-shadow:var(--shadow-soft);
+}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:640px){ .grid{grid-template-columns:1fr} }
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:0.2px}
+input, select, textarea {
+  width:100%;
+  padding:12px 14px;
+  border-radius:8px;
+  border:1px solid var(--border-subtle);
+  background:var(--surface-elevated);
+  color:var(--fg);
+  font-size:1rem;
+  transition:border-color .25s ease, box-shadow .25s ease, background .25s ease;
+  scroll-margin-top:calc(var(--header-h,56px) + var(--tabs-h,48px) + 8px);
+}
+input::placeholder,
+select::placeholder,
+textarea::placeholder{
+  color:var(--muted);
+  opacity:.65;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(58,61,255,0.25);
+}
+textarea{min-height:64px;resize:vertical}
+
+.small{font-size:12px;color:var(--muted)}
+.btn{
+  appearance:none;
+  border:none;
+  border-radius:8px;
+  padding:0 18px;
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  font-size:1rem;
+  letter-spacing:0.2px;
+  color:var(--fg);
+  background:rgba(43,47,58,0.92);
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:background .2s ease, color .2s ease, transform .1s ease, box-shadow .2s ease;
+}
+.btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+.btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 2px rgba(58,61,255,0.3);
+}
+.btn:not(:disabled):hover{
+  filter:brightness(1.08);
+}
+.btn:not(:disabled):active{
+  transform:scale(0.98);
+}
+.btn.primary{
+  background:rgba(58,61,255,0.85);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(58,61,255,0.18);
+}
+.btn.primary:focus-visible{
+  box-shadow:0 0 0 3px rgba(58,61,255,0.3), 0 8px 20px rgba(58,61,255,0.18);
+}
+.btn.primary:not(:disabled):hover{
+  filter:brightness(1.06);
+}
+.btn.ghost{
+  background:rgba(43,47,58,0.35);
+  border:1px solid var(--border-subtle);
+  color:var(--fg);
+}
+.btn.ghost:not(:disabled):hover{
+  background:rgba(255,255,255,0.05);
+}
+.btn.warn{
+  background:var(--warn);
+  color:#121417;
+}
+.btn.warn:not(:disabled):hover{
+  filter:brightness(1.05);
+}
+.btn.toggle{
+  border:1px solid var(--border-subtle);
+  background:var(--surface-elevated);
+  color:var(--fg);
+}
+.btn.toggle.active{
+  background:var(--ok);
+  border-color:rgba(46,204,113,0.4);
+  color:#062615;
+}
+/* Tabs: aktiver Zustand = wie Primary */
+nav.tabs .btn{
+  height:40px;
+  padding:0 16px;
+  border-radius:8px;
+  background:transparent;
+  border:1px solid transparent;
+  color:var(--muted);
+  position:relative;
+  transition:color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+nav.tabs .btn:not(.primary):hover{
+  color:var(--fg);
+  border-color:var(--border-subtle);
+  background:var(--surface-elevated);
+}
+nav.tabs .btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 2px rgba(58,61,255,0.25);
+}
+nav.tabs .btn.primary {
+  color:#fff;
+  background:rgba(58,61,255,0.2);
+  border-color:rgba(58,61,255,0.35);
+  box-shadow:0 10px 25px rgba(58,61,255,0.18);
+}
+nav.tabs .btn.primary::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:-6px;
+  height:2px;
+  border-radius:999px;
+  background:var(--accent);
+  box-shadow:0 4px 12px rgba(58,61,255,0.35);
+}
+.accordion{
+  background:var(--card-layer2);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  margin:24px 0;
+  overflow:hidden;
+  transition:border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  box-shadow:var(--shadow-soft);
+}
+.accordion summary{
+  list-style:none;
+  cursor:pointer;
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:600;
+  color:var(--fg);
+  letter-spacing:0.3px;
+  transition:background .2s ease, color .2s ease;
+  position:relative;
+}
+.accordion summary::after{
+  content:"";
+  position:absolute;
+  left:20px;
+  right:20px;
+  bottom:0;
+  height:1px;
+  background:var(--border-subtle);
+  transition:background .2s ease;
+}
+.accordion summary::-webkit-details-marker{display:none;}
+.accordion .chevron{
+  transition:transform .2s ease;
+}
+.accordion[open] .chevron{
+  transform:rotate(90deg);
+}
+.accordion summary:hover{
+  background:rgba(58,61,255,0.06);
+}
+.accordion[open]{
+  border-color:rgba(58,61,255,0.3);
+  box-shadow:0 12px 28px rgba(0,0,0,0.28);
+}
+.accordion[open] summary{
+  background:rgba(58,61,255,0.08);
+}
+.accordion[open] summary::after{
+  background:rgba(58,61,255,0.15);
+}
+.accordion summary:focus-visible{
+  outline:none;
+  box-shadow:inset 0 0 0 2px rgba(58,61,255,0.25);
+}
+.accordion .accordion-body{
+  padding:0 20px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+.bp-pane{display:none;}
+.bp-pane.active{display:block;}
+.panel-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:flex-start;
+  align-items:center;
+  margin:24px 0 0;
+}
+.panel-actions .btn{min-width:160px;}
+.card.panel-flash,
+.card-nested.panel-flash{
+  animation:panelFlash 0.45s ease-in-out forwards;
+}
+@keyframes panelFlash{
+  0%{
+    box-shadow:var(--shadow-soft);
+    background:var(--panel-bg);
+  }
+  40%{
+    box-shadow:0 0 0 3px rgba(46,204,113,0.45), 0 14px 30px rgba(46,204,113,0.18);
+    background:rgba(46,204,113,0.12);
+  }
+  100%{
+    box-shadow:var(--shadow-soft);
+    background:var(--panel-bg);
+  }
+}
+.card-nested{
+  --panel-bg:var(--card-layer2);
+  background:var(--panel-bg);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  padding:24px 20px;
+  margin-top:24px;
+  box-shadow:var(--shadow-soft);
+}
+.card-nested:first-of-type{margin-top:0;}
+.card-nested h3.blockTitle{margin-top:0;}
+@media (max-width:640px){
+  .accordion summary{padding:14px 16px;}
+  .accordion .accordion-body{padding:0 16px 18px;}
+}
+
+
+.btn.flash{
+  background:linear-gradient(90deg,var(--accent) 0%,#7c3aed 50%,var(--accent) 100%)!important;
+  background-size:200% 100%;
+  color:#fff!important;
+  animation:flashGradient 1s ease forwards,flashPop .2s ease;
+  box-shadow:0 6px 24px rgba(79,70,229,.35);
+  border-radius:8px;
+  height:40px;
+}
+@keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes flashPop {
+0% { transform: scale(1) }
+50% { transform: scale(1.03) }
+100% { transform: scale(1) }
+}
+
+/* Toolbar mit zentrierter Mitte + Badges rechts */
+#doctorCard .toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between; /* Titel links + Mitte + Badges rechts */
+}
+
+#doctorCard .toolbar .center-group {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center; /* Buttons + Datum + Anwenden mittig */
+}
+
+#doctorCard .toolbar .badge {
+  margin-left: 8px;
+}
+
+.spacer{flex:1}
+section.view{display:none}
+section.view.active{display:block}
+
+#doctorCard .toolbar{border-bottom:1px solid #242833;padding-bottom:8px;margin-bottom:8px}
+
+#err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:9999}
+
+/* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
+.doctor-view .doctor-day{
+display:grid;
+grid-template-columns: 1fr; /* Standard = gestapelt */
+gap:12px;
+align-items:start;
+padding:12px 14px;
+margin:8px 0;
+border-radius:12px;
+background:var(--card);
+border:1px solid #242833;
+box-shadow:0 6px 18px rgba(0,0,0,.25);
+page-break-inside:avoid;
+break-inside:avoid;
+}
+
+  /* --- Arzt-Toolbar Badges (Daily KPIs) --- */
+.badge {
+  display: inline-block;
+  padding: 6px 12px;         /* etwas mehr Platz */
+  border: 1.5px solid #2b2f3a;
+  border-radius: 12px;       /* runder = moderner */
+  font-size: 13px;           /* +1pt groesser */
+  font-weight: 600;          /* kraeftiger */
+  margin-left: 10px;
+}
+.badge.good{border-color:var(--ok); color:var(--ok)}
+.badge.bad{ border-color:var(--danger); color:var(--danger)}
+.badge.hidden{ display:none !important; }
+
+/* Tablet/Desktop: nebeneinander */
+@media (min-width: 900px){
+.doctor-view .doctor-day{
+grid-template-columns: 18% 46% 36%;
+}
+}
+
+/* Zwischenbereich: 2 Spalten */
+@media (min-width: 600px) and (max-width: 899px){
+.doctor-view .doctor-day{
+grid-template-columns: 40% 60%;
+grid-template-areas:
+"date measure"
+"date special";
+}
+.doctor-view .col-date{ grid-area: date; }
+.doctor-view .col-measure{ grid-area: measure; }
+.doctor-view .col-special{ grid-area: special; }
+}
+
+/* Spalte A - Datum */
+.doctor-view .col-date{
+display:flex; align-items:center;
+font-weight:800;
+font-size:clamp(16px,1.6vw,20px);
+letter-spacing:.2px;
+}
+  /* Datumsspalte mit Cloud + Delete untereinander */
+.doctor-view .col-date{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.doctor-view .col-date .date-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.doctor-view .col-date .date-label{
+  font-weight:800;
+  font-size:clamp(16px,1.6vw,20px);
+  letter-spacing:.2px;
+}
+.doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
+.doctor-view .col-date .date-actions{
+  display:flex;
+  justify-content:flex-start; /* oder center, wenn du's mittig magst */
+}
+.btn-xs{ padding:6px 10px; font-size:12px; border-radius:8px; }
+
+/* Spalte B - Messungen */
+.doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
+/* Kopf und Werte-Spalten: gleiche Breiten wie Zahlen, Label links fix */
+.doctor-view .measure-head,
+.doctor-view .measure-grid{
+display:grid;
+grid-template-columns: minmax(70px, auto) repeat(4, 1fr);
+gap:4px;
+}
+.doctor-view .measure-head{ font-size:12px; opacity:.8; }
+
+
+/* Head-Zellen als Flex: rechtsbuendig wie die Zahlen */
+.doctor-view .measure-head > div{ display:flex; align-items:center; }
+.doctor-view .measure-head > div:first-child{ justify-content:flex-start; }
+.doctor-view .measure-head > div:not(:first-child){ justify-content:flex-end; }
+.doctor-view .measure-row{ display:contents; }
+.doctor-view .label{ display:flex; align-items:center; font-size:13px; opacity:.9; }
+
+/* Zahlenbild */
+.doctor-view .num{
+font-variant-numeric: tabular-nums lining-nums;
+-moz-font-feature-settings:"tnum","lnum";
+-webkit-font-feature-settings:"tnum","lnum";
+font-feature-settings:"tnum","lnum";
+text-align:right;
+display:flex; align-items:center; justify-content:flex-end;
+
+min-width: 4ch; /* Basisschutz gegen Abschneiden */
+white-space: nowrap;
+}
+  
+  /* Grenzwert-Highlight fuer Arzt-Ansicht */
+.doctor-view .num.alert{ color: var(--danger); }
+
+.doctor-view .measure-grid .num,
+.doctor-view .col-special .num{
+text-align:right; justify-content:flex-end;
+}
+
+/* Spalte C - Spezialinfos */
+/* Gewicht: Ueberschrift + Zahl darunter */
+.doctor-view .weight-line,
+.doctor-view .waist-line{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-weight: 600;
+}
+
+.doctor-view .weight-line > :first-child,
+.doctor-view .waist-line > :first-child{
+  font-size: 12px;
+  opacity:.8;
+  font-weight:600;
+  letter-spacing:.2px;
+}
+
+.doctor-view .weight-line .num,
+.doctor-view .waist-line .num{
+  font-size:clamp(16px,1.6vw,20px);
+  font-weight:700;
+  line-height:1.1;
+  text-align:center;
+}
+
+/* Spalten C/D/E: Gewicht | Flags | Kommentar */
+.doctor-view .col-special{
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 220px 1fr; /* C | D | E */
+  column-gap: 16px;
+  row-gap: 6px;
+  align-items: start; /* <-- alles oben ausrichten */
+}
+
+/* Elemente gezielt in Spalten setzen */
+.doctor-view .col-special > .weight-line,
+.doctor-view .col-special > .waist-line { grid-column: 1; }
+.doctor-view .col-special > .flags       { grid-column: 2; }
+.doctor-view .col-special > .notes       { grid-column: 3; }
+
+/* D: Flags - Desktop: eine Spalte untereinander */
+.doctor-view .flags{
+  display:grid;
+  grid-template-columns: repeat(2, max-content); /* 2 Spalten */
+  justify-content:start;
+  align-items:start;
+  gap: 6px 16px; /* vertikal 6px, horizontal 16px */
+}
+
+.doctor-view .weight-line .num,
+.doctor-view .waist-line .num{ font-variant-numeric: tabular-nums; } /* Spalten wirken ruhiger */
+.doctor-view .flag span:last-child{ white-space:nowrap; }
+.doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
+.doctor-view .flag-box{
+width:16px; height:16px; border:1.5px solid #2b2f3a; border-radius:3px; display:inline-block; position:relative;
+}
+.doctor-view .flag-box.on::after{
+content:""; position:absolute; inset:2px; background:var(--accent); border-radius:2px;
+}
+
+/* Notizen: im Screen 3 Zeilen, im Druck voll */
+/* Kommentar: Titel + Box */
+/* Kommentar: Kopf + Wert, ohne Kasten */
+.doctor-view .notes{
+  font-size: 13px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;      /* 3 Zeilen, bei Bedarf 2 setzen */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  padding: 0;                 /* kein Box-Feeling */
+  background: transparent;
+  border: none;
+}
+.doctor-view .notes::before{
+  content: "Kommentar";
+  display: block;
+  font-size: 12px;
+  opacity: .8;
+  font-weight: 600;
+  letter-spacing: .2px;
+  margin-bottom: 4px;
+}
+/* NICHT ausblenden, auch wenn leer - der Renderer liefert "-" */
+
+/* Mobile-Optimierung */
+@media (max-width: 599px){
+
+  /* Kopf & Werte: schmaelere Label-Spalte + garantierte Zahlbreite */
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
+  }
+  .doctor-view .measure-head{ font-size: 11px; }
+
+  /* Zahlen duerfen nicht schrumpfen  keine abgeschnittenen Dezimalstellen */
+  .doctor-view .num{
+    min-width: 4.5ch; /* ~ "96.7" passt sicher */
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+.doctor-view .col-special .weight-line .num,
+.doctor-view .col-special .waist-line .num{
+  min-width: 5ch;
+}
+
+  /* Spalten: Gewicht | Flags nebeneinander, Kommentar darunter ueber volle Breite */
+  .doctor-view .col-special{
+    grid-template-columns: minmax(110px, max-content) 1fr; /* Flags bekommen flex Breite */
+    column-gap: 12px;
+  }
+  .doctor-view .col-special > .notes{
+    grid-column: 1 / -1; /* Kommentar ueber beide Spalten */
   }
 
+  /* Kommentar: mobil 4 Zeilen anzeigen */
+  .doctor-view .notes{
+    -webkit-line-clamp: 4; /* bei Bedarf auf 5 erhoehen */
+  }
+
+  /* Flags: kompakt in 2 Spalten, keine abgeschnittenen Labels */
+  .doctor-view .flags{
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 6px;
+    margin-top: 6px;
+  }
+  .doctor-view .flag span:last-child{ white-space: nowrap; }
+}
+
+/* Extra-eng ( 390px Breite) */
+@media (max-width: 390px){
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns: minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
+  }
+  .doctor-view .flags{
+    grid-template-columns: repeat(3, max-content);
+  }
+}
+
+/* Panels */
+.panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
+/* Panel (Charts) - Fullscreen */
+.panel.chart{
+  inset: 0;                 /* volle Flaeche (top/right/bottom/left = 0) */
+  width: 100vw;
+  height: 100dvh;           /* korrekt auf Mobile (sichtbare Hoehe) */
+  max-width: 100vw;
+  max-height: 100dvh;
+  border-radius: 0;         /* keine abgerundeten Ecken im Vollbild */
+}
+
+/* Flex-Layout: Header fix oben, Inhalt fuellt Rest */
+.panel.chart{
+  /* Sichtbarkeit steuert JS; NICHT auf block setzen */
+}
+.panel.chart header{ 
+  /* bleibt oben, keine Aenderung noetig - aber fixere Hoehe ist hilfreich */
+  min-height: 44px;
+}
+.panel.chart .content{
+  /* Inhalt fuellt den verfuegbaren Raum */
+  height: calc(100dvh - 44px - 2px); /* 44px Header + 1px border oben/unten */
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
+.panel h4{margin:0;font-size:14px}
+.panel .content{
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+#diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
+
+/* FABs */
+.fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
+.fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
+
+/* Chart panel */
+#chart .controls{
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  margin-bottom:6px;
+}
+#chart .controls select{
+  appearance:none;
+  background:var(--surface-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  padding:0 14px;
+  height:40px;
+  color:var(--fg);
+  box-shadow:0 6px 16px rgba(0,0,0,0.25);
+}
+#chart .controls select:focus-visible{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(58,61,255,0.25);
+}
+#chart .controls .kpis{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:8px;
+  background:var(--surface-elevated);
+  border:1px solid var(--border-subtle);
+  color:var(--fg);
+  box-shadow:0 8px 22px rgba(0,0,0,0.2);
+}
+#chart .controls .kpis .sep{
+  opacity:.6;
+  color:var(--muted);
+}
+/* ANKER: flags-overlay CSS */
+#chartSvg .flags { pointer-events: auto; }
+#chart .controls > * {flex:1}
+#chart .controls .half{flex:0 0 calc(50% - 4px)}
+  
+  /* SVG fuellt verbleibende Hoehe vollstaendig */
+#chart svg{
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;     /* statt auto */
+  min-height: 160px;
+  display: block;
+  background: radial-gradient(circle at top, rgba(255,255,255,0.045), transparent 55%);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+}
+
+#chartSvg{
+  transform-origin:center;
+}
+#chartSvg.chart-refresh{
+  animation:chartRescale .48s cubic-bezier(.25,.1,.25,1);
+}
+@keyframes chartRescale{
+  0%{opacity:0.35; transform:translateY(8px);}
+  100%{opacity:1; transform:translateY(0);}
+}
+
+#chart .legend{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;border:1px solid rgba(0,0,0,0.3)}
+
+#chartSvg path[data-series]{
+  transition: opacity .2s ease, stroke-width .18s ease, filter .18s ease;
+  stroke-linecap:round;
+}
+#chartSvg path[data-series].is-hover{ stroke-width:2.8; opacity:1; filter:brightness(1.12); }
+#chartSvg path[data-series].is-dim{ opacity:.25; }
+
+#chartSvg .pt{
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), opacity .18s cubic-bezier(.16,1,.3,1), filter .18s ease;
+}
+#chartSvg .pt.is-hover{ transform:scale(1.4); opacity:1; filter:brightness(1.08); }
+#chartSvg .pt.is-dim{ opacity:.35; }
+
+#chartSvg .body-bar{
+  transition: opacity .18s cubic-bezier(.16,1,.3,1), transform .18s cubic-bezier(.16,1,.3,1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+#chartSvg .body-bar.is-hover{ opacity:.9; transform:translateY(-1px); }
+#chartSvg .body-bar.is-dim{ opacity:.35; }
+
+#chart .legend [data-series]{
+  transition: opacity .18s cubic-bezier(.16,1,.3,1), transform .18s cubic-bezier(.16,1,.3,1);
+}
+#chart .legend [data-series].is-hover{ opacity:1; transform:translateY(-1px); }
+#chart .legend [data-series].is-dim{ opacity:.35; }
+
+#chartSvg .goal-band{
+  fill:var(--chart-goal-sys);
+  stroke:none;
+}
+#chartSvg .goal-band.goal-dia{
+  fill:var(--chart-goal-dia);
+}
+.chart-tip{
+  position:absolute;
+  inset:auto auto auto auto;
+  transform:translate(8px,8px);
+  background:var(--chart-tooltip-bg);
+  border:1px solid rgba(60,68,90,.65);
+  border-radius:8px;
+  padding:8px 10px;
+  font-size:12px;
+  line-height:1.35;
+  max-width:280px;
+  box-shadow:0 12px 28px rgba(0,0,0,.42);
+  color:var(--fg);
+  text-shadow:0 1px 1px rgba(0,0,0,.35);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .15s ease;
+  display:block;
+  z-index:2;
+}
+
+#chartSvg .chart-hit{ cursor:pointer; }
+#chartSvg .chart-hit:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* Busy overlay */
+#busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
+#busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
+
+.seg{display:flex;gap:8px;margin:8px 0 12px}
+.seg .seg-btn.active{background:var(--accent);color:#fff}
+.hidden{display:none!important}
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* App-Lock Overlay */
+#appLock{
+  position: fixed; inset: 0; z-index: 10001;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(2px);
+}
+#appLock .lock-card{
+  width: min(420px, 92vw);
+  background: #fff; color: #111;
+  border-radius: 16px; padding: 18px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.35);
+  border: 1px solid #e5e7eb;
+}
+#appLock .lock-card h3{ margin: 0 0 6px; }
+#appLock .btn.primary{ background: var(--accent); color: #fff; }
+#appLock .pin-wrap{ display:flex; gap:8px; margin-top:8px; }
+#appLock .pin-wrap input{
+  flex:1; background:#f8fafc; color:#111; border:1px solid #e5e7eb;
+}
+
+/* Body-State: solange gelockt ist, Interaktion sperren (Overlay deckt ohnehin ab) */
+body.app-locked main, body.app-locked nav, body.app-locked header{
+  filter: blur(0); /* bewusst ohne Blur, nur visuelles Dimmen optional */
+}
+body.app-locked { pointer-events: auto; } /* Overlay nimmt Events ab */
+
+/* Login-Overlay */
+#loginOverlay{
+
+  position: fixed; inset: 0; z-index: 10000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(2px);
+}
+#loginOverlay .login-card{
+  width: min(420px, 92vw);
+  background: #fff; color: #111;
+  border-radius: 16px; padding: 18px;
+  box-shadow: 0 18px 48px rgba(0,0,0,.35);
+  border: 1px solid #e5e7eb;
+}
+#loginOverlay .login-card h3{ margin: 0 0 6px; }
+  #loginOverlay .btn.primary{ background: var(--accent); color: #fff; }
+  
+/* Lifestyle progress: modern look */
+#lifestyle .progress, #cap-intake-wrap .progress { position: relative; width:100%; height:18px; background:#0f1116; border:1px solid #2b2f3a; border-radius:999px; overflow:hidden; margin-top:8px; }
+#lifestyle .progress .bar, #cap-intake-wrap .progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),#7c3aed); transition: width .35s ease, filter .2s ease; box-shadow: inset 0 0 0 1px rgba(79,70,229,.25); }
+#lifestyle .progress .label, #cap-intake-wrap .progress .label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:rgba(255,255,255,.9); text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
+#lifestyle .progress.ok   .bar, #cap-intake-wrap .progress.ok   .bar { background:linear-gradient(90deg,#10b981,#34d399); box-shadow: inset 0 0 0 1px rgba(16,185,129,.25), 0 8px 20px rgba(16,185,129,.18); }
+#lifestyle .progress.warn .bar, #cap-intake-wrap .progress.warn .bar { background:linear-gradient(90deg,#f59e0b,#fbbf24); box-shadow: inset 0 0 0 1px rgba(245,158,11,.25), 0 8px 20px rgba(245,158,11,.18); }
+#lifestyle .progress.bad  .bar, #cap-intake-wrap .progress.bad  .bar { background:linear-gradient(90deg,#ef4444,#f87171); box-shadow: inset 0 0 0 1px rgba(239,68,68,.25), 0 8px 20px rgba(239,68,68,.18); }
+#lifestyle .progress.neutral .bar, #cap-intake-wrap .progress.neutral .bar { background:linear-gradient(90deg,#6b7280,#9ca3af); box-shadow: inset 0 0 0 1px rgba(107,114,128,.25); }
+@media (hover:hover){
+  #lifestyle .progress:hover .bar, #cap-intake-wrap .progress:hover .bar { filter:brightness(1.05); }
+}
+
+#cap-intake-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  background:var(--card-layer2);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  padding:24px 20px;
+  box-shadow:var(--shadow-soft);
+}
+#cap-intake-wrap .blockTitle{
+  margin:0;
+  padding-bottom:12px;
+  font-size:1.1rem;
+  font-weight:600;
+  color:var(--fg);
+  letter-spacing:0.3px;
+  position:relative;
+}
+#cap-intake-wrap .blockTitle::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:1px;
+  background:var(--border-subtle);
+}
+#cap-intake-status{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0 !important;
+  opacity:.85;
+}
+#cap-intake-wrap .row{
+  align-items:flex-end;
+  gap:16px;
+  flex-wrap:wrap;
+  margin:0;
+}
+#cap-intake-wrap .row + .row{margin-top:24px;}
+#cap-intake-wrap .row > div:last-child{
+  width:160px;
+  min-width:140px;
+  display:flex;
+  justify-content:flex-end;
+}
+#cap-intake-wrap .row > div:last-child .btn{
+  width:100%;
+}
+#cap-intake-wrap > .small:last-of-type{
+  margin-top:0 !important;
+  text-align:right;
+  color:var(--muted);
+}
+#cap-intake-wrap input{
+  background:var(--surface-elevated);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  color:var(--fg);
+  transition:border-color .25s ease, box-shadow .25s ease, background .25s ease;
+}
+#cap-intake-wrap input:focus-visible{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(58,61,255,0.25);
+}
+#cap-intake-wrap input::placeholder{
+  color:var(--muted);
+  opacity:.65;
+}
+#cap-intake-wrap .blockTitle,
+#bodyAccordion .blockTitle{
+  display:none;
+}
+
+/* Intake status pills (Capture) */
+#cap-intake-status { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; background:var(--surface-elevated); border:1px solid var(--border-subtle); color:var(--fg); }
+.pill .dot { width:8px; height:8px; border-radius:50%; background:#6b7280; box-shadow:0 0 0 1px rgba(0,0,0,.4); }
+.pill.ok .dot { background:var(--ok); }
+.pill.warn .dot { background:var(--warn); }
+.pill.bad .dot { background:var(--danger); }
+.pill.neutral .dot { background:var(--accent); }
+.body-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.capture-header{ display:flex; flex-direction:column; gap:8px; }
+.capture-header .capture-date{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.capture-header .capture-pills{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.capture-header .capture-pills .pill{ margin:0; }
+
+
+/* Arzttermine Skeleton */
+#appointmentsWrap {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.appointment-card {
+  background:var(--card-layer2);
+  border:1px solid var(--border-subtle);
+  border-radius:8px;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  box-shadow:var(--shadow-soft);
+}
+.appointment-card h3 {
+  margin:0;
+}
+.appointment-inputs {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  align-items:end;
+}
+.appointment-inputs > div {
+  min-width:160px;
+}
+.appointment-inputs .btn-wrap {
+  grid-column:span 2;
+  align-self:end;
+}
+.appointment-inputs .btn-wrap button {
+  width:100%;
+  height:40px;
+}
+.appointment-meta{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.appointment-line {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  color:var(--muted);
+}
+.appointment-line .label {
+  order:1;
+}
+.appointment-line .value {
+  order:2;
+  font-size:13px;
+  color:var(--fg);
+  font-weight:500;
+}
+.appointment-line button {
+  order:3;
+  min-width:110px;
+  height:36px;
+  margin:0 0 0 8px;
+  padding-inline:14px;
+}
+@media (max-width: 640px) {
+  .appointment-inputs > div {
+    flex: 1 1 100%;
+  }
+  .appointment-inputs .btn-wrap button {
+    width: 100%;
+  }
+  .appointment-line {
+    gap: 6px;
+  }
+  .appointment-line .value {
+    flex-basis:100%;
+  }
+}
+
+/* --- SAFETY: versteckte Dinge fangen keine Klicks --- */
+[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Versteckte Overlays fangen niemals Pointer-Events */
+#loginOverlay[hidden],
+#appLock[hidden],
+#loginOverlay.is-hidden,
+#appLock.is-hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* --- SAFETY: summary darf nie full-screen 'oben' liegen --- */
+summary {
+  position: static !important;
+  z-index: auto !important;
+  pointer-events: auto !important;
+}
+details[open] > summary {
+  position: static !important;
+}
+
+/* Falls Details per hidden versteckt werden */
+details[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Optional: Config-Accordion im Login-Overlay explizit entschaerfen */
+#configAdv > summary { position: static !important; }
+
 </style>
+<!-- END MODULE -->
+</head>
+<body>
+<!-- ANKER: touch-log-fallback -->
+<pre id="touchLog" style="display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000"></pre>
+
+<header>
+<div style="display:flex;align-items:center;gap:10px">
+<h1>Gesundheits-Logger</h1><span class="small">V1.7.6</span>
+<div class="spacer"></div>
+<button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
+<button class="btn ghost" id="diagToggle" type="button">Log</button>
+</div>
+</header>
+
+<nav class="tabs">
+<button class="btn ghost" data-tab="capture" id="tab-capture" type="button">Erfassen</button>
+<button class="btn ghost" data-tab="doctor" id="tab-doctor" type="button">Arzt-Ansicht</button>
+</nav>
+
+<!-- Hilfe-Panel -->
+<div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
+<header>
+<h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
+<button class="btn ghost" id="helpClose" type="button">x</button>
+</header>
+<div class="content">
+<strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
+<ul>
+<li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
+<li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
+<li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+</ul>
+</div>
+</div>
+
+<!-- Diagnose-Panel -->
+<div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
+<header>
+<h4 id="diagTitle">Touch-Log</h4>
+<button class="btn ghost" id="diagClose" type="button">x</button>
+</header>
+<pre id="diagLog" class="content" style="margin:0"></pre>
+</div>
+
+<!-- Diagramm-Panel (Daily) -->
+<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
+<header>
+<h4 id="chartTitle">Diagramm (Daily)</h4>
+<button class="btn ghost" id="chartClose" type="button">x</button>
+</header>
+<div class="content">
+<div class="controls">
+<select id="metricSel" class="half compact" aria-label="Messgroesse auswaehlen">
+    <option value="bp">Blutdruck (Sys/Dia)</option>
+    <option value="weight">Koerper</option>
+</select>
+
+  <!-- ANKER: chart-averages (Daily) -->
+  <div id="chartAverages" class="kpis" aria-live="polite">
+    <span data-k="sys">Durchschnitt Sys: -</span>
+    <span class="sep" aria-hidden="true">*</span>
+    <span data-k="dia">Durchschnitt Dia: -</span>
+    <span class="sep" aria-hidden="true">*</span>
+    <span data-k="map">Durchschnitt MAP: -</span>
+  </div>
+</div>
+
+<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
+<div class="legend" id="chartLegend"></div>
+<div class="small" style="opacity:.7;margin-top:6px">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+</div>
+</div>
+
+<div id="err" role="status" aria-live="polite"></div>
+<div id="busy"><div class="box"> Bitte warten...</div></div>
+
+<main id="appMain">
+<!-- END MODULE -->
+<!-- MODULE: CAPTURE (Intake)
+  intent: Tageserfassung (UI) inkl. Intake/BP/Body/Flags/Termine, verbindet Benutzeraktionen mit Save-Flows
+  contracts: nutzt DATA ACCESS.saveIntakeTotals*, AUTH.isLoggedIn, UI.requestUiRefresh
+  todo: @extract-candidate bindIntakeCapture, refreshCaptureIntake spaeter extrahieren
+-->
+<!-- Capture -->
+<section class="view active" id="capture" aria-labelledby="captureHeading">
+ 
+  <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
+  <!-- Daily-Capture -->
+  <!-- SUBMODULE: capture-entry shell @internal - wraps accordions and intake status pills -->
+  <section class="card" id="entry">
+    <div class="capture-header">
+      <div class="capture-date">
+        <div style="flex:0 0 220px">
+          <label>Datum</label>
+          <input class="compact" type="date" id="date">
+        </div>
+      </div>
+      <div class="capture-pills" id="capturePillsRow">
+        <div id="cap-intake-status-top" class="small" style="opacity:.8; display:flex; gap:8px; flex-wrap:wrap"></div>
+        <span id="nextApptBadge" class="pill neutral" title="Kein Termin geplant" aria-live="polite">Kein Termin geplant</span>
+      </div>
+    </div>
+
+    <!-- SUBMODULE: bp-capture accordion @internal - logs morning/abends Werte & Kommentare -->
+    <details class="accordion" id="bodyAccordion">
+      <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested">
+          <div class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+            <div style="min-width:180px">
+              <label for="bpContextSel">Messzeitpunkt</label>
+              <select id="bpContextSel">
+                <option value="M">Morgens</option>
+                <option value="A">Abends</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-nested bp-pane active" data-context="M">
+          <h3 class="blockTitle">Morgens</h3>
+          <div class="grid">
+            <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+            <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
+          </div>
+        </div>
+        <div class="card-nested bp-pane" data-context="A">
+          <h3 class="blockTitle">Abends</h3>
+          <div class="grid">
+            <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+            <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- SUBMODULE: body-capture accordion @internal - captures weight + Umfang Werte -->
+    <details class="accordion">
+      <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+          <div class="card-nested">
+            <div class="body-grid">
+              <div>
+                <label>Gewicht (kg)</label>
+                <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+              </div>
+              <div>
+                <label>Bauchumfang (cm)</label>
+                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
+              </div>
+              <div>
+                <label>Fett (%)</label>
+                <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
+              </div>
+              <div>
+                <label>Muskel (%)</label>
+                <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
+              </div>
+            </div>
+          </div>
+        
+        <div class="panel-actions">
+          <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- SUBMODULE: intake-capture accordion @internal - updates water/salt/protein totals -->
+    <details class="accordion" id="captureIntake">
+      <summary><span>&#x1F964; Fluessigkeit & Intake</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested" id="cap-intake-wrap">
+          <h3 class="blockTitle">Intake pro Tag</h3>
+          <div class="small" id="cap-intake-status" style="margin-bottom:10px;opacity:.8"></div>
+
+          <div class="row" style="align-items:flex-end; gap:8px; flex-wrap:wrap">
+            <div style="flex:1;min-width:180px">
+              <label>Wasser hinzufuegen (ml)</label>
+              <input type="number" id="cap-water-add" min="0" step="50" inputmode="numeric" placeholder="z. B. 250">
+            </div>
+            <div style="width:140px">
+              <button class="btn primary" id="cap-water-add-btn" type="button">+ Menge</button>
+            </div>
+          </div>
+
+          <div class="row" style="align-items:flex-end; gap:8px; flex-wrap:wrap; margin-top:12px">
+            <div style="flex:1;min-width:180px">
+              <label>Salz hinzufuegen (g)</label>
+              <input type="text" id="cap-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
+            </div>
+            <div style="width:140px">
+              <button class="btn primary" id="cap-salt-add-btn" type="button">+ Menge</button>
+            </div>
+          </div>
+
+          <div class="row" style="align-items:flex-end; gap:8px; flex-wrap:wrap; margin-top:12px">
+            <div style="flex:1;min-width:180px">
+              <label>Protein hinzufuegen (g)</label>
+              <input type="text" id="cap-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
+            </div>
+            <div style="width:140px">
+              <button class="btn primary" id="cap-protein-add-btn" type="button">+ Menge</button>
+            </div>
+          </div>
+
+          <div class="small" style="margin-top:10px;opacity:.75">
+            Hinweis: Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- SUBMODULE: day-flags accordion @internal - toggles training/sick/salt states -->
+    <details class="accordion">
+      <summary><span>&#x1F6A9; Flags</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+      <div class="accordion-body">
+        <div class="card-nested">
+          <div class="row" style="align-items:center; gap:8px; flex-wrap:wrap; margin-top:0">
+            <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
+            <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
+            <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
+            <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
+            <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
+            <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
+            <button class="btn toggle" id="proteinHighToggle" type="button" aria-pressed="false" title="Protein >= 90 g">&#x1F969; Protein >= 90 g</button>
+            <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
+          </div>
+        </div>
+        <div class="card-nested">
+          <label for="flagsComment" class="small" style="display:block;margin-bottom:6px">Kommentar zu Flags</label>
+          <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
+        </div>
+        <div class="panel-actions">
+          <button class="btn primary" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Flags speichern</button>
+        </div>
+      </div>
+
+</details>
+
+<!-- SUBMODULE: appointments accordion @internal - manages per-role appointment cards -->
+<details class="accordion" id="appointments">
+  <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+  <div class="accordion-body">
+    <div class="card-nested" id="appointmentsWrap">
+      <div class="small" style="margin-bottom:12px;opacity:.8">Pro Rolle gibt es genau einen geplanten Termin.</div>
+
+      <div class="appointment-card" data-role="nephro">
+        <h3 class="blockTitle">Nephrologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-nephro-date">Datum</label>
+            <input type="date" id="appt-nephro-date">
+          </div>
+          <div>
+            <label for="appt-nephro-time">Zeit</label>
+            <input type="time" id="appt-nephro-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-nephro-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-nephro-next">&mdash;</span>
+            <button class="btn ghost" id="appt-nephro-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-nephro-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="internal">
+        <h3 class="blockTitle">Internist</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-internal-date">Datum</label>
+            <input type="date" id="appt-internal-date">
+          </div>
+          <div>
+            <label for="appt-internal-time">Zeit</label>
+            <input type="time" id="appt-internal-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-internal-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-internal-next">&mdash;</span>
+            <button class="btn ghost" id="appt-internal-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-internal-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="urology">
+        <h3 class="blockTitle">Urologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-urology-date">Datum</label>
+            <input type="date" id="appt-urology-date">
+          </div>
+          <div>
+            <label for="appt-urology-time">Zeit</label>
+            <input type="time" id="appt-urology-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-urology-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-urology-next">&mdash;</span>
+            <button class="btn ghost" id="appt-urology-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-urology-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="dentist">
+        <h3 class="blockTitle">Zahnarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-dentist-date">Datum</label>
+            <input type="date" id="appt-dentist-date">
+          </div>
+          <div>
+            <label for="appt-dentist-time">Zeit</label>
+            <input type="time" id="appt-dentist-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-dentist-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-dentist-next">&mdash;</span>
+            <button class="btn ghost" id="appt-dentist-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-dentist-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="ophtha">
+        <h3 class="blockTitle">Augenarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-ophtha-date">Datum</label>
+            <input type="date" id="appt-ophtha-date">
+          </div>
+          <div>
+            <label for="appt-ophtha-time">Zeit</label>
+            <input type="time" id="appt-ophtha-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-ophtha-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-ophtha-next">&mdash;</span>
+            <button class="btn ghost" id="appt-ophtha-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-ophtha-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="physio">
+        <h3 class="blockTitle">Physiotherapie</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-physio-date">Datum</label>
+            <input type="date" id="appt-physio-date">
+          </div>
+          <div>
+            <label for="appt-physio-time">Zeit</label>
+            <input type="time" id="appt-physio-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-physio-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-physio-next">&mdash;</span>
+            <button class="btn ghost" id="appt-physio-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-physio-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="small" style="opacity:.7">Hinweis: Logik folgt in den naechsten Phasen - aktuell nur UI-Skelett.</div>
+    </div>
+  </div>
+</details>
+
+  </section>
+</section>
+<!-- END MODULE -->
+
+<!-- Lifestyle (Heute) -->
+
+
+<!-- MODULE: DOCTOR VIEW
+  intent: Aggregations-UI fuer Aerzt:innen, steuert Zeitraum-Filter, Export und Chart-Pivot
+  contracts: nutzt DATA ACCESS.fetchDailyOverview, CHARTS.renderDailyChart, AUTH.setDoctorAccess @public
+  todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
+-->
+<!-- Doctor -->
+<section class="view" id="doctor" aria-labelledby="doctorHeading">
+  <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
+  <div class="card" id="doctorCard">
+    <div class="toolbar">
+      <strong id="doctorTitle">Arzt-Ansicht</strong>
+
+      <div class="center-group">
+        <label class="small">Von <input type="date" id="from" style="width:auto"></label>
+        <label class="small">Bis <input type="date" id="to" style="width:auto"></label>
+        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+        <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
+      </div>
+
+      <span id="docTrainCnt" class="badge good" title="Anzahl Tage mit Training im Zeitraum"> Trainingstage: <span class="val">0</span></span>
+      <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag"> Tage mit Bad-Flag: <span class="val">0</span></span>
+    </div> <!--  Toolbar sauber schliessen -->
+
+    <div style="overflow:auto" id="doctorDailyWrap">
+      <div class="doctor-view" id="doctorView"></div>
+    </div>
+
+        <div class="small" style="margin-top:6px">
+      Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
+    </div>
+  </div>
+</section>
+
+<!-- END MODULE -->
+
+</main>
+
+<!-- Supabase (UMD, v2) -->
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+  integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+  crossorigin="anonymous"
+></script>
+
 
 <script src="assets/js/diagnostics.js"></script>
+<!-- @refactor: moved to assets/js/ui.js -->
 <script src="assets/js/ui.js"></script>
+<!-- @refactor: moved to assets/js/ui-layout.js -->
 <script src="assets/js/ui-layout.js"></script>
+<!-- @refactor: moved to assets/js/ui-errors.js -->
 <script src="assets/js/ui-errors.js"></script>
+<!-- @refactor: moved to assets/js/utils.js -->
 <script src="assets/js/utils.js"></script>
-<script src="assets/js/utils/debounce-fallback.js"></script>
+<!-- @refactor: moved to assets/js/format.js -->
 <script src="assets/js/format.js"></script>
+<!-- @refactor: moved to assets/js/config.js -->
 <script src="assets/js/config.js"></script>
+<!-- @refactor: moved to assets/js/capture/globals.js -->
 <script src="assets/js/capture/globals.js"></script>
-<script src="assets/js/appointments.js"></script>
+<!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
-<script src="assets/js/ui-tabs.js"></script>
-
 <!-- @refactor: moved to assets/js/supabase/index.js -->
 <script type="module" src="assets/js/supabase/index.js"></script>
 
 <script type="module">
   import { SupabaseAPI } from "./assets/js/supabase/index.js";
 
-const bootAuth = () => {
-  if (window.__bootAuthDone) return;
-  window.__bootAuthDone = true;
-  SupabaseAPI.initAuth?.({
-    onStatus: (status) => console.info("Auth status:", status),
-    onLoginOverlay: (visible) => {
-      if (visible) {
-        SupabaseAPI.showLoginOverlay?.(true);
-      } else {
-        SupabaseAPI.hideLoginOverlay?.();
+  const bootAuth = () => {
+    SupabaseAPI.initAuth?.({
+      onStatus: (status) => console.info("Auth status:", status),
+      onLoginOverlay: (visible) => {
+        if (visible) {
+          SupabaseAPI.showLoginOverlay?.(true);
+        } else {
+          SupabaseAPI.hideLoginOverlay?.();
+        }
+      },
+      onUserUi: (email) => {
+        SupabaseAPI.setUserUi?.(email || "");
+      },
+      onDoctorAccess: (enabled) => {
+        SupabaseAPI.setDoctorAccess?.(enabled);
       }
-    },
-    onUserUi: (email) => {
-      SupabaseAPI.setUserUi?.(email || "");
-    },
-    onDoctorAccess: (enabled) => {
-      SupabaseAPI.setDoctorAccess?.(enabled);
-    }
-  });
-};
+    });
+  };
 
-const appInitPromise = (async () => {
   if (document.readyState === "loading") {
-    await new Promise((resolve) =>
-      document.addEventListener("DOMContentLoaded", resolve, { once: true })
-    );
+    document.addEventListener("DOMContentLoaded", bootAuth, { once: true });
+  } else {
+    bootAuth();
   }
-  await main();
-})();
-
-appInitPromise.then(() => bootAuth()).catch((err) => {
-  console.error('[BOOT] app initialization failed', err);
-});
-window.__appInitPromise = appInitPromise;
-
-window.addEventListener('focus', () => {
-  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
-});
 </script>
+<!-- @refactor: moved to assets/js/ui-tabs.js -->
+<script src="assets/js/ui-tabs.js"></script>
 
 <script>
 let supabaseMissingLogged = false;
@@ -149,6 +1713,7 @@ const setAuthPendingAfterUnlock = (value) => {
     state.pendingAfterUnlock = value ?? null;
   }
 };
+
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
   return ({ timeout = 6000, pollInterval = 25 } = {}) => {
@@ -181,11 +1746,287 @@ const waitForSupabaseApi = (() => {
           reject(new Error('SupabaseAPI not ready within timeout'));
         }, timeout);
       }
+      // immediate check in case API became ready between Promise creation and listener setup
       onReady();
     });
     return pendingPromise;
   };
 })();
+
+/** MODULE: LOGGING & DIAGNOSTICS
+ * intent: sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
+ * contracts: stellt diag-Logger, perfStats-Snapshots, uiError/uiInfo fuer UI-Module bereit
+ * exports: diag, recordPerfStat, uiError, uiInfo
+ * notes: rein beobachtend; Verhalten bleibt unveraendert
+ */
+
+
+/** MODULE: UI / ROUTING / VIEWS - Core (Refresh/Help)
+ * intent: steuert Hilfspanel, UI Refresh Loop, Tabs & Fokusreparatur
+ * contracts: stellt requestUiRefresh @public, maybeRefreshForTodayChange, setUnderlayInert fuer andere Module bereit
+ * exports: requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert
+ * notes: Fortsetzung des Kern-UI-Routings (Refresh/Help); DOM-Struktur unveraendert belassen
+ */
+// @refactor: moved to assets/js/ui.js (helpPanel)
+
+/* ===== Helpers ===== */
+const UI_REFRESH_TIMEOUT_MS = 8000;
+const GET_USER_TIMEOUT_MS = 2000;
+const uiRefreshState = {
+  timer: null,
+  running: false,
+  docNeeded: false,
+  chartNeeded: false,
+  lifestyleNeeded: false,
+  appointmentsNeeded: false,
+  resolvers: [],
+  lastReason: '',
+  reasons: new Set()
+};
+
+const uiRefreshTimeoutSymbol = Symbol('ui-refresh-timeout');
+const uiNow = () => (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
+
+// SUBMODULE: requestUiRefresh @public - debounces multi-surface refresh (doctor/chart/capture); mutex via uiRefreshState
+function requestUiRefresh(opts = {}) {
+  if (typeof opts === "string") {
+    opts = { reason: opts };
+  }
+  const reason = opts.reason || '';
+  const doctor = opts.doctor !== undefined ? !!opts.doctor : true;
+
+  let chartDefault = false;
+  try { chartDefault = !!(chartPanel?.open); } catch(_) {}
+  const chart = opts.chart !== undefined ? !!opts.chart : chartDefault;
+
+  let lifestyleDefault = false;
+  try {
+    const lifestyleEl = document.getElementById('lifestyle');
+    lifestyleDefault = !!(lifestyleEl?.classList?.contains('active'));
+  } catch(_) {}
+  const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
+
+  const appointments = opts.appointments !== undefined ? !!opts.appointments : false;
+
+  uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
+  uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
+  uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
+  uiRefreshState.appointmentsNeeded = uiRefreshState.appointmentsNeeded || appointments;
+  uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
+  if (reason) uiRefreshState.reasons.add(reason);
+
+  const promise = new Promise(resolve => uiRefreshState.resolvers.push(resolve));
+
+  if (!uiRefreshState.running && !uiRefreshState.timer) {
+    uiRefreshState.timer = setTimeout(() => {
+      uiRefreshState.timer = null;
+      runUiRefresh().catch(err => {
+        diag.add?.('[ui] refresh fatal: ' + (err?.message || err));
+      });
+    }, 0);
+  }
+  return promise;
+}
+
+// SUBMODULE: runUiSubStep @internal - executes gated refresh tasks with perf tracking
+async function runUiSubStep(label, enabled, fn) {
+  if (!enabled) return;
+  const start = uiNow();
+  diag.add?.(`[ui] step start ${label}`);
+  let timeoutId;
+  let timedOut = false;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      reject(uiRefreshTimeoutSymbol);
+    }, UI_REFRESH_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([
+      (async () => {
+        try {
+          await fn();
+        } catch (err) {
+          if (!timedOut) throw err;
+          diag.add?.(`[ui] step late error ${label}: ${err?.message || err}`);
+        }
+      })(),
+      timeoutPromise
+    ]);
+    const duration = Math.round(uiNow() - start);
+    diag.add?.(`[ui] step end ${label} (${duration} ms)`);
+  } catch (err) {
+    const duration = Math.round(uiNow() - start);
+    if (err === uiRefreshTimeoutSymbol) {
+      diag.add?.(`[ui] step timeout ${label} (${duration} ms)`);
+    } else {
+      diag.add?.(`[ui] step error ${label}: ${err?.message || err} (${duration} ms)`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// SUBMODULE: runUiRefresh @internal - orchestrates capture/doctor/chart refresh pipeline
+async function runUiRefresh(){
+  const state = uiRefreshState;
+  if (state.timer){
+    clearTimeout(state.timer);
+    state.timer = null;
+  }
+  if (state.running) return;
+  state.running = true;
+  const refreshStart = uiNow();
+  const reasons = state.reasons.size ? Array.from(state.reasons) : (state.lastReason ? [state.lastReason] : []);
+  state.reasons.clear();
+  const reasonLabel = reasons.length ? reasons.join(',') : 'unspecified';
+  diag.add?.(`[ui] refresh start reason=${reasonLabel}`);
+  try {
+    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) {
+      const doc = state.docNeeded;
+      const chart = state.chartNeeded;
+      const lifestyle = state.lifestyleNeeded;
+      const appointments = state.appointmentsNeeded;
+      state.docNeeded = false;
+      state.chartNeeded = false;
+      state.lifestyleNeeded = false;
+      state.appointmentsNeeded = false;
+
+      await runUiSubStep('doctor', doc, async () => { await renderDoctor(); });
+      await runUiSubStep('appointments', appointments, async () => { await refreshAppointments(); });
+      await runUiSubStep('lifestyle', lifestyle && typeof renderLifestyle === 'function', async () => { await renderLifestyle(); });
+      await runUiSubStep('chart', chart && !!chartPanel?.draw, async () => { await chartPanel.draw?.(); });
+    }
+  } finally {
+    state.running = false;
+    const duration = Math.round(uiNow() - refreshStart);
+    diag.add?.(`[ui] refresh end reason=${reasonLabel} (${duration} ms)`);
+    const resolvers = state.resolvers;
+    state.resolvers = [];
+    resolvers.forEach(resolve => { try { resolve(); } catch(_){} });
+    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) && !state.timer){
+      state.timer = setTimeout(() => {
+        uiRefreshState.timer = null;
+        runUiRefresh().catch(err => diag.add?.('[ui] refresh fatal: ' + (err?.message || err)));
+      }, 0);
+    }
+  }
+}
+// kleines visuelles Ping bei Realtime
+// SUBMODULE: livePulse @internal - flashes heartbeat indicator for realtime events
+function livePulse(){
+  const el = document.getElementById('doctorLive');
+  if (!el) return;
+  el.classList.add('pulse');
+  setTimeout(() => el.classList.remove('pulse'), 900);
+}
+
+/** END MODULE */
+
+// --- Service-Role-Schutz (NIEMALS im Browser) ---
+// SUBMODULE: isServiceRoleKey @internal - blocks service_role keys in browser context
+function isServiceRoleKey(raw){
+  const tok = String(raw||"").trim().replace(/^Bearer\s+/i,'');
+  try{
+    const payload = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return payload?.role === 'service_role';
+  }catch{
+    return false; // Fallback: lieber konservativ sein
+  }
+}
+
+// ANCHOR: num-helper-de
+function toNumDE(s) {
+  if (s == null) return null;
+  let v = String(s).trim();
+  if (!v) return null;
+  // strip trailing units/symbols
+  v = v.replace(/\s*(?:%|\u2030|[A-Za-z]+|\u20AC|\$|\u00A3)\s*$/u, '');
+  // normalize minus and spaces
+  v = v.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[\u00A0\u2009\u202F]/g, ' ').replace(/\s+/g, '');
+  // decide decimal separator
+  const lastComma = v.lastIndexOf(',');
+  const lastDot   = v.lastIndexOf('.');
+  let dec = null;
+  if (lastComma !== -1 && lastDot !== -1) dec = (lastComma > lastDot) ? ',' : '.';
+  else if (lastComma !== -1) dec = (v.length - lastComma - 1) <= 2 ? ',' : null;
+  else if (lastDot   !== -1) dec = (v.length - lastDot   - 1) <= 2 ? '.' : null;
+  if (dec) {
+    // protect the chosen decimal (replace its last occurrence with placeholder)
+    v = v.replace(new RegExp('\\' + dec + '(?=[^' + (dec === '.' ? '\\.' : ',') + ']*$)'), '#');
+  }
+  // remove remaining group separators (.,', and spaces)
+  v = v.replace(/[.,'\s]/g, '');
+  if (dec) v = v.replace('#', '.');
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// @refactor: moved to assets/js/diagnostics.js (uiError, uiInfo)
+
+// @refactor: moved to assets/js/ui.js (debounce)
+
+// @refactor: moved to assets/js/ui.js (setUnderlayInert)
+
+// @refactor: moved to assets/js/ui-layout.js (updateStickyOffsets)
+
+// @refactor: moved to assets/js/ui-layout.js (ensureNotObscured & focus handler)
+
+// @refactor: moved to assets/js/ui.js (focusTrap)
+
+// @refactor: moved to assets/js/ui-errors.js (restErrorMessage, uiRestError, withBusy)
+  
+/** MODULE: AUTH
+ * intent: verwaltet Supabase-Sitzung, legt Auth-Locks frei, bindet Login-Overlay ein
+ * contracts: stellt isLoggedIn @public, setAuthGuard, setDoctorAccess bereit und sichert spaeter Client/Header fuer DATA ACCESS
+ * exports: isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess
+ * notes: Seiteneffekte auf Auth-Surfaces beschraenken; Verhalten unveraendert lassen
+ */
+/* ===== Auth-Guard ===== */
+// SUBMODULE: isLoggedIn @public - quick check to gate protected actions
+async function isLoggedIn(){
+  if (!sbClient) return false;
+  return await isLoggedInFast({ timeout: 800 });
+}
+
+/** Schaltet optisch auf "gesperrt" - ohne Controls hart zu deaktivieren */
+// SUBMODULE: setAuthGuard - dims UI when auth session missing
+function setAuthGuard(logged){
+  // Nur visuelles Dimmen; die Save-Logik prueft isLoggedIn() ohnehin.
+  document.body.classList.toggle('auth-locked', !logged);
+  // Kein auto-boot mehr hier - Start erfolgt in main()/watchAuthState.
+}
+
+// SUBMODULE: setDoctorAccess - toggles doctor tab when auth state changes
+function setDoctorAccess(enabled){
+  // Tab-Button
+  const tabBtn = document.getElementById('tab-doctor');
+  if (tabBtn){
+    tabBtn.disabled = !enabled;
+    tabBtn.classList.toggle('ghost', !enabled);
+    tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
+  }
+  // "Werte anzeigen"-Button
+  const chartBtn = document.getElementById('doctorChartBtn');
+  if (chartBtn){
+    chartBtn.disabled = !enabled;
+    chartBtn.title = enabled ? 'Werte als Grafik' : 'Bitte zuerst anmelden';
+  }
+  // Lifestyle-Tab mitsteuern
+  
+}
+  
+/** END MODULE */
+  
+/** MODULE: UTILITIES
+ * intent: generische DOM/Format Helper fuer das Monolith-Skript
+ * contracts: stellt $, $$, fmtNum, todayStr, timeStr, esc/nl2br fuer UI-/Capture-Module bereit
+ * exports: $, $$, fmtNum, todayStr, timeStr, esc, nl2br
+ * notes: deterministische Hilfsfunktionen; rein funktional belassen
+ */
+// @refactor: moved to assets/js/utils.js ($, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br)
+
+/** END MODULE */
 
 /** MODULE: CAPTURE (Intake)
  * intent: steuert Intake-State, Mitternachts-Resets und Bindings fuer die Tageserfassung
@@ -785,131 +2626,450 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
 /** END MODULE */
 
-
-/** MODULE: CAPTURE (Intake)
- * intent: steuert Intake-State, Mitternachts-Resets und Bindings fuer die Tageserfassung
- * contracts: nutzt DATA ACCESS.loadIntakeToday/saveIntakeTotals*, UI.requestUiRefresh, AUTH.isLoggedIn
- * exports: refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus
- * notes: spiegelt CAPTURE UI Modul; reine Logik
+/** MODULE: APPOINTMENTS
+ * intent: CRUD und UI-Sync fuer Arzttermine inkl. Badge und Summary Mapping
+ * contracts: nutzt DATA ACCESS.fetchWithAuth, UI.requestUiRefresh, AUTH.getHeaders
+ * exports: refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge
+ * notes: integriert Capture-Header-Pills; reine Kommentare
  */
-/** MODULE: DATA ACCESS (IndexedDB)
- * intent: lokale IndexedDB- und Konfig-Hilfen fuer Intake-/Doctor-Features
- * contracts: stellt initDB, Config-Lese/Schreibhelfer sowie Entry-Stores fuer CAPTURE/BP bereit
- * exports: initDB, putConf, getConf, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal, dayIsoToMidnightIso
- * notes: dient als Basis fuer Offline-Zwischenspeicher; keine Netz-Calls
- */
-// @refactor: moved to assets/js/data-local.js (initDB, putConf, getConf, dayIsoToMidnightIso, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal)
+// SUBMODULE: getAppointmentsEndpoint @internal - derives base URL for appointments REST calls
+async function getAppointmentsEndpoint(){
+  const rest = await getConf('webhookUrl');
+  if (!rest) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) {
+    setConfigStatus('Bitte REST-Endpoint konfigurieren.', 'error');
+    return null;
+  }
+  return { base };
+}
 
-/** END MODULE */
+// SUBMODULE: getAppointmentRoleLabel @internal - human readable role label
+function getAppointmentRoleLabel(code){
+  const role = APPOINTMENT_ROLES.find(r => r.code === code);
+  return role ? role.label : (code || '');
+}
 
-/* ===== Remote (Supabase REST) ===== */
-/** MODULE: AUTH
- * intent: stellt Supabase JWT Header bereit und kapselt Service-Role-Schutz (Fortsetzung)
- * contracts: stellt getHeaders @public fuer DATA ACCESS.fetchWithAuth zur Verfuegung
- * exports: getHeaders
- * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
- */
-// SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
-// Dep: expects SupabaseAPI helpers (assets/js/supabase/index.js) to be ready.
-async function getHeaders({ forceRefresh = false } = {}) {
-  const supaApi = getSupabaseApi();
-  const maxAgeMs = 5 * 60 * 1000;
+// SUBMODULE: setAppointmentBadge @internal - updates capture header appointment pill
+const setAppointmentBadge = debounce(function(details){
+  const badge = document.getElementById('nextApptBadge');
+  if (!badge) return;
 
-  if (!forceRefresh) {
-    try {
-      const cached = supaApi.getCachedHeaders?.();
-      const cachedAt = supaApi.getCachedHeadersAt?.();
-      if (cached && cachedAt && (Date.now() - cachedAt) < maxAgeMs) {
-        diag.add?.('[headers] cache hit');
-        return cached;
-      }
-    } catch (_) {
-      /* noop */
+  const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
+  try {
+    badge.setAttribute('role','status');
+    badge.setAttribute('aria-live','polite');
+    badge.setAttribute('tabindex','0');
+
+    const role = details?.role || null;
+    const dtIso = details?.dt || null;
+
+    if (!role || !dtIso) {
+      badge.textContent = 'Kein Termin geplant';
+      badge.title = 'Kein Termin geplant';
+      badge.setAttribute('aria-label', 'Kein Termin geplant');
+      badge.dataset.role = '';
+      badge.dataset.dt = '';
+      return;
     }
-    const inflight = supaApi.getHeaderPromise?.();
-    if (inflight) {
-      diag.add?.('[headers] await inflight');
-      return inflight;
+
+    const label = getAppointmentRoleLabel(role);
+    const formatted = formatDateTimeDE(dtIso);
+    const text = `N\u00e4chster Arzttermin bei: ${label} am: ${formatted}`;
+    badge.textContent = text;
+    badge.title = `Arzttermin bei ${label} am ${formatted}`;
+    badge.setAttribute('aria-label', text);
+    badge.dataset.role = role;
+    badge.dataset.dt = dtIso;
+  } finally {
+    recordPerfStat('header_appt', startedAt);
+  }
+}, 160);
+
+// SUBMODULE: computeNextAppointment @internal - finds nearest upcoming appointment
+function computeNextAppointment(summary){
+  if (!summary) return null;
+  let nextRole = null;
+  let nextIso = null;
+  let nextTs = Number.POSITIVE_INFINITY;
+  const nowTs = Date.now();
+
+  for (const { code } of APPOINTMENT_ROLES) {
+    const nextCandidate = summary[code]?.next;
+    if (!nextCandidate) continue;
+    const ts = Date.parse(nextCandidate);
+    if (!Number.isFinite(ts)) continue;
+    if (ts < nowTs - APPOINTMENT_GRACE_MS) continue;
+    if (ts < nextTs) {
+      nextTs = ts;
+      nextRole = code;
+      nextIso = nextCandidate;
     }
   }
 
-  const load = (async () => {
-    const key = await getConf("webhookKey");
-    if (!key) {
-      diag.add?.('Headers: kein Key (webhookKey)');
-      supaApi.clearHeaderCache?.();
-      return null;
-    }
-    if (isServiceRoleKey(key)) {
-      diag.add?.('Headers: service_role Key blockiert');
-      supaApi.clearHeaderCache?.();
-      return null;
-    }
-    const anonKey = key.replace(/^Bearer\s+/i, "");
+  if (!nextRole || !nextIso) return null;
+  return { role: nextRole, dt: nextIso };
+}
 
-    const supa = await ensureSupabaseClient();
-    if (!supa) {
-      diag.add?.('Headers: Supabase-Client fehlt');
-      supaApi.clearHeaderCache?.();
-      return null;
+// SUBMODULE: validateAppointmentInput @internal - guards appointment form inputs
+function validateAppointmentInput({ date, time }){
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { ok: false, error: 'date' };
+  }
+  if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    return { ok: false, error: 'time' };
+  }
+  const dt = new Date(`${date}T${time}:00`);
+  if (Number.isNaN(dt.getTime())) {
+    return { ok: false, error: 'invalid' };
+  }
+  return { ok: true, iso: dt.toISOString() };
+}
+
+// SUBMODULE: resetAppointmentsUi @internal - clears appointment UI state
+function resetAppointmentsUi(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = '\u2014';
+    if (lastEl) lastEl.textContent = '\u2014';
+    if (doneBtn){
+      doneBtn.disabled = true;
+      doneBtn.dataset.hasNext = '0';
+      doneBtn.hidden = true;
     }
+  });
+  appointmentsState.next = null;
+  setAppointmentBadge();
+}
 
-    let timeoutId;
-    let timedOut = false;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        timedOut = true;
-        reject(new Error('getSession-timeout'));
-      }, GET_USER_TIMEOUT_MS);
-    });
-    let sessionInfo = null;
-    try {
-      const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
-      sessionInfo = result?.data?.session ?? null;
-    } catch (err) {
-      if (timedOut) {
-        diag.add?.('[auth] getSession timeout');
-      } else {
-        diag.add?.('[auth] getSession error: ' + (err?.message || err));
-      }
-    } finally {
-      clearTimeout(timeoutId);
+// SUBMODULE: applyAppointmentsUi @internal - binds fetched appointment summary to DOM
+function applyAppointmentsUi(summary){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const record = summary && summary[code] ? summary[code] : { next: null, last: null };
+    const nextEl = document.getElementById(`appt-${code}-next`);
+    const lastEl = document.getElementById(`appt-${code}-last`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (nextEl) nextEl.textContent = formatDateTimeDE(record.next);
+    if (lastEl) lastEl.textContent = formatDateTimeDE(record.last);
+    if (doneBtn){
+      doneBtn.disabled = !record.next;
+      doneBtn.dataset.hasNext = record.next ? '1' : '0';
+      doneBtn.hidden = !record.next;
     }
+  });
+}
 
-    if (timedOut) {
-      const cached = supaApi.getCachedHeaders?.();
-      const cachedAt = supaApi.getCachedHeadersAt?.();
-      if (cached && cachedAt) {
-        diag.add?.('[headers] fallback cached (timeout)');
-        return cached;
-      }
+// SUBMODULE: fetchAppointmentsSummary @internal - loads scheduled/done appointments from REST
+async function fetchAppointmentsSummary(){
+  const rest = await getConf('webhookUrl');
+  if (!rest) return null;
+  const base = baseUrlFromRest(rest);
+  if (!base) return null;
+
+  const fetchJson = async (url) => {
+    const res = await fetchWithAuth(
+      headers => fetch(url.toString(), { headers }),
+      { tag: 'appt:summary', maxAttempts: 2 }
+    );
+    if (res.status === 404) return [];
+    if (!res.ok) {
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+      throw new Error(`appointments fetch failed ${res.status} ${details}`);
     }
+    return await res.json();
+  };
 
-    const jwt = sessionInfo?.access_token;
-    if (!anonKey || !jwt) {
-      diag.add?.('Headers: fehlende Session/JWT');
-      supaApi.clearHeaderCache?.();
-      return supaApi.getCachedHeaders?.() ?? null;
-    }
+  const scheduledUrl = new URL(`${base}/rest/v1/appointments`);
+  scheduledUrl.searchParams.set('select', 'role,dt');
+  scheduledUrl.searchParams.set('status', 'eq.scheduled');
+  scheduledUrl.searchParams.set('order', 'dt.asc');
 
-    const headers = {
-      "Content-Type": "application/json",
-      "apikey": anonKey,
-      "Authorization": `Bearer ${jwt}`,
-      "Prefer": "return=representation"
-    };
-    supaApi.cacheHeaders?.(headers);
-    diag.add?.('[headers] ok');
-    return headers;
-  })();
+  const doneUrl = new URL(`${base}/rest/v1/appointments`);
+  doneUrl.searchParams.set('select', 'role,dt');
+  doneUrl.searchParams.set('status', 'eq.done');
+  doneUrl.searchParams.set('order', 'dt.desc');
 
-  supaApi.setHeaderPromise?.(load);
+  const [scheduled, done] = await Promise.all([
+    fetchJson(scheduledUrl),
+    fetchJson(doneUrl)
+  ]);
+  return { scheduled, done };
+}
+
+// SUBMODULE: refreshAppointments @internal - orchestrates summary fetch and UI update
+async function refreshAppointments(){
+  if (appointmentsState.loading) return;
+  appointmentsState.loading = true;
   try {
-    return await load;
+    const summaryRaw = await fetchAppointmentsSummary();
+    const scheduledList = Array.isArray(summaryRaw?.scheduled) ? summaryRaw.scheduled : [];
+    const doneList = Array.isArray(summaryRaw?.done) ? summaryRaw.done : [];
+
+    const scheduledMap = new Map();
+    for (const item of scheduledList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!scheduledMap.has(role)) {
+        scheduledMap.set(role, item);
+      }
+    }
+
+    const doneMap = new Map();
+    for (const item of doneList) {
+      const role = item?.role;
+      const dt = item?.dt;
+      if (!role || !dt) continue;
+      if (!doneMap.has(role)) {
+        doneMap.set(role, item);
+      }
+    }
+
+    const summary = Object.create(null);
+    const now = Date.now();
+
+    APPOINTMENT_ROLES.forEach(({ code }) => {
+      let nextIso = null;
+      let lastIso = doneMap.get(code)?.dt ?? null;
+
+      const scheduled = scheduledMap.get(code);
+      if (scheduled?.dt) {
+        const ts = Date.parse(scheduled.dt);
+        if (Number.isFinite(ts)) {
+          if (ts >= now - APPOINTMENT_GRACE_MS) {
+            nextIso = scheduled.dt;
+          } else if (!lastIso) {
+            lastIso = scheduled.dt;
+          }
+        }
+      }
+
+      summary[code] = { next: nextIso, last: lastIso };
+    });
+
+    appointmentsState.data = summary;
+    appointmentsState.loaded = true;
+    applyAppointmentsUi(summary);
+    const nextAppt = computeNextAppointment(summary);
+    appointmentsState.next = nextAppt;
+    setAppointmentBadge(nextAppt);
+  } catch (e) {
+    diag.add?.('appointments refresh error: ' + (e?.message || e));
+    appointmentsState.data = Object.create(null);
+    appointmentsState.loaded = false;
+    resetAppointmentsUi();
   } finally {
-    supaApi.setHeaderPromise?.(null);
+    appointmentsState.loading = false;
   }
 }
+
+
+// SUBMODULE: handleAppointmentSave @internal - POST/PUT appointment scheduling flow
+async function handleAppointmentSave(role){
+  const dateEl = document.getElementById(`appt-${role}-date`);
+  const timeEl = document.getElementById(`appt-${role}-time`);
+  const saveBtn = document.getElementById(`appt-${role}-save`);
+  if (!dateEl || !timeEl || !saveBtn) return;
+
+  const date = (dateEl.value || '').trim();
+  const time = (timeEl.value || '').trim();
+  const validation = validateAppointmentInput({ date, time });
+  if (!validation.ok){
+    if (validation.error === 'date'){
+      uiError('Bitte Datum waehlen.');
+      dateEl.focus();
+    } else if (validation.error === 'time'){
+      uiError('Bitte Uhrzeit im Format HH:MM angeben.');
+      timeEl.focus();
+    } else {
+      uiError('Bitte Datum/Uhrzeit pruefen.');
+      timeEl.focus();
+    }
+    return;
+  }
+
+  const endpoint = await getAppointmentsEndpoint();
+  const base = endpoint?.base || null;
+  const iso = validation.iso;
+
+  const hasScheduled = !!(appointmentsState.data && appointmentsState.data[role] && appointmentsState.data[role].next);
+  const patchUrl = base ? new URL(base + '/rest/v1/appointments') : null;
+  if (patchUrl){
+    patchUrl.searchParams.set('status', 'eq.scheduled');
+    patchUrl.searchParams.set('role', 'eq.' + role);
+  }
+
+  const body = JSON.stringify({ dt: iso });
+  withBusy(saveBtn, true);
+  try {
+    if (!base || !patchUrl){
+      const errMissing = new Error('appointments-endpoint-missing');
+      errMissing.status = 401;
+      throw errMissing;
+    }
+
+    let saved = false;
+    if (hasScheduled){
+      const res = await fetchWithAuth(
+        headers => fetch(patchUrl.toString(), { method: 'PATCH', headers, body }),
+        { tag: 'appt:patch', maxAttempts: 2 }
+      );
+      if (!res.ok){
+        let details = '';
+        try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (res.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        if (res.status !== 404){
+          const errPatch = new Error('appointments-patch-failed');
+          errPatch.status = res.status;
+          errPatch.details = details;
+          throw errPatch;
+        }
+      } else {
+        saved = true;
+      }
+    }
+
+    if (!saved){
+      const uid = await getUserId();
+      if (!uid){
+        const errAuth = new Error('appointments-user-missing');
+        errAuth.status = 401;
+        throw errAuth;
+      }
+      const postUrl = new URL(base + '/rest/v1/appointments');
+      const payload = JSON.stringify([{ role, dt: iso, status: 'scheduled', user_id: uid }]);
+      const resPost = await fetchWithAuth(
+        headers => fetch(postUrl.toString(), { method: 'POST', headers, body: payload }),
+        { tag: 'appt:post', maxAttempts: 2 }
+      );
+      if (resPost.status === 409){
+        uiError('Es existiert bereits ein geplanter Termin. Bitte aktualisieren.');
+        return;
+      }
+      if (!resPost.ok){
+        let details = '';
+        try { const err = await resPost.json(); details = err?.message || err?.details || ''; } catch(_){ }
+        if (resPost.status === 400){
+          uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+          timeEl.focus();
+          return;
+        }
+        const errPost = new Error('appointments-post-failed');
+        errPost.status = resPost.status;
+        errPost.details = details;
+        throw errPost;
+      }
+    }
+
+    dateEl.value = '';
+    timeEl.value = '';
+    await refreshAppointments();
+    uiInfo('Termin gespeichert.');
+  } catch (e){
+    if (e?.status === 400){
+      uiError('Bitte Datum/Uhrzeit pruefen (HH:MM).');
+      timeEl.focus();
+    } else if (e?.status === 401 || e?.status === 403){
+      showLoginOverlay(true);
+      uiError('Bitte erneut anmelden.');
+    } else if (e?.status) {
+      uiRestError(e.status, e.details || e.message);
+      try {
+        diag.add?.('appointments save error (' + role + '): ' + (e?.details || e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
+    } else {
+      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+      try {
+        diag.add?.('appointments save error (' + role + '): ' + (e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
+    }
+  } finally {
+    withBusy(saveBtn, false);
+  }
+}
+// SUBMODULE: handleAppointmentDone @internal - marks scheduled appointment as completed
+async function handleAppointmentDone(role){
+  const btn = document.getElementById(`appt-${role}-done`);
+  if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
+
+  const endpoint = await getAppointmentsEndpoint();
+  const base = endpoint?.base || null;
+  withBusy(btn, true);
+  try {
+    if (!base){
+      const errMissing = new Error('appointments-endpoint-missing');
+      errMissing.status = 401;
+      throw errMissing;
+    }
+    const url = new URL(base + '/rest/v1/appointments');
+    url.searchParams.set('status', 'eq.scheduled');
+    url.searchParams.set('role', 'eq.' + role);
+    const body = JSON.stringify({ status: 'done' });
+
+    const res = await fetchWithAuth(
+      headers => fetch(url.toString(), { method: 'PATCH', headers, body }),
+      { tag: 'appt:done', maxAttempts: 2 }
+    );
+    if (!res.ok){
+      let details = '';
+      try { const err = await res.json(); details = err?.message || err?.details || ''; } catch(_){ }
+      if (res.status === 404){
+        uiError('Kein geplanter Termin vorhanden.');
+        await refreshAppointments();
+        return;
+      }
+      const errDone = new Error('appointments-done-failed');
+      errDone.status = res.status;
+      errDone.details = details;
+      throw errDone;
+    }
+    await refreshAppointments();
+    uiInfo('Termin abgeschlossen.');
+  } catch (e){
+    if (e?.status === 401 || e?.status === 403){
+      showLoginOverlay(true);
+      uiError('Bitte erneut anmelden.');
+    } else if (e?.status) {
+      uiRestError(e.status, e.details || e.message, 'Termin konnte nicht abgeschlossen werden.');
+      try {
+        diag.add?.('appointments done error (' + role + '): ' + (e?.details || e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
+    } else {
+      uiError('Termin konnte nicht abgeschlossen werden.');
+      try {
+        diag.add?.('appointments done error (' + role + '): ' + (e?.message || e));
+      } catch (logErr) {
+        console.error('diag.add failed', logErr);
+      }
+    }
+  } finally {
+    withBusy(btn, false);
+  }
+}
+// SUBMODULE: bindAppointmentsPanel @internal - wires appointment buttons to handlers
+function bindAppointmentsPanel(){
+  APPOINTMENT_ROLES.forEach(({ code }) => {
+    const saveBtn = document.getElementById(`appt-${code}-save`);
+    const doneBtn = document.getElementById(`appt-${code}-done`);
+    if (saveBtn) saveBtn.addEventListener('click', () => handleAppointmentSave(code));
+    if (doneBtn) doneBtn.addEventListener('click', () => handleAppointmentDone(code));
+  });
+}
+
+/** END MODULE */
 
 /** MODULE: CAPTURE (Intake)
  * intent: UI Helpers fuer Intake-Status, Guards und Reset-Flows (Fortsetzung)
@@ -3237,7 +5397,7 @@ if (includeFlagsComment && flagsComment){
   if (savedNote){
     const el = document.getElementById('flagsComment');
     if (el) el.value = '';
-    diag.add?.('Flags-Kommentar gespeichert');
+    diag.add('Flags-Kommentar gespeichert');
     saved = true;
   }
 }
@@ -3648,7 +5808,7 @@ document.body.classList.remove('auth-locked');
 window.addEventListener('online', async ()=>{
 const resPush = await pushPendingToRemote();
 if(resPush.pushed || resPush.failed){
-diag.add?.('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
+diag.add('Online-Push: OK=' + resPush.pushed + ', FAIL=' + resPush.failed);
 if (typeof reconcileFromRemote === 'function') {
   await reconcileFromRemote();
 }
@@ -3657,6 +5817,20 @@ if (typeof reconcileFromRemote === 'function') {
 }
 
 resetAppointmentsUi();
+
+/* boot */
+if (!window.__bootDone) {
+  window.__bootDone = true;
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", main);
+
+    window.addEventListener('focus', () => {
+      try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+    });
+  } else {
+    main();
+  }
+}
 
 /** MODULE: FUTURE (placeholders)
  * intent: haelt geplante Assist/PWA/BLE-Refactors fuer die Zeit nach dem Annotations-Pass bereit
@@ -3764,7 +5938,6 @@ resetAppointmentsUi();
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
-
 
 
 
