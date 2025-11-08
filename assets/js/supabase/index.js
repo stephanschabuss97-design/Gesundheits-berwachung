@@ -87,7 +87,6 @@ const notifySupabaseReady = () => {
   const doc = globalWindow?.document;
   if (!doc || typeof doc.dispatchEvent !== 'function') return;
   const eventName = 'supabase:ready';
-  const eventName = 'supabase:ready';
   try {
     doc.dispatchEvent(new CustomEvent(eventName));
     return;
