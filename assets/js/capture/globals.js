@@ -38,7 +38,7 @@ function setDateUserSelected(v) { __dateUserSelected = !!v; }
 function getLastKnownToday() { return __lastKnownToday; }
 function setLastKnownToday(v) { __lastKnownToday = String(v || ''); }
 
-function getBpUserOverride() { return !!__bpUserOverride; }
+function getBpUserOverride() { return __bpUserOverride; }
 function setBpUserOverride(v) { __bpUserOverride = !!v; }
 
 function getMidnightTimer() { return __midnightTimer; }
