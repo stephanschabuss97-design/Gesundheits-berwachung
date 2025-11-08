@@ -2431,7 +2431,7 @@ function millisUntilNextMidnight(){
 
 // SUBMODULE: handleMidnightRefresh @internal - trigger capture refresh on new day
 async function handleMidnightRefresh(){
-  __midnightTimer = null;
+  AppModules.captureGlobals.setMidnightTimer(null);
   try {
     await maybeRefreshForTodayChange({ force: true, source: 'midnight' });
   } finally {
@@ -2442,9 +2442,10 @@ async function handleMidnightRefresh(){
 // SUBMODULE: scheduleMidnightRefresh @internal - arms midnight timer loop
 function scheduleMidnightRefresh(){
   try {
-    if (__midnightTimer) clearTimeout(__midnightTimer);
+    const _mt = AppModules.captureGlobals.getMidnightTimer();
+    if (_mt) clearTimeout(_mt);
     const delay = millisUntilNextMidnight();
-    __midnightTimer = setTimeout(handleMidnightRefresh, delay);
+    AppModules.captureGlobals.setMidnightTimer(setTimeout(handleMidnightRefresh, delay));
   } catch { /* noop */ }
 }
 
@@ -2453,7 +2454,7 @@ function scheduleMidnightRefresh(){
 function maybeResetIntakeForToday(todayIso){
   try {
     const last = window?.localStorage?.getItem(LS_INTAKE_RESET_DONE_KEY) || '';
-    if (__intakeResetDoneFor === todayIso || last === todayIso) return;
+    if (AppModules.captureGlobals.getIntakeResetDoneFor() === todayIso || last === todayIso) return;
   } catch(_) { /* ignore storage */ }
 
   (async () => {
@@ -2493,7 +2494,7 @@ function maybeResetIntakeForToday(todayIso){
       return;
     } finally {
       if (guardSet) {
-        __intakeResetDoneFor = todayIso;
+        AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
         try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
         try { refreshCaptureIntake(); } catch(_) {}
       }
@@ -2520,9 +2521,10 @@ function millisUntilNoonGrace(){
 // SUBMODULE: scheduleNoonSwitch @internal - toggles noon-based BP auto context timer
 function scheduleNoonSwitch(){
   try {
-    if (__noonTimer) clearTimeout(__noonTimer);
+    const _nt = AppModules.captureGlobals.getNoonTimer();
+    if (_nt) clearTimeout(_nt);
     const delay = millisUntilNoonGrace();
-    __noonTimer = setTimeout(handleNoonSwitch, delay);
+    AppModules.captureGlobals.setNoonTimer(setTimeout(handleNoonSwitch, delay));
   } catch { /* noop */ }
 }
 
@@ -2541,7 +2543,7 @@ function isAfterNoonGrace(){
 
 // SUBMODULE: maybeAutoApplyBpContext @internal - flips BP panes based on time-of-day
 function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
-  if (!force && __bpUserOverride) return;
+  if (!force && AppModules.captureGlobals.getBpUserOverride()) return;
   const select = document.getElementById('bpContextSel');
   if (!select) return;
   const dateEl = document.getElementById('date');
@@ -2560,7 +2562,7 @@ function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
 
 // SUBMODULE: handleNoonSwitch @internal - noon timer callback to adjust BP context
 function handleNoonSwitch(){
-  __noonTimer = null;
+  AppModules.captureGlobals.setNoonTimer(null);
   try {
     maybeAutoApplyBpContext({ source: 'noon-timer' });
   } finally {
@@ -2570,10 +2572,12 @@ function handleNoonSwitch(){
 
 // SUBMODULE: getBpPanes @internal - caches BP accordion panes for faster toggles
 function getBpPanes(){
-  if (!__bpPanesCache || __bpPanesCache.length === 0) {
-    __bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
+  let cache = AppModules.captureGlobals.getBpPanesCache();
+  if (!cache || cache.length === 0) {
+    cache = Array.from(document.querySelectorAll('.bp-pane'));
+    AppModules.captureGlobals.setBpPanesCache(cache);
   }
-  return __bpPanesCache;
+  return cache;
 }
 
 // SUBMODULE: applyBpContext @internal - swaps visible BP pane
@@ -2590,15 +2594,15 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
   const todayIso = todayStr();
   const dateEl = document.getElementById('date');
   const selected = dateEl?.value || '';
-  const todayChanged = __lastKnownToday !== todayIso;
+  const todayChanged = AppModules.captureGlobals.getLastKnownToday() !== todayIso;
   if (!force && !todayChanged) return;
 
-  const userPinnedOtherDay = __dateUserSelected && selected && selected !== todayIso;
+  const userPinnedOtherDay = AppModules.captureGlobals.getDateUserSelected() && selected && selected !== todayIso;
   if (!userPinnedOtherDay && dateEl) {
     if (selected !== todayIso) {
       dateEl.value = todayIso;
     }
-    __dateUserSelected = false;
+    AppModules.captureGlobals.setDateUserSelected(false);
   }
 
   // Tageswechsel erkannt -> Intake ggf. automatisch auf 0 zuruecksetzen
@@ -2610,11 +2614,11 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
     await refreshCaptureIntake();
   } catch(_) {}
 
-  __lastKnownToday = todayIso;
-  if (!__midnightTimer) scheduleMidnightRefresh();
+  AppModules.captureGlobals.setLastKnownToday(todayIso);
+  if (!AppModules.captureGlobals.getMidnightTimer()) scheduleMidnightRefresh();
   scheduleNoonSwitch();
   if (!userPinnedOtherDay) {
-    __bpUserOverride = false;
+    AppModules.captureGlobals.setBpUserOverride(false);
     maybeAutoApplyBpContext({ force: true, source: source || 'day-change' });
   }
   diag.add?.(`intake: day refresh (${source || 'auto'})`);
@@ -3137,7 +3141,7 @@ async function handleCaptureIntake(kind){
   diag.add?.(`[capture] click ${kind}`);
 
   try {
-    if (!__dateUserSelected) {
+    if (!AppModules.captureGlobals.getDateUserSelected()) {
       const todayIso = todayStr();
       const dateEl = document.getElementById('date');
       const selected = dateEl?.value || '';
@@ -5442,9 +5446,9 @@ async function main(){
   bindTabs();
 const todayIso = todayStr();
 $("#date").value = todayIso;
-__lastKnownToday = todayIso;
-__dateUserSelected = false;
-__bpUserOverride = false;
+AppModules.captureGlobals.setLastKnownToday(todayIso);
+AppModules.captureGlobals.setDateUserSelected(false);
+AppModules.captureGlobals.setBpUserOverride(false);
 prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
@@ -5494,7 +5498,7 @@ updateBpCommentWarnings();
 
 // Toggle-Handler
 const bpContextSel = document.getElementById('bpContextSel');
-__bpPanesCache = Array.from(document.querySelectorAll('.bp-pane'));
+AppModules.captureGlobals.setBpPanesCache(Array.from(document.querySelectorAll('.bp-pane')));
 if (bpContextSel){
   applyBpContext(bpContextSel.value || 'M');
   maybeAutoApplyBpContext({ force: true, source: 'boot' });
@@ -5649,7 +5653,7 @@ const dateEl = document.getElementById('date');
     dateEl.addEventListener('change', async () => {
       try {
         const todayIso = todayStr();
-        __dateUserSelected = (dateEl.value || '') !== todayIso;
+  AppModules.captureGlobals.setDateUserSelected((dateEl.value || '') !== todayIso);
         // was du beim Datum aendern haben willst:
         await refreshCaptureIntake();
         await syncCaptureToggles();

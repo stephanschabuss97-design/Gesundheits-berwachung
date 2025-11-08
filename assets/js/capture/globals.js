@@ -30,6 +30,35 @@ var __intakeResetDoneFor = null; // Tag, fuer den Reset bereits gelaufen ist (pr
 var __bpPanesCache = null;
 var __lastUserId = null;
 
+// Getter / Setter helpers for mutable primitives so external callers
+// always observe the current value even when re-assigned later.
+function getDateUserSelected() { return __dateUserSelected; }
+function setDateUserSelected(v) { __dateUserSelected = !!v; }
+
+function getLastKnownToday() { return __lastKnownToday; }
+function setLastKnownToday(v) { __lastKnownToday = String(v || ''); }
+
+function getBpUserOverride() { return !!__bpUserOverride; }
+function setBpUserOverride(v) { __bpUserOverride = !!v; }
+
+function getMidnightTimer() { return __midnightTimer; }
+function setMidnightTimer(val) { __midnightTimer = val; }
+
+function getNoonTimer() { return __noonTimer; }
+function setNoonTimer(val) { __noonTimer = val; }
+
+function getDayHeartbeat() { return __dayHeartbeat; }
+function setDayHeartbeat(val) { __dayHeartbeat = val; }
+
+function getIntakeResetDoneFor() { return __intakeResetDoneFor; }
+function setIntakeResetDoneFor(val) { __intakeResetDoneFor = val; }
+
+function getBpPanesCache() { return __bpPanesCache; }
+function setBpPanesCache(val) { __bpPanesCache = val; }
+
+function getLastUserId() { return __lastUserId; }
+function setLastUserId(val) { __lastUserId = val; }
+
 function setBusy(on) {
   const b = document.getElementById('busy');
   if (b) b.style.display = on ? 'flex' : 'none';
@@ -55,15 +84,25 @@ window.AppModules.captureGlobals = {
   LS_INTAKE_RESET_DONE_KEY,
   captureIntakeState,
   __lsTotals,
-  __dateUserSelected,
-  __lastKnownToday,
-  __bpUserOverride,
-  __midnightTimer,
-  __noonTimer,
-  __dayHeartbeat,
-  __intakeResetDoneFor,
-  __bpPanesCache,
-  __lastUserId,
+  // accessors for mutable primitives/timers (use getters to read current value)
+  getDateUserSelected,
+  setDateUserSelected,
+  getLastKnownToday,
+  setLastKnownToday,
+  getBpUserOverride,
+  setBpUserOverride,
+  getMidnightTimer,
+  setMidnightTimer,
+  getNoonTimer,
+  setNoonTimer,
+  getDayHeartbeat,
+  setDayHeartbeat,
+  getIntakeResetDoneFor,
+  setIntakeResetDoneFor,
+  getBpPanesCache,
+  setBpPanesCache,
+  getLastUserId,
+  setLastUserId,
   setBusy,
   sleep,
   softWarnRange
