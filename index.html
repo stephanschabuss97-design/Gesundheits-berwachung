@@ -27,6 +27,51 @@
 
 </style>
 
+<script src="assets/js/diagnostics.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/ui-layout.js"></script>
+<script src="assets/js/ui-errors.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/utils/debounce-fallback.js"></script>
+<script src="assets/js/format.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/capture/globals.js"></script>
+<script src="assets/js/appointments.js"></script>
+<script src="assets/js/data-local.js"></script>
+<script src="assets/js/ui-tabs.js"></script>
+
+<!-- @refactor: moved to assets/js/supabase/index.js -->
+<script type="module" src="assets/js/supabase/index.js"></script>
+
+<script type="module">
+  import { SupabaseAPI } from "./assets/js/supabase/index.js";
+
+  const bootAuth = () => {
+    SupabaseAPI.initAuth?.({
+      onStatus: (status) => console.info("Auth status:", status),
+      onLoginOverlay: (visible) => {
+        if (visible) {
+          SupabaseAPI.showLoginOverlay?.(true);
+        } else {
+          SupabaseAPI.hideLoginOverlay?.();
+        }
+      },
+      onUserUi: (email) => {
+        SupabaseAPI.setUserUi?.(email || "");
+      },
+      onDoctorAccess: (enabled) => {
+        SupabaseAPI.setDoctorAccess?.(enabled);
+      }
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootAuth, { once: true });
+  } else {
+    bootAuth();
+  }
+</script>
+
 <script>
 let supabaseMissingLogged = false;
 const getSupabaseApi = () => {
@@ -90,20 +135,6 @@ const setAuthPendingAfterUnlock = (value) => {
     state.pendingAfterUnlock = value ?? null;
   }
 };
-const debounce =
-  window.debounce ||
-  window.AppModules?.uiCore?.debounce ||
-  ((fn, ms = 150) => {
-    let timer = null;
-    return (...args) => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        fn(...args);
-      }, ms);
-    };
-  });
-
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
   return ({ timeout = 6000, pollInterval = 25 } = {}) => {
