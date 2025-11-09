@@ -107,7 +107,6 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
           const fbMsg = `[resume] fallback scheduleAuthGrace failed: ${fbErr?.message || fbErr}`;
           diag.add?.(fbMsg);
           console.error?.(fbMsg, fbErr);
-          throw fbErr;
         }
       }
     }
@@ -130,8 +129,9 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
             const fbMsg = `[resume] fallback finalizeAuthState(false) failed: ${fbErr?.message || fbErr}`;
             diag.add?.(fbMsg);
             console.error?.(fbMsg, fbErr);
-            throw fbErr;
           }
+        } else {
+          diag.add?.('[resume] fallback finalizeAuthState(false) missing');
         }
       }
       callMaybe(globalWindow?.showLoginOverlay, true);
@@ -164,8 +164,9 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
           const fbMsg = `[resume] fallback finalizeAuthState(${loggedIn}) failed: ${fbErr?.message || fbErr}`;
           diag.add?.(fbMsg);
           console.error?.(fbMsg, fbErr);
-          throw fbErr;
         }
+      } else {
+        diag.add?.(`[resume] fallback finalizeAuthState(${loggedIn}) missing`);
       }
     }
     diag.add?.(`[resume] logged=${loggedIn}`);

@@ -69,7 +69,6 @@ export async function syncCaptureToggles() {
     if (!setFlag('setNsar', !!f.nsar_taken)) failedFlags.push('nsar_taken');
     if (failedFlags.length) {
       diag.add?.(`[toggles] failed to set: ${failedFlags.join(', ')}`);
-      console.warn?.('[toggles] setters missing for flags', failedFlags);
     }
     const flagsCommentEl = document.getElementById('flagsComment');
     if (flagsCommentEl) flagsCommentEl.value = '';
