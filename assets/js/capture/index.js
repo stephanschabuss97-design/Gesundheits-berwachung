@@ -112,15 +112,15 @@
     const totals = { ...captureIntakeState.totals };
     let message = '';
     if (kind === 'water'){
-      const total = Math.min(MAX_WATER_ML, Math.max(0, (totals.water_ml || 0) + value));
+      const total = Math.max(0, Math.min(MAX_WATER_ML, (totals.water_ml || 0) + value));
       totals.water_ml = Math.round(total);
       message = 'Wasser aktualisiert.';
     } else if (kind === 'salt'){
-      const total = Math.min(MAX_SALT_G, Math.max(0, (totals.salt_g || 0) + value));
+      const total = Math.max(0, Math.min(MAX_SALT_G, (totals.salt_g || 0) + value));
       totals.salt_g = Number(total.toFixed(2));
       message = 'Salz aktualisiert.';
     } else {
-      const total = Math.min(MAX_PROTEIN_G, Math.max(0, (totals.protein_g || 0) + value));
+      const total = Math.max(0, Math.min(MAX_PROTEIN_G, (totals.protein_g || 0) + value));
       totals.protein_g = Number(total.toFixed(2));
       message = 'Protein aktualisiert.';
     }

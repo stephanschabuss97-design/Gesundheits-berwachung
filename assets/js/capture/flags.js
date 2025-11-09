@@ -3,20 +3,9 @@
   global.AppModules = global.AppModules || {};
 
   const FLAG_KEYS = ['trainingActive','lowIntakeActive','sickActive','valsartanMissed','forxigaMissed','nsarTaken','saltHigh','proteinHigh'];
-  const LEGACY_FLAG_PROPS = {
-    trainingActive: 'trainingActive',
-    lowIntakeActive: 'lowIntakeActive',
-    sickActive: 'sickActive',
-    valsartanMissed: 'valsartanMissed',
-    forxigaMissed: 'forxigaMissed',
-    nsarTaken: 'nsarTaken',
-    saltHigh: 'saltHigh',
-    proteinHigh: 'proteinHigh'
-  };
 
   function readLegacyFlag(key) {
-    const prop = LEGACY_FLAG_PROPS[key];
-    return prop ? !!global[prop] : false;
+    return FLAG_KEYS.includes(key) ? !!global[key] : false;
   }
 
   function getCaptureFlagsStateSnapshot() {

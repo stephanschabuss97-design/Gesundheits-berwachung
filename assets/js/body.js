@@ -46,7 +46,7 @@
     if (typeof snapshotFn === "function") {
       try {
         const result = snapshotFn();
-        if (result && typeof result === 'object') {
+        if (result && typeof result === 'object' && !Array.isArray(result)) {
           rawFlags = result;
         }
       } catch (err) {
