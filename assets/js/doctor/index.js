@@ -3,7 +3,11 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
-  const fallbackRequireDoctorUnlock = async () => true;
+  const fallbackRequireDoctorUnlock = async () => {
+    diag.add?.('[doctor] requireDoctorUnlock missing – blocking access');
+    console.warn('[doctor] requireDoctorUnlock not available; denying unlock');
+    return false;
+  };
   const getAuthGuardState = () => {
     const api = global.SupabaseAPI || global.AppModules?.supabase;
     const state = api?.authGuardState;
@@ -140,7 +144,11 @@ async function renderDoctor(){
   const formatNotesHtml = (notes) => {
     const raw = (notes || '').trim();
     if (!raw) return '-';
-    const escaped = typeof esc === 'function' ? esc(raw) : raw.replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c] || c));
+    const escapeFallbackMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const rawEscaped = typeof esc === 'function'
+      ? esc(raw)
+      : raw.replace(/[&<>"']/g, (c) => escapeFallbackMap[c] || c);
+    const escaped = rawEscaped;
     if (typeof nl2br === 'function') {
       return nl2br(escaped);
     }

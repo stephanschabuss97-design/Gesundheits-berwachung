@@ -30,7 +30,7 @@ const isLoggedInFast = createSupabaseFn('isLoggedInFast');
 const syncWebhook = createSupabaseFn('syncWebhook');
 const loadIntakeToday = createSupabaseFn('loadIntakeToday');
 const saveIntakeTotalsRpc = createSupabaseFn('saveIntakeTotalsRpc');
-const cleanupOldIntake = createSupabaseFn('cleanupOldIntake');
+const cleanupOldIntake = createSupabaseFn('cleanupOldIntake', { optional: true });
 const fetchDailyOverview = createSupabaseFn('fetchDailyOverview');
 const deleteRemoteDay = createSupabaseFn('deleteRemoteDay');
 const syncCaptureToggles = createSupabaseFn('syncCaptureToggles');
@@ -45,6 +45,8 @@ const baseUrlFromRest = createSupabaseFn('baseUrlFromRest');
 const requireDoctorUnlock = createSupabaseFn('requireDoctorUnlock');
 const bindAppLockButtons = createSupabaseFn('bindAppLockButtons');
 const resumeFromBackground = createSupabaseFn('resumeFromBackground');
+const pushPendingToRemote = createSupabaseFn('pushPendingToRemote', { optional: true });
+const reconcileFromRemote = createSupabaseFn('reconcileFromRemote', { optional: true });
 
 const getLockUi = () => {
   const fn = getSupabaseApi()?.lockUi;
@@ -61,6 +63,7 @@ const setAuthPendingAfterUnlock = (value) => {
     state.pendingAfterUnlock = value ?? null;
   }
 };
+const sleep = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
@@ -347,7 +350,8 @@ function toNumDE(s) {
 /* ===== Auth-Guard ===== */
 // SUBMODULE: isLoggedIn @public - quick check to gate protected actions
 async function isLoggedIn(){
-  if (!sbClient) return false;
+  const client = (typeof sbClient !== 'undefined' && sbClient) || getSupabaseApi()?.sbClient || null;
+  if (!client) return false;
   return await isLoggedInFast({ timeout: 800 });
 }
 
@@ -413,105 +417,137 @@ function setDoctorAccess(enabled){
  * exports: getHeaders
  * notes: kurzer Zwischenblock; Caching-Semantik unveraendert lassen
  */
+const HEADER_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+
+const tryGetCachedHeaders = (supaApi, maxAgeMs = HEADER_CACHE_MAX_AGE_MS) => {
+  try {
+    const cached = supaApi.getCachedHeaders?.();
+    const cachedAt = supaApi.getCachedHeadersAt?.();
+    if (cached && cachedAt && (Date.now() - cachedAt) < maxAgeMs) {
+      return cached;
+    }
+  } catch(_) { /* ignore cache errors */ }
+  return null;
+};
+
+const getStaleCachedHeaders = (supaApi) => {
+  try {
+    return supaApi.getCachedHeaders?.() ?? null;
+  } catch(_) {
+    return null;
+  }
+};
+
+const getInflightHeaderPromise = (supaApi) => supaApi.getHeaderPromise?.();
+const setInflightHeaderPromise = (supaApi, value) => supaApi.setHeaderPromise?.(value);
+
+async function validateWebhookKey(supaApi) {
+  const key = await getConf("webhookKey");
+  if (!key) {
+    diag.add?.('Headers: kein Key (webhookKey)');
+    supaApi.clearHeaderCache?.();
+    return null;
+  }
+  if (isServiceRoleKey(key)) {
+    diag.add?.('Headers: service_role Key blockiert');
+    supaApi.clearHeaderCache?.();
+    return null;
+  }
+  return key.replace(/^Bearer\s+/i, "");
+}
+
+async function getSessionWithTimeout(supa) {
+  let timeoutId;
+  let timedOut = false;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      reject(new Error('getSession-timeout'));
+    }, GET_USER_TIMEOUT_MS);
+  });
+  let sessionInfo = null;
+  try {
+    const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
+    sessionInfo = result?.data?.session ?? null;
+  } catch (err) {
+    if (timedOut) {
+      diag.add?.('[auth] getSession timeout');
+    } else {
+      diag.add?.('[auth] getSession error: ' + (err?.message || err));
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  return { session: sessionInfo, timedOut };
+}
+
+function buildAndCacheHeaders(supaApi, anonKey, jwt) {
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": anonKey,
+    "Authorization": `Bearer ${jwt}`,
+    "Prefer": "return=representation"
+  };
+  supaApi.cacheHeaders?.(headers);
+  diag.add?.('[headers] ok');
+  return headers;
+}
+
+async function loadHeadersWithTimeout(supaApi) {
+  const anonKey = await validateWebhookKey(supaApi);
+  if (!anonKey) return null;
+
+  const supa = await ensureSupabaseClient();
+  if (!supa) {
+    diag.add?.('Headers: Supabase-Client fehlt');
+    supaApi.clearHeaderCache?.();
+    return null;
+  }
+
+  const { session, timedOut } = await getSessionWithTimeout(supa);
+  if (timedOut) {
+    const cached = getStaleCachedHeaders(supaApi);
+    if (cached) {
+      diag.add?.('[headers] fallback cached (timeout)');
+      return cached;
+    }
+  }
+
+  const jwt = session?.access_token;
+  if (!jwt) {
+    diag.add?.('Headers: fehlende Session/JWT');
+    supaApi.clearHeaderCache?.();
+    return getStaleCachedHeaders(supaApi);
+  }
+
+  return buildAndCacheHeaders(supaApi, anonKey, jwt);
+}
+
 // SUBMODULE: getHeaders @public - resolved JWT/anon header bundle with timeout fallback
 // Dep: expects SupabaseAPI helpers (assets/js/supabase/index.js) to be ready.
 async function getHeaders({ forceRefresh = false } = {}) {
   const supaApi = getSupabaseApi();
-  const maxAgeMs = 5 * 60 * 1000;
+  if (!supaApi) return null;
 
   if (!forceRefresh) {
-    try {
-      const cached = supaApi.getCachedHeaders?.();
-      const cachedAt = supaApi.getCachedHeadersAt?.();
-      if (cached && cachedAt && (Date.now() - cachedAt) < maxAgeMs) {
-        diag.add?.('[headers] cache hit');
-        return cached;
-      }
-    } catch (_) {
-      /* noop */
+    const cached = tryGetCachedHeaders(supaApi);
+    if (cached) {
+      diag.add?.('[headers] cache hit');
+      return cached;
     }
-    const inflight = supaApi.getHeaderPromise?.();
+    const inflight = getInflightHeaderPromise(supaApi);
     if (inflight) {
       diag.add?.('[headers] await inflight');
       return inflight;
     }
   }
 
-  const load = (async () => {
-    const key = await getConf("webhookKey");
-    if (!key) {
-      diag.add?.('Headers: kein Key (webhookKey)');
-      supaApi.clearHeaderCache?.();
-      return null;
-    }
-    if (isServiceRoleKey(key)) {
-      diag.add?.('Headers: service_role Key blockiert');
-      supaApi.clearHeaderCache?.();
-      return null;
-    }
-    const anonKey = key.replace(/^Bearer\s+/i, "");
-
-    const supa = await ensureSupabaseClient();
-    if (!supa) {
-      diag.add?.('Headers: Supabase-Client fehlt');
-      supaApi.clearHeaderCache?.();
-      return null;
-    }
-
-    let timeoutId;
-    let timedOut = false;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        timedOut = true;
-        reject(new Error('getSession-timeout'));
-      }, GET_USER_TIMEOUT_MS);
-    });
-    let sessionInfo = null;
-    try {
-      const result = await Promise.race([supa.auth.getSession(), timeoutPromise]);
-      sessionInfo = result?.data?.session ?? null;
-    } catch (err) {
-      if (timedOut) {
-        diag.add?.('[auth] getSession timeout');
-      } else {
-        diag.add?.('[auth] getSession error: ' + (err?.message || err));
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    if (timedOut) {
-      const cached = supaApi.getCachedHeaders?.();
-      const cachedAt = supaApi.getCachedHeadersAt?.();
-      if (cached && cachedAt) {
-        diag.add?.('[headers] fallback cached (timeout)');
-        return cached;
-      }
-    }
-
-    const jwt = sessionInfo?.access_token;
-    if (!anonKey || !jwt) {
-      diag.add?.('Headers: fehlende Session/JWT');
-      supaApi.clearHeaderCache?.();
-      return supaApi.getCachedHeaders?.() ?? null;
-    }
-
-    const headers = {
-      "Content-Type": "application/json",
-      "apikey": anonKey,
-      "Authorization": `Bearer ${jwt}`,
-      "Prefer": "return=representation"
-    };
-    supaApi.cacheHeaders?.(headers);
-    diag.add?.('[headers] ok');
-    return headers;
-  })();
-
-  supaApi.setHeaderPromise?.(load);
+  const loadPromise = loadHeadersWithTimeout(supaApi);
+  setInflightHeaderPromise(supaApi, loadPromise);
   try {
-    return await load;
+    return await loadPromise;
   } finally {
-    supaApi.setHeaderPromise?.(null);
+    setInflightHeaderPromise(supaApi, null);
   }
 }
 
@@ -813,55 +849,67 @@ function scheduleMidnightRefresh(){
 
 // Fire-and-Forget: Intake-Totals beim echten Tageswechsel auf 0 setzen
 // SUBMODULE: maybeResetIntakeForToday - ensures zeroed intake when day rolls over
-function maybeResetIntakeForToday(todayIso){
+async function maybeResetIntakeForToday(todayIso){
   try {
     const last = window?.localStorage?.getItem(LS_INTAKE_RESET_DONE_KEY) || '';
     if (AppModules.captureGlobals.getIntakeResetDoneFor() === todayIso || last === todayIso) return;
   } catch(_) { /* ignore storage */ }
 
-  (async () => {
-    let guardSet = false;
-    try {
-      const logged = await isLoggedInFast();
-      if (!logged) return;
-      const uid = await getUserId();
-      if (!uid) return;
-
-      let existing = null;
+  let guardSet = false;
+  const loadTotalsWithRetry = async (uid) => {
+    let attempt = 0;
+    let lastErr = null;
+    while (attempt < 3) {
       try {
-        existing = await loadIntakeToday({ user_id: uid, dayIso: todayIso });
+        return await loadIntakeToday({ user_id: uid, dayIso: todayIso });
       } catch (err) {
-        diag.add?.(`[capture] reset intake skip day=${todayIso} (lookup failed: ${err?.message || err})`);
-        return;
-      }
-
-      const hasTotals = !!(existing && (
-        Number(existing.water_ml || 0) > 0 ||
-        Number(existing.salt_g || 0) > 0 ||
-        Number(existing.protein_g || 0) > 0
-      ));
-
-      if (hasTotals) {
-        diag.add?.(`[capture] reset intake skip day=${todayIso} (existing totals)`);
-        guardSet = true;
-      } else {
-        diag.add?.(`[capture] reset intake start day=${todayIso}`);
-        const zeros = { water_ml: 0, salt_g: 0, protein_g: 0 };
-        await saveIntakeTotalsRpc({ dayIso: todayIso, totals: zeros });
-        diag.add?.('[capture] reset intake ok');
-        guardSet = true;
-      }
-    } catch(e) {
-      try { diag.add?.('[capture] reset intake error: ' + (e?.message || e)); } catch(_) {}
-      return;
-    } finally {
-      if (guardSet) {
-        AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
-        try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
-        try { window.AppModules.capture.refreshCaptureIntake(); } catch(_) {}
+        lastErr = err;
+        diag.add?.(`[capture] reset intake lookup failed (attempt ${attempt + 1}): ${err?.message || err}`);
+        attempt += 1;
+        if (attempt < 3) {
+          await sleep(250 * attempt);
+        }
       }
     }
-  })();
+    throw lastErr;
+  };
+
+  try {
+    const logged = await isLoggedInFast();
+    if (!logged) return;
+    const uid = await getUserId();
+    if (!uid) return;
+
+    const existing = await loadTotalsWithRetry(uid);
+
+    const hasTotals = !!(existing && (
+      Number(existing.water_ml || 0) > 0 ||
+      Number(existing.salt_g || 0) > 0 ||
+      Number(existing.protein_g || 0) > 0
+    ));
+
+    if (hasTotals) {
+      diag.add?.(`[capture] reset intake skip day=${todayIso} (existing totals)`);
+      guardSet = true;
+    } else {
+      diag.add?.(`[capture] reset intake start day=${todayIso}`);
+      const zeros = { water_ml: 0, salt_g: 0, protein_g: 0 };
+      await saveIntakeTotalsRpc({ dayIso: todayIso, totals: zeros });
+      diag.add?.('[capture] reset intake ok');
+      guardSet = true;
+    }
+  } catch (e) {
+    const message = e?.message || e;
+    diag.add?.('[capture] reset intake error: ' + message);
+    uiError?.('Intake konnte nicht automatisch zurueckgesetzt werden. Bitte erneut versuchen.');
+    throw e;
+  } finally {
+    if (guardSet) {
+      AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
+      try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
+      try { window.AppModules.capture.refreshCaptureIntake(); } catch(_) {}
+    }
+  }
 }
 
 // SUBMODULE: millisUntilNoonGrace @internal - calculates midday cutoff for BP context
@@ -969,7 +1017,7 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
 
   // Tageswechsel erkannt -> Intake ggf. automatisch auf 0 zuruecksetzen
   if (!userPinnedOtherDay) {
-    try { maybeResetIntakeForToday(todayIso); } catch(_) {}
+    try { await maybeResetIntakeForToday(todayIso); } catch(_) {}
   }
 
   try {
@@ -1405,7 +1453,11 @@ $("#doctorExportJson").addEventListener("click", async () => {
 // --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
 window.AppModules.capture.bindIntakeCapture();
 window.AppModules.appointments.bindAppointmentsPanel();
-try { if (await isLoggedInFast()) { await cleanupOldIntake(); } } catch(_) {}
+try {
+  if (hasSupabaseFn('cleanupOldIntake') && await isLoggedInFast()) {
+    await cleanupOldIntake();
+  }
+} catch(_) {}
 
 // Initial Render
 await requestUiRefresh({ reason: 'boot:initial', appointments: true });
@@ -1419,10 +1471,11 @@ document.body.classList.remove('auth-locked');
 // Auto-Push Pending sobald online
 window.addEventListener('online', async ()=>{
   try {
+    if (!hasSupabaseFn('pushPendingToRemote')) return;
     const resPush = await pushPendingToRemote();
     if(resPush?.pushed || resPush?.failed){
       diag.add?.('Online-Push: OK=' + (resPush.pushed || 0) + ', FAIL=' + (resPush.failed || 0));
-      if (typeof reconcileFromRemote === 'function') {
+      if (hasSupabaseFn('reconcileFromRemote')) {
         await reconcileFromRemote();
       }
     }
@@ -1433,7 +1486,7 @@ window.addEventListener('online', async ()=>{
 });
 }
 
-resetAppointmentsUi();
+window.AppModules?.appointments?.resetAppointmentsUi?.();
 
 /* boot */
 if (!window.__bootDone) {
@@ -1466,7 +1519,5 @@ if (!window.__bootDone) {
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
 
-
-let supabaseMissingLogged = false;
 
 

@@ -724,7 +724,7 @@ const metric = $("#metricSel")?.value || "bp";
     }
 
     // Flag-Aggregation (Flags + Tooltips)
-    let dayFlagsTmp = new Map();
+    let dayFlagsTmp = null;
     const flagsByDate = new Map();
     if (metric !== "weight") {
       dayFlagsTmp = new Map();
@@ -782,7 +782,8 @@ const metric = $("#metricSel")?.value || "bp";
       this.flagsByDate = new Map();
       this.hasFlagsForDate = () => false;
     } else {
-      flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
+      const activeFlags = dayFlagsTmp || new Map();
+      flagTs = [...activeFlags.keys()].map(d => Date.parse(d + "T00:00:00Z"));
       this.flagsByDate = flagsByDate;
       this.hasFlagsForDate = (dayIso) => {
         if (!dayIso || !this.flagsByDate) return false;
@@ -917,7 +918,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     // === Flags Overlay (nur fuer BP) ===
     if (this.svg && metric !== "weight") {
-      const dayFlags = dayFlagsTmp;
+      const dayFlags = dayFlagsTmp || new Map();
 
       const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
       const flaggedDays = [...dayFlags.keys()]
