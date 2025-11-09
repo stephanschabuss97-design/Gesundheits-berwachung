@@ -33,6 +33,50 @@
     });
   }
 
+  // SUBMODULE: prepareIntakeStatusHeader @public - ensures pills/status header exists
+  function prepareIntakeStatusHeader(){
+    try {
+      const wrap = document.getElementById('capturePillsRow');
+      const nab = wrap ? wrap.querySelector('#nextApptBadge') : document.getElementById('nextApptBadge');
+      if (nab) {
+        nab.textContent = 'Kein Termin geplant';
+        nab.title = 'Kein Termin geplant';
+      }
+      if (!wrap) return;
+
+      wrap.style.gap = '8px';
+      wrap.style.flexWrap = 'wrap';
+      wrap.style.alignItems = 'center';
+
+      let top = document.getElementById('cap-intake-status-top');
+      if (!top) {
+        top = document.createElement('div');
+        top.id = 'cap-intake-status-top';
+        top.className = 'small';
+        top.style.opacity = '.8';
+        top.setAttribute('role','group');
+        top.setAttribute('aria-live','polite');
+        top.setAttribute('tabindex','0');
+      }
+
+      if (top) {
+        top.setAttribute('role','group');
+        top.setAttribute('aria-live','polite');
+        top.setAttribute('tabindex','0');
+        top.style.display = 'flex';
+        top.style.gap = '8px';
+        top.style.flexWrap = 'wrap';
+        top.style.alignItems = 'center';
+      }
+
+      if (wrap && nab && top) {
+        wrap.insertBefore(top, nab);
+      } else if (wrap && top && !top.parentElement) {
+        wrap.appendChild(top);
+      }
+    } catch(_) {}
+  }
+
   // SUBMODULE: refreshCaptureIntake @extract-candidate - laedt Intake-Daten und synchronisiert Pills/UI
   async function refreshCaptureIntake(){
     const wrap = document.getElementById('cap-intake-wrap');
