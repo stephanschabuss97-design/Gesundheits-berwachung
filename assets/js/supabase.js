@@ -127,14 +127,7 @@ export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
 window.AppModules.supabase = SupabaseAPI;
 
-const legacyWarnings = new Set();
-const warnLegacy = (name) => {
-  if (legacyWarnings.has(name)) return;
-  legacyWarnings.add(name);
-  console.warn?.(
-    `[SupabaseAPI] window.${name} is deprecated; use window.AppModules.supabase.${name} instead.`
-  );
-};
+const warnLegacy = () => {};
 
 const legacyNames = [...Object.keys(SupabaseAPI), 'SupabaseAPI'];
 legacyNames.forEach((name) => {
