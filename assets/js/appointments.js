@@ -2,7 +2,7 @@
 /**
  * MODULE: appointments
  * intent: CRUD und UI-Sync fuer Arzttermine inkl. Badge und Summary Mapping
- * exports: refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge
+ * exports: refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge, resetAppointmentsUi
  * compat: window.AppModules + Legacy Globals (refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge)
  */
 
