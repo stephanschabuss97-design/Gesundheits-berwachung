@@ -5,6 +5,9 @@
   gap:8px;
   flex-wrap:wrap;
   justify-content:space-between; /* Titel links + Mitte + Badges rechts */
+  border-bottom:1px solid #242833;
+  padding-bottom:8px;
+  margin-bottom:8px;
 }
 
 #doctorCard .toolbar .center-group {
@@ -18,12 +21,6 @@
 
 #doctorCard .toolbar .badge {
   margin-left:8px;
-}
-
-#doctorCard .toolbar{
-  border-bottom:1px solid #242833;
-  padding-bottom:8px;
-  margin-bottom:8px;
 }
 
 /* --- Arzt-Toolbar Badges (Daily KPIs) --- */
@@ -79,15 +76,12 @@
 /* Spalte A - Datum */
 .doctor-view .col-date{
   display:flex;
+  flex-direction:column;
+  gap:6px;
   align-items:center;
   font-weight:800;
   font-size:clamp(16px,1.6vw,20px);
   letter-spacing:.2px;
-}
-.doctor-view .col-date{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
 }
 .doctor-view .col-date .date-top{
   display:flex;
@@ -105,8 +99,6 @@
   display:flex;
   justify-content:flex-start; /* oder center, wenn du's mittig magst */
 }
-.btn-xs{ padding:6px 10px; font-size:12px; border-radius:8px; }
-
 /* Spalte B - Messungen */
 .doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
 .doctor-view .measure-head,

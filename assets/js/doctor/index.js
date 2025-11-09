@@ -166,7 +166,7 @@ async function renderDoctor(){
       <span class="date-cloud" title="In Cloud gespeichert?">${day.hasCloud ? "&#9729;&#65039;" : ""}</span>
     </div>
     <div class="date-actions">
-      <button class="btn ghost btn-xs" data-del-day="${day.date}">Loeschen</button>
+      <button class="btn ghost" data-del-day="${day.date}">Loeschen</button>
     </div>
   </div>
 
