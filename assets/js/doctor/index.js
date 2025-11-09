@@ -145,10 +145,9 @@ async function renderDoctor(){
     const raw = (notes || '').trim();
     if (!raw) return '-';
     const escapeFallbackMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    const rawEscaped = typeof esc === 'function'
+    const escaped = typeof esc === 'function'
       ? esc(raw)
       : raw.replace(/[&<>"']/g, (c) => escapeFallbackMap[c] || c);
-    const escaped = rawEscaped;
     if (typeof nl2br === 'function') {
       return nl2br(escaped);
     }
