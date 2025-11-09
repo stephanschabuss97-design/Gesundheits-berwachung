@@ -3,6 +3,34 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
+  const fallbackRequireDoctorUnlock = async () => true;
+  const getAuthGuardState = () => {
+    const api = global.SupabaseAPI || global.AppModules?.supabase;
+    const state = api?.authGuardState;
+    return state && typeof state === 'object' ? state : null;
+  };
+  const isDoctorUnlockedSafe = () => {
+    if (typeof global.__doctorUnlocked !== 'undefined') {
+      return !!global.__doctorUnlocked;
+    }
+    return !!getAuthGuardState()?.doctorUnlocked;
+  };
+  const requestDoctorUnlock = async () => {
+    const unlockFn = global.requireDoctorUnlock;
+    if (typeof unlockFn === 'function') {
+      return unlockFn();
+    }
+    return fallbackRequireDoctorUnlock();
+  };
+  const logDoctorError = (msg, err) => {
+    const detail = err?.message || err;
+    diag.add?.(`[doctor] ${msg}: ${detail}`);
+    if (err) {
+      console.error(`[doctor] ${msg}`, err);
+    } else {
+      console.error(`[doctor] ${msg}`);
+    }
+  };
 
 /* ===== Doctor view ===== */
 // SUBMODULE: setDocBadges @internal - updates toolbar KPI badges for training/bad days
@@ -10,9 +38,11 @@ function setDocBadges({ training, bad, visible } = {}) {
   const t = document.getElementById('docTrainCnt');
   const b = document.getElementById('docBadCnt');
   if (!t || !b) return;
+  const tVal = t.querySelector('.val');
+  const bVal = b.querySelector('.val');
 
-  if (training !== undefined) t.querySelector('.val').textContent = String(training);
-  if (bad !== undefined)      b.querySelector('.val').textContent = String(bad);
+  if (training !== undefined && tVal) tVal.textContent = String(training);
+  if (bad !== undefined && bVal)      bVal.textContent = String(bad);
 
   if (visible !== undefined) {
     t.classList.toggle('hidden', !visible);
@@ -37,7 +67,7 @@ async function renderDoctor(){
   }
 
   if (!(await isLoggedIn())){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
+    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -46,12 +76,16 @@ async function renderDoctor(){
   // Nur sperren, wenn die Arzt-Ansicht wirklich aktiv angezeigt wird
   const doctorSection = document.getElementById('doctor');
   const isActive = !!doctorSection && doctorSection.classList.contains('active');
-  if (!__doctorUnlocked){
+  if (!isDoctorUnlockedSafe()){
     if (isActive){
-      host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Arzt-Ansicht kurz entsperren.</div>`;
+      host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte Arzt-Ansicht kurz entsperren.</div>`;
       setDocBadges({ visible: false });
-      try { await (window.requireDoctorUnlock || defaultRequireDoctorUnlock)(); } catch(_) {}
-      if (!__doctorUnlocked) return;
+      try {
+        await requestDoctorUnlock();
+      } catch(err) {
+        logDoctorError('Failed to requireDoctorUnlock', err);
+      }
+      if (!isDoctorUnlockedSafe()) return;
     } else {
       return;
     }
@@ -73,7 +107,7 @@ async function renderDoctor(){
   const from = $("#from").value;
   const to   = $("#to").value;
   if (!from || !to){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Bitte Zeitraum waehlen.</div>`;
+    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte Zeitraum waehlen.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -84,8 +118,9 @@ async function renderDoctor(){
   let daysArr = [];
   try{
     daysArr = await fetchDailyOverview(from, to);
-  }catch(_){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Fehler beim Laden aus der Cloud.</div>`;
+  }catch(err){
+    logDoctorError('fetchDailyOverview failed', err);
+    host.innerHTML = `<div class="small" data-style="doctor-placeholder" data-error="doctor-fetch-failed">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -102,9 +137,21 @@ async function renderDoctor(){
   }).length;
   setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
+  const formatNotesHtml = (notes) => {
+    const raw = (notes || '').trim();
+    if (!raw) return '-';
+    const escaped = typeof esc === 'function' ? esc(raw) : raw.replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c] || c));
+    if (typeof nl2br === 'function') {
+      return nl2br(escaped);
+    }
+    return escaped.replace(/\r?\n/g, '<br>');
+  };
+
   // Renderer je Tag
   // SUBMODULE: renderDoctorDay @internal - templates per-day HTML card for doctor view
-  const renderDoctorDay = (day) => `
+  const renderDoctorDay = (day) => {
+    const safeNotes = formatNotesHtml(day.notes);
+    return `
 <section class="doctor-day" data-date="${day.date}">
   <div class="col-date">
     <div class="date-top">
@@ -159,14 +206,15 @@ async function renderDoctor(){
       <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
     </div>
 
-    <div class="notes">${nl2br((day.notes || "").trim() || "-")}</div>
+    <div class="notes">${safeNotes}</div>
   </div>
 </section>
 `;
+  };
 
   // Rendern / Leerzustand
   if (!daysArr.length){
-    host.innerHTML = `<div class="small" style="text-align:center;opacity:.7;padding:12px">Keine Eintraege im Zeitraum</div>`;
+    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Keine Eintraege im Zeitraum</div>`;
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {
@@ -204,8 +252,12 @@ async function renderDoctor(){
           const r = await deleteRemoteDay(date);
           if (!r.ok){
             alert(`Server-Loeschung fehlgeschlagen (${r.status||"?"}).`);
+            return;
           }
           await requestUiRefresh({ reason: 'doctor:delete' });
+        } catch(err) {
+          logDoctorError('deleteRemoteDay failed', err);
+          alert('Server-Loeschung fehlgeschlagen (Fehler siehe Konsole).');
         } finally {
           btn.disabled = false; btn.textContent = old;
         }
@@ -227,9 +279,9 @@ async function exportDoctorJson(){
   } catch(err) {
     console.error('isLoggedInFast check failed', err);
   }
-  if (!isDoctorUnlocked()) {
+  if (!isDoctorUnlockedSafe()) {
     setAuthPendingAfterUnlock('export');
-    const ok = await requireDoctorUnlock();
+    const ok = await requestDoctorUnlock();
     if (!ok) return;
     setAuthPendingAfterUnlock(null);
   }
@@ -247,3 +299,4 @@ async function exportDoctorJson(){
   global.renderDoctor = renderDoctor;
   global.exportDoctorJson = exportDoctorJson;
 })(typeof window !== 'undefined' ? window : globalThis);
+

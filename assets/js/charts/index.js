@@ -408,12 +408,16 @@ async getFiltered() {
     }
 
     const parts = [];
-    const hdr = (date || ctx) ? `<div style="opacity:.85;margin-bottom:4px">${esc([date, ctx].filter(Boolean).join(" . "))}</div>` : "";
+    const hdr = (date || ctx) ? `<div class="chart-tip-header">${esc([date, ctx].filter(Boolean).join(" . "))}</div>` : "";
     if (hdr) parts.push(hdr);
-    if (note) parts.push(`<div style="white-space:pre-wrap;margin-bottom:${items.length? '6' : '0'}px">${esc(note)}</div>`);
+    if (note) {
+      const noteClass = items.length ? ' chart-tip-note--with-flags' : '';
+      parts.push(`<div class="chart-tip-note${noteClass}">${esc(note)}</div>`);
+    }
     if (items.length) {
       const lis = items.map(esc).map(t => `<li>${t}</li>`).join("");
-      parts.push(`<div style="margin-top:${note? '0' : '2'}px"><strong>Flags:</strong><ul style="margin:4px 0 0 16px; padding:0">${lis}</ul></div>`);
+      const flagsClass = note ? 'chart-tip-flags chart-tip-flags--tight' : 'chart-tip-flags';
+      parts.push(`<div class="${flagsClass}"><strong>Flags:</strong><ul class="chart-tip-flags-list">${lis}</ul></div>`);
     }
     if (!parts.length) { this.hideTip(); return; }
     this.tip.innerHTML = parts.join("");
@@ -719,23 +723,11 @@ const metric = $("#metricSel")?.value || "bp";
       return;
     }
 
-    // Dynamische Groesse
-    const bbox = this.svg?.getBoundingClientRect?.() || { width: 640, height: 280 };
-    const W = Math.max(300, Math.floor(bbox.width  || 640));
-    const H = Math.max(200, Math.floor(bbox.height || 280));
-    if (this.svg) this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-
-    const PL = 48, PR = 16, PT = 12, PB = 28;
-    const innerW = W - PL - PR, innerH = H - PT - PB;
-
-    // === Flags -> X-Bereich erweitern (immer) + Lookup fuer Tooltip ===
-    let flagTs = [];
-    if (metric === "weight") {
-      this.flagsByDate = new Map();
-      this.hasFlagsForDate = () => false;
-    } else {
-      const dayFlagsTmp = new Map(); // date -> { training:bool, badCount:int, seen:{} }
-      const flagsByDate = new Map(); // date -> detailed flags for tooltip
+    // Flag-Aggregation (Flags + Tooltips)
+    let dayFlagsTmp = new Map();
+    const flagsByDate = new Map();
+    if (metric !== "weight") {
+      dayFlagsTmp = new Map();
       for (const e of data) {
         if (!e?.date) continue;
         let rec = dayFlagsTmp.get(e.date);
@@ -760,7 +752,6 @@ const metric = $("#metricSel")?.value || "bp";
           if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
         }
 
-        // Tooltip-Detailflags sammeln
         let f = flagsByDate.get(e.date);
         if (!f) f = { training:false, sick:false, low_intake:false, salt_high:false, protein_high90:false, valsartan_missed:false, forxiga_missed:false, nsar_taken:false, meds:false };
         f.training = f.training || !!e.training;
@@ -774,6 +765,23 @@ const metric = $("#metricSel")?.value || "bp";
         f.meds = f.meds || meds;
         flagsByDate.set(e.date, f);
       }
+    }
+
+    // Dynamische Groesse
+    const bbox = this.svg?.getBoundingClientRect?.() || { width: 640, height: 280 };
+    const W = Math.max(300, Math.floor(bbox.width  || 640));
+    const H = Math.max(200, Math.floor(bbox.height || 280));
+    if (this.svg) this.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+    const PL = 48, PR = 16, PT = 12, PB = 28;
+    const innerW = W - PL - PR, innerH = H - PT - PB;
+
+    // === Flags -> X-Bereich erweitern (immer) + Lookup fuer Tooltip ===
+    let flagTs = [];
+    if (metric === "weight") {
+      this.flagsByDate = new Map();
+      this.hasFlagsForDate = () => false;
+    } else {
       flagTs = [...dayFlagsTmp.keys()].map(d => Date.parse(d + "T00:00:00Z"));
       this.flagsByDate = flagsByDate;
       this.hasFlagsForDate = (dayIso) => {
@@ -909,23 +917,7 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     // === Flags Overlay (nur fuer BP) ===
     if (this.svg && metric !== "weight") {
-      const dayFlags = new Map(); // date -> { training:bool, badCount:int, seen:{} }
-      for (const e of data) {
-        if (!e?.date) continue;
-        let rec = dayFlags.get(e.date);
-        if (!rec) {
-          rec = { training:false, badCount:0, seen:{ water:false, salt:false, protein:false, sick:false, meds:false } };
-          dayFlags.set(e.date, rec);
-        }
-        if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = {
-          water: !!e.low_intake, salt: !!e.salt_high, protein: !!e.protein_high90, sick: !!e.sick, meds
-        };
-        for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
-        }
-      }
+      const dayFlags = dayFlagsTmp;
 
       const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
       const flaggedDays = [...dayFlags.keys()]
