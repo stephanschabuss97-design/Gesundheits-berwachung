@@ -6,11 +6,16 @@
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
   const MAX_PROTEIN_G = 300;
-  // SUBMODULE: setCaptureIntakeDisabled @internal - toggles capture inputs
+  // SUBMODULE: setCaptureIntakeDisabled @public - toggles capture inputs and buttons
   function setCaptureIntakeDisabled(disabled){
+    const state = !!disabled;
     ['cap-water-add','cap-salt-add','cap-protein-add'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.disabled = !!disabled;
+      if (el) el.disabled = state;
+    });
+    ['cap-water-add-btn','cap-salt-add-btn','cap-protein-add-btn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = state;
     });
   }
 
