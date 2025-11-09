@@ -1,0 +1,241 @@
+'use strict';
+(function(global){
+  global.AppModules = global.AppModules || {};
+  const appModules = global.AppModules;
+
+  /** MODULE: BP (Blood Pressure)
+   * intent: BP-spezifische Validierungen, Kontextumschaltung und Panel-Reset
+   * contracts: arbeitet mit CAPTURE UI, DATA ACCESS.saveBlock, CHARTS-Schwellenwerten
+   * exports: requiresBpComment, updateBpCommentWarnings, resetBpPanel
+   * notes: UI-Validierung strikt halten; keine DOM-Umbauten
+   */
+  // SUBMODULE: requiresBpComment @internal - enforces comment when vitals exceed thresholds
+  function requiresBpComment(which){
+    const sys = Number($(bpSelector('sys', which)).value);
+    const dia = Number($(`#dia${which}`).value);
+    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    const comment = (el?.value || "").trim();
+    return ((sys > 130) || (dia > 90)) && !comment;
+  }
+  // SUBMODULE: updateBpCommentWarnings @internal - highlights comment fields requiring input
+  function updateBpCommentWarnings(){
+    ['M','A'].forEach(which => {
+      const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+      if (!el) return;
+      const needs = requiresBpComment(which);
+      el.style.outline = needs ? "2px solid var(--danger)" : "";
+      if (needs) el.setAttribute("aria-invalid","true");
+      else el.removeAttribute("aria-invalid");
+    });
+  }
+
+  /* === Panel Reset Helpers (V1.5.7) === */
+  // SUBMODULE: bpFieldId @internal - maps BP field ids for capture contexts
+  function bpFieldId(base, ctx){
+    if (base === 'sys' && ctx === 'M') return 'captureAmount';
+    return base + ctx;
+  }
+
+  // SUBMODULE: bpSelector @internal - resolves selector for BP inputs
+  function bpSelector(base, ctx){
+    return base === 'sys' && ctx === 'M' ? '#captureAmount' : `#${base}${ctx}`;
+  }
+
+  // SUBMODULE: resetBpPanel @internal - clears BP inputs per context
+  function resetBpPanel(which, opts = {}) {
+    const { focus = true } = opts;
+    const ctx = which === 'A' ? 'A' : 'M';
+    ['sys','dia','pulse','bpComment'].forEach(id => {
+      const el = document.getElementById(bpFieldId(id, ctx));
+      if (el) el.value = '';
+    });
+    try { updateBpCommentWarnings?.(); } catch(_){}
+    if (focus) {
+      const target = document.getElementById(bpFieldId('sys', ctx));
+      if (target) target.focus();
+    }
+  }
+  /** END MODULE */
+
+  /** MODULE: BP (Blood Pressure)
+   * intent: verarbeitet Blutdruck-Erfassung, Validation und Persistierung
+   * contracts: interagiert mit DATA ACCESS.addEntry/syncWebhook, CAPTURE Toggles, UI-Warnungen
+   * exports: saveBlock, appendNote, allocateNoteTimestamp
+   * notes: Validierungslogik unveraendert dokumentieren; nur Kommentare
+   */
+  // SUBMODULE: blockHasData @internal - detects if BP panel has any input before saving
+  function blockHasData(which){
+    const getVal = (sel) => document.querySelector(sel)?.value?.trim();
+    const sys = getVal(bpSelector('sys', which));
+    const dia = getVal(`#dia${which}`);
+    const pulse = getVal(`#pulse${which}`);
+    const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    const comment = (commentEl?.value || "").trim();
+    return !!(sys || dia || pulse || comment);
+  }
+  // SUBMODULE: saveBlock @internal - persists BP measurements and optional comments
+  async function saveBlock(contextLabel, which, includeWeight=false, force=false){
+  const date = $("#date").value || todayStr();
+  const time = which === 'M' ? '07:00' : '22:00';
+
+  const sys   = $(bpSelector('sys', which)).value   ? toNumDE($(bpSelector('sys', which)).value)   : null;
+  const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
+  const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
+
+  const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+  const comment = (commentEl?.value || '').trim();
+
+  const hasAny = (sys != null) || (dia != null) || (pulse != null);
+  const hasComment = comment.length > 0;
+
+  if (!force && !hasAny && !hasComment) return false;
+
+  if (hasAny){
+    if ((sys != null && dia == null) || (dia != null && sys == null)){
+      uiError('Bitte beide Blutdruck-Werte (Sys und Dia) eingeben.');
+      return false;
+    }
+    if (pulse != null && (sys == null || dia == null)){
+      uiError('Puls kann nur mit Sys und Dia zusammen gespeichert werden.');
+      return false;
+    }
+
+    const currentISO = new Date(date + "T" + time).toISOString();
+    const ts = new Date(date + "T" + time).getTime();
+
+    const entry = {
+      date, time, dateTime: currentISO, ts,
+      context: contextLabel,
+      sys, dia, pulse,
+      weight: null,
+      map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
+      notes: '',
+      training: false,
+      low_intake: false,
+      sick: false,
+      valsartan_missed: false,
+      forxiga_missed: false,
+      nsar_taken: false,
+      salt_high: false,
+      protein_high90: false
+    };
+
+    const localId = await addEntry(entry);
+    await syncWebhook(entry, localId);
+  }
+
+  if (hasComment){
+    try {
+      await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
+      if (commentEl) commentEl.value = '';
+      updateBpCommentWarnings();
+    } catch(err) {
+      diag.add?.('BP-Kommentar Fehler: ' + (err?.message || err));
+    }
+  }
+
+  return hasAny || hasComment;
+  }
+
+  // SUBMODULE: baseEntry @internal - composes canonical intake/bp entry skeleton
+  function baseEntry(date, time, contextLabel){
+    const iso = new Date(date + "T" + time).toISOString();
+    const ts = new Date(date + "T" + time).getTime();
+    const flags = getCaptureFlagsStateSnapshot();
+    return {
+      date,
+      time,
+      dateTime: iso,
+      ts,
+      context: contextLabel,
+      sys: null,
+      dia: null,
+      pulse: null,
+      weight: null,
+      map: null,
+      notes: ($("#notesDay")?.value || "").trim(),
+      training: flags.trainingActive,
+      low_intake: flags.lowIntakeActive,
+      sick: flags.sickActive,
+      valsartan_missed: flags.valsartanMissed,
+      forxiga_missed: flags.forxigaMissed,
+      nsar_taken: flags.nsarTaken,
+      salt_high: flags.saltHigh,
+      protein_high90: flags.proteinHigh
+    };
+  }
+
+  // SUBMODULE: appendNote @internal - stores supplemental note entries for BP/flags
+  async function appendNote(date, prefix, text){
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+    const stamp = allocateNoteTimestamp(date);
+    const entry = baseEntry(date, stamp.time, 'Tag');
+    entry.dateTime = stamp.iso;
+    entry.ts = stamp.ts;
+    entry.notes = prefix + trimmed;
+    entry.training = false;
+    entry.low_intake = false;
+    entry.sick = false;
+    entry.valsartan_missed = false;
+    entry.forxiga_missed = false;
+    entry.nsar_taken = false;
+    entry.salt_high = false;
+    entry.protein_high90 = false;
+    const localId = await addEntry(entry);
+    await syncWebhook(entry, localId);
+  }
+
+  // SUBMODULE: allocateNoteTimestamp @internal - generates staggered timestamps for notes
+  function allocateNoteTimestamp(date){
+    const base = new Date(date + "T22:30:00");
+    const now = Date.now();
+    const minuteOffset = now % 60;
+    const secondOffset = Math.floor(now / 1000) % 60;
+    base.setMinutes(base.getMinutes() + minuteOffset);
+    base.setSeconds(base.getSeconds() + secondOffset);
+    const iso = base.toISOString();
+    return { iso, ts: base.getTime(), time: iso.slice(11,16) };
+  }
+
+  /** END MODULE */
+  function getCaptureFlagsStateSnapshot(){
+    const capture = appModules.capture || {};
+    if (typeof capture.getCaptureFlagsState === 'function') {
+      return capture.getCaptureFlagsState();
+    }
+    if (typeof global.getCaptureFlagsState === 'function') {
+      return global.getCaptureFlagsState();
+    }
+    return {
+      trainingActive: global.trainingActive || false,
+      lowIntakeActive: global.lowIntakeActive || false,
+      sickActive: global.sickActive || false,
+      valsartanMissed: global.valsartanMissed || false,
+      forxigaMissed: global.forxigaMissed || false,
+      nsarTaken: global.nsarTaken || false,
+      saltHigh: global.saltHigh || false,
+      proteinHigh: global.proteinHigh || false
+    };
+  }
+
+
+  const bpApi = {
+    requiresBpComment: requiresBpComment,
+    updateBpCommentWarnings: updateBpCommentWarnings,
+    bpFieldId: bpFieldId,
+    bpSelector: bpSelector,
+    resetBpPanel: resetBpPanel,
+    blockHasData: blockHasData,
+    saveBlock: saveBlock,
+    baseEntry: baseEntry,
+    appendNote: appendNote,
+    allocateNoteTimestamp: allocateNoteTimestamp
+  };
+  appModules.bp = Object.assign(appModules.bp || {}, bpApi);
+  Object.entries(bpApi).forEach(([name, fn]) => {
+    if (typeof global[name] === 'undefined') {
+      global[name] = fn;
+    }
+  });
+})(typeof window !== 'undefined' ? window : globalThis);
