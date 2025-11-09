@@ -11,8 +11,8 @@
    */
   // SUBMODULE: requiresBpComment @internal - enforces comment when vitals exceed thresholds
   function requiresBpComment(which){
-    const sys = Number($(bpSelector('sys', which)).value);
-    const dia = Number($(`#dia${which}`).value);
+    const sys = Number($(bpSelector('sys', which))?.value);
+    const dia = Number($(bpSelector('dia', which))?.value);
     const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
     const comment = (el?.value || "").trim();
     return ((sys > 130) || (dia > 90)) && !comment;
@@ -141,7 +141,17 @@
   function baseEntry(date, time, contextLabel){
     const iso = new Date(date + "T" + time).toISOString();
     const ts = new Date(date + "T" + time).getTime();
-    const flags = getCaptureFlagsStateSnapshot();
+    const snapshotFn = global.getCaptureFlagsStateSnapshot;
+    const flags = typeof snapshotFn === 'function' ? snapshotFn() : {
+      trainingActive: false,
+      lowIntakeActive: false,
+      sickActive: false,
+      valsartanMissed: false,
+      forxigaMissed: false,
+      nsarTaken: false,
+      saltHigh: false,
+      proteinHigh: false
+    };
     return {
       date,
       time,
@@ -199,26 +209,6 @@
   }
 
   /** END MODULE */
-  function getCaptureFlagsStateSnapshot(){
-    const capture = appModules.capture || {};
-    if (typeof capture.getCaptureFlagsState === 'function') {
-      return capture.getCaptureFlagsState();
-    }
-    if (typeof global.getCaptureFlagsState === 'function') {
-      return global.getCaptureFlagsState();
-    }
-    return {
-      trainingActive: global.trainingActive || false,
-      lowIntakeActive: global.lowIntakeActive || false,
-      sickActive: global.sickActive || false,
-      valsartanMissed: global.valsartanMissed || false,
-      forxigaMissed: global.forxigaMissed || false,
-      nsarTaken: global.nsarTaken || false,
-      saltHigh: global.saltHigh || false,
-      proteinHigh: global.proteinHigh || false
-    };
-  }
-
 
   const bpApi = {
     requiresBpComment: requiresBpComment,

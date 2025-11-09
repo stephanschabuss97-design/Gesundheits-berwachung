@@ -31,7 +31,17 @@
 
     const entry = baseEntry(date, time, "Tag");
     let validationFailed = false;
-    const flags = getCaptureFlagsStateSnapshot();
+    const snapshotFn = global.getCaptureFlagsStateSnapshot;
+    const flags = typeof snapshotFn === "function" ? snapshotFn() : {
+      trainingActive: false,
+      lowIntakeActive: false,
+      sickActive: false,
+      valsartanMissed: false,
+      forxigaMissed: false,
+      nsarTaken: false,
+      saltHigh: false,
+      proteinHigh: false
+    };
 
     const notesRaw = ($("#notesDay")?.value || "").trim();
     if (includeBody){
@@ -167,26 +177,6 @@
       applyValues(null);
     }
   }
-  function getCaptureFlagsStateSnapshot(){
-    const capture = appModules.capture || {};
-    if (typeof capture.getCaptureFlagsState === 'function') {
-      return capture.getCaptureFlagsState();
-    }
-    if (typeof global.getCaptureFlagsState === 'function') {
-      return global.getCaptureFlagsState();
-    }
-    return {
-      trainingActive: global.trainingActive || false,
-      lowIntakeActive: global.lowIntakeActive || false,
-      sickActive: global.sickActive || false,
-      valsartanMissed: global.valsartanMissed || false,
-      forxigaMissed: global.forxigaMissed || false,
-      nsarTaken: global.nsarTaken || false,
-      saltHigh: global.saltHigh || false,
-      proteinHigh: global.proteinHigh || false
-    };
-  }
-
   const bodyApi = {
     resetBodyPanel: resetBodyPanel,
     saveDaySummary: saveDaySummary,

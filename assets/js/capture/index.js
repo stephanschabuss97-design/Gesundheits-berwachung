@@ -3,6 +3,10 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
 
+  const MAX_WATER_ML = 6000;
+  const MAX_SALT_G = 30;
+  const MAX_PROTEIN_G = 300;
+
   /** MODULE: CAPTURE (Intake)
    * intent: UI Helpers fuer Intake-Status, Guards und Reset-Flows (Fortsetzung)
    * contracts: nutzt requestUiRefresh, saveIntakeTotals*, DATA ACCESS Helfer
@@ -108,15 +112,15 @@
     const totals = { ...captureIntakeState.totals };
     let message = '';
     if (kind === 'water'){
-      const total = Math.min(6000, Math.max(0, (totals.water_ml || 0) + value));
+      const total = Math.min(MAX_WATER_ML, Math.max(0, (totals.water_ml || 0) + value));
       totals.water_ml = Math.round(total);
       message = 'Wasser aktualisiert.';
     } else if (kind === 'salt'){
-      const total = Math.min(30, Math.max(0, (totals.salt_g || 0) + value));
+      const total = Math.min(MAX_SALT_G, Math.max(0, (totals.salt_g || 0) + value));
       totals.salt_g = Number(total.toFixed(2));
       message = 'Salz aktualisiert.';
     } else {
-      const total = Math.min(300, Math.max(0, (totals.protein_g || 0) + value));
+      const total = Math.min(MAX_PROTEIN_G, Math.max(0, (totals.protein_g || 0) + value));
       totals.protein_g = Number(total.toFixed(2));
       message = 'Protein aktualisiert.';
     }
@@ -207,9 +211,9 @@
     const pProg = document.getElementById('ls-protein-prog');
     const pLbl = document.getElementById('ls-protein-label');
 
-    const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, 6000));
-    const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, 30));
-    const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, 300));
+    const w = Math.max(0, Math.min(__lsTotals.water_ml || 0, MAX_WATER_ML));
+    const s = Math.max(0, Math.min(__lsTotals.salt_g || 0, MAX_SALT_G));
+    const p = Math.max(0, Math.min(__lsTotals.protein_g || 0, MAX_PROTEIN_G));
 
     const wPct = Math.min(1, w / LS_WATER_GOAL) * 100;
     const sPct = Math.min(1, s / LS_SALT_MAX) * 100;
@@ -287,8 +291,8 @@
       if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
 
       const dayIso = todayStr();
-      let total = Math.min(6000, Math.max(0, (__lsTotals.water_ml||0) + v));
-      if (total > 6000) total = 6000;
+      let total = Math.min(MAX_WATER_ML, Math.max(0, (__lsTotals.water_ml||0) + v));
+      if (total > MAX_WATER_ML) total = MAX_WATER_ML;
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
         __lsTotals.water_ml = total;
@@ -311,7 +315,7 @@
       if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
       const dayIso = todayStr();
       let total = (__lsTotals.salt_g||0) + v;
-      if (total > 30) total = 30;
+      if (total > MAX_SALT_G) total = MAX_SALT_G;
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
         __lsTotals.salt_g = total;
@@ -334,7 +338,7 @@
       if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
       const dayIso = todayStr();
       let total = (__lsTotals.protein_g||0) + v;
-      if (total > 300) total = 300;
+      if (total > MAX_PROTEIN_G) total = MAX_PROTEIN_G;
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
         __lsTotals.protein_g = total;
@@ -512,7 +516,8 @@ function resetFlagsPanel(opts = {}) {
     setForxigaMiss: setForxigaMiss,
     setNsar: setNsar,
     updateLifestyleBars: updateLifestyleBars,
-    fmtDE: fmtDE
+    fmtDE: fmtDE,
+    getCaptureFlagsState: getCaptureFlagsState
   };
   appModules.capture = Object.assign(appModules.capture || {}, captureApi);
   Object.entries(captureApi).forEach(([name, fn]) => {
