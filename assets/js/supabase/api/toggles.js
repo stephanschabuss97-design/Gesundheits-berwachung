@@ -9,6 +9,11 @@ import { getUserId } from '../auth/core.js';
 import { loadFlagsFromView } from './vitals.js';
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
+const diag =
+  globalWindow?.diag ||
+  globalWindow?.AppModules?.diag ||
+  globalWindow?.AppModules?.diagnostics ||
+  { add() {} };
 
 const getTodayIso = () => {
   const fn = globalWindow?.todayStr;
@@ -26,11 +31,15 @@ const setFlag = (name, value) => {
   const captureModule = globalWindow?.AppModules?.capture;
   if (captureModule && typeof captureModule[name] === 'function') {
     captureModule[name](value);
-    return;
+    return true;
   }
   if (typeof globalWindow?.[name] === 'function') {
     globalWindow[name](value);
+    return true;
   }
+  diag.add?.(`[toggles] setter missing for ${name}`);
+  console.warn?.('[toggles] missing setter', name);
+  return false;
 };
 
 export async function syncCaptureToggles() {
@@ -61,7 +70,8 @@ export async function syncCaptureToggles() {
     setFlag('setNsar', !!f.nsar_taken);
     const flagsCommentEl = document.getElementById('flagsComment');
     if (flagsCommentEl) flagsCommentEl.value = '';
-  } catch (_) {
-    // non-blocking
+  } catch (err) {
+    diag.add?.('[toggles] sync failed: ' + (err?.message || err));
+    console.error?.('[toggles] sync failed', err);
   }
 }

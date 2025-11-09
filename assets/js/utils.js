@@ -48,15 +48,37 @@ const esc = s =>
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
 
 // === DOWNLOAD HELPER ===
+const normalizeDownloadName = (name = '') => {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return 'download.bin';
+  if (trimmed.includes('.')) return trimmed;
+  return `${trimmed}.bin`;
+};
+
 const dl = (filename, content, mime = 'application/octet-stream') => {
   try {
+    if (typeof document === 'undefined' || !document.body) {
+      console.error('[utils] dl failed: document unavailable');
+      return;
+    }
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || 'download';
-    a.click();
-    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = normalizeDownloadName(filename);
+    link.style.position = 'absolute';
+    link.style.width = '1px';
+    link.style.height = '1px';
+    link.style.overflow = 'hidden';
+    link.style.clipPath = 'inset(100%)';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (_) {}
+      link.remove();
+    }, 1200);
   } catch (err) {
     console.error('[utils] dl failed', err);
   }

@@ -37,8 +37,8 @@ const {
 
 const { withRetry, fetchWithAuth } = http;
 
-const showLoginOverlayLegacy = (show = true) =>
-  show ? authUi.showLoginOverlay() : authUi.hideLoginOverlay();
+const showLoginOverlay = () => authUi.showLoginOverlay();
+const hideLoginOverlay = () => authUi.hideLoginOverlay();
 
 Object.defineProperties(window, {
   sbClient: {
@@ -101,8 +101,8 @@ const supabaseApi = {
   bindAuthButtons: authUi.bindAuthButtons,
   prefillSupabaseConfigForm: authUi.prefillSupabaseConfigForm,
   setConfigStatus: authUi.setConfigStatus,
-  showLoginOverlay: showLoginOverlayLegacy,
-  hideLoginOverlay: authUi.hideLoginOverlay,
+  showLoginOverlay,
+  hideLoginOverlay,
   setUserUi: authUi.setUserUi,
   setDoctorAccess: authGuard.setDoctorAccess,
   setupRealtime: realtime.setupRealtime,
@@ -126,65 +126,30 @@ const supabaseApi = {
 export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
 window.AppModules.supabase = SupabaseAPI;
-window.SupabaseAPI = SupabaseAPI;
 
-const legacyGlobals = {
-  cacheHeaders,
-  clearHeaderCache,
-  getCachedHeaders,
-  getCachedHeadersAt,
-  getHeaderPromise,
-  setHeaderPromise,
-  setSupabaseDebugPii,
-  maskUid,
-  baseUrlFromRest,
-  ensureSupabaseClient,
-  withRetry,
-  fetchWithAuth,
-  syncWebhook: notes.syncWebhook,
-  patchDayFlags: notes.patchDayFlags,
-  appendNoteRemote: notes.appendNoteRemote,
-  deleteRemote: notes.deleteRemote,
-  deleteRemoteDay: notes.deleteRemoteDay,
-  loadIntakeToday: intake.loadIntakeToday,
-  saveIntakeTotals: intake.saveIntakeTotals,
-  saveIntakeTotalsRpc: intake.saveIntakeTotalsRpc,
-  cleanupOldIntake: intake.cleanupOldIntake,
-  loadBpFromView: vitals.loadBpFromView,
-  loadBodyFromView: vitals.loadBodyFromView,
-  loadFlagsFromView: vitals.loadFlagsFromView,
-  fetchDailyOverview: vitals.fetchDailyOverview,
-  pushPendingToRemote,
-  syncCaptureToggles,
-  bindAuthButtons: authUi.bindAuthButtons,
-  prefillSupabaseConfigForm: authUi.prefillSupabaseConfigForm,
-  setConfigStatus: authUi.setConfigStatus,
-  showLoginOverlay: showLoginOverlayLegacy,
-  hideLoginOverlay: authUi.hideLoginOverlay,
-  setUserUi: authUi.setUserUi,
-  setDoctorAccess: authGuard.setDoctorAccess,
-  setupRealtime: realtime.setupRealtime,
-  teardownRealtime: realtime.teardownRealtime,
-  resumeFromBackground: realtime.resumeFromBackground,
-  toEventsUrl: realtime.toEventsUrl,
-  requireDoctorUnlock: authGuard.requireDoctorUnlock,
-  resumeAfterUnlock: authGuard.resumeAfterUnlock,
-  bindAppLockButtons: authGuard.bindAppLockButtons,
-  authGuardState: authGuard.authGuardState,
-  lockUi: authGuard.lockUi,
-  requireSession: authCore.requireSession,
-  watchAuthState: authCore.watchAuthState,
-  afterLoginBoot: authCore.afterLoginBoot,
-  getUserId: authCore.getUserId,
-  isLoggedInFast: authCore.isLoggedInFast,
-  scheduleAuthGrace: authCore.scheduleAuthGrace,
-  finalizeAuthState: authCore.finalizeAuthState
+const legacyWarnings = new Set();
+const warnLegacy = (name) => {
+  if (legacyWarnings.has(name)) return;
+  legacyWarnings.add(name);
+  console.warn?.(
+    `[SupabaseAPI] window.${name} is deprecated; use window.AppModules.supabase.${name} instead.`
+  );
 };
 
-Object.entries(legacyGlobals).forEach(([name, fn]) => {
-  if (!(name in window)) {
-    window[name] = fn;
-  } else {
-    window[name] = fn;
-  }
+const legacyNames = [...Object.keys(SupabaseAPI), 'SupabaseAPI'];
+legacyNames.forEach((name) => {
+  if (Object.prototype.hasOwnProperty.call(window, name)) return;
+  Object.defineProperty(window, name, {
+    configurable: true,
+    get() {
+      warnLegacy(name);
+      return name === 'SupabaseAPI' ? SupabaseAPI : SupabaseAPI[name];
+    },
+    set(value) {
+      warnLegacy(name);
+      if (name !== 'SupabaseAPI') {
+        SupabaseAPI[name] = value;
+      }
+    }
+  });
 });

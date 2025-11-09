@@ -95,7 +95,10 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
     globalWindow?.AppModules?.uiLayout?.updateStickyOffsets?.();
     try {
       scheduleAuthGrace();
-    } catch (_) {
+    } catch (err) {
+      const msg = `[resume] scheduleAuthGrace failed: ${err?.message || err}`;
+      diag.add?.(msg);
+      console.error?.(msg, err);
       callMaybe(globalWindow?.scheduleAuthGrace);
     }
 
@@ -105,7 +108,10 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       diag.add?.('[resume] no supabase client -> login overlay');
       try {
         finalizeAuthState(false);
-      } catch (_) {
+      } catch (err) {
+        const msg = `[resume] finalizeAuthState(false) failed: ${err?.message || err}`;
+        diag.add?.(msg);
+        console.error?.(msg, err);
         callMaybe(globalWindow?.finalizeAuthState, false);
       }
       callMaybe(globalWindow?.showLoginOverlay, true);
@@ -126,7 +132,10 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
     }
     try {
       finalizeAuthState(loggedIn);
-    } catch (_) {
+    } catch (err) {
+      const msg = `[resume] finalizeAuthState(${loggedIn}) failed`;
+      diag.add?.(`${msg}: ${err?.message || err}`);
+      console.error?.(msg, err);
       callMaybe(globalWindow?.finalizeAuthState, loggedIn);
     }
     diag.add?.(`[resume] logged=${loggedIn}`);

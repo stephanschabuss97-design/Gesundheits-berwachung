@@ -23,7 +23,7 @@ const safeGetConf = async (k) => {
 
 const getFocusTrap = () => {
   const trap = global.AppModules?.uiCore?.focusTrap || global.focusTrap || null;
-  return trap || null;
+  return trap;
 };
 
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
