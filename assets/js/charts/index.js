@@ -21,6 +21,11 @@ const safeGetConf = async (k) => {
   return null;
 };
 
+const getFocusTrap = () => {
+  const trap = global.AppModules?.uiCore?.focusTrap || global.focusTrap || null;
+  return trap || null;
+};
+
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
 const chartPanel = {
   el: null,
@@ -160,7 +165,7 @@ const chartPanel = {
     this.open = true;
     if (this.el) {
       this.el.style.display = "block";
-      activateFocusTrap(this.el);
+      getFocusTrap()?.activate?.(this.el);
     }
   },
 
@@ -169,7 +174,7 @@ const chartPanel = {
     this.open = false;
     if (this.el) {
       this.el.style.display = "none";
-      deactivateFocusTrap();
+      getFocusTrap()?.deactivate?.();
     }
     this.tipSticky = false;
     this.hideTip();

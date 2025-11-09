@@ -143,7 +143,7 @@ const applyAuthUi = (logged) => {
   }
 };
 
-const finalizeAuthState = (logged) => {
+export const finalizeAuthState = (logged) => {
   clearAuthGrace();
   supabaseState.authState = logged ? 'auth' : 'unauth';
   supabaseState.lastLoggedIn = logged;
@@ -160,7 +160,7 @@ const finalizeAuthState = (logged) => {
   callStatus(supabaseState.authState);
 };
 
-const scheduleAuthGrace = () => {
+export const scheduleAuthGrace = () => {
   clearAuthGrace();
   supabaseState.authState = 'unknown';
   supabaseState.authGraceTimer = setTimeout(async () => {

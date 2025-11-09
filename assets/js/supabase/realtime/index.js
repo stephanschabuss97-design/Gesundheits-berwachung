@@ -12,6 +12,8 @@
  * author: System Integration Layer (M.I.D.A.S. v1.8)
  */
 
+import { scheduleAuthGrace, finalizeAuthState } from '../auth/core.js';
+
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const globalDocument = typeof document !== 'undefined' ? document : undefined;
 
@@ -91,13 +93,21 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       await doubleRaf();
     } catch (_) {}
     globalWindow?.AppModules?.uiLayout?.updateStickyOffsets?.();
-    callMaybe(globalWindow?.scheduleAuthGrace);
+    try {
+      scheduleAuthGrace();
+    } catch (_) {
+      callMaybe(globalWindow?.scheduleAuthGrace);
+    }
 
     const supa = await asyncMaybe(globalWindow?.ensureSupabaseClient);
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) {
       diag.add?.('[resume] no supabase client -> login overlay');
-      callMaybe(globalWindow?.finalizeAuthState, false);
+      try {
+        finalizeAuthState(false);
+      } catch (_) {
+        callMaybe(globalWindow?.finalizeAuthState, false);
+      }
       callMaybe(globalWindow?.showLoginOverlay, true);
       return;
     }
@@ -114,7 +124,11 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
         diag.add?.('[resume] refresh error: ' + (err?.message || err));
       }
     }
-    callMaybe(globalWindow?.finalizeAuthState, loggedIn);
+    try {
+      finalizeAuthState(loggedIn);
+    } catch (_) {
+      callMaybe(globalWindow?.finalizeAuthState, loggedIn);
+    }
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) {
       diag.add?.('[resume] no session -> login overlay');

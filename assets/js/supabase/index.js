@@ -24,6 +24,8 @@ import * as intake from './api/intake.js';
 import * as vitals from './api/vitals.js';
 import * as notes from './api/notes.js';
 import * as select from './api/select.js';
+import * as push from './api/push.js';
+import * as toggles from './api/toggles.js';
 
 // SUBMODULE: aggregation @internal - kombiniert Exporte, erkennt Konflikte
 const MODULE_SOURCES = [
@@ -36,7 +38,9 @@ const MODULE_SOURCES = [
   ['intake', intake],
   ['vitals', vitals],
   ['notes', notes],
-  ['select', select]
+  ['select', select],
+  ['push', push],
+  ['toggles', toggles]
 ];
 
 const owners = Object.create(null);

@@ -47,9 +47,24 @@ const esc = s =>
 /** Wandelt Zeilenumbrüche in <br> um (nach Escape) */
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
 
+// === DOWNLOAD HELPER ===
+const dl = (filename, content, mime = 'application/octet-stream') => {
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'download';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('[utils] dl failed', err);
+  }
+};
+
 // === EXPORT / GLOBAL REGISTRATION ===
 (() => {
-  const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br };
+  const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br, dl };
 
   // Namespace sichern
   window.AppModules = window.AppModules || {};
