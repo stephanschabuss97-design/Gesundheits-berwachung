@@ -77,6 +77,82 @@
     } catch(_) {}
   }
 
+  // SUBMODULE: updateCaptureIntakeStatus @public - renders intake KPI pills
+  const updateCaptureIntakeStatus = debounce(function(){
+    const startedAt = (typeof performance !== "undefined" && typeof performance.now === "function") ? performance.now() : null;
+    try {
+      const statusEl = document.getElementById('cap-intake-status');
+      let statusTop = document.getElementById('cap-intake-status-top');
+      if (!statusEl && !statusTop) return;
+
+      if (!statusTop) {
+        prepareIntakeStatusHeader();
+        statusTop = document.getElementById('cap-intake-status-top');
+      }
+
+      if (statusTop) {
+        statusTop.setAttribute('role','group');
+        statusTop.setAttribute('aria-live','polite');
+        statusTop.setAttribute('tabindex','0');
+      }
+
+      if (!captureIntakeState.logged){
+        if (statusEl) {
+          statusEl.textContent = 'Bitte anmelden, um Intake zu erfassen.';
+          statusEl.style.display = '';
+        }
+        if (statusTop) {
+          statusTop.innerHTML = '';
+          statusTop.style.display = 'none';
+          statusTop.setAttribute('aria-label', 'Tagesaufnahme: Bitte anmelden, um Intake zu erfassen.');
+        }
+        return;
+      }
+
+      const t = captureIntakeState.totals || {};
+      const waterVal = Math.round(t.water_ml || 0);
+      const saltVal = Number(t.salt_g || 0);
+      const proteinVal = Number(t.protein_g || 0);
+
+      const waterRatio = MAX_WATER_ML ? waterVal / MAX_WATER_ML : 0;
+      const waterCls = waterRatio >= 0.9 ? 'ok' : (waterRatio >= 0.5 ? 'warn' : 'bad');
+      const saltCls = saltVal > MAX_SALT_G ? 'bad' : (saltVal >= 5 ? 'warn' : 'ok');
+      const proteinCls = (proteinVal >= 78 && proteinVal <= MAX_PROTEIN_G) ? 'ok' : (proteinVal > MAX_PROTEIN_G ? 'bad' : 'warn');
+
+      const describe = (cls) => ({
+        ok: 'Zielbereich',
+        warn: 'Warnung',
+        bad: 'kritisch',
+        neutral: 'neutral'
+      }[cls] || 'unbekannt');
+
+      const pills = [
+        { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
+        { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
+        { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` }
+      ];
+
+      const summary = pills.map(p => `${p.label} ${p.value} (${describe(p.cls)})`).join(', ');
+      const html = pills.map(p => {
+        const statusText = describe(p.cls);
+        const aria = `${p.label}: ${p.value}, Status: ${statusText}`;
+        return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"><span class="dot" aria-hidden="true"></span>${p.label}: ${p.value}</span>`;
+      }).join(' ');
+
+      if (statusEl) {
+        statusEl.innerHTML = '';
+        statusEl.style.display = 'none';
+      }
+      if (statusTop) {
+        statusTop.innerHTML = html;
+        statusTop.style.display = 'flex';
+        statusTop.setAttribute('aria-label', `Tagesaufnahme: ${summary}`);
+      }
+    } finally {
+      recordPerfStat('header_intake', startedAt);
+    }
+  }, 150);
+
   // SUBMODULE: refreshCaptureIntake @extract-candidate - laedt Intake-Daten und synchronisiert Pills/UI
   async function refreshCaptureIntake(){
     const wrap = document.getElementById('cap-intake-wrap');
