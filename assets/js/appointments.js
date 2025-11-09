@@ -367,7 +367,6 @@
       patchUrl.searchParams.set('role', 'eq.' + role);
     }
 
-    const body = JSON.stringify({ dt: iso });
     withBusy(saveBtn, true);
     try {
       if (!base || !patchUrl) {
@@ -376,12 +375,9 @@
         throw errMissing;
       }
       const headersHandler = (headers) => {
-        const opts = { method: hasScheduled ? 'PATCH' : 'POST', headers, body };
+        const payload = hasScheduled ? { dt: iso } : { dt: iso, role, status: 'scheduled' };
+        const opts = { method: hasScheduled ? 'PATCH' : 'POST', headers, body: JSON.stringify(payload) };
         const target = hasScheduled ? patchUrl : new URL(base + '/rest/v1/appointments');
-        if (!hasScheduled) {
-          target.searchParams.set('role', role);
-          target.searchParams.set('status', 'scheduled');
-        }
         return global.fetch(target.toString(), opts);
       };
       const res = await fetchWithAuth(headersHandler, {
