@@ -6,6 +6,13 @@
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
   const MAX_PROTEIN_G = 300;
+  // SUBMODULE: setCaptureIntakeDisabled @internal - toggles capture inputs
+  function setCaptureIntakeDisabled(disabled){
+    ['cap-water-add','cap-salt-add','cap-protein-add'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !!disabled;
+    });
+  }
 
   /** MODULE: CAPTURE (Intake)
    * intent: UI Helpers fuer Intake-Status, Guards und Reset-Flows (Fortsetzung)
