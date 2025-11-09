@@ -32,7 +32,7 @@
     const entry = baseEntry(date, time, "Tag");
     let validationFailed = false;
     const snapshotFn = global.getCaptureFlagsStateSnapshot;
-    const flags = typeof snapshotFn === "function" ? snapshotFn() : {
+    const defaultFlags = {
       trainingActive: false,
       lowIntakeActive: false,
       sickActive: false,
@@ -42,6 +42,22 @@
       saltHigh: false,
       proteinHigh: false
     };
+    let rawFlags = defaultFlags;
+    if (typeof snapshotFn === "function") {
+      try {
+        const result = snapshotFn();
+        if (result && typeof result === 'object') {
+          rawFlags = result;
+        }
+      } catch (err) {
+        try { diag.add?.(`[body] getCaptureFlagsStateSnapshot failed: ${err?.message || err}`); } catch (_) {}
+      }
+    }
+    const flags = Object.keys(defaultFlags).reduce((acc, key) => {
+      const value = rawFlags[key];
+      acc[key] = typeof value === 'boolean' ? value : !!value;
+      return acc;
+    }, { ...defaultFlags });
 
     const notesRaw = ($("#notesDay")?.value || "").trim();
     if (includeBody){
@@ -173,7 +189,11 @@
       const rows = await loadBodyFromView({ user_id: uid, from: dayIso, to: dayIso });
       const row = Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
       applyValues(row);
-    } catch(_) {
+    } catch(err) {
+      try {
+        diag.add?.(`[body] prefillBodyInputs failed for ${dayIso}: ${err?.message || err}`);
+      } catch (_) { /* noop */ }
+      console.error('prefillBodyInputs failed', { dayIso, error: err });
       applyValues(null);
     }
   }

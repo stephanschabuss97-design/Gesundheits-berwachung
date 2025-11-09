@@ -2,18 +2,21 @@
 (function(global) {
   global.AppModules = global.AppModules || {};
 
+  const FLAG_KEYS = ['trainingActive','lowIntakeActive','sickActive','valsartanMissed','forxigaMissed','nsarTaken','saltHigh','proteinHigh'];
+  const LEGACY_FLAG_PROPS = {
+    trainingActive: 'trainingActive',
+    lowIntakeActive: 'lowIntakeActive',
+    sickActive: 'sickActive',
+    valsartanMissed: 'valsartanMissed',
+    forxigaMissed: 'forxigaMissed',
+    nsarTaken: 'nsarTaken',
+    saltHigh: 'saltHigh',
+    proteinHigh: 'proteinHigh'
+  };
+
   function readLegacyFlag(key) {
-    switch (key) {
-      case 'trainingActive': return !!global.trainingActive;
-      case 'lowIntakeActive': return !!global.lowIntakeActive;
-      case 'sickActive': return !!global.sickActive;
-      case 'valsartanMissed': return !!global.valsartanMissed;
-      case 'forxigaMissed': return !!global.forxigaMissed;
-      case 'nsarTaken': return !!global.nsarTaken;
-      case 'saltHigh': return !!global.saltHigh;
-      case 'proteinHigh': return !!global.proteinHigh;
-      default: return false;
-    }
+    const prop = LEGACY_FLAG_PROPS[key];
+    return prop ? !!global[prop] : false;
   }
 
   function getCaptureFlagsStateSnapshot() {
@@ -22,19 +25,15 @@
       if (capture && typeof capture.getCaptureFlagsState === 'function') {
         return capture.getCaptureFlagsState() || {};
       }
-    } catch (_) {
-      /* ignore */
+    } catch (err) {
+      try {
+        console.warn('[capture flags] getCaptureFlagsState failed', err);
+      } catch (_) { /* noop */ }
     }
-    return {
-      trainingActive: readLegacyFlag('trainingActive'),
-      lowIntakeActive: readLegacyFlag('lowIntakeActive'),
-      sickActive: readLegacyFlag('sickActive'),
-      valsartanMissed: readLegacyFlag('valsartanMissed'),
-      forxigaMissed: readLegacyFlag('forxigaMissed'),
-      nsarTaken: readLegacyFlag('nsarTaken'),
-      saltHigh: readLegacyFlag('saltHigh'),
-      proteinHigh: readLegacyFlag('proteinHigh')
-    };
+    return FLAG_KEYS.reduce((acc, key) => {
+      acc[key] = readLegacyFlag(key);
+      return acc;
+    }, {});
   }
 
   global.getCaptureFlagsStateSnapshot = getCaptureFlagsStateSnapshot;

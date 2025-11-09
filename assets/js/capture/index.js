@@ -291,8 +291,7 @@
       if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
 
       const dayIso = todayStr();
-      let total = Math.min(MAX_WATER_ML, Math.max(0, (__lsTotals.water_ml||0) + v));
-      if (total > MAX_WATER_ML) total = MAX_WATER_ML;
+      let total = Math.max(0, Math.min(MAX_WATER_ML, (__lsTotals.water_ml||0) + v));
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
         __lsTotals.water_ml = total;
@@ -314,8 +313,7 @@
       const v = toNumDE(el?.value);
       if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
       const dayIso = todayStr();
-      let total = (__lsTotals.salt_g||0) + v;
-      if (total > MAX_SALT_G) total = MAX_SALT_G;
+      let total = Math.max(0, Math.min(MAX_SALT_G, (__lsTotals.salt_g||0) + v));
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
         __lsTotals.salt_g = total;
@@ -337,8 +335,7 @@
       const v = toNumDE(el?.value);
       if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
       const dayIso = todayStr();
-      let total = (__lsTotals.protein_g||0) + v;
-      if (total > MAX_PROTEIN_G) total = MAX_PROTEIN_G;
+      let total = Math.max(0, Math.min(MAX_PROTEIN_G, (__lsTotals.protein_g||0) + v));
       try{
         await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
         __lsTotals.protein_g = total;
@@ -376,11 +373,14 @@
   // Replace sugar toggle with protein (runtime migration for legacy layouts)
   // Migration entfernt: Markup nutzt direkt #proteinHighToggle
   // SUBMODULE: captureFlagToggles @internal - manages capture flag buttons and state cache
-  function setProteinHigh(on){
-    proteinHigh = !!on;
-    setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
-  }
-  let trainingActive=false, lowIntakeActive=false, sickActive=false, valsartanMissed=false, forxigaMissed=false, nsarTaken=false,
+  let trainingActive=false,
+      lowIntakeActive=false,
+      sickActive=false,
+      valsartanMissed=false,
+      forxigaMissed=false,
+      nsarTaken=false,
+      saltHigh=false,
+      proteinHigh=false;
 
   function getCaptureFlagsState(){
     return {
@@ -394,7 +394,11 @@
       proteinHigh
     };
   }
-  saltHigh=false, proteinHigh=false;
+
+  function setProteinHigh(on){
+    proteinHigh = !!on;
+    setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
+  }
   function setToggle(el, on, activeText, baseText){
   el = el || null;
   if (!el) return;
