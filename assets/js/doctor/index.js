@@ -71,7 +71,7 @@ async function renderDoctor(){
   }
 
   if (!(await isLoggedIn())){
-    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
+    host.innerHTML = `<div class="small u-doctor-placeholder">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -82,7 +82,7 @@ async function renderDoctor(){
   const isActive = !!doctorSection && doctorSection.classList.contains('active');
   if (!isDoctorUnlockedSafe()){
     if (isActive){
-      host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte Arzt-Ansicht kurz entsperren.</div>`;
+      host.innerHTML = `<div class="small u-doctor-placeholder">Bitte Arzt-Ansicht kurz entsperren.</div>`;
       setDocBadges({ visible: false });
       try {
         await requestDoctorUnlock();
@@ -111,7 +111,7 @@ async function renderDoctor(){
   const from = $("#from").value;
   const to   = $("#to").value;
   if (!from || !to){
-    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Bitte Zeitraum waehlen.</div>`;
+    host.innerHTML = `<div class="small u-doctor-placeholder">Bitte Zeitraum waehlen.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -124,7 +124,7 @@ async function renderDoctor(){
     daysArr = await fetchDailyOverview(from, to);
   }catch(err){
     logDoctorError('fetchDailyOverview failed', err);
-    host.innerHTML = `<div class="small" data-style="doctor-placeholder" data-error="doctor-fetch-failed">Fehler beim Laden aus der Cloud.</div>`;
+    host.innerHTML = `<div class="small u-doctor-placeholder" data-error="doctor-fetch-failed">Fehler beim Laden aus der Cloud.</div>`;
     setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
@@ -221,7 +221,7 @@ async function renderDoctor(){
 
   // Rendern / Leerzustand
   if (!daysArr.length){
-    host.innerHTML = `<div class="small" data-style="doctor-placeholder">Keine Eintraege im Zeitraum</div>`;
+    host.innerHTML = `<div class="small u-doctor-placeholder">Keine Eintraege im Zeitraum</div>`;
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {

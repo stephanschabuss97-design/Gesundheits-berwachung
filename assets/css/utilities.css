@@ -1,0 +1,44 @@
+/* Flex row helpers */
+.u-row-flex-center-gap8{align-items:center;gap:8px;flex-wrap:wrap;margin-top:0;}
+.u-row-flex-end-gap12{align-items:flex-end;gap:12px;flex-wrap:wrap;}
+.u-row-flex-end-gap8{align-items:flex-end;gap:8px;flex-wrap:wrap;}
+.u-row-flex-end-gap8-mt12{align-items:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+/* Config + spacing utilities */
+.u-config-summary{cursor:pointer;list-style:none;padding:8px 0;}
+.u-block-mb6{display:block;margin-bottom:6px;}
+.u-flex-center-gap10{display:flex;align-items:center;gap:10px;}
+.u-flex-col-gap6-mt4{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+.u-hidden{display:none;}
+.u-diag-log{display:none;position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#111;color:#eee;font-size:12px;padding:4px;z-index:10000;}
+.u-flex-fixed-220{flex:0 0 220px;}
+.u-flex-grow-min180{flex:1;min-width:180px;}
+.u-gap-8{gap:8px;}
+.u-m-0{margin:0;}
+.u-mb-8{margin:0 0 8px;}
+.u-mb10-opacity80{margin-bottom:10px;opacity:.8;}
+.u-mb-12{margin-bottom:12px;}
+.u-mb12-opacity80{margin-bottom:12px;opacity:.8;}
+.u-mt10-opacity75{margin-top:10px;opacity:.75;}
+.u-mt-4{margin-top:4px;}
+.u-mt-6{margin-top:6px;}
+.u-mt6-muted{margin-top:6px;color:#6b7280;}
+.u-mt8-opacity80{margin-top:8px;opacity:.8;}
+.u-status-muted{min-height:16px;color:#9aa3af;}
+.u-minw-180{min-width:180px;}
+.u-opacity-70{opacity:.7;}
+.u-opacity70-mt6{opacity:.7;margin-top:6px;}
+.u-flex-wrap-gap8-opacity80{opacity:.8;display:flex;gap:8px;flex-wrap:wrap;}
+.u-overflow-auto{overflow:auto;}
+.u-text-center-mt6{text-align:center;margin-top:6px;}
+
+/* Width utilities */
+.u-w100-h48{width:100%;height:48px;}
+.u-w100-h48-mb12{width:100%;height:48px;margin-bottom:12px;}
+.u-w100-mt4{width:100%;margin-top:4px;}
+.u-w100-mt6{width:100%;margin-top:6px;}
+.u-w100-mt8{width:100%;margin-top:8px;}
+.u-input-field{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;}
+.u-textarea-field{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;resize:vertical;}
+.u-w-140{width:140px;}
+.u-w-auto{width:auto;}

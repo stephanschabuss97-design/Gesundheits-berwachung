@@ -17,15 +17,16 @@
 <link rel="stylesheet" href="assets/css/doctor.css">
 <link rel="stylesheet" href="assets/css/chart.css">
 <link rel="stylesheet" href="assets/css/auth.css">
+<link rel="stylesheet" href="assets/css/utilities.css">
 <link rel="stylesheet" href="assets/css/app.css">
 <!-- END MODULE -->
 </head>
 <body>
 <!-- ANKER: touch-log-fallback -->
-<pre id="touchLog" data-style="diag-log"></pre>
+<pre id="touchLog" class="u-diag-log"></pre>
 
 <header>
-<div data-style="flex-center-gap10">
+<div class="u-flex-center-gap10">
 <h1>Gesundheits-Logger</h1><span class="small">V1.7.6</span>
 <div class="spacer"></div>
 <button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
@@ -60,7 +61,7 @@
 <h4 id="diagTitle">Touch-Log</h4>
 <button class="btn ghost" id="diagClose" type="button">x</button>
 </header>
-<pre id="diagLog" class="content" data-style="m-0"></pre>
+<pre id="diagLog" class="content u-m-0"></pre>
 </div>
 
 <!-- Diagramm-Panel (Daily) -->
@@ -88,7 +89,7 @@
 
 <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
 <div class="legend" id="chartLegend"></div>
-<div class="small" data-style="opacity70-mt6">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+<div class="small u-opacity70-mt6">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
 </div>
 </div>
 
@@ -111,13 +112,13 @@
   <section class="card" id="entry">
     <div class="capture-header">
       <div class="capture-date">
-        <div data-style="flex-fixed-220">
+        <div class="u-flex-fixed-220">
           <label>Datum</label>
           <input class="compact" type="date" id="date">
         </div>
       </div>
       <div class="capture-pills" id="capturePillsRow">
-        <div id="cap-intake-status-top" class="small" data-style="flex-wrap-gap8-opacity80"></div>
+        <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
         <span id="nextApptBadge" class="pill neutral" title="Kein Termin geplant" aria-live="polite">Kein Termin geplant</span>
       </div>
     </div>
@@ -127,8 +128,8 @@
       <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
-          <div class="row" data-style="row-flex-end-gap12">
-            <div data-style="minw-180">
+          <div class="row u-row-flex-end-gap12">
+            <div class="u-minw-180">
               <label for="bpContextSel">Messzeitpunkt</label>
               <select id="bpContextSel">
                 <option value="M">Morgens</option>
@@ -144,7 +145,7 @@
             <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
             <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
           </div>
-          <div class="row" data-style="mt-6">
+          <div class="row u-mt-6">
             <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
           </div>
         </div>
@@ -155,7 +156,7 @@
             <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
             <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
           </div>
-          <div class="row" data-style="mt-6">
+          <div class="row u-mt-6">
             <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
           </div>
         </div>
@@ -202,39 +203,39 @@
       <div class="accordion-body">
         <div class="card-nested" id="cap-intake-wrap">
           <h3 class="blockTitle">Intake pro Tag</h3>
-          <div class="small" id="cap-intake-status" data-style="mb10-opacity80"></div>
+          <div class="small u-mb10-opacity80" id="cap-intake-status"></div>
 
-          <div class="row" data-style="row-flex-end-gap8">
-            <div data-style="flex-grow-min180">
+          <div class="row u-row-flex-end-gap8">
+            <div class="u-flex-grow-min180">
               <label>Wasser hinzufuegen (ml)</label>
               <input type="number" id="cap-water-add" min="0" step="50" inputmode="numeric" placeholder="z. B. 250">
             </div>
-            <div data-style="w-140">
+            <div class="u-w-140">
               <button class="btn primary" id="cap-water-add-btn" type="button">+ Menge</button>
             </div>
           </div>
 
-          <div class="row" data-style="row-flex-end-gap8-mt12">
-            <div data-style="flex-grow-min180">
+          <div class="row u-row-flex-end-gap8-mt12">
+            <div class="u-flex-grow-min180">
               <label>Salz hinzufuegen (g)</label>
               <input type="text" id="cap-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
             </div>
-            <div data-style="w-140">
+            <div class="u-w-140">
               <button class="btn primary" id="cap-salt-add-btn" type="button">+ Menge</button>
             </div>
           </div>
 
-          <div class="row" data-style="row-flex-end-gap8-mt12">
-            <div data-style="flex-grow-min180">
+          <div class="row u-row-flex-end-gap8-mt12">
+            <div class="u-flex-grow-min180">
               <label>Protein hinzufuegen (g)</label>
               <input type="text" id="cap-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
             </div>
-            <div data-style="w-140">
+            <div class="u-w-140">
               <button class="btn primary" id="cap-protein-add-btn" type="button">+ Menge</button>
             </div>
           </div>
 
-          <div class="small" data-style="mt10-opacity75">
+          <div class="small u-mt10-opacity75">
             Hinweis: Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
           </div>
         </div>
@@ -246,7 +247,7 @@
       <summary><span>&#x1F6A9; Flags</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
       <div class="accordion-body">
         <div class="card-nested">
-          <div class="row" data-style="row-flex-center-gap8">
+          <div class="row u-row-flex-center-gap8">
             <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
             <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
             <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
@@ -258,7 +259,7 @@
           </div>
         </div>
         <div class="card-nested">
-          <label for="flagsComment" class="small" data-style="block-mb6">Kommentar zu Flags</label>
+          <label for="flagsComment" class="small u-block-mb6">Kommentar zu Flags</label>
           <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
         </div>
         <div class="panel-actions">
@@ -273,7 +274,7 @@
   <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
   <div class="accordion-body">
     <div class="card-nested" id="appointmentsWrap">
-      <div class="small" data-style="mb12-opacity80">Pro Rolle gibt es genau einen geplanten Termin.</div>
+      <div class="small u-mb12-opacity80">Pro Rolle gibt es genau einen geplanten Termin.</div>
 
       <div class="appointment-card" data-role="nephro">
         <h3 class="blockTitle">Nephrologe</h3>
@@ -443,7 +444,7 @@
         </div>
       </div>
 
-      <div class="small" data-style="opacity-70">Hinweis: Logik folgt in den naechsten Phasen - aktuell nur UI-Skelett.</div>
+      <div class="small u-opacity-70">Hinweis: Logik folgt in den naechsten Phasen - aktuell nur UI-Skelett.</div>
     </div>
   </div>
 </details>
@@ -468,8 +469,8 @@
       <strong id="doctorTitle">Arzt-Ansicht</strong>
 
       <div class="center-group">
-        <label class="small">Von <input type="date" id="from" data-style="w-auto"></label>
-        <label class="small">Bis <input type="date" id="to" data-style="w-auto"></label>
+        <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
+        <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
         <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
         <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
         <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
@@ -479,11 +480,11 @@
       <span id="docBadCnt" class="badge bad" title="Anzahl Tage mit mind. einem Bad-Flag"> Tage mit Bad-Flag: <span class="val">0</span></span>
     </div> <!--  Toolbar sauber schliessen -->
 
-    <div data-style="overflow-auto" id="doctorDailyWrap">
+    <div class="u-overflow-auto" id="doctorDailyWrap">
       <div class="doctor-view" id="doctorView"></div>
     </div>
 
-        <div class="small" data-style="mt-6">
+        <div class="small u-mt-6">
       Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
     </div>
   </div>
@@ -541,36 +542,36 @@
 
 <script src="assets/js/main.js"></script>
 <!-- Login-Overlay (zentriert) -->
-<div id="loginOverlay" data-style="u-hidden">
+<div id="loginOverlay" class="u-hidden">
   <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <h3 id="loginTitle">Willkommen</h3>
-    <p class="small" data-style="mb-8">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
-    <button class="btn primary" id="googleLoginBtn" type="button" data-style="w100-h48-mb12">Mit Google anmelden</button>
-    <details id="configAdv" class="config-box" data-style="mb-12">
-      <summary class="small" data-style="config-summary">Erweiterte Einstellungen</summary>
-      <div data-style="flex-col-gap6-mt4">
+    <p class="small u-mb-8">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
+    <button class="btn primary u-w100-h48-mb12" id="googleLoginBtn" type="button">Mit Google anmelden</button>
+    <details id="configAdv" class="config-box u-mb-12">
+      <summary class="small u-config-summary">Erweiterte Einstellungen</summary>
+      <div class="u-flex-col-gap6-mt4">
         <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
-        <input id="configRestUrl" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events" data-style="input-field">
-        <label class="small" for="configAnonKey" data-style="mt-4">Supabase ANON-Key</label>
-        <textarea id="configAnonKey" rows="3" placeholder="ANON-Key (kein service_role)" data-style="textarea-field"></textarea>
-        <button class="btn ghost" id="configSaveBtn" type="button" data-style="w100-mt4">Konfiguration speichern</button>
-        <div id="configStatus" class="small" data-style="status-muted"></div>
+        <input id="configRestUrl" class="u-input-field" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events">
+        <label class="small u-mt-4" for="configAnonKey">Supabase ANON-Key</label>
+        <textarea id="configAnonKey" class="u-textarea-field" rows="3" placeholder="ANON-Key (kein service_role)"></textarea>
+        <button class="btn ghost u-w100-mt4" id="configSaveBtn" type="button">Konfiguration speichern</button>
+        <div id="configStatus" class="small u-status-muted"></div>
       </div>
     </details>
-    <div id="whoAmI" class="small" data-style="text-center-mt6"></div>
+    <div id="whoAmI" class="small u-text-center-mt6"></div>
   </div>
 </div>
 
 <!-- App-Lock Overlay (zentriert) -->
-<div id="appLock" data-style="u-hidden">
+<div id="appLock" class="u-hidden">
   <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
     <h3 id="lockTitle">App gesperrt</h3>
-    <p class="small" data-style="mb-8">
+    <p class="small u-mb-8">
       Bitte entsperren: bevorzugt per Passkey (Finger/Face). Alternativ PIN.
     </p>
 
-    <div class="row" data-style="gap-8">
-      <button class="btn primary" id="unlockPasskeyBtn" type="button" data-style="w100-h48">
+    <div class="row u-gap-8">
+      <button class="btn primary u-w100-h48" id="unlockPasskeyBtn" type="button">
         Per Passkey entsperren
       </button>
     </div>
@@ -580,20 +581,20 @@
       <button class="btn ghost" id="unlockPinBtn" type="button">PIN</button>
     </div>
 
-    <div class="small" data-style="mt8-opacity80">
-      <button class="btn ghost" id="setupPasskeyBtn" type="button" data-style="w100-mt6">
+    <div class="small u-mt8-opacity80">
+      <button class="btn ghost u-w100-mt6" id="setupPasskeyBtn" type="button">
         Passkey einrichten
       </button>
-      <button class="btn ghost" id="setPinBtn" type="button" data-style="w100-mt6">
+      <button class="btn ghost u-w100-mt6" id="setPinBtn" type="button">
         PIN setzen/aendern
       </button>
     </div>
 
-    <button class="btn ghost" id="lockCancelBtn" type="button" data-style="w100-mt8">
+    <button class="btn ghost u-w100-mt8" id="lockCancelBtn" type="button">
       Abbrechen
     </button>
 
-    <div id="lockMsg" class="small" data-style="mt6-muted"></div>
+    <div id="lockMsg" class="small u-mt6-muted"></div>
   </div>
 </div>
 
