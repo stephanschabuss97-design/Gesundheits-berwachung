@@ -33,6 +33,20 @@
     });
   }
 
+  // SUBMODULE: millisUntilNextMidnight @public - calculates next midnight reset window
+  function millisUntilNextMidnight(){
+    try {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(0, 0, 10, 0);
+      next.setDate(next.getDate() + 1);
+      const diff = next.getTime() - now.getTime();
+      return Number.isNaN(diff) ? 3600_000 : Math.max(1000, diff);
+    } catch {
+      return 3600_000;
+    }
+  }
+
   // SUBMODULE: prepareIntakeStatusHeader @public - ensures pills/status header exists
   function prepareIntakeStatusHeader(){
     try {
