@@ -1,0 +1,291 @@
+/* Toolbar mit zentrierter Mitte + Badges rechts */
+#doctorCard .toolbar {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:space-between; /* Titel links + Mitte + Badges rechts */
+}
+
+#doctorCard .toolbar .center-group {
+  flex:1;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center; /* Buttons + Datum + Anwenden mittig */
+}
+
+#doctorCard .toolbar .badge {
+  margin-left:8px;
+}
+
+#doctorCard .toolbar{
+  border-bottom:1px solid #242833;
+  padding-bottom:8px;
+  margin-bottom:8px;
+}
+
+/* --- Arzt-Toolbar Badges (Daily KPIs) --- */
+.badge {
+  display:inline-block;
+  padding:6px 12px;         /* etwas mehr Platz */
+  border:1.5px solid #2b2f3a;
+  border-radius:12px;       /* runder = moderner */
+  font-size:13px;           /* +1pt groesser */
+  font-weight:600;          /* kraeftiger */
+  margin-left:10px;
+}
+.badge.good{border-color:var(--color-success); color:var(--color-success)}
+.badge.bad{ border-color:var(--color-danger); color:var(--color-danger)}
+.badge.hidden{ display:none !important; }
+
+/* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
+.doctor-view .doctor-day{
+  display:grid;
+  grid-template-columns:1fr; /* Standard = gestapelt */
+  gap:12px;
+  align-items:start;
+  padding:12px 14px;
+  margin:8px 0;
+  border-radius:12px;
+  background:var(--color-surface-card);
+  border:1px solid #242833;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+  page-break-inside:avoid;
+  break-inside:avoid;
+}
+
+/* Tablet/Desktop: nebeneinander */
+@media (min-width:900px){
+  .doctor-view .doctor-day{
+    grid-template-columns:18% 46% 36%;
+  }
+}
+
+/* Zwischenbereich: 2 Spalten */
+@media (min-width:600px) and (max-width:899px){
+  .doctor-view .doctor-day{
+    grid-template-columns:40% 60%;
+    grid-template-areas:
+      "date measure"
+      "date special";
+  }
+  .doctor-view .col-date{ grid-area:date; }
+  .doctor-view .col-measure{ grid-area:measure; }
+  .doctor-view .col-special{ grid-area:special; }
+}
+
+/* Spalte A - Datum */
+.doctor-view .col-date{
+  display:flex;
+  align-items:center;
+  font-weight:800;
+  font-size:clamp(16px,1.6vw,20px);
+  letter-spacing:.2px;
+}
+.doctor-view .col-date{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.doctor-view .col-date .date-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.doctor-view .col-date .date-label{
+  font-weight:800;
+  font-size:clamp(16px,1.6vw,20px);
+  letter-spacing:.2px;
+}
+.doctor-view .col-date .date-cloud{ font-size:16px; line-height:1; }
+.doctor-view .col-date .date-actions{
+  display:flex;
+  justify-content:flex-start; /* oder center, wenn du's mittig magst */
+}
+.btn-xs{ padding:6px 10px; font-size:12px; border-radius:8px; }
+
+/* Spalte B - Messungen */
+.doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
+.doctor-view .measure-head,
+.doctor-view .measure-grid{
+  display:grid;
+  grid-template-columns:minmax(70px, auto) repeat(4, 1fr);
+  gap:4px;
+}
+.doctor-view .measure-head{ font-size:12px; opacity:.8; }
+
+.doctor-view .measure-head > div{ display:flex; align-items:center; }
+.doctor-view .measure-head > div:first-child{ justify-content:flex-start; }
+.doctor-view .measure-head > div:not(:first-child){ justify-content:flex-end; }
+.doctor-view .measure-row{ display:contents; }
+.doctor-view .label{ display:flex; align-items:center; font-size:13px; opacity:.9; }
+
+/* Zahlenbild */
+.doctor-view .num{
+  font-variant-numeric:tabular-nums lining-nums;
+  -moz-font-feature-settings:"tnum","lnum";
+  -webkit-font-feature-settings:"tnum","lnum";
+  font-feature-settings:"tnum","lnum";
+  text-align:right;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  min-width:4ch; /* Basisschutz gegen Abschneiden */
+  white-space:nowrap;
+}
+.doctor-view .num.alert{ color:var(--color-danger); }
+
+.doctor-view .measure-grid .num,
+.doctor-view .col-special .num{
+  text-align:right;
+  justify-content:flex-end;
+}
+
+/* Spalte C - Spezialinfos */
+.doctor-view .weight-line,
+.doctor-view .waist-line{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  background:transparent;
+  border:none;
+  padding:0;
+  font-weight:600;
+}
+
+.doctor-view .weight-line > :first-child,
+.doctor-view .waist-line > :first-child{
+  font-size:12px;
+  opacity:.8;
+  font-weight:600;
+  letter-spacing:.2px;
+}
+
+.doctor-view .weight-line .num,
+.doctor-view .waist-line .num{
+  font-size:clamp(16px,1.6vw,20px);
+  font-weight:700;
+  line-height:1.1;
+  text-align:center;
+}
+
+.doctor-view .col-special{
+  display:grid;
+  grid-template-columns:minmax(120px, max-content) 220px 1fr; /* C | D | E */
+  column-gap:16px;
+  row-gap:6px;
+  align-items:start; /* <-- alles oben ausrichten */
+}
+
+.doctor-view .col-special > .weight-line,
+.doctor-view .col-special > .waist-line { grid-column:1; }
+.doctor-view .col-special > .flags       { grid-column:2; }
+.doctor-view .col-special > .notes       { grid-column:3; }
+
+.doctor-view .flags{
+  display:grid;
+  grid-template-columns:repeat(2, max-content); /* 2 Spalten */
+  justify-content:start;
+  align-items:start;
+  gap:6px 16px; /* vertikal 6px, horizontal 16px */
+}
+
+.doctor-view .weight-line .num,
+.doctor-view .waist-line .num{ font-variant-numeric:tabular-nums; } /* Spalten wirken ruhiger */
+.doctor-view .flag span:last-child{ white-space:nowrap; }
+.doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
+.doctor-view .flag-box{
+  width:16px;
+  height:16px;
+  border:1.5px solid #2b2f3a;
+  border-radius:3px;
+  display:inline-block;
+  position:relative;
+}
+.doctor-view .flag-box.on::after{
+  content:"";
+  position:absolute;
+  inset:2px;
+  background:var(--color-accent);
+  border-radius:2px;
+}
+
+.doctor-view .notes{
+  font-size:13px;
+  line-height:1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:3;      /* 3 Zeilen, bei Bedarf 2 setzen */
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  word-break:break-word;
+  padding:0;                 /* kein Box-Feeling */
+  background:transparent;
+  border:none;
+}
+.doctor-view .notes::before{
+  content:"Kommentar";
+  display:block;
+  font-size:12px;
+  opacity:.8;
+  font-weight:600;
+  letter-spacing:.2px;
+  margin-bottom:4px;
+}
+
+/* Mobile-Optimierung */
+@media (max-width:599px){
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns:minmax(72px, 1fr) repeat(4, minmax(56px, 1fr));
+  }
+  .doctor-view .measure-head{ font-size:11px; }
+
+  .doctor-view .num{
+    min-width:4.5ch; /* ~ "96.7" passt sicher */
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
+  .doctor-view .col-special .weight-line .num,
+  .doctor-view .col-special .waist-line .num{
+    min-width:5ch;
+  }
+
+  .doctor-view .col-special{
+    grid-template-columns:minmax(110px, max-content) 1fr; /* Flags bekommen flex Breite */
+    column-gap:12px;
+  }
+  .doctor-view .col-special > .notes{
+    grid-column:1 / -1; /* Kommentar ueber beide Spalten */
+  }
+
+  .doctor-view .notes{
+    -webkit-line-clamp:4; /* bei Bedarf auf 5 erhoehen */
+  }
+
+  .doctor-view .flags{
+    display:grid;
+    grid-template-columns:repeat(2, max-content);
+    justify-content:start;
+    align-items:center;
+    column-gap:14px;
+    row-gap:6px;
+    margin-top:6px;
+  }
+  .doctor-view .flag span:last-child{ white-space:nowrap; }
+}
+
+@media (max-width:390px){
+  .doctor-view .measure-head,
+  .doctor-view .measure-grid{
+    grid-template-columns:minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
+  }
+  .doctor-view .flags{
+    grid-template-columns:repeat(3, max-content);
+  }
+}
+
+[data-style="doctor-placeholder"] { text-align:center; opacity:.7; padding:12px; }
