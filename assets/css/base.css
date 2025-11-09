@@ -1,31 +1,59 @@
-:root {
-  --bg: #121417;
-  --card: #1c1e22;
-  --card-layer2: #202225;
-  --fg: #e8eaec;
-  --muted: #b0b3b8;
-  --disabled: #6c6e70;
-  --accent: #3a3dff;
-  --warn: #ff6b6b;
-  --ok: #2ecc71;
-  --danger: #ff6b6b;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+﻿:root {
+  --color-bg-primary: #121417;
+  --color-surface-card: #1c1e22;
+  --color-surface-card-secondary: #202225;
+  --color-text-primary: #e8eaec;
+  --color-text-muted: #b0b3b8;
+  --color-text-disabled: #6c6e70;
+  --color-accent: #3a3dff;
+  --color-warn: #ff6b6b;
+  --color-success: #2ecc71;
+  --color-danger: #ff6b6b;
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
   --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.25);
-  --surface-elevated: rgba(255, 255, 255, 0.03);
-  --chart-line-primary: #3a3dff;
-  --chart-line-primary-soft: #7d81ff;
-  --chart-line-secondary: #b0b3ff;
-  --chart-line-tertiary: #c6c9ff;
-  --chart-line-dia: #ff87b5;
-  --chart-line-weight: #7d81ff;
-  --chart-line-waist: #a9afb7;
-  --chart-bar-muscle: #3a3dff;
-  --chart-bar-fat: #cfa24a;
-  --chart-goal-sys: rgba(58, 61, 255, 0.12);
-  --chart-goal-dia: rgba(176, 179, 184, 0.16);
-  --chart-tooltip-bg: rgba(20, 23, 28, 0.96);
-  --header-h: 56px;
-  --tabs-h: 48px;
+  --color-surface-elevated: rgba(255, 255, 255, 0.03);
+  --color-chart-line-primary: #3a3dff;
+  --color-chart-line-primary-soft: #7d81ff;
+  --color-chart-line-secondary: #b0b3ff;
+  --color-chart-line-tertiary: #c6c9ff;
+  --color-chart-line-dia: #ff87b5;
+  --color-chart-line-weight: #7d81ff;
+  --color-chart-line-waist: #a9afb7;
+  --color-chart-bar-muscle: #3a3dff;
+  --color-chart-bar-fat: #cfa24a;
+  --color-chart-goal-sys: rgba(58, 61, 255, 0.12);
+  --color-chart-goal-dia: rgba(176, 179, 184, 0.16);
+  --color-chart-tooltip-bg: rgba(20, 23, 28, 0.96);
+  --size-header-height: 56px;
+  --size-tabs-height: 48px;
+
+  /* Legacy aliases (to be removed once consumers migrate) */
+  --bg: var(--color-bg-primary);
+  --card: var(--color-surface-card);
+  --card-layer2: var(--color-surface-card-secondary);
+  --fg: var(--color-text-primary);
+  --muted: var(--color-text-muted);
+  --disabled: var(--color-text-disabled);
+  --accent: var(--color-accent);
+  --warn: var(--color-warn);
+  --ok: var(--color-success);
+  --danger: var(--color-danger);
+  --border-subtle: var(--color-border-subtle);
+  --surface-elevated: var(--color-surface-elevated);
+  --chart-line-primary: var(--color-chart-line-primary);
+  --chart-line-primary-soft: var(--color-chart-line-primary-soft);
+  --chart-line-secondary: var(--color-chart-line-secondary);
+  --chart-line-tertiary: var(--color-chart-line-tertiary);
+  --chart-line-dia: var(--color-chart-line-dia);
+  --chart-line-weight: var(--color-chart-line-weight);
+  --chart-line-waist: var(--color-chart-line-waist);
+  --chart-bar-muscle: var(--color-chart-bar-muscle);
+  --chart-bar-fat: var(--color-chart-bar-fat);
+  --chart-goal-sys: var(--color-chart-goal-sys);
+  --chart-goal-dia: var(--color-chart-goal-dia);
+  --chart-tooltip-bg: var(--color-chart-tooltip-bg);
+  --header-h: var(--size-header-height);
+  --tabs-h: var(--size-tabs-height);
 }
 
 * {
@@ -52,8 +80,8 @@ body {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior-y: none;
@@ -65,7 +93,7 @@ body.auth-locked main {
 
 label {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--color-text-muted);
   display: block;
   margin-bottom: 6px;
   letter-spacing: 0.2px;
@@ -77,18 +105,18 @@ textarea {
   width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-elevated);
-  color: var(--fg);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
   font-size: 1rem;
   transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
-  scroll-margin-top: calc(var(--header-h, 56px) + var(--tabs-h, 48px) + 8px);
+  scroll-margin-top: calc(var(--size-header-height, 56px) + var(--size-tabs-height, 48px) + 8px);
 }
 
 input::placeholder,
 select::placeholder,
 textarea::placeholder {
-  color: var(--muted);
+  color: var(--color-text-muted);
   opacity: .65;
 }
 
@@ -96,10 +124,11 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(58, 61, 255, 0.2);
 }
 
 button {
   font: inherit;
 }
+
