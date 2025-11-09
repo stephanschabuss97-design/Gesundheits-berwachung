@@ -19,6 +19,9 @@ const diag =
 const delay = (ms = 0) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
 // Sentinel used to mark entries that had no events to push (prevents reprocessing loops).
+export const REMOTE_ID_NO_EVENTS = -1;
+
+// Sentinel used to mark entries that had no events to push (prevents reprocessing loops).
 const REMOTE_ID_NO_EVENTS = -1;
 
 const callGlobal = (name, ...args) => {
@@ -46,7 +49,7 @@ export async function pushPendingToRemote() {
   if (!url) return { pushed: 0, failed: 0 };
 
   const allEntries = (await callGlobal('getAllEntries')) || [];
-  const pending = allEntries.filter((entry) => !entry?.remote_id);
+  const pending = allEntries.filter((entry) => entry?.remote_id == null);
 
   let pushed = 0;
   let failed = 0;
@@ -76,11 +79,13 @@ export async function pushPendingToRemote() {
         } catch (bodyErr) {
           bodyText = `(body read failed: ${bodyErr?.message || bodyErr})`;
         }
-        logPushError(
-          `webhook failed entry=${entry?.id ?? '?'} status=${response.status} ${response.statusText || ''}`.trim(),
-          bodyText
-        );
+        const statusLabel = `entry=${entry?.id ?? '?'} status=${response.status} ${response.statusText || ''}`.trim();
+        logPushError(`webhook failed ${statusLabel}`, bodyText);
         failed += 1;
+        if (response.status === 401 || response.status === 403) {
+          logPushError('auth error detected, aborting pending push', statusLabel);
+          break;
+        }
         continue;
       }
       let json;

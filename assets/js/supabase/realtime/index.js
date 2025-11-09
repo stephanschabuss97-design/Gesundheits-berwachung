@@ -99,7 +99,10 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       const msg = `[resume] scheduleAuthGrace failed: ${err?.message || err}`;
       diag.add?.(msg);
       console.error?.(msg, err);
-      callMaybe(globalWindow?.scheduleAuthGrace);
+      const fallback = globalWindow?.scheduleAuthGrace;
+      if (typeof fallback === 'function' && fallback !== scheduleAuthGrace) {
+        callMaybe(fallback);
+      }
     }
 
     const supa = await asyncMaybe(globalWindow?.ensureSupabaseClient);
@@ -112,7 +115,23 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
         const msg = `[resume] finalizeAuthState(false) failed: ${err?.message || err}`;
         diag.add?.(msg);
         console.error?.(msg, err);
-        callMaybe(globalWindow?.finalizeAuthState, false);
+        const fallback = globalWindow?.finalizeAuthState;
+        let fallbackError = null;
+        if (typeof fallback === 'function' && fallback !== finalizeAuthState) {
+          try {
+            fallback(false);
+          } catch (fbErr) {
+            fallbackError = fbErr;
+          }
+        } else {
+          fallbackError = new Error('fallback finalizeAuthState unavailable');
+        }
+        if (fallbackError) {
+          const fbMsg = `[resume] fallback finalizeAuthState(false) failed: ${fallbackError?.message || fallbackError}`;
+          diag.add?.(fbMsg);
+          console.error?.(fbMsg, fallbackError);
+          throw fallbackError;
+        }
       }
       callMaybe(globalWindow?.showLoginOverlay, true);
       return;
@@ -136,7 +155,23 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       const msg = `[resume] finalizeAuthState(${loggedIn}) failed`;
       diag.add?.(`${msg}: ${err?.message || err}`);
       console.error?.(msg, err);
-      callMaybe(globalWindow?.finalizeAuthState, loggedIn);
+      const fallback = globalWindow?.finalizeAuthState;
+      let fallbackError = null;
+      if (typeof fallback === 'function' && fallback !== finalizeAuthState) {
+        try {
+          fallback(loggedIn);
+        } catch (fbErr) {
+          fallbackError = fbErr;
+        }
+      } else {
+        fallbackError = new Error('fallback finalizeAuthState unavailable');
+      }
+      if (fallbackError) {
+        const fbMsg = `[resume] fallback finalizeAuthState(${loggedIn}) failed: ${fallbackError?.message || fallbackError}`;
+        diag.add?.(fbMsg);
+        console.error?.(fbMsg, fallbackError);
+        throw fallbackError;
+      }
     }
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) {

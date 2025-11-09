@@ -60,14 +60,19 @@ export async function syncCaptureToggles() {
         forxiga_missed: false,
         nsar_taken: false
       };
-    setFlag('setTraining', !!f.training);
-    setFlag('setSick', !!f.sick);
-    setFlag('setLowIntake', !!f.low_intake);
-    setFlag('setSaltHigh', !!f.salt_high);
-    setFlag('setProteinHigh', !!f.protein_high90);
-    setFlag('setValsartanMiss', !!f.valsartan_missed);
-    setFlag('setForxigaMiss', !!f.forxiga_missed);
-    setFlag('setNsar', !!f.nsar_taken);
+    const failedFlags = [];
+    if (!setFlag('setTraining', !!f.training)) failedFlags.push('training');
+    if (!setFlag('setSick', !!f.sick)) failedFlags.push('sick');
+    if (!setFlag('setLowIntake', !!f.low_intake)) failedFlags.push('low_intake');
+    if (!setFlag('setSaltHigh', !!f.salt_high)) failedFlags.push('salt_high');
+    if (!setFlag('setProteinHigh', !!f.protein_high90)) failedFlags.push('protein_high90');
+    if (!setFlag('setValsartanMiss', !!f.valsartan_missed)) failedFlags.push('valsartan_missed');
+    if (!setFlag('setForxigaMiss', !!f.forxiga_missed)) failedFlags.push('forxiga_missed');
+    if (!setFlag('setNsar', !!f.nsar_taken)) failedFlags.push('nsar_taken');
+    if (failedFlags.length) {
+      diag.add?.(`[toggles] failed to set: ${failedFlags.join(', ')}`);
+      console.warn?.('[toggles] setters missing for flags', failedFlags);
+    }
     const flagsCommentEl = document.getElementById('flagsComment');
     if (flagsCommentEl) flagsCommentEl.value = '';
   } catch (err) {

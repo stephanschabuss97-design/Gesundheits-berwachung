@@ -48,37 +48,53 @@ const esc = s =>
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
 
 // === DOWNLOAD HELPER ===
+let sharedDownloadLink = null;
+
 const normalizeDownloadName = (name = '') => {
   const trimmed = String(name || '').trim();
   if (!trimmed) return 'download.bin';
-  if (trimmed.includes('.')) return trimmed;
+  if (/\.[A-Za-z0-9]{1,8}$/.test(trimmed)) return trimmed;
   return `${trimmed}.bin`;
+};
+
+const ensureDownloadLink = () => {
+  if (typeof document === 'undefined' || !document.body) return null;
+  if (sharedDownloadLink && sharedDownloadLink.isConnected) return sharedDownloadLink;
+  sharedDownloadLink = document.createElement('a');
+  Object.assign(sharedDownloadLink.style, {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
+    clipPath: 'inset(100%)',
+    opacity: '0',
+    pointerEvents: 'none'
+  });
+  document.body.appendChild(sharedDownloadLink);
+  return sharedDownloadLink;
 };
 
 const dl = (filename, content, mime = 'application/octet-stream') => {
   try {
-    if (typeof document === 'undefined' || !document.body) {
+    const link = ensureDownloadLink();
+    if (!link) {
       console.error('[utils] dl failed: document unavailable');
       return;
     }
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
     link.href = url;
     link.download = normalizeDownloadName(filename);
-    link.style.position = 'absolute';
-    link.style.width = '1px';
-    link.style.height = '1px';
-    link.style.overflow = 'hidden';
-    link.style.clipPath = 'inset(100%)';
-    document.body.appendChild(link);
     link.click();
     setTimeout(() => {
       try {
         URL.revokeObjectURL(url);
       } catch (_) {}
-      link.remove();
-    }, 1200);
+      try {
+        link.removeAttribute('href');
+        link.removeAttribute('download');
+      } catch (_) {}
+    }, 200);
   } catch (err) {
     console.error('[utils] dl failed', err);
   }
