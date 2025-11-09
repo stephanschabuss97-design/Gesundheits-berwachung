@@ -131,7 +131,6 @@
 body.app-locked main,
 body.app-locked nav,
 body.app-locked header {
-  filter: blur(0);
 }
 body.app-locked {
   pointer-events: auto;
@@ -168,8 +167,7 @@ body.app-locked {
 /* Visibility guards */
 #loginOverlay[hidden],
 #appLock[hidden],
-#loginOverlay.is-hidden,
-#appLock.is-hidden {
+.is-hidden {
   display: none !important;
   pointer-events: none !important;
 }
