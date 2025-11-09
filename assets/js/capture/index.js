@@ -47,6 +47,91 @@
     }
   }
 
+  // SUBMODULE: handleMidnightRefresh @public - triggers capture refresh on new day
+  async function handleMidnightRefresh(){
+    AppModules.captureGlobals.setMidnightTimer(null);
+    try {
+      await maybeRefreshForTodayChange({ force: true, source: 'midnight' });
+    } finally {
+      scheduleMidnightRefresh();
+    }
+  }
+
+  // SUBMODULE: scheduleMidnightRefresh @public - arms midnight timer loop
+  function scheduleMidnightRefresh(){
+    try {
+      const timer = AppModules.captureGlobals.getMidnightTimer();
+      if (timer) clearTimeout(timer);
+      const delay = millisUntilNextMidnight();
+      AppModules.captureGlobals.setMidnightTimer(setTimeout(handleMidnightRefresh, delay));
+    } catch (_) { /* noop */ }
+  }
+
+  // SUBMODULE: maybeResetIntakeForToday @public - ensures intake reset runs once per day
+  async function maybeResetIntakeForToday(todayIso){
+    try {
+      const last = AppModules.captureGlobals.getIntakeResetDoneFor();
+      if (last === todayIso) return;
+      await syncCaptureToggles();
+      AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
+    } catch (_) { /* noop */ }
+  }
+
+  // SUBMODULE: scheduleNoonSwitch @public - toggles BP context at noon
+  function scheduleNoonSwitch(){
+    try {
+      const timer = AppModules.captureGlobals.getNoonTimer();
+      if (timer) clearTimeout(timer);
+      const now = new Date();
+      const noon = new Date(now);
+      noon.setHours(12, 0, 5, 0);
+      if (noon.getTime() <= now.getTime()) {
+        noon.setDate(noon.getDate() + 1);
+      }
+      const delay = Math.max(1000, noon.getTime() - now.getTime());
+      AppModules.captureGlobals.setNoonTimer(setTimeout(async () => {
+        try {
+          AppModules.captureGlobals.setBpUserOverride(false);
+          await maybeRefreshForTodayChange({ force: true, source: 'noon-switch' });
+        } catch (_) { /* noop */ }
+      }, delay));
+    } catch (_) { /* noop */ }
+  }
+
+  // SUBMODULE: maybeRefreshForTodayChange @public - reconciles capture state for day switches
+  async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
+    const todayIso = todayStr();
+    const dateEl = document.getElementById('date');
+    const selected = dateEl?.value || '';
+    const todayChanged = AppModules.captureGlobals.getLastKnownToday() !== todayIso;
+    if (!force && !todayChanged) return;
+
+    const userPinnedOtherDay = AppModules.captureGlobals.getDateUserSelected() && selected && selected !== todayIso;
+    if (!userPinnedOtherDay && dateEl) {
+      if (selected !== todayIso) {
+        dateEl.value = todayIso;
+      }
+      AppModules.captureGlobals.setDateUserSelected(false);
+    }
+
+    if (!userPinnedOtherDay) {
+      try { maybeResetIntakeForToday(todayIso); } catch(_) {}
+    }
+
+    try {
+      await refreshCaptureIntake();
+    } catch(_) {}
+
+    AppModules.captureGlobals.setLastKnownToday(todayIso);
+    if (!AppModules.captureGlobals.getMidnightTimer()) scheduleMidnightRefresh();
+    scheduleNoonSwitch();
+    if (!userPinnedOtherDay) {
+      AppModules.captureGlobals.setBpUserOverride(false);
+      maybeAutoApplyBpContext({ force: true, source: source || 'day-change' });
+    }
+    diag.add?.(`intake: day refresh (${source || 'auto'})`);
+  }
+
   // SUBMODULE: prepareIntakeStatusHeader @public - ensures pills/status header exists
   function prepareIntakeStatusHeader(){
     try {
