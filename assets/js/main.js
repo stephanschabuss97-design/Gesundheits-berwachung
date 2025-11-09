@@ -63,7 +63,7 @@ const setAuthPendingAfterUnlock = (value) => {
     state.pendingAfterUnlock = value ?? null;
   }
 };
-const sleep = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+const delay = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
@@ -867,7 +867,7 @@ async function maybeResetIntakeForToday(todayIso){
         diag.add?.(`[capture] reset intake lookup failed (attempt ${attempt + 1}): ${err?.message || err}`);
         attempt += 1;
         if (attempt < 3) {
-          await sleep(250 * attempt);
+          await delay(250 * attempt);
         }
       }
     }
