@@ -497,12 +497,13 @@
     handleAppointmentSave,
     handleAppointmentDone,
     bindAppointmentsPanel,
-    setAppointmentBadge
+    setAppointmentBadge,
+    resetAppointmentsUi
   };
 
   appModules.appointments = appointmentsApi;
 
-  ['refreshAppointments', 'handleAppointmentSave', 'handleAppointmentDone', 'bindAppointmentsPanel', 'setAppointmentBadge']
+  ['refreshAppointments', 'handleAppointmentSave', 'handleAppointmentDone', 'bindAppointmentsPanel', 'setAppointmentBadge', 'resetAppointmentsUi']
     .forEach((name) => {
       Object.defineProperty(global, name, {
         configurable: true,
