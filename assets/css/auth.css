@@ -1,0 +1,87 @@
+/* Panels (Help & Diagnostics) */
+.panel{position:fixed;right:8px;bottom:8px;max-height:80vh;overflow:auto;background:#0f1116;border:1px solid #2b2f3a;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);display:none;z-index:9998}
+.panel header{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #2b2f3a}
+.panel h4{margin:0;font-size:14px}
+.panel .content{
+  padding:12px;
+  font-size:13px;
+  line-height:1.45;
+}
+#diag pre{margin:0;padding:8px;font-size:12px;white-space:pre-wrap}
+
+/* FABs (Help/Diag toggles) */
+.fab-wrap{position:fixed;right:8px;bottom:8px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.fab{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #2b2f3a;background:#0f1116;cursor:pointer}
+.fab:hover{box-shadow:0 8px 24px rgba(0,0,0,.35)}
+
+/* Busy overlay */
+#busy{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:99998}
+#busy .box{background:#10131a;border:1px solid #2b2f3a;border-radius:12px;padding:12px 16px;font-weight:600}
+.seg{display:flex;gap:8px;margin:8px 0 12px}
+.seg .seg-btn.active{background:var(--color-accent);color:#fff}
+
+/* App-Lock Overlay */
+#appLock{
+  position:fixed; inset:0; z-index:10001;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.45); backdrop-filter:blur(2px);
+}
+#appLock .lock-card{
+  width:min(420px, 92vw);
+  background:#fff; color:#111;
+  border-radius:16px; padding:18px;
+  box-shadow:0 18px 48px rgba(0,0,0,.35);
+  border:1px solid #e5e7eb;
+}
+#appLock .lock-card h3{margin:0 0 6px;}
+#appLock .btn.primary{background:var(--color-accent); color:#fff;}
+#appLock .pin-wrap{display:flex; gap:8px; margin-top:8px;}
+#appLock .pin-wrap input{
+  flex:1; background:#f8fafc; color:#111; border:1px solid #e5e7eb;
+}
+
+body.app-locked main,
+body.app-locked nav,
+body.app-locked header{
+  filter:blur(0);
+}
+body.app-locked{pointer-events:auto;}
+
+/* Login Overlay */
+#loginOverlay{
+  position:fixed; inset:0; z-index:10000;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.35); backdrop-filter:blur(2px);
+}
+#loginOverlay .login-card{
+  width:min(420px, 92vw);
+  background:#fff; color:#111;
+  border-radius:16px; padding:18px;
+  box-shadow:0 18px 48px rgba(0,0,0,.35);
+  border:1px solid #e5e7eb;
+}
+#loginOverlay .login-card h3{margin:0 0 6px;}
+#loginOverlay .btn.primary{background:var(--color-accent); color:#fff;}
+
+/* Visibility guards */
+#loginOverlay[hidden],
+#appLock[hidden],
+#loginOverlay.is-hidden,
+#appLock.is-hidden{
+  display:none !important;
+  pointer-events:none !important;
+}
+
+summary{
+  position:static !important;
+  z-index:auto !important;
+  pointer-events:auto !important;
+}
+details[open] > summary{
+  position:static !important;
+}
+details[hidden]{
+  display:none !important;
+  pointer-events:none !important;
+}
+#configAdv > summary{position:static !important;}
