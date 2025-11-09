@@ -173,7 +173,7 @@
     if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
       return { ok: false, error: 'time' };
     }
-    const isoCandidate = `${date}T${time}:00Z`;
+    const isoCandidate = `${date}T${time}:00`;
     const dt = new Date(isoCandidate);
     if (Number.isNaN(dt.getTime())) {
       return { ok: false, error: 'invalid' };
