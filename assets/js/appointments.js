@@ -173,7 +173,8 @@
     if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
       return { ok: false, error: 'time' };
     }
-    const dt = new Date(`${date}T${time}:00`);
+    const isoCandidate = `${date}T${time}:00Z`;
+    const dt = new Date(isoCandidate);
     if (Number.isNaN(dt.getTime())) {
       return { ok: false, error: 'invalid' };
     }
@@ -213,7 +214,7 @@
     });
   }
 
-  async function fetchAppointmentsSummary() {
+  async function fetchAppointmentsSummary({ signal } = {}) {
     const rest = await getConfSafe('webhookUrl');
     if (!rest) return null;
     const base = baseUrlFromRest(rest);
@@ -221,7 +222,7 @@
 
     const fetchJson = async (url) => {
       const res = await fetchWithAuth(
-        (headers) => global.fetch(url.toString(), { headers }),
+        (headers) => global.fetch(url.toString(), { headers, signal }),
         { tag: 'appt:summary', maxAttempts: 2 }
       );
       if (res.status === 404) return [];
@@ -253,8 +254,17 @@
   async function refreshAppointments() {
     if (appointmentsState.loading) return;
     appointmentsState.loading = true;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutMs = 10_000;
+    let timeoutId = null;
+    if (controller) {
+      timeoutId = global.setTimeout(() => {
+        logDiag('appointments refresh timeout (aborting request)');
+        try { controller.abort(); } catch (_) {}
+      }, timeoutMs);
+    }
     try {
-      const summaryRaw = await fetchAppointmentsSummary();
+      const summaryRaw = await fetchAppointmentsSummary({ signal: controller?.signal });
       const scheduledList = Array.isArray(summaryRaw?.scheduled) ? summaryRaw.scheduled : [];
       const doneList = Array.isArray(summaryRaw?.done) ? summaryRaw.done : [];
 
@@ -307,11 +317,18 @@
       appointmentsState.next = nextAppt;
       setAppointmentBadge(nextAppt);
     } catch (e) {
-      logDiag('appointments refresh error: ' + (e?.message || e));
+      if (e?.name === 'AbortError') {
+        logDiag('appointments refresh aborted (timeout or manual abort)');
+      } else {
+        logDiag('appointments refresh error: ' + (e?.message || e));
+      }
       appointmentsState.data = Object.create(null);
       appointmentsState.loaded = false;
       resetAppointmentsUi();
     } finally {
+      if (timeoutId) {
+        global.clearTimeout(timeoutId);
+      }
       appointmentsState.loading = false;
     }
   }
@@ -454,12 +471,25 @@
   }
 
   function bindAppointmentsPanel() {
-    APPOINTMENT_ROLES.forEach(({ code }) => {
-      const saveBtn = global.document?.getElementById(`appt-${code}-save`);
-      const doneBtn = global.document?.getElementById(`appt-${code}-done`);
-      if (saveBtn) saveBtn.addEventListener('click', () => handleAppointmentSave(code));
-      if (doneBtn) doneBtn.addEventListener('click', () => handleAppointmentDone(code));
-    });
+    const wrap = global.document?.getElementById('appointmentsWrap');
+    if (!wrap) return;
+    if (wrap.dataset.appointmentsBound === '1') return;
+
+    const handler = (event) => {
+      const btn = event.target?.closest('button');
+      if (!btn || !wrap.contains(btn) || !btn.id) return;
+      const match = btn.id.match(/^appt-([a-z]+)-(save|done)$/);
+      if (!match) return;
+      const [, role, action] = match;
+      if (action === 'save') {
+        handleAppointmentSave(role);
+      } else if (action === 'done') {
+        handleAppointmentDone(role);
+      }
+    };
+
+    wrap.addEventListener('click', handler);
+    wrap.dataset.appointmentsBound = '1';
   }
 
   const appointmentsApi = {
@@ -494,4 +524,3 @@
     };
   }
 })(typeof window !== 'undefined' ? window : globalThis);
-
