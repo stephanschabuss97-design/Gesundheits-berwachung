@@ -128,10 +128,6 @@
   border: 1px solid #e5e7eb;
 }
 
-body.app-locked main,
-body.app-locked nav,
-body.app-locked header {
-}
 body.app-locked {
   pointer-events: auto;
 }

@@ -1,4 +1,4 @@
-﻿'use strict';
+﻿﻿'use strict';
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
@@ -222,6 +222,7 @@ async function renderDoctor(){
   // Rendern / Leerzustand
   if (!daysArr.length){
     host.innerHTML = `<div class="small u-doctor-placeholder">Keine Eintraege im Zeitraum</div>`;
+    setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {
