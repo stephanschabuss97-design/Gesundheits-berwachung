@@ -53,7 +53,7 @@ let sharedDownloadLink = null;
 const normalizeDownloadName = (name = '') => {
   const trimmed = String(name || '').trim();
   if (!trimmed) return 'download.bin';
-  if (/\.[A-Za-z0-9]{1,8}$/.test(trimmed)) return trimmed;
+  if (/\.[A-Za-z0-9]+$/.test(trimmed) && trimmed.includes('.')) return trimmed;
   return `${trimmed}.bin`;
 };
 

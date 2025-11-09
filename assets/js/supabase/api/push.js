@@ -21,9 +21,6 @@ const delay = (ms = 0) => new Promise((resolve) => setTimeout(resolve, Math.max(
 // Sentinel used to mark entries that had no events to push (prevents reprocessing loops).
 export const REMOTE_ID_NO_EVENTS = -1;
 
-// Sentinel used to mark entries that had no events to push (prevents reprocessing loops).
-const REMOTE_ID_NO_EVENTS = -1;
-
 const callGlobal = (name, ...args) => {
   const fn = globalWindow?.[name];
   if (typeof fn === 'function') {

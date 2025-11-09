@@ -37,8 +37,6 @@ const setFlag = (name, value) => {
     globalWindow[name](value);
     return true;
   }
-  diag.add?.(`[toggles] setter missing for ${name}`);
-  console.warn?.('[toggles] missing setter', name);
   return false;
 };
 
