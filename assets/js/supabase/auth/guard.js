@@ -228,9 +228,9 @@ const textEncoder =
   typeof TextEncoder !== 'undefined'
     ? new TextEncoder()
     : (() => {
+        if (typeof require !== 'function') return null;
         try {
-          if (typeof require !== 'function') return null;
-          const { TextEncoder: NodeTextEncoder } = require('util') || {};
+          const { TextEncoder: NodeTextEncoder } = require('util');
           return NodeTextEncoder ? new NodeTextEncoder() : null;
         } catch (_) {
           return null;
@@ -238,15 +238,26 @@ const textEncoder =
       })();
 
 const toUserHandleBytes = (value) => {
-  if (!value) return u8(32);
-  if (textEncoder) {
-    const encoded = textEncoder.encode(String(value));
-    return encoded.length <= 64 ? encoded : encoded.slice(0, 64);
+  if (value === undefined || value === null || value === '') {
+    throw new Error('Supabase guard: user handle missing');
   }
   const normalized = String(value);
-  const result = new Uint8Array(Math.min(64, normalized.length));
-  for (let i = 0; i < result.length; i++) {
+  if (textEncoder) {
+    const encoded = textEncoder.encode(normalized);
+    if (encoded.length >= 64) {
+      return encoded.slice(0, 64);
+    }
+    const padded = new Uint8Array(64);
+    padded.set(encoded);
+    return padded;
+  }
+  const result = new Uint8Array(64);
+  const len = Math.min(64, normalized.length);
+  for (let i = 0; i < len; i++) {
     result[i] = normalized.charCodeAt(i) & 0xff;
+  }
+  if (len === 0) {
+    result[0] = 0;
   }
   return result;
 };
@@ -642,9 +653,8 @@ const registerPasskey = async () => {
         timeout: 60000,
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          residentKey: 'required',
-          requireResidentKey: true,
-          userVerification: 'required'
+          userVerification: 'required',
+          residentKey: 'required'
         },
         attestation: 'none'
       }
@@ -675,14 +685,10 @@ const unlockWithPasskey = async () => {
       setLockMsg('Noch kein Passkey eingerichtet.');
       return false;
     }
-    const allow = [
-      { type: 'public-key', id: b64u.dec(credId), transports: ['internal'] }
-    ];
     const challenge = u8(32);
     const publicKey = {
       challenge,
       timeout: 60000,
-      allowCredentials: allow,
       userVerification: 'required'
     };
     const rpId = resolveRpId();
