@@ -45,7 +45,10 @@ const chartPanel = {
   SHOW_BODY_COMP_BARS: true,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
+  initialized: false,
+
   init() {
+    if (this.initialized) return;
     this.el = $("#chart");
     this.svg = $("#chartSvg");
     this.legend = $("#chartLegend");
@@ -156,6 +159,7 @@ const chartPanel = {
 
     // KPI-Box: Felder sicherstellen
     this.ensureKpiFields();
+    this.initialized = true;
   },
 
   // SUBMODULE: chartPanel.toggle @internal - schaltet Chart-Panel an/aus inkl. Fokus
@@ -171,7 +175,7 @@ const chartPanel = {
   show() {
     this.open = true;
     if (this.el) {
-      this.el.style.display = "block";
+      this.el.style.display = "flex";
       getFocusTrap()?.activate?.(this.el);
     }
   },
@@ -1267,4 +1271,18 @@ const mkAlertDots = (seriesItem) => {
   appModules.charts = Object.assign({}, appModules.charts, chartsApi);
   global.AppModules = appModules;
   global.chartPanel = chartPanel;
+
+  const initChartPanelSafe = () => {
+    try {
+      chartPanel.init();
+    } catch (err) {
+      global.console?.warn?.('[charts] chartPanel init failed', err);
+    }
+  };
+
+  if (global.document?.readyState === 'loading') {
+    global.document.addEventListener('DOMContentLoaded', initChartPanelSafe, { once: true });
+  } else {
+    initChartPanelSafe();
+  }
 })(typeof window !== 'undefined' ? window : globalThis);
