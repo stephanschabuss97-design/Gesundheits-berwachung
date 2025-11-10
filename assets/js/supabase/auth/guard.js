@@ -224,6 +224,46 @@ const buildRp = () => {
   return rp;
 };
 
+const textEncoder =
+  typeof TextEncoder !== 'undefined'
+    ? new TextEncoder()
+    : (() => {
+        try {
+          if (typeof require !== 'function') return null;
+          const { TextEncoder: NodeTextEncoder } = require('util') || {};
+          return NodeTextEncoder ? new NodeTextEncoder() : null;
+        } catch (_) {
+          return null;
+        }
+      })();
+
+const toUserHandleBytes = (value) => {
+  if (!value) return u8(32);
+  if (textEncoder) {
+    const encoded = textEncoder.encode(String(value));
+    return encoded.length <= 64 ? encoded : encoded.slice(0, 64);
+  }
+  const normalized = String(value);
+  const result = new Uint8Array(Math.min(64, normalized.length));
+  for (let i = 0; i < result.length; i++) {
+    result[i] = normalized.charCodeAt(i) & 0xff;
+  }
+  return result;
+};
+
+const getSessionUser = async () => {
+  const client = globalWindow?.sbClient;
+  const auth = client?.auth;
+  if (!auth?.getSession) return null;
+  try {
+    const { data } = await auth.getSession();
+    return data?.session?.user || null;
+  } catch (err) {
+    diag.add?.('[guard] session lookup failed: ' + (err?.message || err));
+    return null;
+  }
+};
+
 // SUBMODULE: UI helpers @internal - Overlay-Steuerung & Statusanzeige
 const setLockMsg = (msg) => {
   const el = document.getElementById('lockMsg');
@@ -576,14 +616,25 @@ export async function resumeAfterUnlock(intent) {
 // SUBMODULE: registerPasskey @internal - registriert neuen Passkey via WebAuthn
 const registerPasskey = async () => {
   try {
+    const sessionUser = await getSessionUser();
+    if (!sessionUser?.id || !sessionUser?.email) {
+      setLockMsg('Bitte zuerst bei Supabase anmelden.');
+      showLoginOverlay();
+      return false;
+    }
     const challenge = u8(32);
-    const userId = u8(16);
     const rp = buildRp();
+    const displayName = sessionUser.email.split('@')[0] || sessionUser.email;
+    const user = {
+      id: toUserHandleBytes(sessionUser.id),
+      name: sessionUser.email,
+      displayName
+    };
     const cred = await globalWindow?.navigator?.credentials?.create({
       publicKey: {
         challenge,
         rp,
-        user: { id: userId, name: 'local-user', displayName: 'Local User' },
+        user,
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 },
           { type: 'public-key', alg: -257 }
@@ -591,8 +642,9 @@ const registerPasskey = async () => {
         timeout: 60000,
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          userVerification: 'preferred',
-          residentKey: 'preferred'
+          residentKey: 'required',
+          requireResidentKey: true,
+          userVerification: 'required'
         },
         attestation: 'none'
       }
@@ -605,7 +657,7 @@ const registerPasskey = async () => {
     configureLockOverlay({
       hasPasskey: true,
       webAuthnAvailable: waAvailable,
-      message: 'Passkey eingerichtet - bitte kurz entsperren.'
+      message: `Passkey eingerichtet - angemeldet als ${displayName}.`
     });
     setLockMsg('Passkey eingerichtet.');
     return true;
@@ -623,13 +675,15 @@ const unlockWithPasskey = async () => {
       setLockMsg('Noch kein Passkey eingerichtet.');
       return false;
     }
-    const allow = [{ type: 'public-key', id: b64u.dec(credId) }];
+    const allow = [
+      { type: 'public-key', id: b64u.dec(credId), transports: ['internal'] }
+    ];
     const challenge = u8(32);
     const publicKey = {
       challenge,
       timeout: 60000,
       allowCredentials: allow,
-      userVerification: 'preferred'
+      userVerification: 'required'
     };
     const rpId = resolveRpId();
     if (rpId) {
