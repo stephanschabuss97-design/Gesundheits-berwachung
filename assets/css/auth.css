@@ -1,4 +1,17 @@
-/* Panels (Help & Diagnostics) */
+/**
+ * MODULE: assets/css/ui/overlays-and-panels.css
+ * Description: Enthält Layout- und UI-Stile für Systempanels, Overlays (Busy, Login, AppLock) und Floating Action Buttons.
+ * Submodules:
+ *  - Panels (Help & Diagnostics)
+ *  - Floating Action Buttons (FABs)
+ *  - Busy Overlay (Ladeanzeige)
+ *  - App-Lock Overlay (PIN-Absicherung)
+ *  - Login Overlay (Auth-Fenster)
+ *  - Visibility Guards (hidden states)
+ *  - Config Accordion (Login-Overlay intern)
+ */
+
+/* SUBMODULE: Panels (Help & Diagnostics) @public - feste Debug-/Hilfsfenster mit Scrollbereich */
 .panel {
   position: fixed;
   right: 8px;
@@ -36,7 +49,7 @@
   white-space: pre-wrap;
 }
 
-/* FABs (Help/Diag toggles) */
+/* SUBMODULE: Floating Action Buttons (FABs) @public - runde Schnellzugriff-Buttons für Panel-Steuerung */
 .fab-wrap {
   position: fixed;
   right: 8px;
@@ -61,7 +74,7 @@
   box-shadow: 0 8px 24px rgba(0,0,0,.35);
 }
 
-/* Busy overlay */
+/* SUBMODULE: Busy Overlay @public - halbtransparente Ladeanzeige mit Sperrung des UI */
 #busy {
   position: fixed;
   inset: 0;
@@ -89,7 +102,7 @@
   color: #fff;
 }
 
-/* App-Lock Overlay */
+/* SUBMODULE: App-Lock Overlay @public - Sperrbildschirm mit PIN-Eingabe */
 #appLock {
   position: fixed;
   inset: 0;
@@ -132,7 +145,7 @@ body.app-locked {
   pointer-events: auto;
 }
 
-/* Login Overlay */
+/* SUBMODULE: Login Overlay @public - modaler Anmeldebildschirm */
 #loginOverlay {
   position: fixed;
   inset: 0;
@@ -160,7 +173,7 @@ body.app-locked {
   color: #fff;
 }
 
-/* Visibility guards */
+/* SUBMODULE: Visibility Guards @internal - blendet Overlays und Elemente sicher aus */
 #loginOverlay[hidden],
 #appLock[hidden],
 .is-hidden {
@@ -168,7 +181,7 @@ body.app-locked {
   pointer-events: none !important;
 }
 
-/* Config accordion inside login overlay */
+/* SUBMODULE: Config Accordion @internal - korrigiert Layout des <summary>-Elements im Login-Overlay */
 #configAdv > summary {
   position: static;
 }

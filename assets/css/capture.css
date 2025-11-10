@@ -1,4 +1,14 @@
-/* Capture accordions & nested panels */
+/**
+ * MODULE: assets/css/ui/capture-and-appointments.css
+ * Description: Enthält Stile für Capture-Accordion-Panels, Lifestyle-/Intake-Statusanzeigen und Arztterminkarten.
+ * Submodules:
+ *  - Capture Accordions & Nested Panels
+ *  - Lifestyle Progress Bars
+ *  - Intake Panels & Status Pills
+ *  - Arzttermine (Appointments)
+ */
+
+/* SUBMODULE: Capture Accordions & Nested Panels @public - UI-Struktur für Datenabschnitte (auf-/zuklappbare Panels) */
 .accordion{
   background:var(--color-surface-card-secondary);
   border:1px solid var(--color-border-subtle);
@@ -107,8 +117,8 @@
   .accordion .accordion-body{padding:0 16px 18px;}
 }
 
-
-/* Lifestyle progress & intake panels */
+/* SUBMODULE: Lifestyle Progress Bars @public - visuelle Fortschrittsanzeigen für Hydration, Ernährung etc. */
+#lifestyle .progress,
 #lifestyle .progress,
 #cap-intake-wrap .progress {
   position: relative;
@@ -166,6 +176,7 @@
   #cap-intake-wrap .progress:hover .bar { filter:brightness(1.05); }
 }
 
+/* SUBMODULE: Intake Panels @public - Eingabebereich und Zusammenfassung für Tagesintakes */
 #cap-intake-wrap{
   display:flex;
   flex-direction:column;
@@ -243,7 +254,7 @@
   display:none;
 }
 
-/* Intake status pills */
+/* SUBMODULE: Intake Status Pills @public - komprimierte Statusanzeigen für Wasser, Salz, Protein etc. */
 #cap-intake-status { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; background:var(--color-surface-elevated); border:1px solid var(--color-border-subtle); color:var(--color-text-primary); }
 .pill .dot { width:8px; height:8px; border-radius:50%; background:#6b7280; box-shadow:0 0 0 1px rgba(0,0,0,.4); }
@@ -258,7 +269,7 @@
 .capture-header .capture-pills .pill{ margin:0; }
 
 
-/* Arzttermine Skeleton */
+/* SUBMODULE: Arzttermine (Appointments) @public - Karten-Layout und Eingabe-Design für Arzttermine */
 #appointmentsWrap {
   display:flex;
   flex-direction:column;

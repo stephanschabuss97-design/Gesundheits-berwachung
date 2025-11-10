@@ -1,10 +1,19 @@
-/* Flex row helpers */
+/**
+ * MODULE: assets/css/utilities/layout-helpers.css
+ * Description: Sammlung universeller Flex-, Spacing- und Breiten-Hilfsklassen für UI-Komponenten und Layouts.
+ * Submodules:
+ *  - Flex Row Utilities
+ *  - Config & Spacing Utilities
+ *  - Width Utilities
+ */
+
+/* SUBMODULE: Flex Row Utilities @public - vorgefertigte Flexbox-Reihen mit unterschiedlichen Abständen und Alignments */
 .u-row-flex-center-gap8{align-items:center;gap:8px;flex-wrap:wrap;margin-top:0;}
 .u-row-flex-end-gap12{align-items:flex-end;gap:12px;flex-wrap:wrap;}
 .u-row-flex-end-gap8{align-items:flex-end;gap:8px;flex-wrap:wrap;}
 .u-row-flex-end-gap8-mt12{align-items:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px;}
 
-/* Config + spacing utilities */
+/* SUBMODULE: Config & Spacing Utilities @public - Hilfsklassen für Abstand, Sichtbarkeit, Textausrichtung und Layoutblöcke */
 .u-config-summary{cursor:pointer;list-style:none;padding:8px 0;}
 .u-block-mb6{display:block;margin-bottom:6px;}
 .u-flex-center-gap10{display:flex;align-items:center;gap:10px;}
@@ -32,7 +41,7 @@
 .u-overflow-auto{overflow:auto;}
 .u-text-center-mt6{text-align:center;margin-top:6px;}
 
-/* Width utilities */
+/* SUBMODULE: Width Utilities @public - standardisierte Klassen für Breiten-, Höhen- und Eingabefeld-Styling */
 .u-w100-h48{width:100%;height:48px;}
 .u-w100-h48-mb12{width:100%;height:48px;margin-bottom:12px;}
 .u-w100-mt4{width:100%;margin-top:4px;}

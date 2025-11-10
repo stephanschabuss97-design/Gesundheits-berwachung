@@ -1,4 +1,18 @@
-﻿:root {
+﻿/**
+ * MODULE: assets/css/core/variables-and-base.css
+ * Description: Definiert globale Farbvariablen, Layout-Token und Basistypografie für das gesamte App-UI (Theme Foundation).
+ * Submodules:
+ *  - Root Variables (Farben, Schatten, Größen)
+ *  - Legacy Aliases (Kompatibilität zu älteren Variablen)
+ *  - Global Resets & Box Model
+ *  - Accessibility Helpers (.sr-only)
+ *  - Body & Typography Base
+ *  - Form Controls (input, select, textarea)
+ *  - Interaction States (focus, placeholder)
+ */
+
+ /* SUBMODULE: Root Variables @public - zentrale Design-Tokens für Farben, Typografie und Layout */
+:root {
   --color-bg-primary: #121417;
   --color-surface-card: #1c1e22;
   --color-surface-card-secondary: #202225;
@@ -28,7 +42,7 @@
   --size-header-height: 56px;
   --size-tabs-height: 48px;
 
-  /* Legacy aliases (to be removed once consumers migrate) */
+/* SUBMODULE: Legacy Aliases @internal - Übergangsvariablen für Alt-Styles (werden später entfernt) */
   --bg: var(--color-bg-primary);
   --card: var(--color-surface-card);
   --card-layer2: var(--color-surface-card-secondary);
@@ -57,10 +71,12 @@
   --tabs-h: var(--size-tabs-height);
 }
 
+/* SUBMODULE: Global Resets & Box Model @internal - sorgt für konsistente Layout-Berechnung */
 * {
   box-sizing: border-box;
 }
 
+/* SUBMODULE: Accessibility Helpers @public - für Screenreader unsichtbare, aber semantische Inhalte */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -73,6 +89,7 @@
   border: 0;
 }
 
+/* SUBMODULE: Body & Typography Base @public - Grundlayout, Schriftfamilie und Farben */
 html,
 body {
   height: 100%;
@@ -92,6 +109,7 @@ body.auth-locked main {
   opacity: .6;
 }
 
+/* SUBMODULE: Form Controls @public - vereinheitlichte Eingabeelemente mit dynamischen Rändern */
 label {
   font-size: 12px;
   color: var(--color-text-muted);
@@ -121,6 +139,7 @@ textarea::placeholder {
   opacity: .65;
 }
 
+/* SUBMODULE: Interaction States @public - visuelles Feedback für Fokuszustände */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
@@ -129,6 +148,7 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px var(--color-focus-shadow);
 }
 
+/* SUBMODULE: Button Reset @internal - erbt Schriftstil aus globalem Font */
 button {
   font: inherit;
 }

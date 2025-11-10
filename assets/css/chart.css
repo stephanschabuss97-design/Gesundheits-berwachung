@@ -1,4 +1,16 @@
-/* Chart panel layout */
+/**
+ * MODULE: assets/css/ui/chart-panel.css
+ * Description: Enthält Layout-, Animations- und Interaktionsstile für das Chart-Panel, inklusive SVG-Rendering, Legende, Tooltip und KPI-Leiste.
+ * Submodules:
+ *  - Chart Panel Layout (responsive container)
+ *  - Chart Controls & KPI Line
+ *  - SVG Canvas & Series Rendering
+ *  - Legend & Hover States
+ *  - Series & Overlay Effects
+ *  - Tooltip Styling
+ */
+
+/* SUBMODULE: Chart Panel Layout @public - definiert Panel-Struktur, Viewportgrößen und flexibles Chart-Layout */
 .panel.chart{
   inset:0;
   width:100vw;
@@ -28,7 +40,7 @@
   overflow:auto;
 }
 
-/* Chart controls & KPI line */
+/* SUBMODULE: Chart Controls & KPI Line @public - enthält Filter, Dropdowns und KPI-Bereich oberhalb des Charts */
 #chart .controls{
   display:flex;
   gap:8px;
@@ -70,7 +82,7 @@
 #chart .controls > *{flex:1}
 #chart .controls .half{flex:0 0 calc(50% - 4px)}
 
-/* SVG canvas */
+/* SUBMODULE: SVG Canvas & Animation @public - Darstellung und Animation des Hauptdiagramms */
 #chart svg{
   flex:1 1 auto;
   width:100%;
@@ -94,7 +106,7 @@
 }
 #chartSvg .flags{pointer-events:auto;}
 
-/* Legend & series states */
+/* SUBMODULE: Legend & Hover States @public - Interaktive Legende für Datenreihen mit Hover-/Dim-Effekten */
 #chart .legend{
   display:flex;
   gap:10px;
@@ -117,7 +129,7 @@
   border:1px solid rgba(0,0,0,0.3);
 }
 
-/* Series + overlays */
+/* SUBMODULE: Series & Overlay Effects @public - Linien, Punkte, Balken und Zielzonen im SVG-Chart */
 #chartSvg path[data-series]{
   transition:opacity .2s ease, stroke-width .18s ease, filter .18s ease;
   stroke-linecap:round;
@@ -151,7 +163,7 @@
 #chartSvg .chart-hit{cursor:pointer;}
 #chartSvg .chart-hit:focus-visible{outline:2px solid var(--color-accent); outline-offset:2px;}
 
-/* Tooltip */
+/* SUBMODULE: Tooltip Styling @public - dynamische Tooltips mit Farbthema, Schatten und responsivem Layout */
 .chart-tip{
   position:absolute;
   inset:auto auto auto auto;

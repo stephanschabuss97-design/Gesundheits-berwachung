@@ -1,4 +1,17 @@
-﻿header {
+﻿/**
+ * MODULE: assets/css/ui/layout-base.css
+ * Description: Grundlegendes Layout-Styling für Header, Tabs, Main-Container und Kartenraster der App-Oberfläche.
+ * Submodules:
+ *  - Header (sticky top navigation)
+ *  - Tabs Navigation Bar
+ *  - Main Content Layout
+ *  - Card Components
+ *  - Flex & Grid Utilities
+ *  - Responsive Grid Adjustments
+ */
+
+/* SUBMODULE: Header @public - Fixierter App-Header mit Blur- und Schatteneffekten */
+header {
   position: sticky;
   top: 0;
   background: linear-gradient(180deg, rgba(18, 20, 23, .95), rgba(18, 20, 23, .75));
@@ -15,11 +28,13 @@ header.is-elevated {
   background: linear-gradient(180deg, rgba(18, 20, 23, 1), rgba(18, 20, 23, 0.85));
 }
 
+/* SUBMODULE: Heading Styles @internal - Standardgrößen für h1-Überschriften */
 h1 {
   margin: 0;
   font-size: 20px;
 }
 
+/* SUBMODULE: Tabs Navigation Bar @public - Sticky Tab-Leiste unterhalb des Headers */
 nav.tabs {
   display: flex;
   gap: 8px;
@@ -43,6 +58,7 @@ nav.tabs button {
   touch-action: manipulation;
 }
 
+/* SUBMODULE: Main Content Layout @public - Grundabstände und Layout-Padding für Hauptinhalte */
 main {
   padding: 12px;
   position: relative;
@@ -50,6 +66,7 @@ main {
   padding-top: calc(var(--size-header-height, 56px) + var(--size-tabs-height, 48px) + 8px);
 }
 
+/* SUBMODULE: Card Components @public - Standardisierte Kartencontainer mit Schatten, Radius und Hintergrund */
 .card {
   --panel-bg: var(--color-surface-card);
   background: var(--panel-bg);
@@ -60,6 +77,7 @@ main {
   box-shadow: var(--shadow-soft);
 }
 
+/* SUBMODULE: Flex & Grid Utilities @public - Hilfsklassen für Layout-Strukturierung */
 .row {
   display: flex;
   gap: 8px;
@@ -72,6 +90,7 @@ main {
   gap: 8px;
 }
 
+/* SUBMODULE: Responsive Grid Adjustments @public - Anpassung der Grid-Struktur für Mobilgeräte */
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;

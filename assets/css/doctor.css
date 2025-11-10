@@ -1,4 +1,17 @@
-/* Toolbar mit zentrierter Mitte + Badges rechts */
+/**
+ * MODULE: assets/css/ui/doctor-view.css
+ * Description: Enthält das komplette Layout- und Styling-System für die Arztansicht – inkl. Toolbar, KPI-Badges, Tages-Grid und responsive Spalten.
+ * Submodules:
+ *  - Toolbar & KPI Badges
+ *  - Doctor Day Grid Layout (3-Spalten-Struktur)
+ *  - Columns (Date, Measurements, Special)
+ *  - Flags & Notes Styling
+ *  - Responsive Layout (Tablet & Mobile)
+ *  - Placeholders & Empty States
+ */
+
+
+/* SUBMODULE: Toolbar & KPI Badges @public - Kopfzeile mit Titel, Datumsauswahl und Tageskennzahlen */
 #doctorCard .toolbar {
   display:flex;
   align-items:center;
@@ -23,7 +36,7 @@
   margin-left:8px;
 }
 
-/* --- Arzt-Toolbar Badges (Daily KPIs) --- */
+/* SUBMODULE: KPI Badges Styles @public - visuelle Kennzeichnung guter/schlechter Tageswerte */
 .badge {
   display:inline-block;
   padding:6px 12px;         /* etwas mehr Platz */
@@ -37,7 +50,7 @@
 .badge.bad{ border-color:var(--color-danger); color:var(--color-danger)}
 .badge.hidden{ display:none !important; }
 
-/* === Arzt-Ansicht (Daily): 3-Spalten-Layout je Tag === */
+/* SUBMODULE: Doctor Day Grid Layout @public - Hauptlayout je Tagesblock (responsive Grid-Struktur) */
 .doctor-view .doctor-day{
   display:grid;
   grid-template-columns:1fr; /* Standard = gestapelt */
@@ -73,7 +86,7 @@
   .doctor-view .col-special{ grid-area:special; }
 }
 
-/* Spalte A - Datum */
+/* SUBMODULE: Column A (Date) @internal - Datum, Wolkensymbol und Aktionen */
 .doctor-view .col-date{
   display:flex;
   flex-direction:column;
@@ -99,7 +112,7 @@
   display:flex;
   justify-content:flex-start; /* oder center, wenn du's mittig magst */
 }
-/* Spalte B - Messungen */
+/* SUBMODULE: Column B (Measurements) @internal - Blutdruck, Puls und MAP */
 .doctor-view .col-measure{ display:grid; grid-template-rows:auto 1fr; gap:6px; }
 .doctor-view .measure-head,
 .doctor-view .measure-grid{
@@ -136,7 +149,7 @@
   justify-content:flex-end;
 }
 
-/* Spalte C - Spezialinfos */
+/* SUBMODULE: Column C (Special Info) @internal - Gewicht, Bauchumfang, Flags und Notizen */
 .doctor-view .weight-line,
 .doctor-view .waist-line{
   display:flex;
@@ -228,7 +241,7 @@
   margin-bottom:4px;
 }
 
-/* Mobile-Optimierung */
+/* SUBMODULE: Responsive Layout @public - Anpassungen für Tablets und Smartphones */
 @media (max-width:599px){
   .doctor-view .measure-head,
   .doctor-view .measure-grid{
@@ -280,4 +293,5 @@
   }
 }
 
+/* SUBMODULE: Placeholders & Empty States @public - Anzeige bei fehlenden Daten oder Sperrzustand */
 .u-doctor-placeholder{ text-align:center; opacity:.7; padding:12px; }
