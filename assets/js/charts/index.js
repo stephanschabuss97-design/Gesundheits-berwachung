@@ -1,15 +1,22 @@
 ﻿'use strict';
+/**
+ * MODULE: app/charts/index.js
+ * Description: Rendert SVG/Canvas-Charts für Blutdruck- und Körperdaten, inklusive KPI-Leiste, Tooltip-Logik und Flag-Overlays.
+ * Submodules:
+ *  - globals & helpers (Supabase-Fallbacks, FocusTrap, Konfiguration)
+ *  - chartPanel controller (Panel-Lifecycle, Events, Tooltip-Handling)
+ *  - chartPanel.getFiltered (Aggregation von Cloud-/Local-Daten)
+ *  - chartPanel.draw (Rendering-Pipeline: Skalen, SVG-Layer, WHO-Ampel, Flags)
+ *  - chartPanel.ensureKpiFields / layoutKpis (KPI-Struktur & WHO-Farbskala)
+ *  - tooltip handling (Hover, Sticky, Accessibility)
+ *  - body composition bars (Fett- & Muskelanteile)
+ *  - appModules registration (global exposure im Namespace)
+ */
+
+// SUBMODULE: globals & helpers @internal - initialisiert global.AppModules, Supabase-Fallbacks und FocusTrap
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
-
-/** MODULE: CHARTS (SVG/Canvas)
- * intent: rendert Tages-Charts (BP/Body) inkl. KPI-Leiste, Flags-Overlay und Tooltips
- * contracts: haengt von DATA ACCESS.fetchDailyOverview, UTILITIES esc/fmtNum, PERF.diag Logging ab
- * exports: chartPanel
- * notes: drawing/scaling pipelines sind @extract-candidate fuer spaetere Auslagerung
- */
-/* ===== Simple SVG Chart (Daily) - final, ohne Doppel-Helper & mit WHO-Ampel ===== */
 
 /* Fallbacks nur, wenn extern nicht verfuegbar */
 const safeEnsureSupabaseClient = async () => {
@@ -327,7 +334,7 @@ async getFiltered() {
     const v = await safeGetConf("height_cm");
     const n = Number(v);
     if (Number.isFinite(n) && n > 0) return n;
-    return 183;
+    return 182;
   },
 
   // Tooltip

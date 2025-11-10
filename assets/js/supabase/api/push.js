@@ -1,13 +1,22 @@
 'use strict';
 /**
  * MODULE: supabase/api/push.js
- * intent: pushes pending capture entries to Supabase webhooks
- * exports: pushPendingToRemote
+ * Description: Überträgt lokale Pending-Einträge (health_events) per Webhook an Supabase; behandelt Fehler, Auth-Abbrüche und Response-Validierung.
+ * Submodules:
+ *  - imports (Core- und Auth-Abhängigkeiten)
+ *  - globals (Diagnose- und Hilfsfunktionen)
+ *  - delay (asynchrone Warteschleife)
+ *  - REMOTE_ID_NO_EVENTS (Sentinel für leere Events)
+ *  - callGlobal (sicherer Zugriff auf globale Funktionen)
+ *  - logPushError (einheitliches Fehlerlogging)
+ *  - pushPendingToRemote (Hauptfunktion: sendet Pending-Einträge)
  */
 
+// SUBMODULE: imports @internal - Core-HTTP und Authentifizierung
 import { fetchWithAuth } from '../core/http.js';
 import { getUserId } from '../auth/core.js';
 
+// SUBMODULE: globals @internal - Diagnose- und Utility-Hilfen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 
 const diag =
@@ -16,11 +25,13 @@ const diag =
   globalWindow?.AppModules?.diagnostics ||
   { add() {} };
 
+  // SUBMODULE: delay @internal - asynchrone Wartehilfe für schrittweise Übertragung
 const delay = (ms = 0) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
 
 // Sentinel used to mark entries that had no events to push (prevents reprocessing loops).
 export const REMOTE_ID_NO_EVENTS = -1;
 
+// SUBMODULE: callGlobal @internal - sicherer Funktionsaufruf im globalen Kontext
 const callGlobal = (name, ...args) => {
   const fn = globalWindow?.[name];
   if (typeof fn === 'function') {
@@ -29,6 +40,7 @@ const callGlobal = (name, ...args) => {
   return undefined;
 };
 
+// SUBMODULE: logPushError @internal - zentrales Logging für Push-Fehler
 const logPushError = (message, details) => {
   const msg = `[push] ${message}`;
   diag.add?.(details ? `${msg} ${details}` : msg);
@@ -41,6 +53,7 @@ const logPushError = (message, details) => {
   }
 };
 
+// SUBMODULE: pushPendingToRemote @public - überträgt alle Pending-Einträge an Supabase (POST → updateEntry)
 export async function pushPendingToRemote() {
   const url = await callGlobal('getConf', 'webhookUrl');
   if (!url) return { pushed: 0, failed: 0 };

@@ -1,15 +1,11 @@
 'use strict';
 /**
  * MODULE: supabase/api/select.js
- * intent: Generische REST-Abfrage-Schnittstelle (sbSelect) für Supabase-Tabellen
- * exports: sbSelect
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Baut REST-URLs dynamisch basierend auf Tabellenname, Filter, Order, Limit
- *   - Nutzt fetchWithAuth für autorisierte Requests
- *   - Meldet Fehler über Diagnostics und UI-Status
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Führt autorisierte, generische REST-Abfragen auf Supabase-Tabellen aus (mit Filter-, Order- und Limit-Unterstützung).
+ * Submodules:
+ *  - imports (Core- und Auth-Abhängigkeiten)
+ *  - globals (Diagnose- und Config-Zugriff)
+ *  - sbSelect (Hauptfunktion für dynamische REST-Abfragen)
  */
 
 // SUBMODULE: imports @internal - REST- und Auth-Abhängigkeiten

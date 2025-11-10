@@ -1,8 +1,24 @@
 ﻿﻿'use strict';
+/**
+ * MODULE: app/doctor.js
+ * Description: Steuert die Arzt-Ansicht – lädt Tagesdaten, verwaltet Sperrlogik (Unlock), Scrollstatus und Exportfunktionen.
+ * Submodules:
+ *  - globals (AppModules, diag, Scroll-State)
+ *  - access-control (Doctor-Unlock-Logik und Fehlerbehandlung)
+ *  - setDocBadges (Toolbar-Badges für Training und "Bad Days")
+ *  - renderDoctor (Haupt-Renderer mit Zugriffsschutz, Scrollwiederherstellung und Lösch-Handling)
+ *  - renderDoctorDay (Template-Funktion für Tageskarten)
+ *  - exportDoctorJson (Exportfunktion für alle Gesundheitsdaten als JSON)
+ *  - doctorApi (Registrierung im global.AppModules-Namespace)
+ */
+
+// SUBMODULE: globals @internal - Initialisierung globaler Handles & State
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
+
+  // SUBMODULE: access-control @internal - Unlock- und Authentifizierungslogik
   const fallbackRequireDoctorUnlock = async () => {
     diag.add?.('[doctor] requireDoctorUnlock missing – blocking access');
     console.warn('[doctor] requireDoctorUnlock not available; denying unlock');
@@ -55,6 +71,7 @@ function setDocBadges({ training, bad, visible } = {}) {
 }
 
 const __t0 = performance.now();
+
 // SUBMODULE: renderDoctor @extract-candidate - orchestrates gated render flow, fetches days, manages scroll state
 async function renderDoctor(){
   const host = $("#doctorView");
@@ -154,7 +171,6 @@ async function renderDoctor(){
     return escaped.replace(/\r?\n/g, '<br>');
   };
 
-  // Renderer je Tag
   // SUBMODULE: renderDoctorDay @internal - templates per-day HTML card for doctor view
   const renderDoctorDay = (day) => {
     const safeNotes = formatNotesHtml(day.notes);
@@ -296,6 +312,7 @@ async function exportDoctorJson(){
   const all = await getAllEntries();
   dl("gesundheitslog.json", JSON.stringify(all, null, 2), "application/json");
 }
+// SUBMODULE: doctorApi @internal - registriert öffentliche API-Funktionen im globalen Namespace
   const doctorApi = {
     renderDoctor,
     setDocBadges,

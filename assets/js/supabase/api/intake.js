@@ -1,15 +1,15 @@
 'use strict';
 /**
  * MODULE: supabase/api/intake.js
- * intent: Intakes-API für Wasser-, Salz- und Proteinwerte; kommuniziert mit Supabase REST-Endpoint
- * exports: loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, cleanupOldIntake
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Bindeglied zwischen App-Frontend und Supabase-Backend (health_events)
- *   - Unterstützt Fallbacks (RPC → Legacy REST) und automatische Wiederholung bei Fehlversuchen
- *   - Nutzt globale Hilfen (getConf, todayStr, dayIsoToMidnightIso) aus dataLocal
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Verwaltet Wasser-, Salz- und Protein-Intake über Supabase REST- oder RPC-Endpunkte mit Fallback-Logik.
+ * Submodules:
+ *  - imports (Core-, Auth- und HTTP-Abhängigkeiten)
+ *  - globals (Diagnose & Utility-Funktionen)
+ *  - getConf/todayStr/dayIsoToMidnightIso helpers
+ *  - loadIntakeToday (aktuellen Tages-Intake laden)
+ *  - saveIntakeTotals (Daten speichern via REST)
+ *  - saveIntakeTotalsRpc (Daten speichern via RPC mit Fallback)
+ *  - cleanupOldIntake (alte Einträge bereinigen)
  */
 
 // SUBMODULE: imports @internal - API- und Core-Abhängigkeiten
@@ -21,7 +21,7 @@ import { getUserId } from '../auth/core.js';
 import { toEventsUrl } from '../realtime/index.js';
 import { sbSelect } from './select.js';
 
-// SUBMODULE: globals @internal - globale Diagnose- und Utility-Hooks
+// SUBMODULE: globals @internal - globale Diagnose- und Utility-Hilfsfunktionen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -29,6 +29,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+    // SUBMODULE: getConf/todayStr/dayIsoToMidnightIso helpers @internal - Zugriff auf globale Hilfsfunktionen
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') return Promise.resolve(null);
@@ -57,7 +58,7 @@ const dayIsoToMidnightIso = (dayIso, timeZone) => {
 
 const isValidDayIso = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
-// SUBMODULE: loadIntakeToday @public - lädt Intake-Daten für aktuellen Tag
+// SUBMODULE: loadIntakeToday @public - lädt Intake-Daten für den aktuellen Tag (REST-Query)
 export async function loadIntakeToday({ user_id, dayIso }) {
   if (!user_id) return null;
   diag.add?.(`[capture] loadIntakeToday start uid=${maskUid(user_id)} day=${dayIso || ''}`);
@@ -87,7 +88,7 @@ export async function loadIntakeToday({ user_id, dayIso }) {
   };
 }
 
-// SUBMODULE: saveIntakeTotals @public - speichert aktuelle Intake-Daten via REST/POST+PATCH
+// SUBMODULE: saveIntakeTotals @public - speichert Intake-Daten via REST-POST/PATCH
 export async function saveIntakeTotals({ dayIso, totals }) {
   const url = await getConf('webhookUrl');
   const uid = await getUserId();
@@ -159,7 +160,7 @@ export async function saveIntakeTotals({ dayIso, totals }) {
   return await res2.json();
 }
 
-// SUBMODULE: saveIntakeTotalsRpc @public - speichert Intake-Daten via Supabase-RPC upsert_intake
+// SUBMODULE: saveIntakeTotalsRpc @public - speichert Intake-Daten via Supabase-RPC mit Fallback auf REST
 export async function saveIntakeTotalsRpc({ dayIso, totals }) {
   const restUrl = await getConf('webhookUrl');
   const base = baseUrlFromRest(restUrl);
@@ -231,7 +232,7 @@ export async function saveIntakeTotalsRpc({ dayIso, totals }) {
   return row;
 }
 
-// SUBMODULE: cleanupOldIntake @public - entfernt alte Intake-Einträge vor aktuellem Tag
+// SUBMODULE: cleanupOldIntake @public - löscht alte Intake-Einträge (vor aktuellem Tag)
 export async function cleanupOldIntake() {
   try {
     const rawUrl = await getConf('webhookUrl');

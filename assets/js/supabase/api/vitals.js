@@ -1,16 +1,17 @@
 'use strict';
 /**
  * MODULE: supabase/api/vitals.js
- * intent: Aggregiert Vitaldaten (Blutdruck, Körperwerte, Flags, Notizen) aus Supabase-Views
- * exports: loadBpFromView, loadBodyFromView, loadFlagsFromView, fetchDailyOverview
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Liest v_events_* Views (bp/body/day_flags) und health_events (notes)
- *   - Kombiniert Ergebnisse zu tagesweisen Einträgen (joinViewsToDaily)
- *   - Berechnet mittleren arteriellen Druck (MAP) mit globaler calcMAP()
- *   - Wird vom Arzt-/Übersichtsbereich für den Chart-Aufbau genutzt
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Aggregiert Vitaldaten aus Supabase-Views (Blutdruck, Körperwerte, Flags, Notizen) zu einer konsolidierten Tagesübersicht.
+ * Submodules:
+ *  - imports (Core- und Query-Abhängigkeiten)
+ *  - globals (Diagnose-Hook)
+ *  - calcMAPValue (Wrapper um globale MAP-Berechnung)
+ *  - loadBpFromView (Blutdruckwerte)
+ *  - loadBodyFromView (Körperwerte)
+ *  - loadFlagsFromView (Tages-Flags)
+ *  - loadNotesLastPerDay (letzte Notizen pro Tag)
+ *  - joinViewsToDaily (Kombination aller Views in Tagesobjekte)
+ *  - fetchDailyOverview (Hauptschnittstelle für Übersicht)
  */
 
 // SUBMODULE: imports @internal - Supabase-Core und Hilfsfunktionen

@@ -1,13 +1,20 @@
 'use strict';
 /**
  * MODULE: supabase/api/toggles.js
- * intent: Syncs capture toggle states with day flags fetched from Supabase
- * exports: syncCaptureToggles
+ * Description: Synchronisiert lokale Capture-Toggles (Training, Medikamente, Symptome) mit den day_flags aus Supabase.
+ * Submodules:
+ *  - imports (Auth- und Vitals-Abhängigkeiten)
+ *  - globals (Diagnose und Hilfsfunktionen)
+ *  - getTodayIso (Fallback-Datumsermittlung)
+ *  - setFlag (dynamischer Setter für Capture-Module oder globale Funktionen)
+ *  - syncCaptureToggles (Hauptfunktion: synchronisiert Flags mit aktueller Tagesansicht)
  */
 
+// SUBMODULE: imports @internal - Authentifizierungs- und Datenzugriff
 import { getUserId } from '../auth/core.js';
 import { loadFlagsFromView } from './vitals.js';
 
+// SUBMODULE: globals @internal - Diagnose- und Utility-Hilfen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   globalWindow?.diag ||
@@ -15,6 +22,7 @@ const diag =
   globalWindow?.AppModules?.diagnostics ||
   { add() {} };
 
+  // SUBMODULE: getTodayIso @internal - Datum im ISO-Format mit Fallback-Berechnung
 const getTodayIso = () => {
   const fn = globalWindow?.todayStr;
   if (typeof fn === 'function') return fn();
@@ -27,6 +35,7 @@ const getTodayIso = () => {
   }
 };
 
+// SUBMODULE: setFlag @internal - setzt Capture-Flags über Modul- oder globale Funktionen
 const setFlag = (name, value) => {
   const captureModule = globalWindow?.AppModules?.capture;
   if (captureModule && typeof captureModule[name] === 'function') {
@@ -40,6 +49,7 @@ const setFlag = (name, value) => {
   return false;
 };
 
+// SUBMODULE: syncCaptureToggles @public - gleicht aktuelle Flags mit Supabase ab und aktualisiert UI
 export async function syncCaptureToggles() {
   try {
     const uid = await getUserId();
