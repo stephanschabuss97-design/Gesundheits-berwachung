@@ -1,21 +1,26 @@
 'use strict';
 /**
  * MODULE: supabase/core/client.js
- * intent: Initialisierung und Verwaltung des Supabase-Clients (Auth + REST-Basis)
- * exports: maskUid, setSupabaseDebugPii, baseUrlFromRest, isServiceRoleKey, ensureSupabaseClient
- * version: 1.8.2
- * compat: Browser / PWA / TWA / Node-fallback
- * notes:
- *   - Handhabt sichere Initialisierung des Supabase-Clients
- *   - Prüft Konfiguration auf service_role Keys
- *   - Nutzt lokale diag.add Hooks für Logging
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Initialisiert und verwaltet den Supabase-Client, prüft Konfiguration, sichert Auth-Setup und verhindert service_role Keys.
+ * Submodules:
+ *  - imports (State-Verwaltung)
+ *  - constants & globals (globale Handles und Log-Objekt)
+ *  - safe accessors (sichere Wrapper für window.getConf / setConfigStatus)
+ *  - maskUid (PII-Schutz für User-IDs)
+ *  - setSupabaseDebugPii (Debug-Flag für Logging sensibler Daten)
+ *  - baseUrlFromRest (Extraktion der Basis-URL)
+ *  - isServiceRoleKey (Validierung gegen verbotene Keys)
+ *  - ensureSupabaseClient (Client-Erstellung mit Sicherheitsprüfungen)
+ * Notes:
+ *  - Hybrid-kompatibel (Browser/PWA/Node)
+ *  - Verhindert versehentliche Initialisierung mit service_role Key
+ *  - Version: 1.8.2 (System Integration Layer, M.I.D.A.S.)
  */
 
 // SUBMODULE: imports @internal - Supabase State-Verwaltung
 import { supabaseState } from './state.js';
 
-// SUBMODULE: constants & globals @internal - globale Handles und Log-Objekt
+// SUBMODULE: constants & globals @internal - globale Handles und Logging
 const supabaseLog = { debugLogPii: false };
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
@@ -24,7 +29,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
-
+// SUBMODULE: safe accessors @internal - gesicherter Zugriff auf window.getConf / setConfigStatus
 const getConfSafe = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') {
@@ -66,7 +71,7 @@ export function baseUrlFromRest(restUrl) {
   return i > 0 ? restUrl.slice(0, i) : null;
 }
 
-// SUBMODULE: isServiceRoleKey @public - prüft JWT Payload auf service_role
+// SUBMODULE: isServiceRoleKey @public - prüft JWT-Payload auf service_role
 export function isServiceRoleKey(raw) {
   const tok = String(raw || '').trim().replace(/^Bearer\s+/i, '');
   try {

@@ -1,18 +1,21 @@
 'use strict';
 /**
  * MODULE: supabase/core/http.js
- * intent: Einheitliches, fehlertolerantes Fetch- und Auth-Handling für REST-Requests
- * exports: withRetry, fetchWithAuth
- * version: 1.8.2
- * compat: Browser / PWA / TWA
- * notes:
- *   - Implementiert robustes Fetch mit Auth-Header-Cache und automatischem Refresh
- *   - Enthält Exponential-Backoff bei 5xx-Fehlern und Session-Retry bei 401
- *   - Zentraler Baustein für alle Supabase REST-Aufrufe in API-Modulen
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Führt zentrale Fetch- und Authentifizierungslogik für Supabase-REST-Aufrufe mit Retry, Header-Cache und Timeout durch.
+ * Submodules:
+ *  - imports (Client & State Utilities)
+ *  - globals (Diagnostics / Window Binding)
+ *  - util (Sleep-Helfer)
+ *  - withRetry (generischer Retry-Mechanismus mit Exponential Backoff)
+ *  - fetchWithAuth (authentifiziertes Fetch mit Header-Caching, Auto-Refresh & Timeout)
+ * Notes:
+ *  - Verwendet Diagnose-Logging über window.diag.
+ *  - Unterstützt automatisches Session-Refresh bei 401/403.
+ *  - Enthält Kurzzeit-Timeout für hängende Requests (10s).
+ *  - Version: 1.8.2 (System Integration Layer, M.I.D.A.S.)
  */
 
-// SUBMODULE: imports @internal - Supabase Client und Header Cache Utilities
+// SUBMODULE: imports @internal - Supabase Client und Header-Cache-Funktionen
 import { ensureSupabaseClient } from './client.js';
 import {
   getCachedHeaders,
@@ -23,7 +26,7 @@ import {
   clearHeaderCache
 } from './state.js';
 
-// SUBMODULE: globals @internal - Diagnose und Window Binding
+// SUBMODULE: globals @internal - Diagnostik-Objekt und globale Handles
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const diag =
   (globalWindow?.diag ||
@@ -31,11 +34,11 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
-    // SUBMODULE: util - Hilfsfunktionen (sleep)
+// SUBMODULE: util @internal - Sleep-Helper für Backoff-Zeiten
 const sleep = (ms = 0) =>
   new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
-// SUBMODULE: retry-wrapper @public - generische Wiederholungslogik mit Exponential Backoff
+// SUBMODULE: withRetry @public - generischer Wiederholungsmechanismus mit Exponential Backoff
 export async function withRetry(fn, { tries = 3, base = 300 } = {}) {
   let attempts = Number.isFinite(tries) ? Math.floor(tries) : 0;
   if (attempts <= 0) attempts = 1;
@@ -53,7 +56,7 @@ export async function withRetry(fn, { tries = 3, base = 300 } = {}) {
   throw lastErr ?? new Error('withRetry: all attempts failed');
 }
 
-// SUBMODULE: fetchWithAuth @public - authentifiziertes Fetch mit Header-Cache und Retry-Strategien
+// SUBMODULE: fetchWithAuth @public - führt REST-Aufrufe mit Auth-Headern, Session-Refresh und Retry-Logik aus
 export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, maxAttempts = 2 } = {}) {
   const supa = await ensureSupabaseClient();
   if (!supa) {
@@ -65,6 +68,7 @@ export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, ma
     throw err;
   }
 
+    // Hilfsfunktionen: Auth-Refresh und Signalsteuerung
   const signalAuth = () => {
     try {
       window.showLoginOverlay?.(true);
@@ -90,6 +94,7 @@ export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, ma
     return await getHeaders();
   };
 
+  // Request-Ausführung mit Timeout und Wiederholungen
   let headers = await loadHeaders(false);
   if (!headers) {
     headers = await loadHeaders(true);

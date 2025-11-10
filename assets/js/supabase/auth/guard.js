@@ -1,19 +1,32 @@
 'use strict';
 /**
  * MODULE: supabase/auth/guard.js
- * intent: Zugriffsschutz, PIN-/Passkey-Handling und Doctor-Lock-Freischaltung
- * exports: setDoctorAccess, requireDoctorUnlock, resumeAfterUnlock, bindAppLockButtons, authGuardState
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Implementiert AppLock-System (PIN + Passkey/WebAuthn)
- *   - Verwaltet UI-Lock, Secure Random, Hashing (SHA-256, PBKDF2)
- *   - Steuert Zugriffsfreigabe auf Arztbereich (DoctorTab, Chart)
- *   - Nutzt Konfigurations-API (getConf/putConf) als Speicher
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Verwaltet AppLock, PIN-/Passkey-Handling und Doctor-Unlock-Mechanismen inkl. Secure Crypto und UI-Integration.
+ * Submodules:
+ *  - imports (Core + UI Overlay)
+ *  - globals (Diagnostics + Window)
+ *  - config accessors (getConf / putConf)
+ *  - state (interne Lock-Flags)
+ *  - random utils (sichere Zufallsbytes)
+ *  - base64 utils (Base64- und URL-Enc/Dec)
+ *  - constants (Lock-Keys & Parameter)
+ *  - WebAuthn helpers (RP-Domain + Availability)
+ *  - UI helpers (Overlay-Steuerung & Messages)
+ *  - promptForPin (Interaktiver PIN-Dialog)
+ *  - crypto utils (SHA-256, PBKDF2, SubtleCrypto)
+ *  - setDoctorAccess (Arztbereich aktivieren/deaktivieren)
+ *  - requireDoctorUnlock (Login-/Entsperr-Workflow)
+ *  - resumeAfterUnlock (Nach-Entsperrungs-Aktion)
+ *  - registerPasskey (WebAuthn-Setup)
+ *  - unlockWithPasskey (Passkey-Entsperrung)
+ *  - setPinInteractive (PIN-Erstellung)
+ *  - unlockWithPin (PIN-Entsperrung)
+ *  - bindAppLockButtons (UI-Eventbindungen)
+ *  - authGuardState (Getter/Setter für Lock-Status)
  */
 
-// SUBMODULE: imports @internal - Auth Core und UI-Overlay
+
+// SUBMODULE: imports @internal - Auth Core & UI Overlay
 import { isLoggedInFast } from './core.js';
 import { showLoginOverlay } from './ui.js';
 
@@ -26,7 +39,7 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
-// SUBMODULE: config accessors @internal - getConf/putConf aus globalWindow
+// SUBMODULE: config accessors @internal - Wrapper für getConf / putConf aus globalWindow
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') {
@@ -39,7 +52,6 @@ const getConf = (...args) => {
   }
 };
 
-// SUBMODULE: config accessors @internal - getConf/putConf aus globalWindow
 const putConf = (...args) => {
   const fn = globalWindow?.putConf;
   if (typeof fn !== 'function') {
@@ -122,7 +134,6 @@ const base64Encode = (binary) => {
   throw new Error('Supabase guard: base64 encode not supported in this environment');
 };
 
-// SUBMODULE: base64 utils @internal - Basis- und URL-sichere Codierung
 const base64Decode = (b64) => {
   if (typeof b64 !== 'string' || !b64.length) {
     throw new Error('Supabase guard: base64 decode expects non-empty string');
@@ -172,7 +183,7 @@ const b64u = {
   }
 };
 
-// SUBMODULE: constants @internal - Schlüssel und Parameter
+// SUBMODULE: constants @internal - interne Schlüssel & Parameter für Lock-State
 const LOCK_ENABLED_KEY = 'app_lock_enabled';
 const LOCK_CRED_ID_KEY = 'lock_cred_id';
 const LOCK_PIN_HASH_KEY = 'lock_pin_hash';
@@ -182,7 +193,7 @@ const LOCK_PIN_ITER_KEY = 'lock_pin_iter';
 const LOCK_LAST_OK_KEY = 'lock_last_ok';
 const LOCK_PIN_DEFAULT_ITER = 120000;
 
-// SUBMODULE: WebAuthn helpers @internal - RP-Domain-Auflösung & Check
+// SUBMODULE: WebAuthn helpers @internal - Prüft Verfügbarkeit & Domainauflösung
 const isWebAuthnAvailable = async () => {
   if (!globalWindow?.PublicKeyCredential) return false;
   try {
@@ -213,7 +224,7 @@ const buildRp = () => {
   return rp;
 };
 
-// SUBMODULE: UI helpers @internal - Overlay-Steuerung und Messages
+// SUBMODULE: UI helpers @internal - Overlay-Steuerung & Statusanzeige
 const setLockMsg = (msg) => {
   const el = document.getElementById('lockMsg');
   if (el) el.textContent = msg || '';
@@ -275,6 +286,7 @@ export function lockUi(on) {
 const focusableSelectors =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
+  // SUBMODULE: promptForPin @internal - erzeugt interaktives PIN-Eingabedialog-Overlay
 const promptForPin = () =>
   new Promise((resolve) => {
     const previousActive = document.activeElement;
@@ -406,7 +418,7 @@ const promptForPin = () =>
     input.focus();
   });
 
-  // SUBMODULE: crypto utils @internal - SubtleCrypto, SHA-256, PBKDF2
+// SUBMODULE: crypto utils @internal - SubtleCrypto, SHA-256 & PBKDF2-basierte Hashingfunktionen
 const getSubtleCrypto = () => {
   const cryptoObj =
     globalWindow?.crypto ||
@@ -473,7 +485,7 @@ const derivePinHash = async (pin, saltBytes, iterations) => {
   }
 };
 
-// SUBMODULE: setDoctorAccess @public - UI-Aktivierung des Arztbereichs
+// SUBMODULE: setDoctorAccess @public - aktiviert/deaktiviert Arzt-UI-Elemente
 export function setDoctorAccess(enabled) {
   const tabBtn = document.getElementById('tab-doctor');
   if (tabBtn) {
@@ -488,7 +500,7 @@ export function setDoctorAccess(enabled) {
   }
 }
 
-// SUBMODULE: requireDoctorUnlock @public - prüft Login + Passkey/PIN-Entsperrung
+// SUBMODULE: requireDoctorUnlock @public - prüft Login & startet Entsperr-Workflow (PIN/Passkey)
 export async function requireDoctorUnlock() {
   if (!(await isLoggedInFast())) {
     showLoginOverlay();
@@ -538,7 +550,7 @@ export async function requireDoctorUnlock() {
   return false;
 }
 
-// SUBMODULE: resumeAfterUnlock @public - führt beabsichtigte Aktion nach Entsperrung aus
+// SUBMODULE: resumeAfterUnlock @public - führt nach Entsperrung die vorgesehene Aktion aus
 export async function resumeAfterUnlock(intent) {
   const target = intent || __pendingAfterUnlock || 'doctor';
   __pendingAfterUnlock = null;
@@ -561,7 +573,7 @@ export async function resumeAfterUnlock(intent) {
   await globalWindow?.setTab?.('doctor');
 }
 
-// SUBMODULE: registerPasskey @internal - legt neuen Passkey via WebAuthn an
+// SUBMODULE: registerPasskey @internal - registriert neuen Passkey via WebAuthn
 const registerPasskey = async () => {
   try {
     const challenge = u8(32);

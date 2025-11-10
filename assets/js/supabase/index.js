@@ -1,15 +1,17 @@
 'use strict';
 /**
  * MODULE: supabase/index.js
- * intent: Zentraler Barrel für Supabase-APIs (Core, Auth, Realtime, API-Layer)
- * exports: SupabaseAPI (aggregated)
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Aggregiert alle Submodule aus core/, api/, auth/, realtime/
- *   - Prüft Konflikte bei gleichnamigen Exports und loggt Warnungen
- *   - Bindet SupabaseAPI global unter window.AppModules.supabase für Legacy-Kompatibilität
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Aggregiert Supabase-Subsysteme (Core, Auth, API, Realtime) zu einem zentralen Exportobjekt.
+ * Submodules:
+ *  - imports (bindet alle Submodule)
+ *  - aggregation (kombiniert Exporte & erkennt Konflikte)
+ *  - export (stellt SupabaseAPI global & als ESM bereit)
+ *  - notifySupabaseReady (sendet Ready-Event nach erfolgreicher Initialisierung)
+ *  - scheduleSupabaseReady (koordiniert Ready-Dispatch mit DOM-Lifecycle)
+ * Notes:
+ *  - Prüft doppelte Exporte und protokolliert Konflikte.
+ *  - Hybrid-kompatibel: global + modular.
+ *  - Version: 1.8.2 (System Integration Layer, M.I.D.A.S.)
  */
 
 // SUBMODULE: imports @internal - bindet Supabase-Submodule (Core, Auth, API)
@@ -27,7 +29,7 @@ import * as select from './api/select.js';
 import * as push from './api/push.js';
 import * as toggles from './api/toggles.js';
 
-// SUBMODULE: aggregation @internal - kombiniert Exporte, erkennt Konflikte
+// SUBMODULE: aggregation @internal - kombiniert alle Module, erkennt doppelte Exporte
 const MODULE_SOURCES = [
   ['legacy', LegacySupabaseAPI],
   ['state', state],
@@ -74,7 +76,7 @@ if (conflicts.length) {
   console.warn(`[supabase/index] Duplicate export keys detected: ${summary}`);
 }
 
-// SUBMODULE: export @public - zentraler Aggregat-Export & globale Bindung
+// SUBMODULE: export @public - stellt SupabaseAPI als Aggregat bereit + globale Bindung
 export const SupabaseAPI = aggregated;
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
@@ -94,6 +96,7 @@ if (globalWindow) {
   }
 }
 
+// SUBMODULE: notifySupabaseReady @internal - löst CustomEvent 'supabase:ready' aus
 const notifySupabaseReady = () => {
   const doc = globalWindow?.document;
   if (!doc || typeof doc.dispatchEvent !== 'function') return;
@@ -118,6 +121,7 @@ const notifySupabaseReady = () => {
   }
 };
 
+// SUBMODULE: enqueueReadyDispatch @internal - führt Eventdispatch asynchron (microtask-basiert) aus
 const enqueueReadyDispatch = (callback) => {
   if (typeof queueMicrotask === 'function') {
     queueMicrotask(callback);
@@ -126,6 +130,7 @@ const enqueueReadyDispatch = (callback) => {
   Promise.resolve().then(callback);
 };
 
+// SUBMODULE: scheduleSupabaseReady @internal - markiert SupabaseAPI als bereit und löst Event zum passenden Zeitpunkt aus
 const scheduleSupabaseReady = () => {
   if (!globalWindow) return;
   SupabaseAPI.isReady = true;

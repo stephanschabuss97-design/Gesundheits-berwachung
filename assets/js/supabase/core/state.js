@@ -1,18 +1,16 @@
 'use strict';
 /**
  * MODULE: supabase/core/state.js
- * intent: Zentraler In-Memory-State für Supabase-Client, Auth-Status und Header-Cache
- * exports: supabaseState, cacheHeaders, clearHeaderCache, getCachedHeaders, getCachedHeadersAt, getHeaderPromise, setHeaderPromise
- * version: 1.8.2
- * compat: Runtime (Browser / Node / PWA)
- * notes:
- *   - Enthält alle Supabase-Session- und Header-Informationen im RAM
- *   - Wird von client.js, http.js und auth/core.js gemeinsam genutzt
- *   - Kein permanenter Storage – volatile, resetbar per clearHeaderCache()
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Verwaltet zentralen Supabase-Runtime-State (Client, Auth-Session, Header-Cache) im RAM.
+ * Submodules:
+ *  - state (Hauptobjekt mit globalem Supabase-Zustand)
+ *  - header cache utilities (Cache- und Promise-Verwaltung für Auth-Header)
+ * Notes:
+ *  - Kein persistenter Speicher; ausschließlich flüchtige Laufzeitdaten.
+ *  - Wird gemeinsam genutzt von client.js, http.js und auth/core.js.
  */
 
-// SUBMODULE: state @internal - globaler Supabase-Zustand (Auth + Header + Session)
+// SUBMODULE: state @internal - globaler Supabase-Zustand (Client, Auth-Status, Header-Cache)
 export const supabaseState = {
   sbClient: null,
   cachedHeaders: null,
@@ -27,7 +25,7 @@ export const supabaseState = {
   lastUserId: null
 };
 
-// SUBMODULE: header cache utilities @public - Verwaltung von Auth-Headern
+// SUBMODULE: header cache utilities @public - steuert Cache und Promise-Verwaltung
 export function cacheHeaders(headers) {
   supabaseState.cachedHeaders = headers;
   supabaseState.cachedHeadersAt = Date.now();

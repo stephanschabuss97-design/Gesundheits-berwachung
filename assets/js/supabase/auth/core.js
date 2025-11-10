@@ -1,15 +1,22 @@
 'use strict';
 /**
  * MODULE: supabase/auth/core.js
- * intent: Steuerung des Authentifizierungs- und Session-Status (Login, Hooks, Grace Period)
- * exports: requireSession, isLoggedInFast, watchAuthState, afterLoginBoot, getUserId, initAuth, resetAuthHooks
- * version: 1.8.2
- * compat: ESM + Monolith (Hybrid)
- * notes:
- *   - Verwaltet Supabase-Sessionzustand über supabaseState
- *   - Bindet UI-Hooks (Overlay, Status, DoctorAccess) und globale Realtime-Events
- *   - Enthält Fallback-Mechanismen bei Timeouts und Client-Fehlern
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Steuert Authentifizierungszustand, Session-Prüfung, Hooks und Grace-Period-Handling für Supabase-Login.
+ * Submodules:
+ *  - imports (Core-State & Client-Helfer)
+ *  - globals (Diagnose & Window)
+ *  - constants (Auth-Timing & Defaults)
+ *  - fallbackUserId (UserID-Fallback bei Fehlern)
+ *  - authHooks (Hook-Verwaltung)
+ *  - Hook-Call-Handler (sichere Hook-Ausführung)
+ *  - authGrace (Grace-Period-Logik)
+ *  - requireSession (Session-Prüfung)
+ *  - isLoggedInFast (schnelle Login-Erkennung)
+ *  - watchAuthState (Realtime-Listener)
+ *  - afterLoginBoot (Post-Login-Initialisierung)
+ *  - getUserId (User-ID mit Timeout & Fallback)
+ *  - initAuth (Hook-Registrierung)
+ *  - resetAuthHooks (Hook-Reset)
  */
 
 // SUBMODULE: imports @internal - Supabase Core-State & Client-Helfer

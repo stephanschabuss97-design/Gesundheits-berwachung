@@ -1,25 +1,33 @@
 'use strict';
 /**
  * MODULE: supabase/realtime/index.js
- * intent: Realtime-Wrapper inklusive Resume-Flows (Focus/Visibility/PageShow)
- * exports: setupRealtime, teardownRealtime, resumeFromBackground, toEventsUrl
- * version: 1.8.2
- * compat: Browser / PWA / TWA
- * notes:
- *   - Delegiert Setup/Teardown an bestehende window.*-Implementierungen (Legacy)
- *   - Enthält native Resume-Implementierung (vormals index.html)
- *   - Verwendet Fallbacks, um fehlende Globals tolerant zu behandeln
- * author: System Integration Layer (M.I.D.A.S. v1.8)
+ * Description: Realtime-Wrapper mit Resume-/Recovery-Flow, bindet Auth & UI-State nach App-Hintergrundaktivität neu.
+ * Submodules:
+ *  - imports (auth-core dependencies, global fallbacks)
+ *  - capturedSetup / capturedTeardown (Delegation an Legacy-Implementierungen)
+ *  - diag logger (interne Diagnosehilfe)
+ *  - resumeState (Zustandsverwaltung für Resume-Flow)
+ *  - helpers (asyncMaybe, callMaybe, doubleRaf, realtimeNeedsSetup)
+ *  - resumeFromBackgroundInternal (Haupt-Resume-Sequenz)
+ *  - setupRealtime / teardownRealtime / resumeFromBackground / toEventsUrl (öffentliche API)
+ * Notes:
+ *  - Hybrid-kompatibel: nutzt vorhandene window.*-Funktionen, fällt bei Bedarf auf native JS zurück.
+ *  - Loggt Diagnosen tolerant, um Runtime-Fehler im PWA-/TWA-Betrieb zu vermeiden.
+ *  - Version 1.8.2 (System Integration Layer, M.I.D.A.S.)
  */
 
+// SUBMODULE: imports @internal - bindet Auth-Abhängigkeiten für Grace-Handling
 import { scheduleAuthGrace, finalizeAuthState } from '../auth/core.js';
 
+// SUBMODULE: globals @internal - sichert window/document Handles ab
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const globalDocument = typeof document !== 'undefined' ? document : undefined;
 
+// SUBMODULE: defaults @internal - Fallbacks für Legacy-Kompatibilität
 const defaultSetupRealtime = async () => undefined;
 const defaultTeardownRealtime = () => undefined;
 
+// SUBMODULE: capturedSetup/Teardown @internal - verwendet globale Implementierungen oder Fallbacks
 const capturedSetup =
   typeof globalWindow?.setupRealtime === 'function'
     ? globalWindow.setupRealtime
@@ -30,12 +38,14 @@ const capturedTeardown =
     ? globalWindow.teardownRealtime
     : defaultTeardownRealtime;
 
+    // SUBMODULE: diag @internal - Diagnostik-Schnittstelle mit tolerantem Fallback
 const diag =
   globalWindow?.diag ||
   globalWindow?.AppModules?.diag ||
   globalWindow?.AppModules?.diagnostics ||
   { add() {}, init() {} };
 
+  // SUBMODULE: resumeState @internal - Trackt Resume-Zustand & Cooldown
 const resumeState = {
   lastResumeAt: 0,
   running: false
@@ -43,6 +53,7 @@ const resumeState = {
 
 const RESUME_COOLDOWN_MS = 0;
 
+// SUBMODULE: helpers @internal - asynchrone Utility-Helfer
 const asyncMaybe = async (fn, ...args) => {
   if (typeof fn !== 'function') return undefined;
   return fn(...args);
@@ -70,6 +81,7 @@ const realtimeNeedsSetup = () => {
   return !ready || channels.length === 0;
 };
 
+// SUBMODULE: resumeFromBackgroundInternal @internal - orchestriert kompletten Resume-Flow
 async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
   const now = Date.now();
   if (resumeState.running) {
@@ -245,18 +257,22 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
   }
 }
 
+// SUBMODULE: setupRealtime @public - ruft Legacy- oder Standard-Setup auf
 export async function setupRealtime(...args) {
   return capturedSetup(...args);
 }
 
+// SUBMODULE: teardownRealtime @public - beendet Realtime-Session
 export function teardownRealtime(...args) {
   return capturedTeardown(...args);
 }
 
+// SUBMODULE: resumeFromBackground @public - öffentlicher Resume-Trigger (Proxy für resumeFromBackgroundInternal)
 export async function resumeFromBackground(options = {}) {
   return resumeFromBackgroundInternal(options);
 }
 
+// SUBMODULE: toEventsUrl @public - ersetzt REST-Endpunkt durch health_events-Ressource
 export function toEventsUrl(restUrl) {
   try {
     const url = String(restUrl || '').trim();
