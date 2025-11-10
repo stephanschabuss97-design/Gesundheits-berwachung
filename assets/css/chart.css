@@ -18,12 +18,15 @@
   height:100vh;      /* fallback for browsers ohne dvh */
   max-height:100vh;
   border-radius:0;
-  display:flex;
+  display:none;
   flex-direction:column;
   --chart-header-height:44px;
 }
+.panel.chart.is-open{
+  display:flex;
+}
 @supports (height: 100dvh){
-  .panel.chart{
+  .panel.chart.is-open{
     height:100dvh;
     max-height:100dvh;
   }

@@ -54,7 +54,9 @@ const chartPanel = {
     this.legend = $("#chartLegend");
 
     // Panel initial nicht anzeigen
-    if (this.el) this.el.style.display = "none";
+    if (this.el) {
+      this.el.classList.remove('is-open');
+    }
 
     // Close + Metric-Select
     const closeBtn = $("#chartClose");
@@ -175,7 +177,8 @@ const chartPanel = {
   show() {
     this.open = true;
     if (this.el) {
-      this.el.style.display = "flex";
+      this.el.classList.add('is-open');
+      this.el.style.removeProperty('display');
       getFocusTrap()?.activate?.(this.el);
     }
   },
@@ -184,7 +187,7 @@ const chartPanel = {
   hide() {
     this.open = false;
     if (this.el) {
-      this.el.style.display = "none";
+      this.el.classList.remove('is-open');
       getFocusTrap()?.deactivate?.();
     }
     this.tipSticky = false;
