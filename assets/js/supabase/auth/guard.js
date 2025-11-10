@@ -256,9 +256,6 @@ const toUserHandleBytes = (value) => {
   for (let i = 0; i < len; i++) {
     result[i] = normalized.charCodeAt(i) & 0xff;
   }
-  if (len === 0) {
-    result[0] = 0;
-  }
   return result;
 };
 
@@ -625,6 +622,53 @@ export async function resumeAfterUnlock(intent) {
 }
 
 // SUBMODULE: registerPasskey @internal - registriert neuen Passkey via WebAuthn
+const buildPublicKeyOptions = ({ challenge, rp, user, residentKeyMode }) => ({
+  challenge,
+  rp,
+  user,
+  pubKeyCredParams: [
+    { type: 'public-key', alg: -7 },
+    { type: 'public-key', alg: -257 }
+  ],
+  timeout: 60000,
+  authenticatorSelection: {
+    authenticatorAttachment: 'platform',
+    userVerification: 'required',
+    residentKey: residentKeyMode
+  },
+  attestation: 'none'
+});
+
+const createPasskeyWithFallback = async (options) => {
+  const navigatorCreds = globalWindow?.navigator?.credentials;
+  if (!navigatorCreds?.create) {
+    throw new Error('WebAuthn nicht verfügbar.');
+  }
+  const tryCreate = async (residentKeyMode) => {
+    const pkOptions = buildPublicKeyOptions({
+      ...options,
+      residentKeyMode
+    });
+    return navigatorCreds.create({ publicKey: pkOptions });
+  };
+  const preferredMode = options.residentKeyMode || 'required';
+  try {
+    return await tryCreate(preferredMode);
+  } catch (err) {
+    const name = err?.name || '';
+    const unsupported =
+      name === 'NotSupportedError' ||
+      name === 'InvalidStateError' ||
+      (name === 'NotAllowedError' && preferredMode === 'required');
+    if (!unsupported || preferredMode === 'preferred') {
+      throw err;
+    }
+    diag.add?.(`[guard] residentKey required failed (${name}), retrying with preferred`);
+    setLockMsg('Gerät unterstützt keinen plattformweiten Passkey - versuche Standardmodus...');
+    return tryCreate('preferred');
+  }
+};
+
 const registerPasskey = async () => {
   try {
     const sessionUser = await getSessionUser();
@@ -632,6 +676,16 @@ const registerPasskey = async () => {
       setLockMsg('Bitte zuerst bei Supabase anmelden.');
       showLoginOverlay();
       return false;
+    }
+    const navigatorCreds = globalWindow?.navigator?.credentials;
+    if (!navigatorCreds?.create || !globalWindow?.PublicKeyCredential) {
+      setLockMsg('WebAuthn wird von diesem Gerät nicht unterstützt.');
+      return false;
+    }
+    const uvPlatformAvailable = await isWebAuthnAvailable();
+    const residentKeyMode = uvPlatformAvailable ? 'required' : 'preferred';
+    if (!uvPlatformAvailable) {
+      diag.add?.('[guard] platform authenticator not available - using residentKey preferred');
     }
     const challenge = u8(32);
     const rp = buildRp();
@@ -641,38 +695,30 @@ const registerPasskey = async () => {
       name: sessionUser.email,
       displayName
     };
-    const cred = await globalWindow?.navigator?.credentials?.create({
-      publicKey: {
-        challenge,
-        rp,
-        user,
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 },
-          { type: 'public-key', alg: -257 }
-        ],
-        timeout: 60000,
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          residentKey: 'required'
-        },
-        attestation: 'none'
-      }
+    const cred = await createPasskeyWithFallback({
+      challenge,
+      rp,
+      user,
+      residentKeyMode
     });
     if (!cred) throw new Error('Keine Antwort vom Authenticator.');
     const idB64 = b64u.enc(cred.rawId);
     await putConf(LOCK_CRED_ID_KEY, idB64);
     await putConf(LOCK_ENABLED_KEY, true);
-    const waAvailable = await isWebAuthnAvailable();
     configureLockOverlay({
       hasPasskey: true,
-      webAuthnAvailable: waAvailable,
+      webAuthnAvailable: uvPlatformAvailable,
       message: `Passkey eingerichtet - angemeldet als ${displayName}.`
     });
     setLockMsg('Passkey eingerichtet.');
     return true;
   } catch (e) {
-    setLockMsg('Passkey-Setup fehlgeschlagen: ' + (e?.message || e));
+    const errName = e?.name || '';
+    if (errName === 'NotAllowedError') {
+      setLockMsg('Passkey-Setup abgebrochen.');
+    } else {
+      setLockMsg('Passkey-Setup fehlgeschlagen: ' + (e?.message || e));
+    }
     return false;
   }
 };
