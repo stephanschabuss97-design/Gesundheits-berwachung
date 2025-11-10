@@ -642,7 +642,7 @@ const buildPublicKeyOptions = ({ challenge, rp, user, residentKeyMode }) => ({
 const createPasskeyWithFallback = async (options) => {
   const navigatorCreds = globalWindow?.navigator?.credentials;
   if (!navigatorCreds?.create) {
-    throw new Error('WebAuthn nicht verfügbar.');
+    throw new Error('WebAuthn nicht verfuegbar.');
   }
   const tryCreate = async (residentKeyMode) => {
     const pkOptions = buildPublicKeyOptions({
@@ -656,15 +656,12 @@ const createPasskeyWithFallback = async (options) => {
     return await tryCreate(preferredMode);
   } catch (err) {
     const name = err?.name || '';
-    const unsupported =
-      name === 'NotSupportedError' ||
-      name === 'InvalidStateError' ||
-      (name === 'NotAllowedError' && preferredMode === 'required');
+    const unsupported = name === 'NotSupportedError' || name === 'InvalidStateError';
     if (!unsupported || preferredMode === 'preferred') {
       throw err;
     }
     diag.add?.(`[guard] residentKey required failed (${name}), retrying with preferred`);
-    setLockMsg('Gerät unterstützt keinen plattformweiten Passkey - versuche Standardmodus...');
+    setLockMsg('Geraet unterstuetzt keinen plattformweiten Passkey - versuche Standardmodus...');
     return tryCreate('preferred');
   }
 };
