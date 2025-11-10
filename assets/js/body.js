@@ -1,4 +1,16 @@
 'use strict';
+/**
+ * MODULE: body.js
+ * Description: Verarbeitet Körperdaten und Tageszusammenfassungen inkl. Validierung, Flags, Kommentare und automatischer UI-Synchronisierung.
+ * Submodules:
+ *  - resetBodyPanel (UI-Reset)
+ *  - saveDaySummary (Body- & Flag-Logik)
+ *  - saveFlagsCommentNote (Flag-Kommentar)
+ *  - prefillBodyInputs (UI-Vorbelegung)
+ *  - API export & global attach
+ */
+
+// SUBMODULE: namespace init @internal - initialisiert globales Modul-Objekt
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
@@ -17,12 +29,6 @@
     if (focus && weightEl) weightEl.focus();
   }
 
-  /** MODULE: BODY (Koerperwerte)
-   * intent: verarbeitet Tageszusammenfassung, Flags und Body-Werte Validierung
-   * contracts: nutzt DATA ACCESS.saveDaySummary/saveFlagsCommentNote, CAPTURE Toggles
-   * exports: saveDaySummary, saveFlagsCommentNote
-   * notes: Body- und Flag-Eintraege konsistent dokumentieren; nur Kommentare
-   */
   // SUBMODULE: saveDaySummary @internal - validates and saves body/flags daily summary
   async function saveDaySummary(options = {}){
     const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
@@ -151,8 +157,7 @@
   return saved;
   }
 
-  /** END MODULE */
-
+  // SUBMODULE: saveFlagsCommentNote @public - speichert zusätzlichen Kommentar zu Flag-Einträgen
   async function saveFlagsCommentNote(date, text){
     const trimmed = (text || '').trim();
     if (!trimmed) return false;
@@ -160,6 +165,7 @@
     return true;
   }
 
+  // SUBMODULE: prefillBodyInputs @internal - lädt letzte Körperwerte und füllt Eingabefelder vor
   async function prefillBodyInputs(){
     const weightEl = document.getElementById('weightDay');
     const waistEl = document.getElementById('input-waist-cm');
@@ -197,6 +203,8 @@
       applyValues(null);
     }
   }
+  
+  // SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden und erweitert AppModules.body
   const bodyApi = {
     resetBodyPanel: resetBodyPanel,
     saveDaySummary: saveDaySummary,

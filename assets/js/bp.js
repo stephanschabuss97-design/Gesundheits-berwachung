@@ -1,14 +1,25 @@
 'use strict';
+/**
+ * MODULE: bp.js
+ * Description: Verwaltet Blutdruck-Erfassung, Validierung und Persistierung inkl. Kommentar-Pflicht, Panel-Reset und Datensynchronisation.
+ * Submodules:
+ *  - requiresBpComment (public, Kommentar-Pflichtprüfung)
+ *  - updateBpCommentWarnings (public, UI-Hinweislogik)
+ *  - bpFieldId / bpSelector (internal, ID-Mapping)
+ *  - resetBpPanel (public, Panel-Reset)
+ *  - blockHasData (internal, Eingabe-Erkennung)
+ *  - saveBlock (public, Messwert-Speicherung)
+ *  - baseEntry (internal, Standard-Eintrag)
+ *  - appendNote (internal, Zusatz-Notizen)
+ *  - allocateNoteTimestamp (internal, Zeitstempel-Generator)
+ *  - API export & global attach (internal)
+ */
+
+// SUBMODULE: namespace init @internal - initialisiert globales Modul-Objekt
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
-
-  /** MODULE: BP (Blood Pressure)
-   * intent: BP-spezifische Validierungen, Kontextumschaltung und Panel-Reset
-   * contracts: arbeitet mit CAPTURE UI, DATA ACCESS.saveBlock, CHARTS-Schwellenwerten
-   * exports: requiresBpComment, updateBpCommentWarnings, resetBpPanel
-   * notes: UI-Validierung strikt halten; keine DOM-Umbauten
-   */
+   
   // SUBMODULE: requiresBpComment @internal - enforces comment when vitals exceed thresholds
   function requiresBpComment(which){
     const sys = Number($(bpSelector('sys', which))?.value);
@@ -29,7 +40,6 @@
     });
   }
 
-  /* === Panel Reset Helpers (V1.5.7) === */
   // SUBMODULE: bpFieldId @internal - maps BP field ids for capture contexts
   function bpFieldId(base, ctx){
     if (base === 'sys' && ctx === 'M') return 'captureAmount';
@@ -55,14 +65,7 @@
       if (target) target.focus();
     }
   }
-  /** END MODULE */
 
-  /** MODULE: BP (Blood Pressure)
-   * intent: verarbeitet Blutdruck-Erfassung, Validation und Persistierung
-   * contracts: interagiert mit DATA ACCESS.addEntry/syncWebhook, CAPTURE Toggles, UI-Warnungen
-   * exports: saveBlock, appendNote, allocateNoteTimestamp
-   * notes: Validierungslogik unveraendert dokumentieren; nur Kommentare
-   */
   // SUBMODULE: blockHasData @internal - detects if BP panel has any input before saving
   function blockHasData(which){
     const getVal = (sel) => document.querySelector(sel)?.value?.trim();
@@ -73,6 +76,7 @@
     const comment = (commentEl?.value || "").trim();
     return !!(sys || dia || pulse || comment);
   }
+
   // SUBMODULE: saveBlock @internal - persists BP measurements and optional comments
   async function saveBlock(contextLabel, which, includeWeight=false, force=false){
   const date = $("#date").value || todayStr();
@@ -208,8 +212,7 @@
     return { iso, ts: base.getTime(), time: iso.slice(11,16) };
   }
 
-  /** END MODULE */
-
+// SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden unter AppModules.bp
   const bpApi = {
     requiresBpComment: requiresBpComment,
     updateBpCommentWarnings: updateBpCommentWarnings,

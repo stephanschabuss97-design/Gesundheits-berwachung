@@ -1,4 +1,21 @@
 ﻿'use strict';
+/**
+ * MODULE: assets/js/main.js
+ * Description: Haupt-Bootstrapping und Orchestrierung des Monolith-Systems (Supabase, Capture, Doctor, UI)
+ * Submodules:
+ *  - getSupabaseApi / createSupabaseFn (SupabaseAPI access & wrappers)
+ *  - waitForSupabaseApi (API readiness handler)
+ *  - ensureModulesReady (Dependency validator)
+ *  - UI Refresh Core (requestUiRefresh / runUiRefresh)
+ *  - Auth Guard & Doctor Access
+ *  - getHeaders / Header Caching / JWT Validation
+ *  - Capture & Intake Handling (reset, status, flags)
+ *  - BP Context Management (noon switch, auto apply)
+ *  - Main Boot (DOMContentLoaded entry, event binding)
+ *  - Online Sync & Realtime Resume
+ */
+
+// SUBMODULE: getSupabaseApi @internal - prüft SupabaseAPI-Verfügbarkeit und loggt fehlende Instanz
 let supabaseMissingLogged = false;
 const getSupabaseApi = () => {
   const api = window.SupabaseAPI;
@@ -14,6 +31,8 @@ const getSupabaseApi = () => {
 };
 const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
+
+// SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
   const fn = getSupabaseApi()?.[name];
   if (typeof fn !== 'function') {
@@ -52,11 +71,14 @@ const getLockUi = () => {
   const fn = getSupabaseApi()?.lockUi;
   return typeof fn === 'function' ? fn : null;
 };
+
+// SUBMODULE: getAuthGuardState / setAuthPendingAfterUnlock @internal - verwaltet Auth-Zustände zwischen Unlock-Phasen
 const getAuthGuardState = () => {
   const state = getSupabaseApi()?.authGuardState;
   return state && typeof state === 'object' ? state : null;
 };
 const isDoctorUnlocked = () => !!getAuthGuardState()?.doctorUnlocked;
+
 const setAuthPendingAfterUnlock = (value) => {
   const state = getAuthGuardState();
   if (state) {
@@ -65,6 +87,7 @@ const setAuthPendingAfterUnlock = (value) => {
 };
 const delay = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
+// SUBMODULE: waitForSupabaseApi @public - wartet auf Supabase-Initialisierung über Polling + Event
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
   return ({ timeout = 6000, pollInterval = 25 } = {}) => {
@@ -146,7 +169,7 @@ function getChartPanel(){
   return window.AppModules?.charts?.chartPanel;
 }
 
-// SUBMODULE: requestUiRefresh @public - debounces multi-surface refresh (doctor/chart/capture); mutex via uiRefreshState
+// SUBMODULE: UI Refresh Core @public - steuert UI-Neuladen (Doctor/Chart/Capture)
 function requestUiRefresh(opts = {}) {
   if (typeof opts === "string") {
     opts = { reason: opts };

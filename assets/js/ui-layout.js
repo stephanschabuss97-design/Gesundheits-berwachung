@@ -1,17 +1,22 @@
 'use strict';
 /**
- * MODULE: uiLayout
- * intent: Verwaltet Sticky-Offsets und stellt sicher, dass Eingabefelder nicht verdeckt werden
- * exports: updateStickyOffsets, ensureNotObscured
- * version: 1.2
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: Init-Offsets sofort setzen; modernisierte hasOwn-GLOBAL-Fallback
+ * MODULE: assets/js/ui-layout.js
+ * Description: Steuert Sticky-Offsets und Scroll-Korrekturen, damit Eingaben und Buttons nicht durch Header/Tabs verdeckt werden.
+ * Submodules:
+ *  - updateStickyOffsets (berechnet dynamische CSS-Offsets)
+ *  - ensureNotObscured (scrollt fokussierte Elemente sichtbar)
+ *  - bindAutoFocusScroll (Event-Handler für focusin)
+ *  - bindResizeEvents (Reaktion auf Layoutänderungen)
+ * Notes:
+ *  - Initialisiert Offsets sofort beim Laden.
+ *  - Hybrid-kompatibel (AppModules + globale Fallbacks).
  */
 
+// SUBMODULE: init @internal - stellt global.AppModules.uiLayout bereit
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // SUBMODULE: updateStickyOffsets @public - aktualisiert CSS-Offsets für Header/Tabs
+  // SUBMODULE: updateStickyOffsets @public - setzt CSS-Variablen für Header- und Tab-Höhen
   function updateStickyOffsets() {
     try {
       const d = global.document;
@@ -34,7 +39,7 @@
     }
   }
 
-  // SUBMODULE: ensureNotObscured @public - scrollt Fokusfelder unter Header hervor
+ // SUBMODULE: ensureNotObscured @public - scrollt Eingabefelder sichtbar, falls sie durch Header/Tabs verdeckt sind
   function ensureNotObscured(el) {
     try {
       if (!el) return;
@@ -60,7 +65,7 @@
     }
   }
 
-  // SUBMODULE: bindAutoFocusScroll @internal - reagiert auf focusin-Events
+  // SUBMODULE: bindAutoFocusScroll @internal - reagiert auf Fokuswechsel und korrigiert automatisch den Sichtbereich
   function bindAutoFocusScroll() {
     global.document.addEventListener(
       'focusin',
@@ -77,23 +82,22 @@
     );
   }
 
-  // SUBMODULE: bindResizeEvents @internal - aktualisiert Offsets bei Layout-Änderung
+// SUBMODULE: bindResizeEvents @internal - aktualisiert Sticky-Offsets bei Resize und Orientationchange
   function bindResizeEvents() {
     global.addEventListener('resize', updateStickyOffsets);
     global.addEventListener('orientationchange', updateStickyOffsets);
   }
 
-  // Initialisierung
+  // SUBMODULE: initialization @internal - aktiviert Event-Bindings und berechnet Startwerte
   bindResizeEvents();
   bindAutoFocusScroll();
-  // fix: Offsets sofort beim Initial-Render berechnen
   updateStickyOffsets();
 
-  // Exportfläche
+  // SUBMODULE: exports @internal - registriert uiLayout-API in AppModules und global
   const uiLayoutApi = { updateStickyOffsets, ensureNotObscured };
   appModules.uiLayout = uiLayoutApi;
 
-  // Legacy read-only globals (mit ES2022 hasOwn, Fallback für ältere Runtimes)
+// SUBMODULE: legacy globals @internal - definiert globale read-only Fallbacks falls nicht vorhanden
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);

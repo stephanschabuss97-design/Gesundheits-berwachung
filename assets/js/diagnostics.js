@@ -1,13 +1,18 @@
 'use strict';
 /**
- * MODULE: diagnostics
- * intent: Sammelt UI-/Runtime-Diagnosen, zeigt Fehler an, speist das Touch-Log
- * exports: diag, recordPerfStat, uiError, uiInfo
- * version: 1.5.3
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: perfStats hardened (key length + reasoned warnings), no redundant delta clamp
+ * MODULE: diagnostics.js
+ * Description: Sammelt und verwaltet UI- und Laufzeitdiagnosen, Fehleranzeigen und Performance-Metriken für App-Module.
+ * Submodules:
+ *  - namespace init (AppModules.diagnostics)
+ *  - unhandled rejection sink (globaler Fehler-Listener)
+ *  - perfStats sampler (Messwertsammlung)
+ *  - recordPerfStat (Performance-Logger)
+ *  - diag logger (UI-Diagnosemodul)
+ *  - uiError / uiInfo (visuelle Feedback-Komponenten)
+ *  - diagnosticsApi export (AppModules.diagnostics + readonly perfStats)
  */
 
+// SUBMODULE: namespace init @internal - Initialisiert globales Diagnostics-Modul
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
   let diagnosticsListenerAdded = false;
@@ -182,7 +187,7 @@
     }
   };
 
-  // SUBMODULE: uiError @public
+  // SUBMODULE: uiError @public - zeigt Fehlermeldung im UI oder Fallback-Console an
   function uiError(msg) {
     const errBox =
       document.getElementById('errBox') || document.getElementById('err');
@@ -200,7 +205,7 @@
     }
   }
 
-  // SUBMODULE: uiInfo @public
+  // SUBMODULE: uiInfo @public - zeigt Info-/Statusmeldung im UI oder Fallback-Console an
   function uiInfo(msg) {
     const infoBox = document.getElementById('infoBox');
     const text = String(msg || 'OK');
@@ -217,7 +222,7 @@
     }
   }
 
-  // Exportfläche
+// SUBMODULE: diagnosticsApi export @internal - registriert API unter AppModules.diagnostics und legt globale Referenzen an
   const diagnosticsApi = { diag, recordPerfStat, uiError, uiInfo };
   appModules.diagnostics = diagnosticsApi;
 
@@ -240,7 +245,7 @@
     });
   });
 
-  // ✅ Safe global export: readonly wrapper for chart compatibility
+  // SUBMODULE: perfStats readonly wrapper @internal - stellt lesenden Zugriff für Charts sicher
   if (!hasOwn(global, 'perfStats')) {
     const ro = Object.freeze({ snap: (key) => perfStats.snap(key) });
     Object.defineProperty(global, 'perfStats', {

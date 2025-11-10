@@ -1,13 +1,17 @@
 'use strict';
 /**
- * MODULE: uiErrors
- * intent: Zentrale REST-Fehlertexte, UI-Error-Handler & Busy-State-Helper
- * exports: restErrorMessage, uiRestError, withBusy
- * version: 1.2
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: Nitpick fix – inline details trim, Verhalten unverändert
+ * MODULE: assets/js/ui-errors.js
+ * Description: Behandelt REST-Fehler, zeigt UI-Warnungen und verwaltet Busy-State von Buttons.
+ * Submodules:
+ *  - restErrorMessage (HTTP → Nutzertext Mapping)
+ *  - uiRestError (UI-Fehleranzeige mit Fallback)
+ *  - withBusy (Button-Zustandsschalter)
+ * Notes:
+ *  - Hybrid-Kompatibilität (AppModules + globale Fallbacks)
+ *  - Minimalistisch gehalten; keine visuelle Abhängigkeit außer uiError()
  */
 
+// SUBMODULE: init @internal - sichert global.AppModules.uiErrors ab
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
@@ -46,11 +50,11 @@
     el.disabled = !!on;
   }
 
-  // Exportfläche
+// SUBMODULE: exports @internal - registriert uiErrors-API unter AppModules und globalen Fallbacks
   const uiErrorApi = { restErrorMessage, uiRestError, withBusy };
   appModules.uiErrors = uiErrorApi;
 
-  // Legacy read-only globals (modern hasOwn check)
+// SUBMODULE: legacy globals @internal - definiert globale read-only Fallbacks falls nicht vorhanden
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);

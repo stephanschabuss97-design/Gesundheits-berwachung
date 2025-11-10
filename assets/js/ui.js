@@ -1,18 +1,23 @@
 ﻿'use strict';
 /**
- * MODULE: uiCore
- * intent: Kapselt UI-Helfer (Help-Panel, Debounce, Focus-Trap, Underlay-Inert) aus dem Monolith-Inline-Skript
- * exports: helpPanel, debounce, setUnderlayInert, focusTrap
- * version: 1.4
- * compat: Hybrid (Monolith + window.AppModules), Legacy-Global-Shims read-only
- * notes: Verhalten beibehalten; Coderabbit-Fixes: focus safety, cache, scoped observer, direct root invalidation + attribute observation
+ * MODULE: assets/js/ui-core.js
+ * Description: Bietet zentrale UI-Helfer wie Hilfe-Panel, Debounce, Fokusfalle und Underlay-Inert-Logik zur Modalisierung.
+ * Submodules:
+ *  - helpPanel (UI-Hilfe-Overlay mit Fokussteuerung)
+ *  - debounce (zeitverzögerte UI-Aktionen)
+ *  - setUnderlayInert (Inaktivschaltung des Hintergrunds)
+ *  - focusTrap (Fokusbegrenzung in Modalfenstern)
+ * Notes:
+ *  - Verhalten beibehalten; verbessert durch Coderabbit-Fixes für Fokus, Cache, Beobachter und Attribute.
+ *  - Hybrid-kompatibel (Monolith + window.AppModules, read-only Legacy-Shims).
  */
 
+// SUBMODULE: init @internal - initialisiert AppModules.uiCore und globale Shims
 (function (global) {
   const MODULE_NAME = 'uiCore';
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // SUBMODULE: help-panel overlay @internal - toggles inline support dialog
+  // SUBMODULE: helpPanel @public - steuert das Inline-Hilfe-Overlay mit Open/Close-Logik
   const helpPanel = {
     el: null,
     open: false,
@@ -63,7 +68,7 @@
   };
 
   /* ===== Utils ===== */
-  // SUBMODULE: debounce util @internal - debounces high-frequency UI updates
+  // SUBMODULE: debounce @public - begrenzt häufige Funktionsaufrufe (UI-Optimierung)
   function debounce(fn, ms = 150) {
     let timer = null;
     return (...args) => {
@@ -75,7 +80,7 @@
     };
   }
 
-  // SUBMODULE: setUnderlayInert @internal - disables background while modal active
+// SUBMODULE: setUnderlayInert @public - deaktiviert Hintergrundelemente während Modals aktiv sind
   function setUnderlayInert(active, exceptEl = null) {
     try {
       const d = global.document;
@@ -124,7 +129,7 @@
     }
   }
 
-  // SUBMODULE: focus-trap @internal - traps tab focus inside modal overlays
+  // SUBMODULE: focusTrap @public - schränkt Tab-Fokus auf aktives Modal ein, inkl. MutationObserver-Caching
   const focusTrap = (() => {
     const cache = new WeakMap();     // root -> focusable elements[]
     const observers = new WeakMap(); // root -> MutationObserver
@@ -263,9 +268,11 @@
     return self;
   })();
 
+  // SUBMODULE: exports @internal - registriert API im globalen AppModules-Namespace
   const uiCoreApi = { helpPanel, debounce, setUnderlayInert, focusTrap };
   appModules[MODULE_NAME] = uiCoreApi;
 
+  // SUBMODULE: legacy globals @internal - definiert globale read-only Zugriffe für Abwärtskompatibilität
   ['helpPanel', 'debounce', 'setUnderlayInert', 'focusTrap'].forEach((k) => {
     if (!Object.prototype.hasOwnProperty.call(global, k)) {
       Object.defineProperty(global, k, {

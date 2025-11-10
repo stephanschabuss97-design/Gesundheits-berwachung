@@ -1,11 +1,24 @@
 'use strict';
 /**
- * MODULE: appointments
- * intent: CRUD und UI-Sync fuer Arzttermine inkl. Badge und Summary Mapping
- * exports: refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge, resetAppointmentsUi
- * compat: window.AppModules + Legacy Globals (refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge)
+ * MODULE: appointments.js
+ * Description: Verwaltet CRUD-Operationen und UI-Synchronisation für Arzttermine inkl. Badge-Update, Summary-Mapping und REST-Integration mit Supabase.
+ * Submodules:
+ *  - imports & globals
+ *  - config & state
+ *  - helpers (format, debounce, diagnostics)
+ *  - Supabase proxy setup
+ *  - appointment badge handler
+ *  - endpoint utilities
+ *  - summary computation & validation
+ *  - UI handling (apply/reset)
+ *  - REST fetch (summary)
+ *  - CRUD actions (refresh/save/done)
+ *  - event binding (panel)
+ *  - API export & global attach
+ *  - fallback debounce factory
  */
 
+// SUBMODULE: imports & globals @internal - Zugriff auf globale Module und Namespaces
 (function (global) {
   const appModules = global.AppModules = global.AppModules || {};
   const configApi = appModules.config || {};
@@ -14,6 +27,7 @@
   const dataLocalApi = appModules.dataLocal || {};
   const uiCoreApi = appModules.uiCore || {};
 
+  // SUBMODULE: config & state @internal - Terminrollen, Zeitfenster und lokaler State
   const APPOINTMENT_ROLES = Array.isArray(configApi.APPOINTMENT_ROLES)
     ? configApi.APPOINTMENT_ROLES
     : Array.isArray(global.APPOINTMENT_ROLES)
@@ -31,6 +45,7 @@
     next: null
   };
 
+  // SUBMODULE: helpers @internal - Format-, Diagnose- und Fallback-Utilities
   const formatDateTimeDE = typeof formatApi.formatDateTimeDE === 'function'
     ? formatApi.formatDateTimeDE
     : typeof global.formatDateTimeDE === 'function'
@@ -68,6 +83,7 @@
     ? global.uiRestError
     : (status, details, fallback) => uiError(fallback || details || status);
 
+    // SUBMODULE: Supabase proxy setup @internal - Factory für autorisierte REST-Calls
   const createSupabaseProxy = (name, { optional = false } = {}) => (...args) => {
     const api = global.SupabaseAPI;
     const fn = api && api[name];
@@ -83,12 +99,14 @@
   const setConfigStatus = createSupabaseProxy('setConfigStatus', { optional: true });
   const showLoginOverlay = createSupabaseProxy('showLoginOverlay', { optional: true });
 
+  // SUBMODULE: diagnostics & config access @internal - sichere Log- und Config-Helfer
   const getConfSafe = (key) => getConf(key);
   const logDiag = (msg) => {
     if (!diagAdd) return;
     try { diagAdd(msg); } catch (_) {}
   };
 
+  // SUBMODULE: appointment badge handler @public - steuert Anzeige des nächsten Arzttermins im Header
   const setAppointmentBadge = debounce(function (details) {
     const badge = global.document?.getElementById('nextApptBadge');
     if (!badge) return;
@@ -126,6 +144,7 @@
     }
   }, 160);
 
+  // SUBMODULE: endpoint utilities @internal - REST-Endpunkt-Auflösung und Fehlermeldung
   async function getAppointmentsEndpoint() {
     const rest = await getConfSafe('webhookUrl');
     if (!rest) return null;
@@ -137,6 +156,7 @@
     return { base };
   }
 
+  // SUBMODULE: summary computation & validation @internal - Label-, Zeit- und Input-Prüflogik
   function getAppointmentRoleLabel(code) {
     const role = APPOINTMENT_ROLES.find((r) => r.code === code);
     return role ? role.label : code || '';
@@ -181,6 +201,7 @@
     return { ok: true, iso: dt.toISOString() };
   }
 
+  // SUBMODULE: UI handling @internal - Darstellung der Terminübersicht im Frontend
   function resetAppointmentsUi() {
     APPOINTMENT_ROLES.forEach(({ code }) => {
       const nextEl = global.document?.getElementById(`appt-${code}-next`);
@@ -214,6 +235,7 @@
     });
   }
 
+  // SUBMODULE: REST fetch (summary) @internal - Abfrage der Terminübersicht über Supabase REST-API
   async function fetchAppointmentsSummary({ signal } = {}) {
     const rest = await getConfSafe('webhookUrl');
     if (!rest) return null;
@@ -251,6 +273,7 @@
     return { scheduled, done };
   }
 
+  // SUBMODULE: CRUD action refresh @public - lädt Terminübersicht neu und aktualisiert UI
   async function refreshAppointments() {
     if (appointmentsState.loading) return;
     appointmentsState.loading = true;
@@ -333,6 +356,7 @@
     }
   }
 
+  // SUBMODULE: CRUD action save @public - speichert neuen oder geänderten Arzttermin
   async function handleAppointmentSave(role) {
     const dateEl = global.document?.getElementById(`appt-${role}-date`);
     const timeEl = global.document?.getElementById(`appt-${role}-time`);
@@ -413,6 +437,7 @@
     }
   }
 
+  // SUBMODULE: CRUD action done @public - markiert Termin als abgeschlossen
   async function handleAppointmentDone(role) {
     const btn = global.document?.getElementById(`appt-${role}-done`);
     if (!btn || btn.hidden || btn.disabled || btn.dataset.hasNext !== '1') return;
@@ -466,6 +491,7 @@
     }
   }
 
+  // SUBMODULE: event binding @public - bindet Buttons im Terminpanel an Aktionen
   function bindAppointmentsPanel() {
     const wrap = global.document?.getElementById('appointmentsWrap');
     if (!wrap) return;
@@ -488,6 +514,7 @@
     wrap.dataset.appointmentsBound = '1';
   }
 
+  // SUBMODULE: API export @internal - Registrierung des Moduls und globaler Methoden
   const appointmentsApi = {
     refreshAppointments,
     handleAppointmentSave,
@@ -508,6 +535,7 @@
       });
     });
 
+    // SUBMODULE: fallback debounce factory @internal - Reserve-Implementierung für debounce()
   function createFallbackDebounce() {
     return (fn, ms = 150) => {
       let timer = null;

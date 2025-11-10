@@ -1,23 +1,28 @@
 'use strict';
 /**
- * MODULE: format
- * intent: Formatiert Werte und mappt Capture-Einträge auf health_events
- * exports: formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly
- * version: 1.4
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: Null-safe checks, NaN filter, immutable global export; calcMAP mit medizinischer Plausibilitätsprüfung
+ * MODULE: format.js
+ * Description: Formatiert Messwerte, berechnet medizinisch plausible Kennzahlen und mappt Capture-Einträge auf Health-Events-Strukturen.
+ * Submodules:
+ *  - namespace init (AppModules.format)
+ *  - toNumberOrNull (Helper)
+ *  - formatDateTimeDE (Datumsformatierung)
+ *  - calcMAP (mittlerer arterieller Druck)
+ *  - toHealthEvents (Event-Mapping)
+ *  - isWeightOnly (Eintragsklassifizierung)
+ *  - formatApi export (AppModules.format + readonly globals)
  */
 
+// SUBMODULE: namespace init @internal - initialisiert globales Format-Modul
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
 
-  // Helper: konvertiert Eingaben zu Zahl oder null, falls ungültig
+  // SUBMODULE: toNumberOrNull @internal - wandelt Eingaben in Zahl oder null um (NaN-safe)
   function toNumberOrNull(val) {
     const num = Number(val);
     return Number.isFinite(num) ? num : null;
   }
 
-  // SUBMODULE: formatDateTimeDE @public - formatiert ISO-Zeitstempel für Arzt-Ansicht
+ // SUBMODULE: formatDateTimeDE @public - formatiert ISO-Zeitstempel nach deutschem Schema (Europe/Vienna)
   function formatDateTimeDE(iso) {
     if (!iso) return '\u2014';
     try {
@@ -38,7 +43,7 @@
     }
   }
 
-  // SUBMODULE: calcMAP @public - mittlerer arterieller Druck aus Sys/Dia (mit Plausibilitäts-Check)
+// SUBMODULE: calcMAP @public - berechnet mittleren arteriellen Druck (MAP) mit Plausibilitätsprüfung
   function calcMAP(sys, dia) {
     const s = toNumberOrNull(sys);
     const d = toNumberOrNull(dia);
@@ -57,7 +62,7 @@
     return d + (s - d) / 3;
   }
 
-  // SUBMODULE: toHealthEvents @public - mappt Capture-Eintrag auf health_events-Payloads
+// SUBMODULE: toHealthEvents @public - mappt Capture-Eintrag auf Health-Event-Payloads für REST-Sync
   function toHealthEvents(entry) {
     if (!entry || typeof entry !== 'object') return [];
 
@@ -121,7 +126,7 @@
     return out;
   }
 
-  // SUBMODULE: isWeightOnly @public - erkennt reine Gewichts-Einträge
+  // SUBMODULE: isWeightOnly @public - erkennt reine Gewichts-Einträge ohne Vitaldaten
   function isWeightOnly(entry) {
     if (!entry) return false;
     const hasVitals =
@@ -129,11 +134,10 @@
     return !hasVitals && entry.weight != null;
   }
 
-  // Exportfläche
+// SUBMODULE: formatApi export @internal - registriert Funktionen unter AppModules.format und setzt read-only globals
   const formatApi = { formatDateTimeDE, calcMAP, toHealthEvents, isWeightOnly };
   appModules.format = formatApi;
 
-  // Legacy read-only globals (modern hasOwn, immutable)
   const hasOwn = Object.hasOwn
     ? Object.hasOwn
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);

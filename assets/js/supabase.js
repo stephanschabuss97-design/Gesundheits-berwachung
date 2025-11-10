@@ -1,10 +1,17 @@
-'use strict';
 /**
- * MODULE: SUPABASE ACCESS (Legacy Proxy)
- * intent: exposes Supabase modules via a legacy window-based API without duplicating logic
- * exports: SupabaseAPI (forwarders only)
+ * MODULE: assets/js/supabase/index.js
+ * Description: Stellt die Supabase-Funktionalität über ein Legacy-Fensterobjekt (window.SupabaseAPI) bereit und forwardet Kernmodule.
+ * Submodules:
+ *  - imports (core, auth, api, realtime)
+ *  - Supabase State Binding (window.sbClient, __authState, __lastLoggedIn)
+ *  - SupabaseAPI Aggregation (core exports + helpers)
+ *  - Legacy Window Exposure (window.AppModules.supabase, warnLegacy)
+ * Notes:
+ *  - Dient als Übergangs-Proxy zwischen modernem Modulcode und Monolith-kompatiblen Fensteraufrufen.
+ *  - Enthält keine eigene Logik, nur Funktions-Forwarder.
  */
 
+// SUBMODULE: imports @internal - bindet Supabase-Kernmodule, Auth- und API-Komponenten
 import * as state from './supabase/core/state.js';
 import * as client from './supabase/core/client.js';
 import * as http from './supabase/core/http.js';
@@ -18,6 +25,7 @@ import * as realtime from './supabase/realtime/index.js';
 import { pushPendingToRemote } from './supabase/api/push.js';
 import { syncCaptureToggles } from './supabase/api/toggles.js';
 
+// SUBMODULE: state exports @internal - extrahiert und forwardet State-Handler (Cache, Header, Promise)
 const {
   supabaseState,
   cacheHeaders,
@@ -28,6 +36,7 @@ const {
   setHeaderPromise
 } = state;
 
+// SUBMODULE: client exports @internal - zentrale Supabase-Client-Methoden und Debug-Toggles
 const {
   baseUrlFromRest,
   ensureSupabaseClient,
@@ -35,11 +44,14 @@ const {
   setSupabaseDebugPii
 } = client;
 
+// SUBMODULE: http exports @internal - HTTP/FETCH Wrapper mit Retry-Logik
 const { withRetry, fetchWithAuth } = http;
 
+// SUBMODULE: ui overlay helpers @internal - Login-Overlay forwarder (UI-Schicht)
 const showLoginOverlay = () => authUi.showLoginOverlay();
 const hideLoginOverlay = () => authUi.hideLoginOverlay();
 
+// SUBMODULE: window property binding @internal - verbindet Supabase-State mit globalem Fensterobjekt
 Object.defineProperties(window, {
   sbClient: {
     configurable: true,
@@ -70,6 +82,7 @@ Object.defineProperties(window, {
   }
 });
 
+// SUBMODULE: SupabaseAPI aggregation @public - bündelt alle Forwarder aus Core-, Auth-, API- und Realtime-Modulen
 const supabaseApi = {
   withRetry,
   fetchWithAuth,
@@ -123,12 +136,15 @@ const supabaseApi = {
   finalizeAuthState: authCore.finalizeAuthState
 };
 
+// SUBMODULE: export binding @public - registriert SupabaseAPI unter window.AppModules.supabase
 export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
 window.AppModules.supabase = SupabaseAPI;
 
+// SUBMODULE: warnLegacy @internal - Platzhalter für zukünftige Warnmeldungen bei globalem Zugriff
 const warnLegacy = () => {};
 
+// SUBMODULE: legacy window proxies @internal - leitet alte globale Aufrufe auf SupabaseAPI weiter
 const legacyNames = [...Object.keys(SupabaseAPI), 'SupabaseAPI'];
 legacyNames.forEach((name) => {
   if (Object.prototype.hasOwnProperty.call(window, name)) return;

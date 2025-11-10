@@ -1,13 +1,17 @@
 'use strict';
 /**
- * MODULE: dataLocal
- * intent: Lokale IndexedDB- und Konfig-Hilfen für Intake-/Doctor-Features
- * exports: initDB, putConf, getConf, getTimeZoneOffsetMs, dayIsoToMidnightIso,
- *          addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal
- * version: 1.7.0
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: getTimeZoneOffsetMs gibt null bei Fehlern; wrapIDBRequest registriert tx-Handler früh
- *        und unterstützt resolveOn ('request'|'txcomplete') + onAbortResolve; updateEntry nutzt Wrapper
+ * MODULE: dataLocal.js
+ * Description: Verwaltet lokale IndexedDB-Operationen und Konfigurationsspeicher für Healthlog-Einträge und Einstellungen.
+ * Submodules:
+ *  - fail (Fehlerlogging)
+ *  - ensureDbReady (Initialisierungsprüfung)
+ *  - IndexedDB Setup (Datenbank- und Store-Definition)
+ *  - wrapIDBRequest (generischer IDB-Promise-Wrapper)
+ *  - initDB (DB-Setup & Migration)
+ *  - putConf / getConf (Konfigurations-Store)
+ *  - getTimeZoneOffsetMs / dayIsoToMidnightIso (Zeitzonen-Hilfen)
+ *  - addEntry / updateEntry / getAllEntries / getEntryByRemoteId / deleteEntryLocal (CRUD für Einträge)
+ *  - dataLocalApi export (AppModules.dataLocal + window bridge)
  */
 
 /* ===== IndexedDB Setup ===== */
@@ -293,6 +297,8 @@ function deleteEntryLocal(id) {
 }
 
 /* ===== Export ===== */
+
+// SUBMODULE: dataLocalApi export @internal - registriert API unter AppModules.dataLocal und legt window-Globals an
 const dataLocalApi = {
   initDB,
   putConf,

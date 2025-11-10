@@ -1,19 +1,24 @@
 'use strict';
 /**
- * MODULE: uiTabs
- * intent: Handhabt Tab-Umschaltung, Header-Schatten und Button-Bindings
- * exports: setTab, bindTabs, bindHeaderShadow
- * version: 1.5
- * compat: Hybrid (Monolith + window.AppModules)
- * notes: Fehler-Propagation + atomare Auth-Queue für Doctor-Unlock
+ * MODULE: assets/js/ui-tabs.js
+ * Description: Steuert Tabwechsel, Header-Schatten und Auth-Locks (Doctor-Unlock) über UI-Events und Zustandssperren.
+ * Submodules:
+ *  - authState (atomare Auth-Flags & Safe-Queue)
+ *  - setTab (Tabwechsel-Logik inkl. Unlock & Refresh)
+ *  - bindTabs (UI-Button-Handler)
+ *  - bindHeaderShadow (Scroll-Elevation-Handler)
+ * Notes:
+ *  - AuthQueue verhindert Race Conditions bei parallelen Unlock-Events.
+ *  - Hybrid-kompatibel über window.AppModules und globale Fallbacks.
  */
 
+// SUBMODULE: init @internal - initialisiert AppModules.uiTabs und lokale Shortcuts
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
   const $ = (sel) => global.document.querySelector(sel);
   const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
 
-  // SUBMODULE: authState @internal – kapselt globale Auth-Flags sicher
+  // SUBMODULE: authState @internal - kapselt Doctor-Unlock-Status mit atomarem Promise-Lock
   const authState = (() => {
     let doctorUnlockedVal = Boolean(global.__doctorUnlocked);
     let pendingAfterUnlockVal = global.__pendingAfterUnlock || null;
@@ -49,7 +54,7 @@
     return state;
   })();
 
-  // SUBMODULE: setTab @internal – steuert Tabwechsel inkl. Auth/Unlock Hooks
+  // SUBMODULE: setTab @public - steuert aktiven Tab inkl. Doctor-Auth, Unlock und UI-Refresh
   async function setTab(name) {
     if (!name || typeof name !== 'string') return;
 
@@ -121,7 +126,7 @@
     }
   }
 
-  // SUBMODULE: bindTabs @internal – verbindet Tabbuttons mit setTab
+// SUBMODULE: bindTabs @public - verbindet Tabbuttons mit setTab(), behandelt Click-Events sicher
   function bindTabs() {
     const btns = $$('.tabs .btn');
     if (!btns.length) return;
@@ -139,7 +144,7 @@
     );
   }
 
-  // SUBMODULE: bindHeaderShadow @internal – toggelt Schatten bei Scroll
+  // SUBMODULE: bindHeaderShadow @public - fügt Header/Tabs Schatten bei Scroll hinzu
   function bindHeaderShadow() {
     const header = global.document.querySelector('header');
     const tabs = global.document.querySelector('nav.tabs');
@@ -155,7 +160,7 @@
     global.addEventListener('scroll', update, { passive: true });
   }
 
-  // Export (authState bleibt intern)
+  // SUBMODULE: export @internal - registriert API unter AppModules und als globale Fallbacks
   const uiTabsApi = { setTab, bindTabs, bindHeaderShadow };
   appModules['uiTabs'] = uiTabsApi;
 

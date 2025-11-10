@@ -1,31 +1,31 @@
 'use strict';
-
 /**
- * MODULE: UTILITIES (v1.2)
- * intent: generische DOM/Format Helper für den M.I.D.A.S.-Monolith
- * exports: $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br
- * compat: 100 % rückwärtskompatibel zu window.AppModules.utils
+ * MODULE: assets/js/utils.js
+ * Description: Stellt universelle DOM-, Formatierungs- und Download-Helfer für M.I.D.A.S. bereit.
+ * Submodules:
+ *  - DOM Query Helpers ($, $$)
+ *  - Number/Date Formatting (fmtNum, pad2, todayStr, timeStr)
+ *  - String Escaping (esc, nl2br)
+ *  - Download Utility (dl, ensureDownloadLink, normalizeDownloadName)
+ * Notes:
+ *  - Vollständig rückwärtskompatibel zu window.AppModules.utils
+ *  - Keine externen Abhängigkeiten; sicher für Monolith- und Modularbetrieb.
  */
 
-// === DOM QUERY HELPERS ===
-// Schnelle, sichere DOM-Abfragen
+// SUBMODULE: domQuery @public - schnelle DOM-Selektoren im Stil von jQuery
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 
-// === NUMBER / DATE FORMATTING ===
-/**
- * Formatiert eine Zahl auf d Nachkommastellen.
- * Gibt '' zurück, wenn Wert ungültig ist.
- */
+// SUBMODULE: fmtNum @public - formatiert Zahlen auf definierte Nachkommastellen
 const fmtNum = (n, d = 1) => {
   const num = Number(n);
   return Number.isFinite(num) ? num.toFixed(d) : '';
 };
 
-/** Füllt Zahl links mit 0 auf zwei Stellen */
+// SUBMODULE: pad2 @public - füllt Zahlen links auf zwei Stellen mit Nullen
 const pad2 = n => String(n).padStart(2, '0');
 
-/** Liefert aktuelles Datum als YYYY-MM-DD */
+// SUBMODULE: todayStr @public - liefert heutiges Datum im Format YYYY-MM-DD
 const todayStr = (date = new Date()) => {
   const y = date.getFullYear();
   const m = pad2(date.getMonth() + 1);
@@ -33,23 +33,23 @@ const todayStr = (date = new Date()) => {
   return `${y}-${m}-${d}`;
 };
 
-/** Liefert aktuelle Uhrzeit als HH:MM */
+// SUBMODULE: timeStr @public - liefert aktuelle Uhrzeit im Format HH:MM
 const timeStr = (date = new Date()) =>
   `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 
-// === STRING ESCAPE HELPERS ===
-/** Ersetzt HTML-kritische Zeichen durch Entitäten */
+// SUBMODULE: esc @public - ersetzt HTML-Sonderzeichen durch sichere Entitäten
 const esc = s =>
   String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 
-/** Wandelt Zeilenumbrüche in <br> um (nach Escape) */
+// SUBMODULE: nl2br @public - ersetzt Zeilenumbrüche durch <br>-Tags nach Escape
 const nl2br = s => esc(s).replace(/\n/g, '<br>');
 
 // === DOWNLOAD HELPER ===
 let sharedDownloadLink = null;
 
+// SUBMODULE: normalizeDownloadName @internal - validiert und erweitert Dateinamen
 const normalizeDownloadName = (name = '') => {
   const trimmed = String(name || '').trim();
   if (!trimmed) return 'download.bin';
@@ -57,6 +57,7 @@ const normalizeDownloadName = (name = '') => {
   return `${trimmed}.bin`;
 };
 
+// SUBMODULE: ensureDownloadLink @internal - erstellt/verwendet unsichtbares <a>-Element zum Download
 const ensureDownloadLink = () => {
   if (typeof document === 'undefined' || !document.body) return null;
   if (sharedDownloadLink && sharedDownloadLink.isConnected) return sharedDownloadLink;
@@ -74,6 +75,7 @@ const ensureDownloadLink = () => {
   return sharedDownloadLink;
 };
 
+// SUBMODULE: dl @public - generiert Download aus String/Binary-Content via Blob-Link
 const dl = (filename, content, mime = 'application/octet-stream') => {
   try {
     const link = ensureDownloadLink();
@@ -100,19 +102,12 @@ const dl = (filename, content, mime = 'application/octet-stream') => {
   }
 };
 
-// === EXPORT / GLOBAL REGISTRATION ===
+// SUBMODULE: export @internal - registriert utils-API unter AppModules und als globale Fallbacks
 (() => {
   const utilsApi = { $, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br, dl };
-
-  // Namespace sichern
   window.AppModules = window.AppModules || {};
   window.AppModules.utils = utilsApi;
-
-  // Globale Shortcuts nur setzen, wenn noch nicht vorhanden
   Object.entries(utilsApi).forEach(([key, fn]) => {
     if (!(key in window)) window[key] = fn;
   });
-
-  // Debug-Ausgabe (optional, auskommentieren im Release)
-  // console.debug('[Utils] geladen:', Object.keys(utilsApi).join(', '));
 })();
