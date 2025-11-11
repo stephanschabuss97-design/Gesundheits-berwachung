@@ -112,29 +112,28 @@ export async function syncWebhook(entry, localId) {
       }
 
       // SUBMODULE: fallback-note @internal - PATCH falls vorhanden, sonst POST neue Notiz
-        const noteEvent = events.find((ev) => ev.type === 'note');
-        try {
-          if (noteEvent && uid) {
-            const dayIso = entry.date;
-            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent });
-            await updateEntry(localId, { remote_id: merged?.id ?? -1 });
-            uiInfo('Kommentar aktualisiert.');
-            diag.add('Fallback: note via PATCH/POST');
-            return;
-          }
-        } catch (errNoteFallback) {
-          diag.add?.(
-            `[webhook] note fallback failed uid=${uid || 'null'} day=${entry?.date || 'null'} localId=${
-              localId ?? 'null'
-            }: ${errNoteFallback?.message || errNoteFallback}`
-          );
-          console.error('Supabase notes fallback error (note patch)', {
-            uid,
-            dayIso: entry?.date,
-            localId,
-            error: errNoteFallback
-          });
+      const noteEvent = events.find((ev) => ev.type === 'note');
+      try {
+        if (noteEvent && uid) {
+          const dayIso = entry.date;
+          const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent });
+          await updateEntry(localId, { remote_id: merged?.id ?? -1 });
+          uiInfo('Kommentar aktualisiert.');
+          diag.add('Fallback: note via PATCH/POST');
+          return;
         }
+      } catch (errNoteFallback) {
+        diag.add?.(
+          `[webhook] note fallback failed uid=${uid || 'null'} day=${entry?.date || 'null'} localId=${
+            localId ?? 'null'
+          }: ${errNoteFallback?.message || errNoteFallback}`
+        );
+        console.error('Supabase notes fallback error (note patch)', {
+          uid,
+          dayIso: entry?.date,
+          localId,
+          error: errNoteFallback
+        });
       }
 
       if (res.status === 409 || /duplicate|unique/i.test(details)) {
