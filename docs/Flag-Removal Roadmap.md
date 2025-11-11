@@ -1,54 +1,55 @@
-## 🧹 Flag-Removal Roadmap
+## Flag-Removal Roadmap (Updated)
 
-### 1. Analyse & Vorbereitung
-- Relevante Dateien/Module notieren:  
-  `assets/js/charts/index.js`, `assets/js/doctor/index.js`, `assets/js/capture/*`,  
-  Supabase-API-Layer (`assets/js/supabase/api/*`), CSS (`assets/css/chart.css`, `capture.css`), Markup (`index.html`).
-- Liste der Flag-Felder (z. B. `trainingActive`, `saltHigh`, `valsartanMissed`, …) festhalten, damit später keine Reste bleiben.
-
----
-
-### 2. Charts entflaggen
-- In `assets/js/charts/index.js` alle Flag-spezifischen Strukturen entfernen:  
-  `hasFlagsForDate`, Flag-Layer, Tooltip-Inhalte, Datenquellen.
-- Prüfen, ob `chartPanel.draw()` noch Flag-Felder anfordert; ggf. Aggregationen (`fetchDailyOverview`) anpassen.
-- CSS-Klassen/Icons für Flag-Overlay löschen.  
-  **QA:** Diagramm öffnen → Tooltip triggern → darf keine Fehler werfen.
+### Status Recap
+- **Step 1 – Charts**: Flag-Layer, Tooltip-Hinweise und Styles entfernt. Diagramm rendert nur Messwerte/Notizen.
+- **Step 2 – Arzt-Ansicht**: Badge- und Flag-Spalten entfernt, Renderpfad verarbeitet keine Flag-Felder mehr.
+- **Step 3 – Capture-UI**: Flags-Akkordeon, Toggle-State und Speicherung entfernt; Supabase-APIs synchronisiert.
+- **Offen**: Inline-Style-Nutzung verhindert eine strenge CSP. Sicherheitsniveau muss wiederhergestellt werden, bevor Backend-Spalten fallen.
 
 ---
 
-### 3. Arzt-Ansicht säubern
-- Textblock + Pills aus dem Doctor-Template entfernen (`assets/js/doctor/index.js` + zugehörige CSS).
-- State-Logik/Badges aktualisieren (`setDocBadges`, `renderDoctor`).
-- Sicherstellen, dass Supabase-Abfragen zwar noch Flag-Felder liefern dürfen, sie aber ignoriert werden, bis das Backend angepasst ist.
+### Step 4 – UI Hardening & CSP Recovery
+1. **Inline-Style-Inventar**  
+   - Script-Suche nach `.style.` und dynamischen `style.cssText`.  
+   - Gruppiere nach Komponenten (Login/App-Lock, Busy/Banner, Chart-Panel, PIN-Prompt, Diagnostics, Capture Status).
+2. **Utility-Klassen & States**  
+   - Ergänze generische Klassen (`.is-hidden`, `.is-flex`, `.is-inline-flex`, `.is-active`, `.has-error`, Tooltip-States).  
+   - Für komplexere Komponenten (Chart-Tip, PIN-Dialog) dedizierte CSS-Blöcke anlegen, damit JS nur noch Klassen toggelt.
+3. **Refactor JS-Module**  
+   - `assets/js/supabase/auth/ui.js`, `auth/guard.js`, `main.js`, `charts/index.js`, `capture/index.js`, `diagnostics.js` etc. auf Klassenwechsel umstellen.  
+   - Dynamische Stile (Positionierung) über CSS-Variablen oder Inline-Styles mit `<style nonce>` ersetzen, damit CSP-konform.
+4. **CSP wieder verschärfen**  
+   - Sobald alle sichtbaren Inline-Styles verschwunden sind, stelle `<meta http-equiv="Content-Security-Policy">` auf  
+     `style-src 'self'; style-src-attr 'self'; style-src-elem 'self' https://cdn.jsdelivr.net` (oder analog) zurück.  
+   - Optional: Nonce-basierten Mechanismus einführen, falls wenige dynamische Styles übrig bleiben.
+5. **QA**  
+   - Login-Overlay, App-Lock, Chart-Panel, Diagnose-Panel, PIN-Dialog, Capture-Speichern in allen States testen.  
+   - DevTools müssen ohne „Applying inline style“ Warnungen bleiben.
 
 ---
 
-### 4. Capture-UI demontieren
-- Accordion-Markup und Buttons in `index.html` / `capture.css` löschen.
-- Event-Handler & State (`capture.globals`, `capture.flags.js`, Toggle-Setter) entfernen.
-- `refreshCaptureIntake`, `saveDaySummary`, etc. aufräumen, sodass keine Flag-Daten mehr gelesen/geschrieben werden.
-- **QA:** Capture speichern → Tag wechseln → keine Flag-Fehlermeldungen.
+### Step 5 – Codebase Cleanup
+- Volltextsuche nach `flag`, `training`, `valsartan`, `nsar`, `saltHigh`, `forxiga`, `dayFlags`, `flagsComment`.  
+  Entferne Restreferenzen in JS, CSS, Docs, Tests, Telemetrie.
+- Entferne tote Module (z. B. `capture/flags.js`), die nach Step 3 übrig bleiben könnten.
+- Linting laufen lassen (ESLint) und Build prüfen, um ungenutzte Variablen/Im-ports zu entdecken.
 
 ---
 
-### 5. Codebase Cleanup
-- Volltextsuche nach `flag`, `training`, `valsartan`, `nsar`, `saltHigh`, `forxiga`, etc.  
-  → verbleibende Referenzen löschen (inkl. Diagnose-Logs, Tests, Docs).
-- CSS- & Translation-Dateien prüfen.
-- Optional: `ESLint` / `TS-Lint` laufen lassen, um „unused variable“ zu finden.
+### Step 6 – Backend & Daten
+1. **Schema-Aufräumung**  
+   - Supabase-Migration vorbereiten: Flag-Spalten/Constraints aus `health_events` entfernen oder archivieren.  
+   - Backup-Skript (SQL/CSV) erstellen, falls historische Flag-Daten benötigt werden.
+2. **API-Contracts**  
+   - PostgREST Policies/Views aktualisieren, damit Flag-Felder nicht mehr exposed werden.  
+   - Frontend-DTOs anpassen (Typdefinitionen, Zod-Schemas, eventuell TS-Deklarationen).
+3. **Integrationstest**  
+   - Capture → Supabase → Doctor → Chart einmal komplett durchspielen, um sicherzustellen, dass keine Flag-Felder mehr erwartet werden.
 
 ---
 
-### 6. Backend & Daten
-- Supabase: Flag-Spalten oder -Tabellen via Migration/SQL droppen, sobald das Frontend keine Abhängigkeit mehr hat.
-- Bei Bedarf einmaliges Skript oder `npx`-Task, der vorhandene Flag-Werte archiviert oder auf `NULL` setzt, bevor Spalten fallen.
-- Nach Schema-Update API-Layer anpassen (Typdefinitionen, DTOs).
-- **End-to-End-Test:** Capture speichern → Arzt-Ansicht öffnen → Diagramm ziehen → keine API-Errors.
-
----
-
-### 7. Abschluss
-- Dokumentation aktualisieren (`docs/QA_CHECKS.md`, Release Notes).
-- Optional Feature-Flag für Anwenderdoku („Flags entfernt in Version …“).
-- Finaler Smoke-Test: Login → Capture → Doctor → Chart.
+### Step 7 – Dokumentation & Release
+- `docs/QA_CHECKS.md`, `CHANGELOG.md`, README und Benutzerhilfen aktualisieren (Hinweis „Flags entfernt in Version …“).  
+- Roadmap nach jedem abgeschlossenen Schritt anpassen, damit zukünftige Arbeiten nachvollziehbar bleiben.  
+- Finaler Smoke-Test (Login → Capture → Doctor → Chart → Logout) unter strenger CSP.  
+- Danach Tag/Release erstellen und ggf. Backend-Migration deployen.
