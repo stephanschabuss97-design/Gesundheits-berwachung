@@ -652,7 +652,7 @@ Save-Flow (saveBlock) uebermittelt salt_high/sugar_high; toggle-Status wird beim
 
 **Smoke**
 - Mehrere Refresh-Anst  e werden koalesziert (nur ein Durchlauf aktiv).
-- Pro Sub-Step (doctor/appointments/lifestyle/chart) Timeout (~8s) ? Log + Weiterlauf.
+- Pro Sub-Step (doctor/lifestyle/chart) Timeout (~8s) ? Log + Weiterlauf.
 
 **Sanity**
 - Start/Ende-Logs mit Dauer vorhanden; Promise resolved immer.

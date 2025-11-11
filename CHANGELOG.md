@@ -1,3 +1,13 @@
+## Unreleased
+
+Removed:
+- Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.
+- `assets/js/appointments.js` (inkl. globaler State) entfällt; `assets/js/config.js` exportiert nur noch `DEV_ALLOW_DEFAULTS` ohne zusätzliche `window.*`-Zuordnungen.
+- Neues Skript `sql/08_Remove_Appointments.sql` entfernt `public.appointments` inkl. Trigger, Policies und Realtime-Publikation.
+
+Docs:
+- `docs/QA_CHECKS.md` aktualisiert (UI-Refresh Steps nur noch doctor/lifestyle/chart).
+
 ## v1.8.2 - Guard/Resume Cleanup
 
 Added:
