@@ -107,7 +107,6 @@
   0%{opacity:0.35; transform:translateY(8px);}
   100%{opacity:1; transform:translateY(0);}
 }
-#chartSvg .flags{pointer-events:auto;}
 
 /* SUBMODULE: Legend & Hover States @public - Interaktive Legende für Datenreihen mit Hover-/Dim-Effekten */
 #chart .legend{
@@ -189,7 +188,3 @@
 }
 .chart-tip-header{opacity:.85; margin-bottom:4px;}
 .chart-tip-note{white-space:pre-wrap; margin-bottom:0;}
-.chart-tip-note--with-flags{margin-bottom:6px;}
-.chart-tip-flags{margin-top:2px;}
-.chart-tip-flags--tight{margin-top:0;}
-.chart-tip-flags-list{margin:4px 0 0 16px; padding:0;}

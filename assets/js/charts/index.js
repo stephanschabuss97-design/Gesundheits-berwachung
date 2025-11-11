@@ -103,8 +103,7 @@ const chartPanel = {
         if (!(isPt || isHit)) { this.hideTip(); return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
-        const hasFlags = this.hasFlagsForDate?.(date);
-        if (!(hasNote || hasFlags)) { this.hideTip(); return; }
+        if (!hasNote) { this.hideTip(); return; }
         this.fillTipFromTarget(tgt);
         this.positionTip(e);
       });
@@ -122,8 +121,7 @@ const chartPanel = {
         if (!(isPt || isHit)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
         const date = tgt.getAttribute("data-date") || "";
         const hasNote = !!(tgt.getAttribute("data-note"));
-        const hasFlags = this.hasFlagsForDate?.(date);
-        if (!(hasNote || hasFlags)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
+        if (!hasNote) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
         this.fillTipFromTarget(tgt);
         this.tipSticky = !this.tipSticky;
         this.positionTip(e);
@@ -137,10 +135,8 @@ const chartPanel = {
         if (!(isPt || isHit)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          const date = tgt.getAttribute("data-date") || "";
           const hasNote = !!(tgt.getAttribute("data-note"));
-          const hasFlags = this.hasFlagsForDate?.(date);
-          if (!(hasNote || hasFlags)) return;
+          if (!hasNote) return;
           this.fillTipFromTarget(tgt);
           this.tipSticky = !this.tipSticky;
         } else if (e.key === "Escape") {
@@ -220,14 +216,6 @@ async getFiltered() {
           weight: null,
           waist_cm: null,
           notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: !!d.flags.valsartan_missed,
-          forxiga_missed:   !!d.flags.forxiga_missed,
-          nsar_taken:       !!d.flags.nsar_taken,
-          salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90,
           fat_kg: null,
           muscle_kg: null
         });
@@ -246,14 +234,6 @@ async getFiltered() {
           weight: null,
           waist_cm: null,
           notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: !!d.flags.valsartan_missed,
-          forxiga_missed:   !!d.flags.forxiga_missed,
-          nsar_taken:       !!d.flags.nsar_taken,
-          salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90,
           fat_kg: null,
           muscle_kg: null
         });
@@ -270,45 +250,8 @@ async getFiltered() {
           weight: d.weight,
           waist_cm: d.waist_cm,
           notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: !!d.flags.valsartan_missed,
-          forxiga_missed:   !!d.flags.forxiga_missed,
-          nsar_taken:       !!d.flags.nsar_taken,
-          salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90,
           fat_kg: d.fat_kg,
           muscle_kg: d.muscle_kg
-        });
-      }
-    }
-    // Ergaenze Tage mit ausschliesslich Flags (ohne BP/Body), damit Flags-Overlay immer angezeigt wird
-    for (const d of days) {
-      const hasFlags = !!(d?.flags?.training || d?.flags?.sick || d?.flags?.water_lt2 || d?.flags?.salt_gt5 || d?.flags?.protein_ge90 || d?.flags?.meds);
-      if (!hasFlags) continue;
-      const already = flat.some(e => e?.date === d.date);
-      if (!already) {
-        const ts = Date.parse(d.date + "T12:00:00Z");
-        flat.push({
-          date: d.date,
-          dateTime: new Date(ts).toISOString(),
-          ts,
-          context: "Tag",
-          sys: null, dia: null, pulse: null,
-          weight: null,
-          waist_cm: null,
-          notes: d.notes || "",
-          training: d.flags.training,
-          low_intake: d.flags.water_lt2,
-          sick: d.flags.sick,
-          valsartan_missed: !!d.flags.valsartan_missed,
-          forxiga_missed:   !!d.flags.forxiga_missed,
-          nsar_taken:       !!d.flags.nsar_taken,
-          salt_high: d.flags.salt_gt5,
-          protein_high90: d.flags.protein_ge90,
-          fat_kg: null,
-          muscle_kg: null
         });
       }
     }
@@ -405,45 +348,26 @@ async getFiltered() {
       this.tip.style.opacity = "1";
     }
   },
-  // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt inkl. Flags
+  // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt
   fillTipFromTarget(tgt) {
     if (!this.tip) return;
     this.setHoverSeries(tgt?.getAttribute("data-series") || null);
     const note = tgt.getAttribute("data-note") || "";
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
-    const flags = (typeof this.flagsByDate?.get === 'function') ? this.flagsByDate.get(date) : null;
-    const items = [];
-    if (flags) {
-      if (flags.training)         items.push("Training");
-      if (flags.sick)             items.push("Krank");
-      if (flags.low_intake)       items.push("< 2 L Wasser");
-      if (flags.salt_high)        items.push("> 5 g Salz");
-      if (flags.protein_high90)   items.push("Protein  90 g");
-      if (flags.valsartan_missed) items.push("Valsartan vergessen");
-      if (flags.forxiga_missed)   items.push("Forxiga vergessen");
-      if (flags.nsar_taken)       items.push("NSAR genommen");
-      if (!flags.valsartan_missed && !flags.forxiga_missed && !flags.nsar_taken && flags.meds) items.push("Medikamente");
-    }
 
     const parts = [];
     const hdr = (date || ctx) ? `<div class="chart-tip-header">${esc([date, ctx].filter(Boolean).join(" . "))}</div>` : "";
     if (hdr) parts.push(hdr);
     if (note) {
-      const noteClass = items.length ? ' chart-tip-note--with-flags' : '';
-      parts.push(`<div class="chart-tip-note${noteClass}">${esc(note)}</div>`);
-    }
-    if (items.length) {
-      const lis = items.map(esc).map(t => `<li>${t}</li>`).join("");
-      const flagsClass = note ? 'chart-tip-flags chart-tip-flags--tight' : 'chart-tip-flags';
-      parts.push(`<div class="${flagsClass}"><strong>Flags:</strong><ul class="chart-tip-flags-list">${lis}</ul></div>`);
+      parts.push(`<div class="chart-tip-note">${esc(note)}</div>`);
     }
     if (!parts.length) { this.hideTip(); return; }
     this.tip.innerHTML = parts.join("");
     this.tip.dataset.visible = "1";
     this.tip.style.display = "block";
     this.tip.style.opacity = "1";
-    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note ? 'Notiz vorhanden. ' : ''}${items.length ? 'Flags: ' + items.join(', ') : ''}`.trim();
+    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note ? 'Notiz vorhanden.' : ''}`.trim();
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
@@ -735,55 +659,10 @@ const metric = $("#metricSel")?.value || "bp";
 
     // Wenn es Flags gibt, soll das Chart nicht fruehzeitig abbrechen
     const hasBarData = barSeries.some(s => s.values.some(v => v != null));
-    const hasAnyFlagsData = (metric !== "weight") && Array.isArray(data) && data.some(e => !!(e?.training || e?.low_intake || e?.sick || e?.salt_high || e?.protein_high90 || e?.valsartan_missed || e?.forxiga_missed || e?.nsar_taken));
-    const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData || hasAnyFlagsData;
+    const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
-    }
-
-    // Flag-Aggregation (Flags + Tooltips)
-    let dayFlagsTmp = null;
-    const flagsByDate = new Map();
-    if (metric !== "weight") {
-      dayFlagsTmp = new Map();
-      for (const e of data) {
-        if (!e?.date) continue;
-        let rec = dayFlagsTmp.get(e.date);
-        if (!rec) {
-          rec = {
-            training: false,
-            badCount: 0,
-            seen: { water:false, salt:false, protein:false, sick:false, meds:false },
-          };
-          dayFlagsTmp.set(e.date, rec);
-        }
-        if (e.training) rec.training = true;
-        const meds = !!(e.valsartan_missed || e.forxiga_missed || e.nsar_taken);
-        const flags = {
-          water: !!e.low_intake,
-          salt:  !!e.salt_high,
-          protein: !!e.protein_high90,
-          sick:  !!e.sick,
-          meds,
-        };
-        for (const k of Object.keys(flags)) {
-          if (flags[k] && !rec.seen[k]) { rec.seen[k] = true; rec.badCount++; }
-        }
-
-        let f = flagsByDate.get(e.date);
-        if (!f) f = { training:false, sick:false, low_intake:false, salt_high:false, protein_high90:false, valsartan_missed:false, forxiga_missed:false, nsar_taken:false, meds:false };
-        f.training = f.training || !!e.training;
-        f.sick = f.sick || !!e.sick;
-        f.low_intake = f.low_intake || !!e.low_intake;
-        f.salt_high = f.salt_high || !!e.salt_high;
-        f.protein_high90 = f.protein_high90 || !!e.protein_high90;
-        f.valsartan_missed = f.valsartan_missed || !!e.valsartan_missed;
-        f.forxiga_missed   = f.forxiga_missed   || !!e.forxiga_missed;
-        f.nsar_taken       = f.nsar_taken       || !!e.nsar_taken;
-        f.meds = f.meds || meds;
-        flagsByDate.set(e.date, f);
-      }
     }
 
     // Dynamische Groesse
@@ -795,23 +674,6 @@ const metric = $("#metricSel")?.value || "bp";
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
 
-    // === Flags -> X-Bereich erweitern (immer) + Lookup fuer Tooltip ===
-    let flagTs = [];
-    if (metric === "weight") {
-      this.flagsByDate = new Map();
-      this.hasFlagsForDate = () => false;
-    } else {
-      const activeFlags = dayFlagsTmp || new Map();
-      flagTs = [...activeFlags.keys()].map(d => Date.parse(d + "T00:00:00Z"));
-      this.flagsByDate = flagsByDate;
-      this.hasFlagsForDate = (dayIso) => {
-        if (!dayIso || !this.flagsByDate) return false;
-        const f = this.flagsByDate.get(dayIso);
-        if (!f) return false;
-        return !!(f.training || f.sick || f.low_intake || f.salt_high || f.protein_high90 || f.valsartan_missed || f.forxiga_missed || f.nsar_taken || f.meds);
-      };
-    }
-
     // Skalen
     const xVals = X.filter(t => Number.isFinite(t));
     let xmin = Math.min(...xVals);
@@ -821,12 +683,6 @@ const metric = $("#metricSel")?.value || "bp";
       // Fallback
       xmin = Date.now() - 7 * 864e5;
       xmax = Date.now();
-    }
-
-    // Union mit Flag-Tagen (immer)
-    if (flagTs.length) {
-      xmin = Math.min(xmin, Math.min(...flagTs));
-      xmax = Math.max(xmax, Math.max(...flagTs));
     }
 
     // Padding (2%)
@@ -935,215 +791,6 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
 
     if (this.svg) this.svg.insertAdjacentHTML("beforeend", grid);
 
-    // === Flags Overlay (nur fuer BP) ===
-    if (this.svg && metric !== "weight") {
-      const dayFlags = dayFlagsTmp || new Map();
-
-      const toDayTsLocal = (iso) => Date.parse(iso + "T00:00:00Z");
-      const flaggedDays = [...dayFlags.keys()]
-        .filter(d => {
-          const r = dayFlags.get(d);
-          return r && (r.training || r.badCount > 0);
-        })
-        .sort();
-
-      if (flaggedDays.length) {
-        const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-        g.setAttribute("class","flags");
-        g.setAttribute("pointer-events","auto");
-        g.setAttribute("aria-hidden","true");
-
-        const uniqDays = [...new Set([...flaggedDays.map(d => toDayTsLocal(d)), ...X.filter(Boolean)])].sort((a,b)=>a-b);
-        const dayXs = uniqDays.map(t => x(t));
-        const minStep = dayXs.length > 1 ? Math.min(...dayXs.slice(1).map((v,i)=>v - dayXs[i])) : innerW;
-        const bandW   = Math.max(10, Math.floor(minStep * 0.45));
-        const yBottom = PT + innerH;
-        const slotH   = innerH / 6; // 1 Training + bis zu 5 Bad
-
-        for (const d of flaggedDays) {
-          const t = toDayTsLocal(d);
-          const cx = x(t), xLeft = Math.round(cx - bandW/2);
-          const rec = dayFlags.get(d);
-          let used = 0;
-
-          // Training (gruen)
-          if (rec.training) {
-            const yTop = Math.round(yBottom - (used + 1) * slotH);
-            const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-            r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
-            r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-            r.setAttribute("fill", "#10b981"); r.setAttribute("fill-opacity","0.22");
-            r.setAttribute("stroke", "#fff");  r.setAttribute("stroke-opacity","0.06");
-            r.setAttribute("shape-rendering","crispEdges");
-            g.appendChild(r);
-            used++;
-          }
-          // Bad-Flags (rot gestapelt)
-          for (let i=0; i<rec.badCount; i++) {
-            const yTop = Math.round(yBottom - (used + 1) * slotH);
-            const r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-            r.setAttribute("x", xLeft); r.setAttribute("y", yTop);
-            r.setAttribute("width", bandW); r.setAttribute("height", Math.ceil(slotH));
-            r.setAttribute("fill", "#ef4444"); r.setAttribute("fill-opacity","0.18");
-            r.setAttribute("stroke", "#fff");  r.setAttribute("stroke-opacity","0.06");
-            r.setAttribute("shape-rendering","crispEdges");
-            g.appendChild(r);
-            used++;
-          }
-
-          // Interaktiver Hit-Bereich pro Tag ueber alle Slots
-          const totalSlots = used;
-          if (totalSlots > 0) {
-            const yTopAll = Math.round(yBottom - totalSlots * slotH);
-            const hit = document.createElementNS("http://www.w3.org/2000/svg","rect");
-            hit.setAttribute("x", xLeft); hit.setAttribute("y", yTopAll);
-            hit.setAttribute("width", bandW); hit.setAttribute("height", Math.ceil(totalSlots * slotH));
-            hit.setAttribute("fill", "transparent");
-            hit.setAttribute("pointer-events", "all");
-            hit.setAttribute("class", "flag-hit chart-hit");
-            hit.setAttribute("data-date", d);
-            hit.setAttribute("role", "button");
-            hit.setAttribute("tabindex", "0");
-            // ARIA-Label aus Flags ableiten
-            try {
-              const f = this.flagsByDate?.get?.(d);
-              if (f) {
-                const items = [];
-                if (f.training) items.push("Training");
-                if (f.sick) items.push("Krank");
-                if (f.low_intake) items.push("< 2 L Wasser");
-                if (f.salt_high) items.push("> 5 g Salz");
-                if (f.protein_high90) items.push("Protein  90 g");
-                if (f.valsartan_missed) items.push("Valsartan vergessen");
-                if (f.forxiga_missed) items.push("Forxiga vergessen");
-                if (f.nsar_taken) items.push("NSAR genommen");
-                if (!f.valsartan_missed && !f.forxiga_missed && !f.nsar_taken && f.meds) items.push("Medikamente");
-                if (items.length) hit.setAttribute("aria-label", `Flags: ${items.join(", ")}`);
-              }
-            } catch(_){}
-            g.appendChild(hit);
-          }
-        }
-        this.svg.appendChild(g); // hinter den Linien/Punkten
-      }
-    }
-
-    // Koerper: Kompositionsbalken (Muskel/Fett) als hinterer Layer
-    if (metric === "weight" && this.SHOW_BODY_COMP_BARS && this.svg) {
-      const baseLineValue = 75;
-      const baseline = y(baseLineValue);
-      const muscleSeries = barSeries[0] || { values: [] };
-      const fatSeries    = barSeries[1] || { values: [] };
-      const entries = data.map((entry, idx) => {
-        const ts = X[idx];
-        if (!Number.isFinite(ts)) return null;
-        const muscle = muscleSeries.values[idx];
-        const fat = fatSeries.values[idx];
-        if (muscle == null && fat == null) return null;
-        return { ts, muscle, fat, src: data[idx], idx };
-      }).filter(Boolean);
-
-      if (entries.length) {
-        const uniqTs = [...new Set(entries.map(e => e.ts))].sort((a,b)=>a-b);
-        const dayXs = uniqTs.map(t => x(t));
-        const baseStep = dayXs.length > 1
-          ? Math.min(...dayXs.slice(1).map((v,i) => v - dayXs[i]))
-          : innerW / Math.max(1, uniqTs.length);
-        const groupWidth = Math.max(12, Math.min(36, Math.floor(baseStep * 0.5)));
-        const gap = Math.max(2, Math.floor(groupWidth * 0.12));
-        const barWidth = Math.max(4, Math.floor((groupWidth - gap) / 2));
-
-        if (barWidth > 0 && Number.isFinite(baseline)) {
-          const formatKg = (val) => {
-            if (val == null) return null;
-            const num = Number(val);
-            if (!Number.isFinite(num)) return null;
-            return (typeof fmtNum === "function" ? fmtNum(num, 1) : num.toFixed(1));
-          };
-          let barsSvg = '<g class="body-bars" aria-hidden="true">';
-          let hitsSvg = '<g class="body-bar-hits">';
-          for (const { ts, muscle, fat, src } of entries) {
-            const center = x(ts);
-            const start = center - groupWidth / 2;
-            const raw = src || {};
-            const dayIso = raw?.date || (raw?.dateTime ? raw.dateTime.slice(0, 10) : new Date(ts).toISOString().slice(0, 10));
-            const weightVal = formatKg(raw?.weight);
-            const muscleNum = muscle != null ? Number(muscle) : null;
-            const fatNum = fat != null ? Number(fat) : null;
-            const hasMuscle = muscleNum != null && Number.isFinite(muscleNum);
-            const hasFat = fatNum != null && Number.isFinite(fatNum);
-            let muscleX = start;
-            let fatX = start + barWidth + gap;
-            if (hasMuscle && !hasFat) {
-              muscleX = center - barWidth / 2;
-            }
-            if (!hasMuscle && hasFat) {
-              fatX = center - barWidth / 2;
-            }
-
-            if (hasMuscle) {
-              const yVal = y(baseLineValue + muscleNum);
-              if (Number.isFinite(yVal)) {
-                const h = Math.abs(baseline - yVal);
-                if (h > 0.5) {
-                  const top = Math.min(baseline, yVal);
-                  barsSvg += `<rect class="body-bar" data-series="body-muscle" x="${muscleX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="var(--chart-bar-muscle)" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
-                  let hitHeight = Math.max(h, 14);
-                  let hitTop = Math.min(top, baseline - hitHeight);
-                  if (hitTop < PT) {
-                    hitTop = PT;
-                    hitHeight = Math.max(4, baseline - hitTop);
-                  }
-                  if (hitHeight > 0.5) {
-                    const muscleVal = formatKg(muscleNum);
-                    const parts = [];
-                    if (muscleVal) parts.push(`Muskelmasse: ${muscleVal} kg`);
-                    if (weightVal) parts.push(`Gewicht: ${weightVal} kg`);
-                    const note = parts.join('\n');
-                    const aria = `${dayIso || ''} Muskel ${muscleVal ? muscleVal + ' kg' : ''}`.trim();
-                    hitsSvg += `<rect class="body-hit chart-hit" x="${muscleX.toFixed(1)}" y="${hitTop.toFixed(1)}" width="${barWidth}" height="${hitHeight.toFixed(1)}" fill="transparent" pointer-events="all"
-                      data-series="body-muscle" data-date="${esc(dayIso || '')}" data-ctx="Muskel" data-note="${esc(note)}"
-                      aria-label="${esc(aria)}" title="${esc(aria)}" role="button" tabindex="0"></rect>`;
-                  }
-                }
-              }
-            }
-
-            if (hasFat) {
-              const yVal = y(baseLineValue + fatNum);
-              if (Number.isFinite(yVal)) {
-                const h = Math.abs(baseline - yVal);
-                if (h > 0.5) {
-                  const top = Math.min(baseline, yVal);
-                  barsSvg += `<rect class="body-bar" data-series="body-fat" x="${fatX.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth}" height="${h.toFixed(1)}" fill="var(--chart-bar-fat)" fill-opacity="0.55" stroke="none" pointer-events="none" />`;
-                  let hitHeight = Math.max(h, 14);
-                  let hitTop = Math.min(top, baseline - hitHeight);
-                  if (hitTop < PT) {
-                    hitTop = PT;
-                    hitHeight = Math.max(4, baseline - hitTop);
-                  }
-                  if (hitHeight > 0.5) {
-                    const fatVal = formatKg(fatNum);
-                    const parts = [];
-                    if (fatVal) parts.push(`Fettmasse: ${fatVal} kg`);
-                    if (weightVal) parts.push(`Gewicht: ${weightVal} kg`);
-                    const note = parts.join('\n');
-                    const aria = `${dayIso || ''} Fett ${fatVal ? fatVal + ' kg' : ''}`.trim();
-                    hitsSvg += `<rect class="body-hit chart-hit" x="${fatX.toFixed(1)}" y="${hitTop.toFixed(1)}" width="${barWidth}" height="${hitHeight.toFixed(1)}" fill="transparent" pointer-events="all"
-                      data-series="body-fat" data-date="${esc(dayIso || '')}" data-ctx="Fett" data-note="${esc(note)}"
-                      aria-label="${esc(aria)}" title="${esc(aria)}" role="button" tabindex="0"></rect>`;
-                  }
-                }
-              }
-            }
-          }
-          barsSvg += '</g>';
-          hitsSvg += '</g>';
-          this.svg.insertAdjacentHTML("beforeend", barsSvg);
-          pendingBodyHitsSvg = hitsSvg;
-        }
-      }
-    }
 
     // Linien + Punkte
 const isFiniteTs = (t) => Number.isFinite(t);
