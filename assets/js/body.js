@@ -1,11 +1,10 @@
 'use strict';
 /**
  * MODULE: body.js
- * Description: Verarbeitet Körperdaten und Tageszusammenfassungen inkl. Validierung, Flags, Kommentare und automatischer UI-Synchronisierung.
+ * Description: Verarbeitet Körperdaten und Tageszusammenfassungen inkl. Validierung und automatischer UI-Synchronisierung.
  * Submodules:
  *  - resetBodyPanel (UI-Reset)
- *  - saveDaySummary (Body- & Flag-Logik)
- *  - saveFlagsCommentNote (Flag-Kommentar)
+ *  - saveDaySummary (Body-Logik)
  *  - prefillBodyInputs (UI-Vorbelegung)
  *  - API export & global attach
  */
@@ -29,41 +28,14 @@
     if (focus && weightEl) weightEl.focus();
   }
 
-  // SUBMODULE: saveDaySummary @internal - validates and saves body/flags daily summary
+  // SUBMODULE: saveDaySummary @internal - validates and saves body summary
   async function saveDaySummary(options = {}){
-    const { includeBody = true, includeFlags = true, includeFlagsComment = true } = options;
+    const { includeBody = true } = options;
     const date = $("#date")?.value || todayStr();
     const time = "12:00";
 
     const entry = baseEntry(date, time, "Tag");
     let validationFailed = false;
-    const snapshotFn = global.getCaptureFlagsStateSnapshot;
-    const defaultFlags = {
-      trainingActive: false,
-      lowIntakeActive: false,
-      sickActive: false,
-      valsartanMissed: false,
-      forxigaMissed: false,
-      nsarTaken: false,
-      saltHigh: false,
-      proteinHigh: false
-    };
-    let rawFlags = defaultFlags;
-    if (typeof snapshotFn === "function") {
-      try {
-        const result = snapshotFn();
-        if (result && typeof result === 'object' && !Array.isArray(result)) {
-          rawFlags = result;
-        }
-      } catch (err) {
-        try { diag.add?.(`[body] getCaptureFlagsStateSnapshot failed: ${err?.message || err}`); } catch (_) {}
-      }
-    }
-    const flags = Object.keys(defaultFlags).reduce((acc, key) => {
-      const value = rawFlags[key];
-      acc[key] = typeof value === 'boolean' ? value : !!value;
-      return acc;
-    }, { ...defaultFlags });
 
     const notesRaw = ($("#notesDay")?.value || "").trim();
     if (includeBody){
@@ -110,59 +82,17 @@
 
     if (validationFailed) return false;
 
-    if (includeFlags){
-      entry.training = flags.trainingActive;
-      entry.low_intake = flags.lowIntakeActive;
-    entry.sick = flags.sickActive;
-    entry.valsartan_missed = flags.valsartanMissed;
-    entry.forxiga_missed = flags.forxigaMissed;
-    entry.nsar_taken = flags.nsarTaken;
-    entry.salt_high = flags.saltHigh;
-    entry.protein_high90 = flags.proteinHigh;
-  } else {
-    entry.training = null;
-    entry.low_intake = null;
-    entry.sick = null;
-    entry.valsartan_missed = null;
-    entry.forxiga_missed = null;
-    entry.nsar_taken = null;
-    entry.salt_high = null;
-    entry.protein_high90 = null;
-  }
-
-    const flagsComment = includeFlagsComment ? ($("#flagsComment")?.value || "").trim() : "";
   let saved = false;
 
   const hasBodyContent = includeBody && ((entry.weight != null) || (entry.waist_cm != null) || !!entry.notes);
-  const hasFlagContent = includeFlags && !!(flags.trainingActive || flags.lowIntakeActive || flags.sickActive ||
-    flags.valsartanMissed || flags.forxigaMissed || flags.nsarTaken ||
-    flags.saltHigh || flags.proteinHigh);
 
-  if (hasBodyContent || hasFlagContent){
+  if (hasBodyContent){
     const localId = await addEntry(entry);
     await syncWebhook(entry, localId);
     saved = true;
   }
 
-  if (includeFlagsComment && flagsComment){
-    const savedNote = await saveFlagsCommentNote(date, flagsComment);
-    if (savedNote){
-      const el = document.getElementById('flagsComment');
-      if (el) el.value = '';
-      diag.add('Flags-Kommentar gespeichert');
-      saved = true;
-    }
-  }
-
   return saved;
-  }
-
-  // SUBMODULE: saveFlagsCommentNote @public - speichert zusätzlichen Kommentar zu Flag-Einträgen
-  async function saveFlagsCommentNote(date, text){
-    const trimmed = (text || '').trim();
-    if (!trimmed) return false;
-    await appendNote(date, '[Flags] ', trimmed);
-    return true;
   }
 
   // SUBMODULE: prefillBodyInputs @internal - lädt letzte Körperwerte und füllt Eingabefelder vor
@@ -208,7 +138,6 @@
   const bodyApi = {
     resetBodyPanel: resetBodyPanel,
     saveDaySummary: saveDaySummary,
-    saveFlagsCommentNote: saveFlagsCommentNote,
     prefillBodyInputs: prefillBodyInputs
   };
   appModules.body = Object.assign(appModules.body || {}, bodyApi);

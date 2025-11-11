@@ -10,7 +10,7 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
 - **Capture (Tageserfassung)**
   - Blutdruck Morgens/Abends inkl. Kommentarpflicht bei Grenzwerten.
   - Koerperwerte: Gewicht, Taille sowie optional Prozent Fett und Prozent Muskel (ab v1.6.7).
-  - Flags (Training, Medikamente, Intake usw.) mit eigenem Kommentar.
+  - Freitext-Kommentar fuer Tagesereignisse direkt im Body-Panel.
   - Intake-Accordion fuer Wasser, Salz und Protein mit Tages-Pills und Fortschrittsbalken.
   - Panel "Arzttermine" (v1.6.0) fuer sechs Rollen mit PATCH-first Workflow, Realtime-Updates und Done-Abschluss.
 
@@ -20,14 +20,13 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
   - Telemetrie misst Render-Zeiten (p50/p90/p95) und schreibt in das Diagnose-Log.
 
 - **Arzt-Ansicht**
-  - Tageskarten mit Datum/Cloud-Status, Messungen, Gewicht/Flags/Kommentar.
+  - Tageskarten mit Datum/Cloud-Status, Messungen, Gewicht und Kommentar.
   - Cloud-Loeschung einzelner Tage, Export als JSON.
   - Zugriff nur nach lokalem Unlock (Passkey oder PIN).
 
 - **Diagramm (Daily)**
   - SVG-Chart fuer Blutdruck und Koerperdaten, inklusive Tastatur- und Tooltip-Unterstuetzung.
   - Muskel- und Fettbalken (kg) hinter dem Gewicht-Chart (v1.6.8), per Feature-Flag deaktivierbar.
-  - Flags-Overlay bleibt exklusiv fuer Blutdruckwerte.
 
 - **Synchronisation und Logging**
   - Google OAuth (anon Key) + Supabase REST/Realtime.

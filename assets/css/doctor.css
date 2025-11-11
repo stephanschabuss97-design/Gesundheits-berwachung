@@ -149,7 +149,7 @@
   justify-content:flex-end;
 }
 
-/* SUBMODULE: Column C (Special Info) @internal - Gewicht, Bauchumfang, Flags und Notizen */
+/* SUBMODULE: Column C (Special Info) @internal - Gewicht, Bauchumfang und Notizen */
 .doctor-view .weight-line,
 .doctor-view .waist-line{
   display:flex;

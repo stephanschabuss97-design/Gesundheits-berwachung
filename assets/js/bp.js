@@ -113,15 +113,7 @@
       sys, dia, pulse,
       weight: null,
       map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-      notes: '',
-      training: false,
-      low_intake: false,
-      sick: false,
-      valsartan_missed: false,
-      forxiga_missed: false,
-      nsar_taken: false,
-      salt_high: false,
-      protein_high90: false
+      notes: ''
     };
 
     const localId = await addEntry(entry);
@@ -145,17 +137,6 @@
   function baseEntry(date, time, contextLabel){
     const iso = new Date(date + "T" + time).toISOString();
     const ts = new Date(date + "T" + time).getTime();
-    const snapshotFn = global.getCaptureFlagsStateSnapshot;
-    const flags = typeof snapshotFn === 'function' ? snapshotFn() : {
-      trainingActive: false,
-      lowIntakeActive: false,
-      sickActive: false,
-      valsartanMissed: false,
-      forxigaMissed: false,
-      nsarTaken: false,
-      saltHigh: false,
-      proteinHigh: false
-    };
     return {
       date,
       time,
@@ -167,19 +148,11 @@
       pulse: null,
       weight: null,
       map: null,
-      notes: ($("#notesDay")?.value || "").trim(),
-      training: flags.trainingActive,
-      low_intake: flags.lowIntakeActive,
-      sick: flags.sickActive,
-      valsartan_missed: flags.valsartanMissed,
-      forxiga_missed: flags.forxigaMissed,
-      nsar_taken: flags.nsarTaken,
-      salt_high: flags.saltHigh,
-      protein_high90: flags.proteinHigh
+      notes: ($("#notesDay")?.value || "").trim()
     };
   }
 
-  // SUBMODULE: appendNote @internal - stores supplemental note entries for BP/flags
+  // SUBMODULE: appendNote @internal - stores supplemental note entries for BP comments
   async function appendNote(date, prefix, text){
     const trimmed = (text || '').trim();
     if (!trimmed) return;
@@ -188,14 +161,6 @@
     entry.dateTime = stamp.iso;
     entry.ts = stamp.ts;
     entry.notes = prefix + trimmed;
-    entry.training = false;
-    entry.low_intake = false;
-    entry.sick = false;
-    entry.valsartan_missed = false;
-    entry.forxiga_missed = false;
-    entry.nsar_taken = false;
-    entry.salt_high = false;
-    entry.protein_high90 = false;
     const localId = await addEntry(entry);
     await syncWebhook(entry, localId);
   }

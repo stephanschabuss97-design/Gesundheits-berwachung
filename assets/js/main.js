@@ -9,7 +9,7 @@
  *  - UI Refresh Core (requestUiRefresh / runUiRefresh)
  *  - Auth Guard & Doctor Access
  *  - getHeaders / Header Caching / JWT Validation
- *  - Capture & Intake Handling (reset, status, flags)
+ *  - Capture & Intake Handling (reset, status)
  *  - BP Context Management (noon switch, auto apply)
  *  - Main Boot (DOMContentLoaded entry, event binding)
  *  - Online Sync & Realtime Resume
@@ -52,7 +52,6 @@ const saveIntakeTotalsRpc = createSupabaseFn('saveIntakeTotalsRpc');
 const cleanupOldIntake = createSupabaseFn('cleanupOldIntake', { optional: true });
 const fetchDailyOverview = createSupabaseFn('fetchDailyOverview');
 const deleteRemoteDay = createSupabaseFn('deleteRemoteDay');
-const syncCaptureToggles = createSupabaseFn('syncCaptureToggles');
 const setupRealtime = createSupabaseFn('setupRealtime');
 const setConfigStatus = createSupabaseFn('setConfigStatus');
 const showLoginOverlay = createSupabaseFn('showLoginOverlay');
@@ -617,7 +616,6 @@ const REQUIRED_SUPABASE_EXPORTS = [
   'cleanupOldIntake',
   'fetchDailyOverview',
   'deleteRemoteDay',
-  'syncCaptureToggles',
   'setupRealtime',
   'setConfigStatus',
   'showLoginOverlay',
@@ -1264,7 +1262,7 @@ if (saveBodyPanelBtn){
     withBusy(btn, true);
     let savedOk = false;
     try{
-      const saved = await window.AppModules.body.saveDaySummary({ includeBody: true, includeFlags: false, includeFlagsComment: false });
+      const saved = await window.AppModules.body.saveDaySummary({ includeBody: true });
       if (!saved){
         uiError('Keine Koerperdaten eingegeben.');
       } else {
@@ -1287,65 +1285,6 @@ if (saveBodyPanelBtn){
   });
 }
 
-const saveFlagsPanelBtn = document.getElementById('saveFlagsPanelBtn');
-if (saveFlagsPanelBtn){
-  saveFlagsPanelBtn.addEventListener('click', async (e)=>{
-    try {
-      const logged = await isLoggedInFast();
-      if (!logged) {
-        diag.add?.('[panel] flags save while auth unknown');
-        // Diagnostics only: request proceeds so auth wrapper can retry properly.
-      }
-    } catch(err) {
-      console.error('isLoggedInFast check failed', err);
-    }
-    const btn = e.currentTarget;
-    withBusy(btn, true);
-    let savedOk = false;
-    try{
-      const saved = await window.AppModules.body.saveDaySummary({ includeBody: false, includeFlags: true, includeFlagsComment: true });
-      if (!saved){
-        uiError('Keine Flag-Daten eingegeben.');
-      } else {
-        savedOk = true;
-        requestUiRefresh({ reason: 'panel:flags' }).catch(err => {
-          diag.add?.('ui refresh err: ' + (err?.message || err));
-        });
-      }
-    }catch(err){
-      diag.add?.('Panel Flags Fehler: ' + (err?.message || err));
-      uiError('Speichern fehlgeschlagen. Bitte erneut versuchen.');
-    }finally{
-      withBusy(btn, false);
-    }
-    if (savedOk){
-      window.AppModules.capture.resetFlagsPanel(); flashButtonOk(btn, '&#x2705; Flags gespeichert');
-    }
-  });
-}
-
-const bindToggle = (id, setter, getVal)=>{
-  const el = $(id);
-  el.addEventListener("click", ()=>{
-    setter(!getVal());
-  });
-};
-const getCaptureFlagValue = (key) => {
-  try {
-    return !!getCaptureFlagsStateSnapshot()[key];
-  } catch (_) {
-    return false;
-  }
-};
-bindToggle("#trainingToggle", window.AppModules.capture.setTraining, ()=>getCaptureFlagValue('trainingActive'));
-bindToggle("#lowIntakeToggle", window.AppModules.capture.setLowIntake, ()=>getCaptureFlagValue('lowIntakeActive'));
-bindToggle("#sickToggle", window.AppModules.capture.setSick, ()=>getCaptureFlagValue('sickActive'));
-bindToggle("#valsartanMissToggle", window.AppModules.capture.setValsartanMiss, ()=>getCaptureFlagValue('valsartanMissed'));
-bindToggle("#forxigaMissToggle", window.AppModules.capture.setForxigaMiss, ()=>getCaptureFlagValue('forxigaMissed'));
-bindToggle("#nsarToggle", window.AppModules.capture.setNsar, ()=>getCaptureFlagValue('nsarTaken'));
-bindToggle("#saltHighToggle", window.AppModules.capture.setSaltHigh, ()=>getCaptureFlagValue('saltHigh'));
-bindToggle("#proteinHighToggle", window.AppModules.capture.setProteinHigh, ()=>getCaptureFlagValue('proteinHigh'));
-
 // Sync toggles when the date changes in capture view
 const dateEl = document.getElementById('date');
   if (dateEl) {
@@ -1355,7 +1294,6 @@ const dateEl = document.getElementById('date');
   AppModules.captureGlobals.setDateUserSelected((dateEl.value || '') !== todayIso);
         // was du beim Datum aendern haben willst:
         await window.AppModules.capture.refreshCaptureIntake();
-        await syncCaptureToggles();
         window.AppModules.capture.resetCapturePanels();
         updateBpCommentWarnings?.();
         await window.AppModules.body.prefillBodyInputs();

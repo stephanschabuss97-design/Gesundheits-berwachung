@@ -1,14 +1,12 @@
 'use strict';
 /**
  * MODULE: supabase/api/notes.js
- * Description: Synchronisiert Notizen- und Tages-Flags-Einträge mit Supabase über REST (POST, PATCH, DELETE) inklusive Fallback-Handling.
+ * Description: Synchronisiert Notizen mit Supabase über REST (POST, PATCH, DELETE) inklusive Fallback-Handling.
  * Submodules:
  *  - imports (Core-, Auth- und UI-Abhängigkeiten)
  *  - globals (Diagnose, Config, UI-Feedback)
  *  - syncWebhook (zentrale Sync-Logik mit Fallbacks)
- *  - fallback-day_flags (PATCH-Fallback für day_flags)
  *  - fallback-note (PATCH-Fallback für note)
- *  - patchDayFlags (aktualisiert Flags eines Tages)
  *  - appendNoteRemote (fügt Text an bestehende Notiz an)
  *  - deleteRemote (löscht einzelnen Remote-Eintrag)
  *  - deleteRemoteDay (löscht alle Einträge eines Tages)
@@ -113,44 +111,7 @@ export async function syncWebhook(entry, localId) {
         /* plain text */
       }
 
-// SUBMODULE: fallback-day_flags @internal - PATCH fallback für day_flags
-      if (res.status === 409 || /duplicate|unique/i.test(details)) {
-        const flagsEvent = events.find((ev) => ev.type === 'day_flags');
-        try {
-          if (flagsEvent && uid) {
-            const dayIso = entry.date;
-            await patchDayFlags({ user_id: uid, dayIso, flags: flagsEvent.payload });
-            const others = events.filter((ev) => ev.type !== 'day_flags');
-            if (others.length) {
-              const res2 = await fetchWithAuth(
-                (headers) =>
-                  fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(others.map((ev) => ({ ...ev, user_id: uid })))
-                  }),
-                { tag: 'webhook:fallback', maxAttempts: 2 }
-              );
-              if (!res2.ok) throw new Error(`rest-post-failed-${res2.status}`);
-            }
-            uiInfo('Flags aktualisiert.');
-            diag.add('Fallback: day_flags via PATCH');
-            return;
-          }
-        } catch (errFallback) {
-          diag.add?.(
-            `[webhook] day_flags fallback failed uid=${uid || 'null'} day=${entry?.date || 'null'}: ${
-              errFallback?.message || errFallback
-            }`
-          );
-          console.error('Supabase notes fallback error (day_flags)', {
-            uid,
-            dayIso: entry?.date,
-            error: errFallback
-          });
-        }
-
-        // SUBMODULE: fallback-note @internal - PATCH fallback für note
+// SUBMODULE: fallback-note @internal - PATCH fallback für note
         const noteEvent = events.find((ev) => ev.type === 'note');
         try {
           if (noteEvent && uid) {
@@ -209,45 +170,6 @@ export async function syncWebhook(entry, localId) {
     diag.add('Webhook: Netzwerkfehler');
     throw err;
   }
-}
-
-// SUBMODULE: patchDayFlags @public - aktualisiert day_flags für angegebenen Benutzer/Tag
-export async function patchDayFlags({ user_id, dayIso, flags }) {
-  const url = await getConf('webhookUrl');
-  if (!url || !user_id || !dayIso) {
-    const err = new Error('patchDayFlags: missing params');
-    err.status = 401;
-    throw err;
-  }
-
-  const from = `${dayIso}T00:00:00Z`;
-  const toNext = new Date(from);
-  toNext.setUTCDate(toNext.getUTCDate() + 1);
-  const toIso = toNext.toISOString().slice(0, 10);
-
-  const query =
-    `${url}?user_id=eq.${encodeURIComponent(user_id)}&type=eq.day_flags` +
-    `&ts=gte.${encodeURIComponent(dayIso)}T00:00:00Z&ts=lt.${encodeURIComponent(toIso)}T00:00:00Z`;
-  const res = await fetchWithAuth(
-    (headers) =>
-      fetch(query, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ payload: flags })
-      }),
-    { tag: 'flags:patch', maxAttempts: 2 }
-  );
-  if (!res.ok) {
-    let details = '';
-    try {
-      const errJson = await res.json();
-      details = errJson?.message || errJson?.details || '';
-    } catch (_) {
-      /* ignore */
-    }
-    throw new Error(`patch day_flags failed ${res.status} - ${details}`);
-  }
-  return await res.json();
 }
 
 // SUBMODULE: appendNoteRemote @public - fügt neuen Notiztext an bestehenden Tageskommentar an

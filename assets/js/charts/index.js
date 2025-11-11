@@ -1,12 +1,12 @@
 ﻿'use strict';
 /**
  * MODULE: app/charts/index.js
- * Description: Rendert SVG/Canvas-Charts für Blutdruck- und Körperdaten, inklusive KPI-Leiste, Tooltip-Logik und Flag-Overlays.
+ * Description: Rendert SVG/Canvas-Charts für Blutdruck- und Körperdaten, inklusive KPI-Leiste und Tooltip-Logik.
  * Submodules:
  *  - globals & helpers (Supabase-Fallbacks, FocusTrap, Konfiguration)
  *  - chartPanel controller (Panel-Lifecycle, Events, Tooltip-Handling)
  *  - chartPanel.getFiltered (Aggregation von Cloud-/Local-Daten)
- *  - chartPanel.draw (Rendering-Pipeline: Skalen, SVG-Layer, WHO-Ampel, Flags)
+ *  - chartPanel.draw (Rendering-Pipeline: Skalen, SVG-Layer, WHO-Ampel)
  *  - chartPanel.ensureKpiFields / layoutKpis (KPI-Struktur & WHO-Farbskala)
  *  - tooltip handling (Hover, Sticky, Accessibility)
  *  - body composition bars (Fett- & Muskelanteile)

@@ -1,14 +1,13 @@
 'use strict';
 /**
  * MODULE: supabase/api/vitals.js
- * Description: Aggregiert Vitaldaten aus Supabase-Views (Blutdruck, Körperwerte, Flags, Notizen) zu einer konsolidierten Tagesübersicht.
+ * Description: Aggregiert Vitaldaten aus Supabase-Views (Blutdruck, Körperwerte, Notizen) zu einer konsolidierten Tagesübersicht.
  * Submodules:
  *  - imports (Core- und Query-Abhängigkeiten)
  *  - globals (Diagnose-Hook)
  *  - calcMAPValue (Wrapper um globale MAP-Berechnung)
  *  - loadBpFromView (Blutdruckwerte)
  *  - loadBodyFromView (Körperwerte)
- *  - loadFlagsFromView (Tages-Flags)
  *  - loadNotesLastPerDay (letzte Notizen pro Tag)
  *  - joinViewsToDaily (Kombination aller Views in Tagesobjekte)
  *  - fetchDailyOverview (Hauptschnittstelle für Übersicht)
@@ -68,20 +67,6 @@ export async function loadBodyFromView({ user_id, from, to }) {
   });
 }
 
-// SUBMODULE: loadFlagsFromView @public - liest Tages-Flags aus v_events_day_flags
-export async function loadFlagsFromView({ user_id, from, to }) {
-  const filters = [['user_id', `eq.${user_id}`]];
-  if (from) filters.push(['day', `gte.${from}`]);
-  if (to) filters.push(['day', `lte.${to}`]);
-  return await sbSelect({
-    table: 'v_events_day_flags',
-    select:
-      'day,training,sick,low_intake,salt_high,protein_high90,valsartan_missed,forxiga_missed,nsar_taken',
-    filters,
-    order: 'day.asc'
-  });
-}
-
 // SUBMODULE: loadNotesLastPerDay @internal - extrahiert letzte Notizen pro Tag
 const loadNotesLastPerDay = async ({ user_id, from, to }) => {
   const filters = [
@@ -113,7 +98,7 @@ const loadNotesLastPerDay = async ({ user_id, from, to }) => {
 };
 
 // SUBMODULE: joinViewsToDaily @internal - fusioniert View-Ergebnisse zu Tagesobjekten
-const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
+const joinViewsToDaily = ({ bp, body, notes = [] }) => {
   const days = new Map();
   const ensure = (day) => {
     let entry = days.get(day);
@@ -129,14 +114,6 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
         fat_kg: null,
         muscle_kg: null,
         notes: '',
-        flags: {
-          water_lt2: false,
-          salt_gt5: false,
-          protein_ge90: false,
-          sick: false,
-          meds: false,
-          training: false
-        },
         remoteIds: [],
         hasCloud: true
       };
@@ -183,20 +160,6 @@ const joinViewsToDaily = ({ bp, body, flags, notes = [] }) => {
     }
   }
 
-    // Flags
-  for (const row of flags) {
-    const entry = ensure(row.day);
-    entry.flags.training = !!row.training;
-    entry.flags.sick = !!row.sick;
-    entry.flags.water_lt2 = !!row.low_intake;
-    entry.flags.salt_gt5 = !!row.salt_high;
-    entry.flags.protein_ge90 = !!row.protein_high90;
-    entry.flags.meds = !!(row.valsartan_missed || row.forxiga_missed || row.nsar_taken);
-    entry.flags.valsartan_missed = !!row.valsartan_missed;
-    entry.flags.forxiga_missed = !!row.forxiga_missed;
-    entry.flags.nsar_taken = !!row.nsar_taken;
-  }
-
     // Notes
   for (const note of notes) {
     const entry = ensure(note.day);
@@ -211,12 +174,11 @@ export async function fetchDailyOverview(fromIso, toIso) {
   const userId = await getUserId();
   if (!userId) return [];
 
-  const [bp, body, flags, notes] = await Promise.all([
+  const [bp, body, notes] = await Promise.all([
     loadBpFromView({ user_id: userId, from: fromIso, to: toIso }),
     loadBodyFromView({ user_id: userId, from: fromIso, to: toIso }),
-    loadFlagsFromView({ user_id: userId, from: fromIso, to: toIso }),
     loadNotesLastPerDay({ user_id: userId, from: fromIso, to: toIso })
   ]);
 
-  return joinViewsToDaily({ bp, body, flags, notes });
+  return joinViewsToDaily({ bp, body, notes });
 }

@@ -99,7 +99,7 @@
 <main id="appMain">
 <!-- END MODULE -->
 <!-- MODULE: CAPTURE (Intake)
-  intent: Tageserfassung (UI) inkl. Intake/BP/Body/Flags/Termine, verbindet Benutzeraktionen mit Save-Flows
+  intent: Tageserfassung (UI) inkl. Intake/BP/Body/Termine, verbindet Benutzeraktionen mit Save-Flows
   contracts: nutzt DATA ACCESS.saveIntakeTotals*, AUTH.isLoggedIn, UI.requestUiRefresh
   todo: @extract-candidate bindIntakeCapture, refreshCaptureIntake spaeter extrahieren
 -->
@@ -241,33 +241,6 @@
         </div>
       </div>
     </details>
-
-    <!-- SUBMODULE: day-flags accordion @internal - toggles training/sick/salt states -->
-    <details class="accordion">
-      <summary><span>&#x1F6A9; Flags</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
-      <div class="accordion-body">
-        <div class="card-nested">
-          <div class="row u-row-flex-center-gap8">
-            <button class="btn toggle" id="trainingToggle" type="button" aria-pressed="false">&#x1F3CB;&#xFE0F; Training heute</button>
-            <button class="btn toggle" id="sickToggle" type="button" aria-pressed="false">&#x1F912; Krank (Forxiga pausiert)</button>
-            <button class="btn toggle" id="valsartanMissToggle" type="button" aria-pressed="false">&#x1F48A; Valsartan vergessen</button>
-            <button class="btn toggle" id="forxigaMissToggle" type="button" aria-pressed="false">&#x23F0; Forxiga vergessen</button>
-            <button class="btn toggle" id="lowIntakeToggle" type="button" aria-pressed="false">&#x1F4A7; &lt; 2 L getrunken</button>
-            <button class="btn toggle" id="saltHighToggle" type="button" aria-pressed="false" title="> 5 g Salz">&#x1F9C2; &gt; 5 g Salz</button>
-            <button class="btn toggle" id="proteinHighToggle" type="button" aria-pressed="false" title="Protein >= 90 g">&#x1F969; Protein >= 90 g</button>
-            <button class="btn toggle" id="nsarToggle" type="button" aria-pressed="false" title="Nicht-steroidale Antirheumatika">&#x1F489; NSAR genommen</button>
-          </div>
-        </div>
-        <div class="card-nested">
-          <label for="flagsComment" class="small u-block-mb6">Kommentar zu Flags</label>
-          <textarea id="flagsComment" placeholder="Kommentar zu Flags (optional)" rows="2"></textarea>
-        </div>
-        <div class="panel-actions">
-          <button class="btn primary" id="saveFlagsPanelBtn" type="button">&#x1F4BE; Flags speichern</button>
-        </div>
-      </div>
-
-</details>
 
 <!-- SUBMODULE: appointments accordion @internal - manages per-role appointment cards -->
 <details class="accordion" id="appointments">
@@ -519,8 +492,6 @@
 <script src="assets/js/data-local.js"></script>
 <!-- @refactor: moved to assets/js/capture/index.js -->
 <script src="assets/js/capture/index.js"></script>
-<!-- @refactor: moved to assets/js/capture/flags.js -->
-<script src="assets/js/capture/flags.js"></script>
 <!-- @refactor: moved to assets/js/bp.js -->
 <script src="assets/js/bp.js"></script>
 <!-- @refactor: moved to assets/js/body.js -->
@@ -615,14 +586,13 @@
     - DATA ACCESS (REST/RPC) -> #SUBMODULES: 30, #@extract: 1, Exports:[deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay]
     - APPOINTMENTS -> #SUBMODULES: 0, #@extract: 12, Exports:[refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge] (moved to assets/js/appointments.js)
     - CAPTURE (Intake) - Status & RPC Hooks -> #SUBMODULES: 0, #@extract: 7, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake] (moved to assets/js/capture/index.js)
-    - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, setDocBadges, renderDoctorDay, exportDoctorJson]
+    - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, renderDoctorDay, exportDoctorJson]
     - CHARTS (SVG/Canvas) -> #SUBMODULES: 15, #@extract: 3, Exports:[chartPanel]
     - UI / ROUTING / VIEWS - Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
-    - CAPTURE (Intake) - Flag Toggles -> #SUBMODULES: 0, #@extract: 1, Exports:[setProteinHigh, setTraining, setLowIntake, setSaltHigh] (moved to assets/js/capture/index.js)
     - BP (Blood Pressure) - Validierung -> #SUBMODULES: 0, #@extract: 5, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel] (moved to assets/js/bp.js)
-    - CAPTURE (Intake) - Panel Resets & Shortcuts -> #SUBMODULES: 0, #@extract: 8, Exports:[resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar] (moved to assets/js/capture/index.js)
+    - CAPTURE (Intake) - Panel Resets & Shortcuts -> #SUBMODULES: 0, #@extract: 2, Exports:[resetBodyPanel, resetCapturePanels, addCapturePanelKeys] (moved to assets/js/capture/index.js)
     - BP (Blood Pressure) - Persistenz -> #SUBMODULES: 0, #@extract: 6, Exports:[saveBlock, appendNote, allocateNoteTimestamp] (moved to assets/js/bp.js)
-    - BODY (Koerperwerte) -> #SUBMODULES: 0, #@extract: 1, Exports:[resetBodyPanel, saveDaySummary, saveFlagsCommentNote, prefillBodyInputs] (moved to assets/js/body.js)
+    - BODY (Koerperwerte) -> #SUBMODULES: 0, #@extract: 1, Exports:[resetBodyPanel, saveDaySummary, prefillBodyInputs] (moved to assets/js/body.js)
     - DATA ACCESS (Auth Helpers) -> #SUBMODULES: 3, #@extract: 2, Exports:[withRetry, fetchWithAuth, syncWebhook]
     - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]

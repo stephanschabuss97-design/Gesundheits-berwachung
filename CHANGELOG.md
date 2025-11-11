@@ -387,7 +387,6 @@ Fixed:
 
 Fixed:
 - `isLoggedInFast()` räumt Timeout auf; keine späten session-timeout Fehler.
-- `resetFlagsPanel` entfernt Legacy-Aufruf `setSugarHigh()`.
 - Ungenutztes `__t0` (performance.now) gelöscht; is-busy Klassen entfallen.
 - Bootstrap-Logger (F9) entfernt, Diagnosepanel übernimmt Logging.
 
@@ -741,7 +740,7 @@ Added:
 
 Changed:
 - `assets/js/supabase.js` entfernt Duplikate (syncWebhook, Intake/Vitals/Notes, Realtime) und delegiert über saubere Proxy-Funktionen an die neuen Module.
-- Laufzeit-Loop exponiert weiterhin alle bisherigen Globals (`loadIntakeToday`, `fetchDailyOverview`, `setupRealtime`, `deleteRemoteDay`, `syncCaptureToggles`) – inklusive neu aufgenommenem `teardownRealtime`.
+- Laufzeit-Loop exponiert weiterhin Kern-Globals (`loadIntakeToday`, `fetchDailyOverview`, `setupRealtime`, `deleteRemoteDay`) – inklusive neu aufgenommenem `teardownRealtime`.
 - Barrel-Initialisierung kombiniert Legacy-API mit modularen Exports, sodass Downstream-Code unverändert bleibt, aber Baum modular geladen wird.
 
 Fixed:

@@ -23,7 +23,6 @@ import * as vitals from './supabase/api/vitals.js';
 import * as notes from './supabase/api/notes.js';
 import * as realtime from './supabase/realtime/index.js';
 import { pushPendingToRemote } from './supabase/api/push.js';
-import { syncCaptureToggles } from './supabase/api/toggles.js';
 
 // SUBMODULE: state exports @internal - extrahiert und forwardet State-Handler (Cache, Header, Promise)
 const {
@@ -97,7 +96,6 @@ const supabaseApi = {
   baseUrlFromRest,
   ensureSupabaseClient,
   syncWebhook: notes.syncWebhook,
-  patchDayFlags: notes.patchDayFlags,
   appendNoteRemote: notes.appendNoteRemote,
   deleteRemote: notes.deleteRemote,
   deleteRemoteDay: notes.deleteRemoteDay,
@@ -107,10 +105,8 @@ const supabaseApi = {
   cleanupOldIntake: intake.cleanupOldIntake,
   loadBpFromView: vitals.loadBpFromView,
   loadBodyFromView: vitals.loadBodyFromView,
-  loadFlagsFromView: vitals.loadFlagsFromView,
   fetchDailyOverview: vitals.fetchDailyOverview,
   pushPendingToRemote,
-  syncCaptureToggles,
   bindAuthButtons: authUi.bindAuthButtons,
   prefillSupabaseConfigForm: authUi.prefillSupabaseConfigForm,
   setConfigStatus: authUi.setConfigStatus,

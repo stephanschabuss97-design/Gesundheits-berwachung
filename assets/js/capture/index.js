@@ -72,7 +72,6 @@
     try {
       const last = AppModules.captureGlobals.getIntakeResetDoneFor();
       if (last === todayIso) return;
-      await syncCaptureToggles();
       AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
     } catch (_) { /* noop */ }
   }
@@ -588,99 +587,24 @@
     if (addProtBtn) addProtBtn.addEventListener('click', addProtein);
   }
 
-  // PATCH: bestehende day_flags eines Tages aktualisieren (RLS: nur eigene Records)
-  // @refactor: moved to assets/js/supabase.js (patchDayFlags)
-
-  // @refactor: moved to assets/js/supabase.js (appendNoteRemote)
 
   /** MODULE: CAPTURE (Intake)
-   * intent: Panel hotkeys, save/reset flows und flag handling (Fortsetzung)
-   * contracts: interagiert mit DATA ACCESS.saveBlock, UI.requestUiRefresh, AUTH Guards
-   * exports: setProteinHigh, setTraining, setLowIntake, setSaltHigh
-   * notes: Fortsetzung fuer Panel-Operationen (Hotkeys/Speichern)
+   * intent: Panel Resets & Tastatur-Shortcuts
+   * contracts: verbindet BP-/BODY-Panels und setzt UI-Kontext zurueck
+   * exports: resetBodyPanel, resetCapturePanels, addCapturePanelKeys
    */
-
-  /* ===== Save flows ===== */
-  // Replace sugar toggle with protein (runtime migration for legacy layouts)
-  // Migration entfernt: Markup nutzt direkt #proteinHighToggle
-  // SUBMODULE: captureFlagToggles @internal - manages capture flag buttons and state cache
-  let trainingActive=false,
-      lowIntakeActive=false,
-      sickActive=false,
-      valsartanMissed=false,
-      forxigaMissed=false,
-      nsarTaken=false,
-      saltHigh=false,
-      proteinHigh=false;
-
-  function getCaptureFlagsState(){
-    return {
-      trainingActive,
-      lowIntakeActive,
-      sickActive,
-      valsartanMissed,
-      forxigaMissed,
-      nsarTaken,
-      saltHigh,
-      proteinHigh
-    };
-  }
-
-  function setProteinHigh(on){
-    proteinHigh = !!on;
-    setToggle($("#proteinHighToggle"), proteinHigh, "&#x1F969; Protein >= 90 g (aktiv)", "&#x1F969; Protein >= 90 g");
-  }
-  function setToggle(el, on, activeText, baseText){
-  el = el || null;
-  if (!el) return;
-  el.classList.toggle("active", !!on);
-  el.setAttribute("aria-pressed", on ? "true" : "false");
-  el.innerHTML = on ? activeText : baseText;
-  }
-  function setTraining(on){ trainingActive=!!on; setToggle($("#trainingToggle"), trainingActive, "&#x1F3CB;&#xFE0F; Training heute (aktiv)", "&#x1F3CB;&#xFE0F; Training heute"); }
-  function setLowIntake(on){ lowIntakeActive=!!on; setToggle($("#lowIntakeToggle"), lowIntakeActive, "&#x1F4A7; < 2 L (aktiv)", "&#x1F4A7; < 2 L getrunken"); }
-  function setSaltHigh(on){ saltHigh = !!on; setToggle($("#saltHighToggle"), saltHigh, "&#x1F9C2; > 5 g Salz (aktiv)", "&#x1F9C2; > 5 g Salz"); }
-  // Kommentar-Pflicht fuer BP: Grenzwerte markieren
-  /** END MODULE */
-
-  /** MODULE: CAPTURE (Intake)
-   * intent: Panel Resets, Flag-Hooks und Tastatur-Shortcuts (Fortsetzung)
-   * contracts: verbindet BP-/BODY-Panels, nutzt CAPTURE State Toggles
-   * exports: resetBodyPanel, resetFlagsPanel, resetCapturePanels, addCapturePanelKeys, setSick, setValsartanMiss, setForxigaMiss, setNsar
-   * notes: Fortsetzung fuer Capture-Hilfsfunktionen (Resets/Toggles)
-   */
-  // SUBMODULE: resetFlagsPanel @internal - setzt Flag-Toggles und Kommentar auf Ausgangszustand
   const getResetBodyPanel = () => {
   const mod = global.AppModules?.body;
   if (mod && typeof mod.resetBodyPanel === 'function') return mod.resetBodyPanel;
   if (typeof global.resetBodyPanel === 'function') return global.resetBodyPanel;
   return null;
 };
-
-function resetFlagsPanel(opts = {}) {
-    const { focus = true } = opts;
-    try {
-      setTraining(false);
-      setLowIntake(false);
-      setSick(false);
-      setValsartanMiss(false);
-      setForxigaMiss(false);
-      setNsar(false);
-      setSaltHigh(false);
-      if (typeof setProteinHigh === 'function') setProteinHigh(false);
-    } catch(_){ }
-    const commentEl = document.getElementById('flagsComment');
-    if (commentEl) commentEl.value = '';
-    if (focus && commentEl) commentEl.focus();
-  }
-  // SUBMODULE: resetCapturePanels @internal - kombiniert Panel-Resets (BP/Body/Flags) und setzt Kontext zurueck
   function resetCapturePanels(opts = {}) {
     const { focus = true } = opts;
     resetBpPanel('M', { focus: false });
     resetBpPanel('A', { focus: false });
     const resetBodyPanelFn = getResetBodyPanel();
-  if (resetBodyPanelFn) resetBodyPanelFn({ focus: false });
-    resetFlagsPanel({ focus: false });
+    if (resetBodyPanelFn) resetBodyPanelFn({ focus: false });
     const ctxSel = document.getElementById('bpContextSel');
     if (ctxSel) ctxSel.value = 'M';
     document.querySelectorAll('.bp-pane').forEach(pane => {
@@ -692,7 +616,6 @@ function resetFlagsPanel(opts = {}) {
       if (first) first.focus();
     }
   }
-  // SUBMODULE: addCapturePanelKeys @internal - registriert Tastaturkuerzel fuer Save-/Reset-Flows
   function addCapturePanelKeys(){
     const bind = (selectors, onEnter, onEsc) => {
       document.querySelectorAll(selectors).forEach(el => {
@@ -705,23 +628,8 @@ function resetFlagsPanel(opts = {}) {
     bind('#captureAmount, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
     bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
     const resetBodyPanelFn = getResetBodyPanel();
-  bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanelFn?.());
-    bind('#flagsComment', () => document.getElementById('saveFlagsPanelBtn')?.click(), () => resetFlagsPanel());
+    bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanelFn?.());
   }
-  // SUBMODULE: setSick @internal - setzt Krank-Flag und sperrt Forxiga-Toggle bei Bedarf
-  function setSick(on){
-  sickActive=!!on; setToggle($("#sickToggle"), sickActive, "&#x1F912; Krank (Forxiga pausiert) (aktiv)", "&#x1F912; Krank (Forxiga pausiert)");
-  if(sickActive){ setForxigaMiss(true); $("#forxigaMissToggle").disabled=true; $("#forxigaMissToggle").style.opacity=0.6; }
-  else { $("#forxigaMissToggle").disabled=false; $("#forxigaMissToggle").style.opacity=1; }
-  }
-  // SUBMODULE: setValsartanMiss @internal - pflegt Valsartan-vergessen Status und UI-Text
-  function setValsartanMiss(on){ valsartanMissed=!!on; setToggle($("#valsartanMissToggle"), valsartanMissed, "&#x1F48A; Valsartan vergessen (aktiv)", "&#x1F48A; Valsartan vergessen"); }
-  // SUBMODULE: setForxigaMiss @internal - pflegt Forxiga-vergessen Status inkl. Label
-  function setForxigaMiss(on){ forxigaMissed=!!on; setToggle($("#forxigaMissToggle"), forxigaMissed, "&#x23F0; Forxiga vergessen (aktiv)", "&#x23F0; Forxiga vergessen"); }
-  // SUBMODULE: setNsar @internal - pflegt NSAR-Flag und Screenreader-Label
-  function setNsar(on){ nsarTaken=!!on; setToggle($("#nsarToggle"), nsarTaken, "&#x1F489; NSAR genommen (aktiv)", "&#x1F489; NSAR genommen"); }
-
-  /** END MODULE */
 
   const captureApi = {
     clearCaptureIntakeInputs: clearCaptureIntakeInputs,
@@ -739,20 +647,10 @@ function resetFlagsPanel(opts = {}) {
     bindIntakeCapture: bindIntakeCapture,
     renderLifestyle: renderLifestyle,
     bindLifestyle: bindLifestyle,
-    resetFlagsPanel: resetFlagsPanel,
     resetCapturePanels: resetCapturePanels,
     addCapturePanelKeys: addCapturePanelKeys,
-    setProteinHigh: setProteinHigh,
-    setTraining: setTraining,
-    setLowIntake: setLowIntake,
-    setSaltHigh: setSaltHigh,
-    setSick: setSick,
-    setValsartanMiss: setValsartanMiss,
-    setForxigaMiss: setForxigaMiss,
-    setNsar: setNsar,
     updateLifestyleBars: updateLifestyleBars,
-    fmtDE: fmtDE,
-    getCaptureFlagsState: getCaptureFlagsState
+    fmtDE: fmtDE
   };
   appModules.capture = Object.assign(appModules.capture || {}, captureApi);
   Object.entries(captureApi).forEach(([name, fn]) => {

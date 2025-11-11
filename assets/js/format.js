@@ -87,7 +87,7 @@
         }
       }
 
-      // Körperwerte, Flags, Notizen
+      // Körperwerte & Notizen
       if (entry.context === 'Tag') {
         const hasBody = entry.weight != null || entry.waist_cm != null;
         if (hasBody) {
@@ -102,19 +102,6 @@
           if (muscle !== null) payload.muscle_pct = muscle;
           out.push({ ts: tsIso, type: 'body', payload });
         }
-
-        const flags = {
-          training: !!entry.training,
-          sick: !!entry.sick,
-          low_intake: !!entry.low_intake,
-          salt_high: !!entry.salt_high,
-          protein_high90: !!entry.protein_high90,
-          valsartan_missed: !!entry.valsartan_missed,
-          forxiga_missed: !!entry.forxiga_missed,
-          nsar_taken: !!entry.nsar_taken
-        };
-        const anyFlag = Object.values(flags).some(Boolean);
-        if (anyFlag) out.push({ ts: tsIso, type: 'day_flags', payload: flags });
 
         const note = (entry.notes || '').trim();
         if (note) out.push({ ts: tsIso, type: 'note', payload: { text: note } });
