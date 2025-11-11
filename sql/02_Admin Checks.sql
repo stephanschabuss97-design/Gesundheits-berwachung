@@ -1,16 +1,15 @@
-﻿-- ============================================
+-- ============================================
 -- 02_admin_checks.sql  (v1.0)
 -- Admin- & QA-Script: zeigt alle Checks, jeder Block eigener Output
 -- ============================================
 
 -- 1) Duplikate-Checks
 -- Erwartung: 0 Zeilen
-select 'Duplikate body/day_flags/note/intake' as check,
        user_id, day, type,
        null::text as ctx,
        count(*) as c
 from public.health_events
-where type in ('body','day_flags','note','intake')
+where type in ('body','note','intake')
 group by user_id, day, type
 having count(*) > 1;
 
@@ -61,10 +60,8 @@ cross join lateral jsonb_object_keys(e.payload) as k(key)
 where e.type='body'
   and k.key not in ('kg','cm');
 
-select 'Unknown keys day_flags' as check, e.id, k.key
 from public.health_events e
 cross join lateral jsonb_object_keys(e.payload) as k(key)
-where e.type='day_flags'
   and k.key not in ('training','sick','low_intake','salt_high','protein_high90',
                     'valsartan_missed','forxiga_missed','nsar_taken');
 
@@ -80,14 +77,14 @@ cross join lateral jsonb_object_keys(e.payload) as k(key)
 where e.type='intake'
   and k.key not in ('water_ml','salt_g','protein_g');
 
--- 4) TagesÃ¼bersicht fÃ¼r einen User (Admin-Tool)
+-- 4) Tagesübersicht für einen User (Admin-Tool)
 -- :uid und :day nach Bedarf ersetzen
-select 'TagesÃ¼bersicht' as check, e.*
+select 'Tagesübersicht' as check, e.*
 from public.health_events e
 where e.user_id = '00000000-0000-0000-0000-000000000001'
   and e.day = current_date;
 
--- 5) Event gezielt lÃ¶schen (Admin-Tool)
+-- 5) Event gezielt löschen (Admin-Tool)
 -- Beispiel (ID anpassen):
 -- delete from public.health_events where id = '...';
 
@@ -98,7 +95,7 @@ left join pg_publication_tables t on p.pubname = t.pubname
 where p.pubname = 'supabase_realtime'
 group by p.pubname;
 
--- 7) User-Ãœbersicht (Auth)
+-- 7) User-Übersicht (Auth)
 select 'Users' as check, u.id, u.email
 from auth.users u;
 
@@ -117,7 +114,7 @@ where a.status = 'scheduled'
 group by a.user_id, a.role
 having count(*) > 1;
 
--- Geplante Termine in der Vergangenheit (überfällig)
+-- Geplante Termine in der Vergangenheit (�berf�llig)
 select 'appointments overdue scheduled' as check,
        a.user_id, a.role, a.dt
 from public.appointments a

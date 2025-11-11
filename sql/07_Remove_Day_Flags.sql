@@ -1,10 +1,26 @@
 -- ============================================
--- 04_Body_Comp_v1.6.6.sql
--- Delta-Migration: Body-Komposition (fat_pct/muscle_pct) + View-Erweiterung
--- Idempotent: CREATE OR REPLACE / IF NOT EXISTS
+-- 07_remove_day_flags.sql  (v1.7.x)
+-- Zweck: Entfernt die veralteten Event-Typen 'day_flags'
+--        aus Schema + Views + Triggerfunktion.
+-- Idempotent ausführbar.
 -- ============================================
 
--- 1) Trigger-Funktion aktualisieren (nur Body-Teil erweitert)
+-- 1) Alt-Daten optional löschen (nur falls noch vorhanden)
+delete from public.health_events where type = 'day_flags';
+
+-- 2) View & Index entfernen
+drop view if exists public.v_events_day_flags cascade;
+drop index if exists public.uq_events_flags_per_day;
+
+-- 3) type-Constraint korrigieren
+alter table public.health_events
+  drop constraint if exists health_events_type_check;
+
+alter table public.health_events
+  add constraint health_events_type_check
+  check (type in ('bp','body','note','intake'));
+
+-- 4) Triggerfunktion aktualisieren (ohne day_flags-Branch)
 create or replace function public.trg_events_validate()
 returns trigger
 language plpgsql
@@ -99,14 +115,6 @@ begin
       end if;
     end if;
 
-    keys := array['training','sick','low_intake','salt_high','protein_high90','valsartan_missed','forxiga_missed','nsar_taken'];
-    if exists (
-      select 1
-      from jsonb_each(new.payload) as kv(k, v)
-      where jsonb_typeof(v) <> 'boolean'
-    ) then
-    end if;
-
   elsif new.type = 'note' then
     keys := array['text'];
     if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
@@ -147,6 +155,9 @@ begin
       if (new.payload->>'protein_g') !~ '^\d+(\.\d+)?$' then
         raise exception 'intake.protein_g muss Zahl sein' using errcode = '22023';
       end if;
+      if (new.payload->>'protein_g')::numeric < 0 or (new.payload->>'protein_g')::numeric > 300 then
+        raise exception 'intake.protein_g außerhalb Range 0-300' using errcode = '22003';
+      end if;
     end if;
   end if;
 
@@ -154,31 +165,4 @@ begin
 end;
 $$;
 
--- 2) View erweitern: zusätzliche Spalten + Berechnung
-create or replace view public.v_events_body
-  with (security_invoker = on)
-as
-select
-  e.id,
-  e.user_id,
-  e.ts,
-  e.day,
-  (e.payload->>'kg')::numeric         as kg,
-  (e.payload->>'cm')::numeric         as cm,
-  (e.payload->>'fat_pct')::numeric    as fat_pct,
-  (e.payload->>'muscle_pct')::numeric as muscle_pct,
-  case when e.payload ? 'kg' and e.payload ? 'fat_pct'
-       then (e.payload->>'kg')::numeric * (e.payload->>'fat_pct')::numeric / 100
-       else null end                   as fat_kg,
-  case when e.payload ? 'kg' and e.payload ? 'muscle_pct'
-       then (e.payload->>'kg')::numeric * (e.payload->>'muscle_pct')::numeric / 100
-       else null end                   as muscle_kg
-from public.health_events e
-where e.type = 'body';
-
-comment on view public.v_events_body is 'Körperwerte (Gewicht/Bauchumfang/Komposition) pro Tag.';
-
--- 3) Optionaler Performance-Index
-create index if not exists idx_events_user_type_ts
-  on public.health_events (user_id, type, ts desc);
-
+comment on table public.health_events is 'Event-Log (bp/body/note/intake) mit RLS, Unique je Tag/Type(+ctx), Validierungs-Trigger und Europe/Vienna-Tageslogik.';

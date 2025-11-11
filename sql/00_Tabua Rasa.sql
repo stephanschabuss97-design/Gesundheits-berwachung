@@ -16,7 +16,7 @@ begin
       where pubname = 'supabase_realtime'
         and schemaname = 'public'
         and tablename in ('health_events','user_profile',
-                          'v_events_bp','v_events_body','v_events_day_flags')
+                          'v_events_bp','v_events_body')
     loop
       execute format('alter publication supabase_realtime drop table %I.%I',
                      tbl.schemaname, tbl.tablename);
@@ -30,7 +30,7 @@ begin
     select schemaname, viewname
     from pg_views
     where schemaname = 'public'
-      and viewname in ('v_events_bp','v_events_body','v_events_day_flags')
+      and viewname in ('v_events_bp','v_events_body')
   loop
     execute format('drop view if exists %I.%I cascade', vw.schemaname, vw.viewname);
   end loop;

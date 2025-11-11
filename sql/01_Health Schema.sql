@@ -1,7 +1,7 @@
-ï»¿ï»¿-- ============================================
+?-- ============================================
 -- 01_health_schema.sql  (v1.3.0)
 -- PostgreSQL 15 | Supabase-kompatibel
--- Ziel: Minimal und robust â€“ Eventschema + RLS + Validierung + Views(security_invoker) + Realtime
+-- Ziel: Minimal und robust – Eventschema + RLS + Validierung + Views(security_invoker) + Realtime
 -- ============================================
 
 -- (A) Extensions
@@ -35,18 +35,17 @@ create policy "profile_delete_own"
 
 -- (C) Kern: Health-Events
 -- Typen:
---  - 'bp'       : Blutdruck (sys/dia/pulse, pulse optional), ctx âˆˆ {Morgen,Abend}
+--  - 'bp'       : Blutdruck (sys/dia/pulse, pulse optional), ctx ? {Morgen,Abend}
 --  - 'body'     : Gewicht/Bauchumfang (kg/cm), mind. eines Pflicht
---  - 'day_flags': Tages-Flags (booleans)
---  - 'note'     : Textnotiz (text, 1..2000)
---  - 'intake'   : Lifestyle-Intake (water_ml/salt_g/protein_g), kumulativ je Tag
+-  - 'note'     : Textnotiz (text, 1..2000)
+-  - 'intake'   : Lifestyle-Intake (water_ml/salt_g/protein_g), kumulativ je Tag
 create table public.health_events (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null default auth.uid(),
   ts         timestamptz not null default now(),
   day        date generated always as ((ts at time zone 'Europe/Vienna')::date) stored,
-  type       text not null check (type in ('bp','body','day_flags','note','intake')),
-  ctx        text null,       -- nur fÃ¼r bp; wird validiert
+  type       text not null check (type in ('bp','body','note','intake')),
+  ctx        text null,       -- nur für bp; wird validiert
   payload    jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
@@ -81,11 +80,6 @@ create unique index if not exists uq_events_body_per_day
   on public.health_events (user_id, day, type)
   where type = 'body';
 
--- day_flags: max 1 pro Tag/User
-create unique index if not exists uq_events_flags_per_day
-  on public.health_events (user_id, day, type)
-  where type = 'day_flags';
-
 -- note: max 1 pro Tag/User
 create unique index if not exists uq_events_note_per_day
   on public.health_events (user_id, day, type)
@@ -101,7 +95,7 @@ create unique index if not exists uq_events_bp_per_day_ctx
   on public.health_events (user_id, day, type, ctx)
   where type = 'bp';
 
--- (E) Kontext-Regel (ctx nur bei bp; dort Pflicht und gÃ¼ltig)
+-- (E) Kontext-Regel (ctx nur bei bp; dort Pflicht und gültig)
 alter table public.health_events
   add constraint chk_ctx_for_bp
   check (
@@ -128,7 +122,7 @@ begin
     -- erlaubte Keys
     keys := array['sys','dia','pulse','ctx'];
     if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
-      raise exception 'bp: payload enthÃ¤lt unbekannte Keys' using errcode = '22023';
+      raise exception 'bp: payload enthält unbekannte Keys' using errcode = '22023';
     end if;
 
     -- Pflichtfelder: sys & dia sind Pflicht; pulse optional; ctx Pflicht
@@ -144,14 +138,14 @@ begin
 
     -- Ranges
     if (new.payload->>'sys') !~ '^\d+$' or (new.payload->>'sys')::int < 70 or (new.payload->>'sys')::int > 260 then
-      raise exception 'bp.sys auÃŸerhalb Range 70â€“260' using errcode = '22003';
+      raise exception 'bp.sys außerhalb Range 70–260' using errcode = '22003';
     end if;
     if (new.payload->>'dia') !~ '^\d+$' or (new.payload->>'dia')::int < 40 or (new.payload->>'dia')::int > 160 then
-      raise exception 'bp.dia auÃŸerhalb Range 40â€“160' using errcode = '22003';
+      raise exception 'bp.dia außerhalb Range 40–160' using errcode = '22003';
     end if;
     if (new.payload ? 'pulse') then
       if (new.payload->>'pulse') !~ '^\d+$' or (new.payload->>'pulse')::int < 35 or (new.payload->>'pulse')::int > 200 then
-        raise exception 'bp.pulse auÃŸerhalb Range 35â€“200' using errcode = '22003';
+        raise exception 'bp.pulse außerhalb Range 35–200' using errcode = '22003';
       end if;
     end if;
 
@@ -164,7 +158,7 @@ begin
   elsif new.type = 'body' then
     keys := array['kg','cm'];
     if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
-      raise exception 'body: payload enthÃ¤lt unbekannte Keys' using errcode = '22023';
+      raise exception 'body: payload enthält unbekannte Keys' using errcode = '22023';
     end if;
 
     has_kg := new.payload ? 'kg';
@@ -175,48 +169,33 @@ begin
 
     if has_kg then
       if (new.payload->>'kg') !~ '^\d+(\.\d+)?$' or (new.payload->>'kg')::numeric < 40 or (new.payload->>'kg')::numeric > 250 then
-        raise exception 'body.kg auÃŸerhalb Range 40â€“250' using errcode = '22003';
+        raise exception 'body.kg außerhalb Range 40–250' using errcode = '22003';
       end if;
     end if;
 
     if has_cm then
       if (new.payload->>'cm') !~ '^\d+(\.\d+)?$' or (new.payload->>'cm')::numeric < 50 or (new.payload->>'cm')::numeric > 200 then
-        raise exception 'body.cm auÃŸerhalb Range 50â€“200' using errcode = '22003';
+        raise exception 'body.cm außerhalb Range 50–200' using errcode = '22003';
       end if;
-    end if;
-
-  elsif new.type = 'day_flags' then
-    keys := array['training','sick','low_intake','salt_high','protein_high90','valsartan_missed','forxiga_missed','nsar_taken'];
-    if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
-      raise exception 'day_flags: payload enthÃ¤lt unbekannte Keys' using errcode = '22023';
-    end if;
-
-    -- alle vorhandenen Keys mÃ¼ssen boolean sein
-    if exists (
-      select 1
-      from jsonb_each(new.payload) as kv(k, v)
-      where jsonb_typeof(v) <> 'boolean'
-    ) then
-      raise exception 'day_flags: alle Werte mÃ¼ssen boolean sein' using errcode = '22023';
     end if;
 
   elsif new.type = 'note' then
     keys := array['text'];
     if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
-      raise exception 'note: payload enthÃ¤lt unbekannte Keys' using errcode = '22023';
+      raise exception 'note: payload enthält unbekannte Keys' using errcode = '22023';
     end if;
 
     if not (new.payload ? 'text') then
       raise exception 'note: payload.text fehlt' using errcode = '23502';
     end if;
     if length(new.payload->>'text') < 1 or length(new.payload->>'text') > 2000 then
-      raise exception 'note.text LÃ¤nge 1â€“2000 Zeichen' using errcode = '22023';
+      raise exception 'note.text Länge 1–2000 Zeichen' using errcode = '22023';
     end if;
 
   elsif new.type = 'intake' then
     keys := array['water_ml','salt_g','protein_g'];
     if exists (select 1 from jsonb_object_keys(new.payload) as t(k) where k <> all(keys)) then
-      raise exception 'intake: payload enthÃ¤lt unbekannte Keys' using errcode = '22023';
+      raise exception 'intake: payload enthält unbekannte Keys' using errcode = '22023';
     end if;
 
     if jsonb_typeof(new.payload) <> 'object' then
@@ -231,7 +210,7 @@ begin
         raise exception 'intake.water_ml muss Zahl sein' using errcode = '22023';
       end if;
       if (new.payload->>'water_ml')::numeric < 0 or (new.payload->>'water_ml')::numeric > 6000 then
-        raise exception 'intake.water_ml auÃŸerhalb Range 0â€“6000' using errcode = '22003';
+        raise exception 'intake.water_ml außerhalb Range 0–6000' using errcode = '22003';
       end if;
     end if;
 
@@ -240,7 +219,7 @@ begin
         raise exception 'intake.salt_g muss Zahl sein' using errcode = '22023';
       end if;
       if (new.payload->>'salt_g')::numeric < 0 or (new.payload->>'salt_g')::numeric > 30 then
-        raise exception 'intake.salt_g auÃŸerhalb Range 0â€“30' using errcode = '22003';
+        raise exception 'intake.salt_g außerhalb Range 0–30' using errcode = '22003';
       end if;
     end if;
 
@@ -249,7 +228,7 @@ begin
         raise exception 'intake.protein_g muss Zahl sein' using errcode = '22023';
       end if;
       if (new.payload->>'protein_g')::numeric < 0 or (new.payload->>'protein_g')::numeric > 300 then
-        raise exception 'intake.protein_g auÃŸerhalb Range 0â€“300' using errcode = '22003';
+        raise exception 'intake.protein_g außerhalb Range 0–300' using errcode = '22003';
       end if;
     end if;
 
@@ -265,8 +244,8 @@ create trigger trg_events_validate_biu
   before insert or update on public.health_events
   for each row execute function public.trg_events_validate();
 
--- (G) Realtime-Publication idempotent bestÃ¼cken
--- Damit listen wir health_events (und optional user_profile) fÃ¼r Realtime
+-- (G) Realtime-Publication idempotent bestücken
+-- Damit listen wir health_events (und optional user_profile) für Realtime
 -- Falls die Publication schon existiert, bleiben Fehler ignoriert (idempotent)
 do $$
 begin
@@ -317,27 +296,7 @@ from public.health_events e
 where e.type = 'body';
 
 
-create or replace view public.v_events_day_flags
-  with (security_invoker = on)
-as
-select
-  e.id,
-  e.user_id,
-  e.ts,
-  e.day,
-  coalesce( (e.payload->>'training')::boolean, false)         as training,
-  coalesce( (e.payload->>'sick')::boolean, false)              as sick,
-  coalesce( (e.payload->>'low_intake')::boolean, false)        as low_intake,
-  coalesce( (e.payload->>'salt_high')::boolean, false)         as salt_high,
-  coalesce( (e.payload->>'protein_high90')::boolean, false)    as protein_high90,
-  coalesce( (e.payload->>'valsartan_missed')::boolean, false)  as valsartan_missed,
-  coalesce( (e.payload->>'forxiga_missed')::boolean, false)    as forxiga_missed,
-  coalesce( (e.payload->>'nsar_taken')::boolean, false)        as nsar_taken
-from public.health_events e
-where e.type = 'day_flags';
-
 -- (I) Doku-Kommentare
-comment on table public.health_events is 'Event-Log (bp/body/day_flags/note/intake) mit RLS, Unique je Tag/Type(+ctx), Validierungs-Trigger und Europe/Vienna-Tageslogik.';
+comment on table public.health_events is 'Event-Log (bp/body/note/intake) mit RLS, Unique je Tag/Type(+ctx), Validierungs-Trigger und Europe/Vienna-Tageslogik.';
 comment on view  public.v_events_bp is 'Blutdruck-Events (Morgen/Abend) mit sys/dia/pulse.';
-comment on view  public.v_events_body is 'KÃ¶rperwerte (Gewicht/Bauchumfang/Komposition) pro Tag.';
-comment on view  public.v_events_day_flags is 'Tages-Flags (Training, Salz, Protein, etc.) pro Tag.';
+comment on view  public.v_events_body is 'Körperwerte (Gewicht/Bauchumfang/Komposition) pro Tag.';
