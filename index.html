@@ -9,7 +9,7 @@
 <meta charset="utf-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
 <title>Gesundheits-Logger (V1.7.6)</title>
 <link rel="stylesheet" href="assets/css/base.css">
 <link rel="stylesheet" href="assets/css/layout.css">
@@ -65,7 +65,7 @@
 </div>
 
 <!-- Diagramm-Panel (Daily) -->
-<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle" style="display:none">
+<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
 <header>
 <h4 id="chartTitle">Diagramm (Daily)</h4>
 <button class="btn ghost" id="chartClose" type="button">x</button>
