@@ -66,16 +66,13 @@ Gesundheits-Logger/
 │   │   │       ├── index.js                   # Initialisierung & Event-Bindings
 │   │   │       ├── calc.js                    # Mittelwerte, MAP, Trends
 │   │   │       └── arzt_ansicht/
-│   │   │           ├── index.js               # Arztpanel (Tab-Switch, Sichtbarkeit)
-│   │   │           ├── werte_uebersicht/
-│   │   │           │   ├── index.js          # Tabellenaufbau, Pagination, Filter
-│   │   │           │   └── table.js          # Dynamisches Rendering der Wertezeilen
+│   │   │           ├── index.js               # Arztpanel (Tab-Switch, Sichtbarkeit), Tabellenaufbau, Pagination, Filter
+│   │   │           ├── table.js               # Dynamisches Rendering der Wertezeilen
 │   │   │           └── chart/
-│   │   │               ├── index.js           # Entry Point für Chartdarstellung
-│   │   │               ├── render.js          # Canvas-/SVG-Renderlogik
-│   │   │               ├── scales.js          # Achsen, Units, Responsiveness
-│   │   │               ├── colors.js          # Farbdefinitionen (zieht aus variables.css)
-│   │   │               └── utils.js           # Reusable Chart-Helferfunktionen
+│   │   │                ├── index.js          # Entry Point für Chartdarstellung
+│   │   │                ├── render.js         # Canvas-/SVG-Renderlogik
+│   │   │                ├── scales.js         # Achsen, Units, Responsiveness
+│   │   │                └── utils.js          # Reusable Chart-Helferfunktionen
 │   │   │
 │   │   ├── diagnostics/                       # 🧪 Entwickler-Werkzeuge (nicht aktiv im Release)
 │   │   │   ├── logger.js                      # Zentrales Logging (AppEvents, Errors)
