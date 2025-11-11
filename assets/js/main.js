@@ -188,8 +188,6 @@ function requestUiRefresh(opts = {}) {
   } catch(_) {}
   const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
 
-  const appointments = false;
-
   uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
   uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
   uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
@@ -268,11 +266,9 @@ async function runUiRefresh(){
       const doc = state.docNeeded;
       const chart = state.chartNeeded;
       const lifestyle = state.lifestyleNeeded;
-      const appointments = false;
       state.docNeeded = false;
       state.chartNeeded = false;
       state.lifestyleNeeded = false;
-      state.appointmentsNeeded = false;
 
       const doctorModule = getDoctorModule();
       const chartPanel = getChartPanel();
