@@ -242,6 +242,185 @@
       </div>
     </details>
 
+<!-- SUBMODULE: appointments accordion @internal - manages per-role appointment cards -->
+<details class="accordion" id="appointments">
+  <summary><span>&#x1F4C5; Arzttermine</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
+  <div class="accordion-body">
+    <div class="card-nested" id="appointmentsWrap">
+      <div class="small u-mb12-opacity80">Pro Rolle gibt es genau einen geplanten Termin.</div>
+
+      <div class="appointment-card" data-role="nephro">
+        <h3 class="blockTitle">Nephrologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-nephro-date">Datum</label>
+            <input type="date" id="appt-nephro-date">
+          </div>
+          <div>
+            <label for="appt-nephro-time">Zeit</label>
+            <input type="time" id="appt-nephro-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-nephro-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-nephro-next">&mdash;</span>
+            <button class="btn ghost" id="appt-nephro-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-nephro-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="internal">
+        <h3 class="blockTitle">Internist</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-internal-date">Datum</label>
+            <input type="date" id="appt-internal-date">
+          </div>
+          <div>
+            <label for="appt-internal-time">Zeit</label>
+            <input type="time" id="appt-internal-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-internal-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-internal-next">&mdash;</span>
+            <button class="btn ghost" id="appt-internal-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-internal-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="urology">
+        <h3 class="blockTitle">Urologe</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-urology-date">Datum</label>
+            <input type="date" id="appt-urology-date">
+          </div>
+          <div>
+            <label for="appt-urology-time">Zeit</label>
+            <input type="time" id="appt-urology-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-urology-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-urology-next">&mdash;</span>
+            <button class="btn ghost" id="appt-urology-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-urology-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="dentist">
+        <h3 class="blockTitle">Zahnarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-dentist-date">Datum</label>
+            <input type="date" id="appt-dentist-date">
+          </div>
+          <div>
+            <label for="appt-dentist-time">Zeit</label>
+            <input type="time" id="appt-dentist-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-dentist-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-dentist-next">&mdash;</span>
+            <button class="btn ghost" id="appt-dentist-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-dentist-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="ophtha">
+        <h3 class="blockTitle">Augenarzt</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-ophtha-date">Datum</label>
+            <input type="date" id="appt-ophtha-date">
+          </div>
+          <div>
+            <label for="appt-ophtha-time">Zeit</label>
+            <input type="time" id="appt-ophtha-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-ophtha-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-ophtha-next">&mdash;</span>
+            <button class="btn ghost" id="appt-ophtha-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-ophtha-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="appointment-card" data-role="physio">
+        <h3 class="blockTitle">Physiotherapie</h3>
+        <div class="appointment-inputs">
+          <div>
+            <label for="appt-physio-date">Datum</label>
+            <input type="date" id="appt-physio-date">
+          </div>
+          <div>
+            <label for="appt-physio-time">Zeit</label>
+            <input type="time" id="appt-physio-time">
+          </div>
+          <div class="btn-wrap">
+            <button class="btn primary" id="appt-physio-save" type="button">Speichern</button>
+          </div>
+        </div>
+        <div class="appointment-meta">
+          <div class="appointment-line">
+            <span class="label">Naechster Termin:</span>
+            <span class="value" id="appt-physio-next">&mdash;</span>
+            <button class="btn ghost" id="appt-physio-done" type="button" disabled>Done</button>
+          </div>
+          <div class="appointment-line">
+            <span class="label">Letzter Termin:</span>
+            <span class="value" id="appt-physio-last">&mdash;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="small u-opacity-70">Hinweis: Logik folgt in den naechsten Phasen - aktuell nur UI-Skelett.</div>
+    </div>
+  </div>
+</details>
 
   </section>
 </section>
@@ -317,6 +496,8 @@
 <script src="assets/js/bp.js"></script>
 <!-- @refactor: moved to assets/js/body.js -->
 <script src="assets/js/body.js"></script>
+<!-- @refactor: moved to assets/js/appointments.js -->
+<script src="assets/js/appointments.js"></script>
 <!-- @refactor: moved to assets/js/doctor/index.js -->
 <script src="assets/js/doctor/index.js"></script>
 <!-- @refactor: moved to assets/js/charts/index.js -->

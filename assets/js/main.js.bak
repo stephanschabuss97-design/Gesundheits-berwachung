@@ -188,12 +188,12 @@ function requestUiRefresh(opts = {}) {
   } catch(_) {}
   const lifestyle = opts.lifestyle !== undefined ? !!opts.lifestyle : lifestyleDefault;
 
-  const appointments = false;
+  const appointments = opts.appointments !== undefined ? !!opts.appointments : false;
 
   uiRefreshState.docNeeded = uiRefreshState.docNeeded || doctor;
   uiRefreshState.chartNeeded = uiRefreshState.chartNeeded || chart;
   uiRefreshState.lifestyleNeeded = uiRefreshState.lifestyleNeeded || lifestyle;
-  uiRefreshState.appointmentsNeeded = false;
+  uiRefreshState.appointmentsNeeded = uiRefreshState.appointmentsNeeded || appointments;
   uiRefreshState.lastReason = reason || uiRefreshState.lastReason;
   if (reason) uiRefreshState.reasons.add(reason);
 
@@ -264,11 +264,11 @@ async function runUiRefresh(){
   const reasonLabel = reasons.length ? reasons.join(',') : 'unspecified';
   diag.add?.(`[ui] refresh start reason=${reasonLabel}`);
   try {
-    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded) {
+    while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) {
       const doc = state.docNeeded;
       const chart = state.chartNeeded;
       const lifestyle = state.lifestyleNeeded;
-      const appointments = false;
+      const appointments = state.appointmentsNeeded;
       state.docNeeded = false;
       state.chartNeeded = false;
       state.lifestyleNeeded = false;
@@ -278,7 +278,9 @@ async function runUiRefresh(){
       const chartPanel = getChartPanel();
 
       await runUiSubStep('doctor', doc, async () => { await doctorModule?.renderDoctor?.(); });
-      // appointments substep entfernt
+      await runUiSubStep('appointments', appointments, async () => {
+        await window.AppModules.appointments.refreshAppointments();
+      });
       await runUiSubStep('lifestyle', lifestyle && typeof window.AppModules.capture?.renderLifestyle === 'function', async () => { await window.AppModules.capture.renderLifestyle(); });
       await runUiSubStep('chart', chart && !!chartPanel?.draw, async () => { await chartPanel?.draw?.(); });
     }
@@ -289,7 +291,7 @@ async function runUiRefresh(){
     const resolvers = state.resolvers;
     state.resolvers = [];
     resolvers.forEach(resolve => { try { resolve(); } catch(_){} });
-    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded) && !state.timer){
+    if ((state.docNeeded || state.chartNeeded || state.lifestyleNeeded || state.appointmentsNeeded) && !state.timer){
       state.timer = setTimeout(() => {
         uiRefreshState.timer = null;
         runUiRefresh().catch(err => diag.add?.('[ui] refresh fatal: ' + (err?.message || err)));
@@ -1162,7 +1164,7 @@ await maybeRefreshForTodayChange({ force: true, source: 'boot' });
   scheduleMidnightRefresh();
   scheduleNoonSwitch();
   maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
-// appointments refresh removed
+await window.AppModules.appointments.refreshAppointments();
 bindAppLockButtons();     //  Buttons der Lock-Card binden
 
 // Konfiguration laden
@@ -1409,7 +1411,7 @@ $("#doctorExportJson").addEventListener("click", async () => {
 
 // --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
 window.AppModules.capture.bindIntakeCapture();
-// appointments panel removed
+window.AppModules.appointments.bindAppointmentsPanel();
 try {
   if (hasSupabaseFn('cleanupOldIntake') && await isLoggedInFast()) {
     await cleanupOldIntake();
@@ -1417,7 +1419,7 @@ try {
 } catch(_) {}
 
 // Initial Render
-await requestUiRefresh({ reason: 'boot:initial' });
+await requestUiRefresh({ reason: 'boot:initial', appointments: true });
 
 // --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
 $$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button').forEach(el=>{
@@ -1443,7 +1445,7 @@ window.addEventListener('online', async ()=>{
 });
 }
 
-// appointments UI reset removed
+window.AppModules?.appointments?.resetAppointmentsUi?.();
 
 /* boot */
 if (!window.__bootDone) {

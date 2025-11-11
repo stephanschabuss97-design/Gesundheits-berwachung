@@ -254,6 +254,19 @@
   display:none;
 }
 
+/* SUBMODULE: Intake Status Pills @public - komprimierte Statusanzeigen für Wasser, Salz, Protein etc. */
+#cap-intake-status { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; background:var(--color-surface-elevated); border:1px solid var(--color-border-subtle); color:var(--color-text-primary); }
+.pill .dot { width:8px; height:8px; border-radius:50%; background:#6b7280; box-shadow:0 0 0 1px rgba(0,0,0,.4); }
+.pill.ok .dot { background:var(--color-success); }
+.pill.warn .dot { background:var(--color-warn); }
+.pill.bad .dot { background:var(--color-danger); }
+.pill.neutral .dot { background:var(--color-accent); }
+.body-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.capture-header{ display:flex; flex-direction:column; gap:8px; }
+.capture-header .capture-date{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.capture-header .capture-pills{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.capture-header .capture-pills .pill{ margin:0; }
 
 
 /* SUBMODULE: Arzttermine (Appointments) @public - Karten-Layout und Eingabe-Design für Arzttermine */

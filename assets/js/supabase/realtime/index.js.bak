@@ -219,7 +219,7 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
 
     const schedule = globalWindow?.setTimeout || setTimeout;
     schedule(() => {
-      const refreshPromise = asyncMaybe(globalWindow?.requestUiRefresh, { reason: 'resume' });
+      const refreshPromise = asyncMaybe(globalWindow?.requestUiRefresh, { reason: 'resume', appointments: true });
       refreshPromise?.catch?.((err) => {
         diag.add?.('ui refresh err: ' + (err?.message || err));
       });
