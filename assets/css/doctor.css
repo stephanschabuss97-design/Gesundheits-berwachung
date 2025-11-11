@@ -5,7 +5,7 @@
  *  - Toolbar & KPI Badges
  *  - Doctor Day Grid Layout (3-Spalten-Struktur)
  *  - Columns (Date, Measurements, Special)
- *  - Flags & Notes Styling
+ *  - Notes Styling
  *  - Responsive Layout (Tablet & Mobile)
  *  - Placeholders & Empty States
  */
@@ -180,44 +180,18 @@
 
 .doctor-view .col-special{
   display:grid;
-  grid-template-columns:minmax(120px, max-content) 220px 1fr; /* C | D | E */
+  grid-template-columns:minmax(160px, max-content) 1fr;
   column-gap:16px;
   row-gap:6px;
-  align-items:start; /* <-- alles oben ausrichten */
+  align-items:start;
 }
 
 .doctor-view .col-special > .weight-line,
 .doctor-view .col-special > .waist-line { grid-column:1; }
-.doctor-view .col-special > .flags       { grid-column:2; }
-.doctor-view .col-special > .notes       { grid-column:3; }
-
-.doctor-view .flags{
-  display:grid;
-  grid-template-columns:repeat(2, max-content); /* 2 Spalten */
-  justify-content:start;
-  align-items:start;
-  gap:6px 16px; /* vertikal 6px, horizontal 16px */
-}
+.doctor-view .col-special > .notes       { grid-column:2; }
 
 .doctor-view .weight-line .num,
-.doctor-view .waist-line .num{ font-variant-numeric:tabular-nums; } /* Spalten wirken ruhiger */
-.doctor-view .flag span:last-child{ white-space:nowrap; }
-.doctor-view .flag{ display:grid; grid-template-columns:18px 1fr; align-items:center; gap:6px; font-size:12px; opacity:.95; }
-.doctor-view .flag-box{
-  width:16px;
-  height:16px;
-  border:1.5px solid #2b2f3a;
-  border-radius:3px;
-  display:inline-block;
-  position:relative;
-}
-.doctor-view .flag-box.on::after{
-  content:"";
-  position:absolute;
-  inset:2px;
-  background:var(--color-accent);
-  border-radius:2px;
-}
+.doctor-view .waist-line .num{ font-variant-numeric:tabular-nums; }
 
 .doctor-view .notes{
   font-size:13px;
@@ -260,37 +234,16 @@
   }
 
   .doctor-view .col-special{
-    grid-template-columns:minmax(110px, max-content) 1fr; /* Flags bekommen flex Breite */
+    grid-template-columns:minmax(110px, max-content) 1fr;
     column-gap:12px;
   }
   .doctor-view .col-special > .notes{
-    grid-column:1 / -1; /* Kommentar ueber beide Spalten */
+    grid-column:1 / -1;
   }
-
   .doctor-view .notes{
     -webkit-line-clamp:4; /* bei Bedarf auf 5 erhoehen */
   }
 
-  .doctor-view .flags{
-    display:grid;
-    grid-template-columns:repeat(2, max-content);
-    justify-content:start;
-    align-items:center;
-    column-gap:14px;
-    row-gap:6px;
-    margin-top:6px;
-  }
-  .doctor-view .flag span:last-child{ white-space:nowrap; }
-}
-
-@media (max-width:390px){
-  .doctor-view .measure-head,
-  .doctor-view .measure-grid{
-    grid-template-columns:minmax(66px, 1fr) repeat(4, minmax(50px, 1fr));
-  }
-  .doctor-view .flags{
-    grid-template-columns:repeat(3, max-content);
-  }
 }
 
 /* SUBMODULE: Placeholders & Empty States @public - Anzeige bei fehlenden Daten oder Sperrzustand */

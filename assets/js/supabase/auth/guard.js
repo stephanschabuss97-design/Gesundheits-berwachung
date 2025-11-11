@@ -604,7 +604,6 @@ export async function resumeAfterUnlock(intent) {
   __pendingAfterUnlock = null;
   if (target === 'chart') {
     await globalWindow?.setTab?.('doctor');
-    globalWindow?.setDocBadges?.({ visible: true });
     globalWindow?.chartPanel?.show?.();
     await globalWindow?.requestUiRefresh?.({ reason: 'unlock:chart', chart: true });
     return;

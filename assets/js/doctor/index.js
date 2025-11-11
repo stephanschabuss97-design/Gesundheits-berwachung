@@ -5,7 +5,6 @@
  * Submodules:
  *  - globals (AppModules, diag, Scroll-State)
  *  - access-control (Doctor-Unlock-Logik und Fehlerbehandlung)
- *  - setDocBadges (Toolbar-Badges für Training und "Bad Days")
  *  - renderDoctor (Haupt-Renderer mit Zugriffsschutz, Scrollwiederherstellung und Lösch-Handling)
  *  - renderDoctorDay (Template-Funktion für Tageskarten)
  *  - exportDoctorJson (Exportfunktion für alle Gesundheitsdaten als JSON)
@@ -53,22 +52,6 @@
   };
 
 /* ===== Doctor view ===== */
-// SUBMODULE: setDocBadges @internal - updates toolbar KPI badges for training/bad days
-function setDocBadges({ training, bad, visible } = {}) {
-  const t = document.getElementById('docTrainCnt');
-  const b = document.getElementById('docBadCnt');
-  if (!t || !b) return;
-  const tVal = t.querySelector('.val');
-  const bVal = b.querySelector('.val');
-
-  if (training !== undefined && tVal) tVal.textContent = String(training);
-  if (bad !== undefined && bVal)      bVal.textContent = String(bad);
-
-  if (visible !== undefined) {
-    t.classList.toggle('hidden', !visible);
-    b.classList.toggle('hidden', !visible);
-  }
-}
 
 const __t0 = performance.now();
 
@@ -89,7 +72,6 @@ async function renderDoctor(){
 
   if (!(await isLoggedIn())){
     host.innerHTML = `<div class="small u-doctor-placeholder">Bitte anmelden, um die Arzt-Ansicht zu sehen.</div>`;
-    setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
@@ -100,7 +82,6 @@ async function renderDoctor(){
   if (!isDoctorUnlockedSafe()){
     if (isActive){
       host.innerHTML = `<div class="small u-doctor-placeholder">Bitte Arzt-Ansicht kurz entsperren.</div>`;
-      setDocBadges({ visible: false });
       try {
         await requestDoctorUnlock();
       } catch(err) {
@@ -118,7 +99,6 @@ async function renderDoctor(){
 
   // Anzeige-Helper
   const dash = v => (v === null || v === undefined || v === "" ? "-" : String(v));
-  const onClass = b => (b ? "on" : "");
   const fmtDateDE = (iso) => {
     const d = new Date(iso + "T00:00:00Z");
     return d.toLocaleDateString("de-AT", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
@@ -129,7 +109,6 @@ async function renderDoctor(){
   const to   = $("#to").value;
   if (!from || !to){
     host.innerHTML = `<div class="small u-doctor-placeholder">Bitte Zeitraum waehlen.</div>`;
-    setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
@@ -142,21 +121,12 @@ async function renderDoctor(){
   }catch(err){
     logDoctorError('fetchDailyOverview failed', err);
     host.innerHTML = `<div class="small u-doctor-placeholder" data-error="doctor-fetch-failed">Fehler beim Laden aus der Cloud.</div>`;
-    setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
     return;
   }
 
   daysArr.sort((a,b)=> b.date.localeCompare(a.date));
-
-  // KPIs
-  const trainingDays = daysArr.filter(d => !!d.flags.training).length;
-  const badDays = daysArr.filter(d => {
-    const f = d.flags;
-    return !!(f.water_lt2 || f.salt_gt5 || f.protein_ge90 || f.sick || f.meds);
-  }).length;
-  setDocBadges({ training: trainingDays, bad: badDays, visible: true });
 
   const formatNotesHtml = (notes) => {
     const raw = (notes || '').trim();
@@ -220,15 +190,6 @@ async function renderDoctor(){
       <div class="num">${dash(fmtNum(day.waist_cm))}</div>
     </div>
 
-    <div class="flags">
-      <div class="flag"><span class="flag-box ${onClass(day.flags.water_lt2)}"></span><span>&lt;2L Wasser</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.salt_gt5)}"></span><span>Salz &gt;5g</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.protein_ge90)}"></span><span>Protein &ge; 90 g</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.sick)}"></span><span>Krank</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.meds)}"></span><span>Medikamente</span></div>
-      <div class="flag"><span class="flag-box ${onClass(day.flags.training)}"></span><span>Training</span></div>
-    </div>
-
     <div class="notes">${safeNotes}</div>
   </div>
 </section>
@@ -238,7 +199,6 @@ async function renderDoctor(){
   // Rendern / Leerzustand
   if (!daysArr.length){
     host.innerHTML = `<div class="small u-doctor-placeholder">Keine Eintraege im Zeitraum</div>`;
-    setDocBadges({ visible: false });
     if (scroller) scroller.scrollTop = 0;
     __doctorScrollSnapshot = { top: 0, ratio: 0 };
   } else {
@@ -315,12 +275,10 @@ async function exportDoctorJson(){
 // SUBMODULE: doctorApi @internal - registriert öffentliche API-Funktionen im globalen Namespace
   const doctorApi = {
     renderDoctor,
-    setDocBadges,
     exportDoctorJson
   };
   appModules.doctor = Object.assign({}, appModules.doctor, doctorApi);
   global.AppModules = appModules;
-  global.setDocBadges = setDocBadges;
   global.renderDoctor = renderDoctor;
   global.exportDoctorJson = exportDoctorJson;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1368,7 +1368,6 @@ const applyBtn = $("#applyRange");
 if (applyBtn) {
   applyBtn.addEventListener("click", async () => {
     await requestUiRefresh({ reason: 'doctor:range' });
-    getDoctorModule()?.setDocBadges?.({ visible: true });
   });
 }
 
@@ -1388,7 +1387,6 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
     if (!ok) return;
     setAuthPendingAfterUnlock(null);
   }
-  getDoctorModule()?.setDocBadges?.({ visible: true });
   const chartPanel = getChartPanel();
   chartPanel?.show?.();
   await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
