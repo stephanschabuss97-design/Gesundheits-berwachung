@@ -107,14 +107,12 @@
     const currentISO = new Date(date + "T" + time).toISOString();
     const ts = new Date(date + "T" + time).getTime();
 
-    const entry = {
-      date, time, dateTime: currentISO, ts,
-      context: contextLabel,
-      sys, dia, pulse,
-      weight: null,
-      map: (sys!=null && dia!=null) ? calcMAP(sys, dia) : null,
-      notes: ''
-    };
+    const entry = baseEntry(date, time, contextLabel);
+    entry.sys = sys;
+    entry.dia = dia;
+    entry.pulse = pulse;
+    entry.map = (sys!=null && dia!=null) ? calcMAP(sys, dia) : null;
+    entry.notes = '';
 
     const localId = await addEntry(entry);
     await syncWebhook(entry, localId);

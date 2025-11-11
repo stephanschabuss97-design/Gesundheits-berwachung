@@ -111,15 +111,15 @@ export async function syncWebhook(entry, localId) {
         /* plain text */
       }
 
-// SUBMODULE: fallback-note @internal - PATCH fallback für note
+      // SUBMODULE: fallback-note @internal - PATCH falls vorhanden, sonst POST neue Notiz
         const noteEvent = events.find((ev) => ev.type === 'note');
         try {
           if (noteEvent && uid) {
             const dayIso = entry.date;
-            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent: noteEvent });
+            const merged = await appendNoteRemote({ user_id: uid, dayIso, noteEvent });
             await updateEntry(localId, { remote_id: merged?.id ?? -1 });
             uiInfo('Kommentar aktualisiert.');
-            diag.add('Fallback: note via PATCH');
+            diag.add('Fallback: note via PATCH/POST');
             return;
           }
         } catch (errNoteFallback) {
