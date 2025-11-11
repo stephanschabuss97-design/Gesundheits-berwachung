@@ -1,0 +1,648 @@
+[33mb5360fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m update
+[33m159927e[m refactor: simplify Content Security Policy by removing inline style hash and clean up chart panel display
+[33mbb535df[m refactor: update Content Security Policy to enhance security by using a hash for inline styles
+[33m6294061[m refactor: remove unused toggles import and update Content Security Policy for inline styles
+[33m2b2be40[m refactor: streamline fallback handling in syncWebhook function
+[33mc8953ff[m löschen einer alten codezeile
+[33mf61cb2c[m Refactor code structure for improved readability and maintainability
+[33m0886ab1[m refactor: remove flags section from intake capture module
+[33m15846bf[m refactor: Remove badge-related code and adjust layout in doctor module
+[33m58670fb[m Merge branch 'main' of https://github.com/stephanschabuss97-design/Gesundheits-berwachung
+[33m5de82fe[m refactor: Remove early exit comment for chart rendering logic
+[33m9ff7cf2[m Commit nach flag entfernung Step 1
+[33m093aab1[m Add files via upload
+[33m6112bec[m Consolidate doctor panel and chart files in repo tree
+[33m41e1cfe[m feat: Implement comprehensive health tracking schema with RLS and validation
+[33m6767e26[m commit nach Loading Bug
+[33me4530d8[m commit nach startup Änderung
+[33mb52e8a6[m CSS Annotisierung
+[33m30e4825[m Löschung voin nciht gebrauchten Dateien
+[33ma4821d5[m Commit nach Annotisierung
+[33m74c04d6[m commit nach coderabbit
+[33mf4c2290[m commit nach coderabbit
+[33mf97752c[m Commit nach Coderabbit
+[33m22c31da[m Windows Hello Guard Update
+[33m5d47395[m Annotierung JS Dateien
+[33m298ebde[m Commit, nach Annotisierung
+[33m678833c[m sql scripte
+[33m41e7b44[m fix der Arzttermine
+[33m9bc160c[m commit css steep 7
+[33ma86cffb[m Commit nach Coderabbit
+[33m06b6b52[m commit css step 6
+[33m4cfabb4[m COMMIT NACH CODRABBIT
+[33ma36c8f2[m commit nach Coderabbit
+[33m222ab10[m Commmit CSS Step 5
+[33m0c132d7[m commit nach coderabbit
+[33m6f3859a[m Commit CSS Step 4
+[33m0b3f611[m commit nach coderabbit
+[33mb8b8f87[m commit css step 3
+[33m8d970c8[m commit nach coderabbit
+[33m1da8e73[m COMMIMT CSS STEP 2
+[33m56f843c[m commit nach coderabbit
+[33md920a9f[m commit nach Coderabbit
+[33md3c24e5[m CSS Step 1
+[33m7a5d8b7[m dev tool silence
+[33m37647c9[m commit nach rep
+[33md0192c0[m commit nach coderabbit
+[33mcd00bda[m COMMIT NACH CODERABBIT
+[33m5bcfe28[m commit nach supabase
+[33ma7c8fb5[m commit step 6
+[33m438067e[m commit nach rep
+[33m0a39c58[m nitpick korrektur
+[33mb2c5450[m commit nach rep
+[33mc51145e[m commit nach code rabbit
+[33mbc37837[m commit step 5
+[33m076f393[m commit nach rep
+[33m2190d90[m 1
+[33mefb0091[m commit nach rep
+[33mf7f38ca[m commit nach app rep
+[33m9a035fc[m commit nach nitpicks
+[33mabb6624[m commit nach rep
+[33m6136c6a[m commit nach nitpicks
+[33m8802757[m commit nach coderabbit
+[33mb61e595[m commit nach rep
+[33m50f2e17[m commit step 4
+[33m09e4079[m commit nach rep
+[33m3d92fec[m commit nach rep
+[33m5dfc732[m commit nach rep
+[33m38190e3[m commit nach code rabbit
+[33m1a12d55[m commit step 3
+[33mfd391c6[m reset step 2
+[33me56c2ff[m reset
+[33m445e3fe[m iindex rep
+[33mac48c02[m 1
+[33m175a9d8[m commit nach reparatur und code rabbit kommentar
+[33m75acf82[m commit nach reparatur
+[33ma2943d9[m COMMIT NACH REPARATUR
+[33m9f5a5f9[m commit step 3
+[33m8e2aeaa[m commit nach rep
+[33ma8df5a1[m commit nach coderabitt
+[33m6403164[m step 2 refactor
+[33m2de4fc4[m Refactor Step 1
+[33m1445354[m commit nach reparatur
+[33m9656f6c[m commit nach reeparatur
+[33mb0a9330[m commit nach coderabbit
+[33m0265c1a[m commit nach reeparatur
+[33m4739b41[m commit nach reparatur
+[33m0b55d79[m commit nach reparatur
+[33ma3b923b[m commit nach coderabbit
+[33mfb59dff[m weiteres refactoring
+[33m35c0f68[m addition of  'use strict'; to js files
+[33m8ac28f4[m creation of web pictures
+[33ma6187d0[m header und submodul Kommentare hinzugefügt
+[33mecb74f0[m Header und Submodul Bemerkungen geupdatetd
+[33me0a4435[m header und submodul marking
+[33mc3f8cae[m header update
+[33m87d5a6f[m fix(diagnostics): validate perfStats key length and remove redundant delta clamp
+[33m28bfa08[m fix(diagnostics): add logging + validation for perfStats keys and deltas
+[33mb45d280[m fix(diagnostics): harden global perfStats as non-writable, snap-only export
+[33m1bb8d67[m fix(diagnostics): re-expose perfStats globally for chart compatibility
+[33m7f08f81[m dead code corrected
+[33m6becb9a[m commit nach getTimeZoneoffsetMS, wrapIDBRequest und updateEntry
+[33m838a5c5[m refactor(data-local): improve timezone error logging and simplify updateEntry transaction flow
+[33mb9368b7[m docs(data-local): add complete SUBMODULE annotations for consistency
+[33mc308115[m chore(data-local): finalize v1.5 with safe index handling and clarity tweaks
+[33m5d3022e[m fix(data-local): add safe index existence checks and robust error handling
+[33m3b04777[m fix(data-local): prevent double-settle in updateEntry and add request-level handlers <details: manualAbort flag, settled guards, req handlers for putConf/updateEntry>
+[33mbcd5ba7[m refactor(data-local): add db guards and unify IndexedDB error handling
+[33mdf9e99a[m refactor(diagnostics): localize listener guard and clean preventDefault
+[33mebd8982[m fix(diagnostics): prevent listener duplication and separate info/error boxes
+[33mac89aec[m fix(diagnostics): separate error/info boxes and add global conflict warnings
+[33m7d9b483[m refactor(diagnostics): encapsulate logging and diagnostics into safe module
+[33m7d5d106[m Diff corection
+[33m8831c77[m fix(format): add medical plausibility checks to calcMAP
+[33m5978189[m fix(format): make calcMAP NaN-safe using toNumberOrNull
+[33m1012674[m fix(format): handle zero values and filter NaN conversions in payloads
+[33m3661a4a[m refactor(format): encapsulate format helpers and add safe mapping guards
+[33m418bd48[m style(uiErrors): inline details trim in restErrorMessage for clarity
+[33ma0a680b[m refactor(uiErrors): encapsulate UI error helpers and remove global leaks
+[33mb798ac9[m refactor(uiLayout): initialize sticky offsets on load and modernize hasOwn check
+[33m4d8bb32[m refactor(uiLayout): encapsulate layout helpers and modernize event bindings
+[33m1416db3[m refactor(uiTabs): fix error propagation and atomic doctor unlock check
+[33mb54a18a[m refactor(uiTabs): harden authState encapsulation and fix queue resilience
+[33m58093fe[m refactor(uiTabs): encapsulate global auth flags with safe async state wrapper
+[33madaf901[m refactor(uiTabs): remove redundant login check and inline module name literal
+[33m72c744c[m refactor(uiTabs): encapsulate tab handling with safety guards and scoped exports
+[33mb03dede[m refactor(uiCore): direct root cache invalidation and attribute-based observation for focusable elements
+[33m3101bbf[m refactor(uiCore): scope MutationObserver to modal roots and add observe/unobserve lifecycle
+[33m45918d5[m refactor(uiCore): apply CodeRabbit nitpick fixes for focus safety, caching, and null guards
+[33m270e396[m refactor(uiCore): encapsulate UI helpers in IIFE, harden exports and DOM guards
+[33md1f5c9f[m cleaned up utils.js (strict mode, better fmtNum, safer globals) → Logik unverändert, nur sauberer und stabiler aufgebaut
+[33m5941747[m fix(api): guard sbSelect against missing table name
+[33m809be4f[m refactor(supabase): centralize sbSelect helper and reuse via SupabaseAPI
+[33mc718d73[m fix(app): fail fast when SupabaseAPI is missing
+[33m1a41266[m refactor(app): route inline scripts through SupabaseAPI wrappers
+[33md8f6102[m commit nach coderabbit review
+[33m868aef6[m chore(supabase): extract API + Realtime to modules and add barrel refactor(supabase.js): proxy old functions to new modules; keep public API stable docs: update CHANGELOG and QA checks for v1.8.1
+[33m539d868[m update docs
+[33mfbf4651[m nach reperatur
+[33m8d6078a[m commit 2/3
+[33m081f375[m commit nach coderabbit finding
+[33mfcb73c1[m commit nach coderabbit finding
+[33m20dbbe0[m Commit 1/3 für auth extrakt
+[33md629c35[m fix(supabase): resolve duplicate baseUrlFromRest declaration breaking module load
+[33mcafb143[m TRext auf Deutsch gestellt
+[33mc36f9a1[m getConfSafe protokolliert jetzt via diag.add?.('Supabase client: window.getConf is not available')
+[33m42230b2[m getConfSafe no longer throws when window.getConf fehlt
+[33m5bd8cc3[m Refaktor-Anpassungen sind eingebaut und die von CodeRabbit gemeldeten Fehler korrigiert.
+[33m2584a1d[m refactor(supabase): Core in ES‑Module extrahiert + Script auf type=module umgestellt
+[33m7f8f5b9[m commit nach update
+[33m419d929[m doku update
+[33m3c1f17e[m update of Version
+[33ma84d422[m last commit
+[33m1f5a7f4[m commit nach reperatur
+[33m97fcda7[m commit nach kontrolle
+[33ma8cd954[m commit nach afterloginboot reperatur
+[33me4e05f2[m _authstate rep
+[33mf1cf8bb[m commit nach watchauthstate rep
+[33m6fccb03[m commit nacg sbclient
+[33me35aebb[m commit after repair
+[33m5a30241[m commit nach rep
+[33ma78ca8d[m commit nach index reperatur
+[33m7235a4b[m commimt nach reperatur
+[33mf626fa0[m commit after reset
+[33mb64d9e6[m Commit nach supabase.js extraktion
+[33m75db65a[m commit nach data-local.js extrakt
+[33md7ce485[m commit nach format.js extrakt
+[33mdfa4c28[m commit nach ui-tabs extrakt
+[33m338e68a[m update nach coderabbit
+[33meea4e29[m commit nach utils.js
+[33m5eddd03[m commit nach ui-errors
+[33m88603b2[m commit nach ui-layouts extrakt
+[33me1a0eb7[m submodul update text
+[33m98a2568[m commit after code rabbit
+[33md117c61[m commit after ui.js export
+[33m8563b57[m update nach Korrektur
+[33m7f3c78d[m update after error correction
+[33m9cfb114[m update nach error corection
+[33mdfe3235[m update after code rabbit
+[33ma296194[m update nahc code rabbit
+[33mf58328a[m after code rabbit
+[33m18003ad[m update after coderabbit
+[33maceb577[m update after Coderabbit
+[33m8b7d31b[m Extraction of disgnostic section of index.html
+[33m1e771e5[m modified:   docs/M.I.D.A.S._Implementation_Spec_v1.2.yaml
+[33m1cfe9d7[m chore: finalize .gitattributes content for cross-platform safety
+[33m343ce7c[m chore: add .gittatributes and .nojekyll for cross-platform and pages support
+[33ma984b99[m chore: add .gitignore for project hygiene
+[33mccf536a[m Delete assets/img/dummy
+[33m450f0cd[m Add files via upload
+[33m81d0b60[m Create dummy
+[33me8b5d4e[m Create dummy
+[33mb89488b[m Create dummy
+[33ma7064a4[m Delete assets/midas_wordmark.png
+[33m5fe4759[m Delete assets/midas_symbol.PNG
+[33m043c774[m Delete assets/midas_Logo_complete.png
+[33mf190b3e[m Add files via upload
+[33mde8ee9f[m Revise CHANGELOG with comprehensive version history
+[33mafd947d[m Delete QA_CHECKS.md
+[33m3c78878[m Delete docs/1
+[33m9545a98[m Add files via upload
+[33m9c39c6b[m Create 1
+[33mc3be03d[m Delete assets/midas_symbol.png
+[33m7a2f9f9[m Add files via upload
+[33m740d967[m Create midas_symbol.png
+[33m0a820c6[m Update print statement from 'Hello' to 'Goodbye'
+[33m6e6b7d3[m Update print statement from 'Hello' to 'Goodbye'
+[33m3b5ac88[m Update index.html
+[33m41583af[m Update index.html
+[33m55642a1[m Update fmt.Println to print 'Goodbye World'
+[33mcde71ed[m Update index.html
+[33m90843af[m Update index.html
+[33m4b3c7f1[m Update index.html
+[33m261ce16[m Update print statement from 'Hello' to 'Goodbye' (#29)
+[33me301976[m Update print statement from 'Hello' to 'Goodbye' (#25)
+[33m231e7e1[m Update print statement from 'Hello' to 'Goodbye' (#22)
+[33mcdd5f92[m Update print statement from 'Hello' to 'Goodbye' (#21)
+[33md61fcb2[m Update print statement to say 'Goodbye World' (#20)
+[33me16d857[m Update print statement from 'Hello' to 'Goodbye'
+[33m2ee64b3[m Update print statement from 'Hello' to 'Goodbye' (#19)
+[33mfd04f87[m Update index.html
+[33m05dafb5[m Update fmt.Println message from 'Hello' to 'Goodbye' (#18)
+[33m59e6a40[m Update print statement from 'Hello' to 'Goodbye' (#17)
+[33mf4601d9[m Update index.html
+[33mc44780a[m Update print statement from 'Hello' to 'Goodbye' (#16)
+[33m530b7f4[m Update fmt.Println message from 'Hello' to 'Goodbye' (#15)
+[33m341667d[m Update print statement from 'Hello' to 'Goodbye' (#14)
+[33m36b9b80[m Update index.html
+[33md2d5cdc[m Update print statement from 'Hello' to 'Goodbye' (#13)
+[33m450c3c8[m Update index.html (#12)
+[33m3120a1b[m Update print statement from 'Hello' to 'Goodbye' (#11)
+[33mb53491a[m Update print statement from 'Hello' to 'Goodbye' (#10)
+[33me750030[m Update print statement from 'Hello' to 'Goodbye' (#9)
+[33m60d5b6c[m Update print statement from 'Hello' to 'Goodbye' (#8)
+[33maa24ca0[m Update index.html (#7)
+[33m3deb79c[m Update index.html
+[33m9c855c1[m Merge pull request #6 from stephanschabuss97-design/stephanschabuss97-design-patch-1
+[33m6748146[m Update index.html
+[33mdc34f95[m Merge pull request #5 from stephanschabuss97-design/stephanschabuss97-design-patch-1
+[33ma3bcd29[m Update index.html
+[33mbb454f9[m Merge pull request #4 from stephanschabuss97-design/revert-3-Changes
+[33m8acf455[m Revert "Update index.html"
+[33m3adc871[m Merge pull request #3 from stephanschabuss97-design/Changes
+[33m432d41a[m Update index.html
+[33m23ea8b6[m Merge pull request #2 from stephanschabuss97-design/Changes
+[33md56980e[m Update index.html
+[33m418f74f[m Update index.html
+[33me8fd717[m Update index.html
+[33mbc0de3e[m Update index.html
+[33mc5ac6e8[m Update index.html
+[33m6c8ae4f[m Update index.html
+[33m8310750[m Update index.html
+[33m1c69e01[m Update index.html
+[33m96bf8d9[m Update index.html
+[33m6fc725b[m Update index.html
+[33m343038f[m Update index.html
+[33m5380feb[m Update index.html
+[33m2567d58[m Update index.html
+[33ma27423b[m Update index.html
+[33mec65e65[m Update index.html
+[33m9d78d85[m Update index.html
+[33m8220f24[m Update index.html
+[33m176d5a8[m Update index.html
+[33m79f089c[m Update index.html
+[33m685871d[m Update index.html
+[33mc89d1ad[m Update index.html
+[33m278b5a3[m Update index.html
+[33m9fcbfa2[m Update index.html
+[33mcc87896[m Update index.html
+[33m5d8011b[m Update index.html
+[33m9231abc[m Update index.html
+[33m28c7759[m Update index.html
+[33m21f8a7d[m Update index.html
+[33m7ed3a35[m Update index.html
+[33m8d324a7[m Update index.html
+[33mae39da2[m Update index.html
+[33ma3dc657[m Update index.html
+[33mcd11997[m Update index.html
+[33m7f2cf12[m Update index.html
+[33m8498141[m Update index.html
+[33m61b0bdc[m Update index.html
+[33m588faaf[m Update index.html
+[33m4f530cf[m Update index.html
+[33maf1f438[m Update index.html
+[33m631da76[m Update index.html
+[33m43ec43a[m Update index.html
+[33m98d01ff[m Update index.html
+[33m8a632dd[m Update index.html
+[33mdde9c55[m Update index.html
+[33m6d7c8fc[m Update index.html
+[33mba75670[m Update index.html
+[33m755ee04[m Update index.html
+[33maff30ec[m Update index.html
+[33m0b7d7ac[m Update index.html
+[33m0d17b52[m Update index.html
+[33m2ee6265[m Update index.html
+[33m1db3269[m Update index.html
+[33m49dfd0b[m Update index.html
+[33mcfbfac6[m Update index.html
+[33m0da2e8d[m Update index.html
+[33m15b7607[m Update index.html
+[33m5bab04b[m Update index.html
+[33mda27e3e[m Update index.html
+[33m16c751c[m Update index.html
+[33mbb975fb[m Update index.html
+[33m5c60168[m Update index.html
+[33m7f9cba0[m Update index.html
+[33m2dcbc01[m Update index.html
+[33mec2a8f9[m Update README.md
+[33mf90f99a[m Update QA_CHECKS.md
+[33md436512[m Update CHANGELOG.md
+[33m3577cb1[m Update index.html
+[33mb9ff062[m Update index.html
+[33m22fbdf3[m Update index.html
+[33mba34561[m Update index.html
+[33m0d0f6c2[m Update index.html
+[33mf60d493[m Update index.html
+[33m4c5b0f1[m Update index.html
+[33m445557b[m Update index.html
+[33m9b3cc2c[m Update index.html
+[33m6b15654[m Update index.html
+[33m1e7c7be[m Update index.html
+[33mbe2ea72[m Update index.html
+[33m73e2227[m Update index.html
+[33m612b3f4[m Update index.html
+[33me6d0145[m Update index.html
+[33m0c42fb4[m Update index.html
+[33m0aad34c[m Update index.html
+[33ma54c903[m Update index.html
+[33m6aaecdf[m Update index.html
+[33mafe87b0[m Update index.html
+[33m4841871[m Update index.html
+[33m29a5c8d[m Update index.html
+[33m307a9b3[m Update index.html
+[33m18c0cdd[m Update index.html
+[33m9a5e3ff[m Update index.html
+[33m45fcf6f[m Update index.html
+[33m8c27ef9[m Update index.html
+[33m4567014[m Update index.html
+[33m1667075[m Update index.html
+[33mb4dd28d[m Update index.html
+[33m50f235a[m Update index.html
+[33mfd4830a[m Update index.html
+[33m964dc89[m Update index.html
+[33m0174ef7[m Update index.html
+[33m98a790c[m Update index.html
+[33md27e532[m Update index.html
+[33mf5ccf20[m Update index.html
+[33m3ba1105[m Update index.html
+[33me325e2a[m Update index.html
+[33m0433b4b[m Update index.html
+[33m27115e7[m Update index.html
+[33m65bca21[m Update index.html
+[33mfafc584[m Update index.html
+[33md7a4738[m Update QA_CHECKS.md
+[33mcf861e0[m Update CHANGELOG.md
+[33ma282f8c[m Update index.html
+[33m54d76a2[m Update index.html
+[33madd8e90[m Update index.html
+[33m60f1398[m Update index.html
+[33me9f314f[m Update index.html
+[33m075398f[m Update index.html
+[33mff46ec5[m Update index.html
+[33md3f8b8f[m Update index.html
+[33mf01eb40[m Update index.html
+[33m7145aeb[m Update index.html
+[33mdc4f733[m Update index.html
+[33m75058e8[m Update index.html
+[33m94ae119[m Update index.html
+[33m2fa6ef7[m Update index.html
+[33m9365996[m Update index.html
+[33m48d471f[m Update index.html
+[33m2dc2699[m Update index.html
+[33mb477d91[m Update index.html
+[33m1a8d883[m Update index.html
+[33m3c5f75b[m Update index.html
+[33m7bb069d[m Update index.html
+[33ma43a602[m Update index.html
+[33m2a6fc41[m Update index.html
+[33m5260c2d[m Update index.html
+[33ma9cb652[m Update index.html
+[33m7b6fcbe[m Update index.html
+[33m1977b36[m Update index.html
+[33m121f5ea[m Update index.html
+[33m173f1d0[m Update index.html
+[33m96d9d2e[m Update index.html
+[33m6d2cf58[m Update QA_CHECKS.md
+[33mb5f040e[m Update CHANGELOG.md
+[33m43e4eed[m Update index.html
+[33me200533[m Update index.html
+[33m2a6a11a[m Update index.html
+[33mb99f71c[m Update README.md
+[33m9ab854d[m Update QA_CHECKS.md
+[33m5780aa0[m Update CHANGELOG.md
+[33m1257f37[m Update index.html
+[33m6bd5798[m Update index.html
+[33m58e9b46[m Update index.html
+[33m30f8e93[m Update index.html
+[33mcefa0a3[m Update index.html
+[33m7f881ca[m Update index.html
+[33m27f59cc[m Update index.html
+[33m3a63eae[m Update index.html
+[33m589b654[m Update QA_CHECKS.md
+[33mbf4a1f1[m Update CHANGELOG.md
+[33mcf011aa[m Update index.html
+[33m97734c3[m Update index.html
+[33m6d4e69a[m Update index.html
+[33mc5d1c18[m Update QA_CHECKS.md
+[33m50a5b60[m Update CHANGELOG.md
+[33madfd7e4[m Update QA_CHECKS.md
+[33mdf9446c[m Update CHANGELOG.md
+[33mda16ee3[m Update index.html
+[33m5d1510c[m Update index.html
+[33m3310483[m Add files via upload
+[33m5068e3a[m Update index.html
+[33m77abc7d[m Update index.html
+[33m660901b[m Update index.html
+[33m49acb1f[m Update index.html
+[33mb819fc7[m Update index.html
+[33m2e9ee43[m Update index.html
+[33mc3bd000[m Update index.html
+[33m2d7ea2c[m Update index.html
+[33m5e311e0[m Update index.html
+[33m52cc3cc[m Update index.html
+[33maf8519b[m Update index.html
+[33m565e0a4[m Update index.html
+[33meefc306[m Update index.html
+[33mc34a3ed[m Update index.html
+[33m15306ad[m Update index.html
+[33m8edd05c[m Update index.html
+[33m9bf700d[m Update index.html
+[33ma28656d[m Update index.html
+[33m7865ecd[m Update index.html
+[33mfb6a046[m Update index.html
+[33m0a5e1d7[m Update index.html
+[33mbc3bcee[m Update index.html
+[33m275e93d[m Update index.html
+[33m3a5fbda[m Update index.html
+[33mf1c393c[m Update index.html
+[33m5b90dc0[m Update index.html
+[33m10f6611[m Update index.html
+[33m6aabc33[m Update index.html
+[33md550947[m Update index.html
+[33m8a11e0a[m Update index.html
+[33m62552ba[m Update index.html
+[33mfa67d50[m Update index.html
+[33md58ac78[m Update index.html
+[33mc5faa19[m Update index.html
+[33me227b24[m Update index.html
+[33m51499a8[m Update index.html
+[33m14bc381[m Update index.html
+[33m7e360dc[m Update index.html
+[33ma122281[m Update index.html
+[33m381b998[m Update index.html
+[33mcc064c6[m Update index.html
+[33m2234e96[m Update index.html
+[33mc659ffa[m Update index.html
+[33m7733936[m Update index.html
+[33mb4f0100[m Update index.html
+[33md50cb18[m Update index.html
+[33m2614bc7[m Update index.html
+[33m2512eed[m Update index.html
+[33mdea0597[m Update index.html
+[33ma15d34a[m Update index.html
+[33m0f2c870[m Update index.html
+[33md97a8cf[m Update index.html
+[33m544bdfe[m Update index.html
+[33m5c479ee[m Update index.html
+[33m86f9b71[m Update index.html
+[33m4308f09[m Update index.html
+[33mec4b429[m Update index.html
+[33mcb9e11a[m Update index.html
+[33m8a6c7bb[m Update index.html
+[33m6da0430[m Update index.html
+[33m966a3cd[m Update index.html
+[33m293e9ee[m Update index.html
+[33md8bbe52[m Update index.html
+[33m57e1ae7[m Update index.html
+[33mf8ca7f5[m Update index.html
+[33mb250f3f[m Update index.html
+[33m870e1ab[m Update index.html
+[33m225560f[m Update index.html
+[33m3fe40de[m Update index.html
+[33mdaf78b4[m Update index.html
+[33m890fa56[m Update index.html
+[33mc931793[m Update index.html
+[33m855f007[m Update index.html
+[33m70704b0[m Update index.html
+[33m4f8459c[m Update index.html
+[33m531da16[m Update index.html
+[33ma7547de[m Update index.html
+[33m3448969[m Update index.html
+[33mb85bc54[m Update index.html
+[33mc60b23a[m Update index.html
+[33m3d0f411[m Update index.html
+[33m5842a81[m Update index.html
+[33mc069c1a[m Update index.html
+[33m4d676da[m Update index.html
+[33m8909c23[m Update index.html
+[33m0b57532[m Update index.html
+[33m19f5344[m Update index.html
+[33me6019f8[m Update index.html
+[33md73c89b[m Update index.html
+[33me2e6a43[m Update index.html
+[33me911ba1[m Update index.html
+[33m9aa02fd[m Update index.html
+[33m5f807b4[m Update index.html
+[33m88d211e[m Update index.html
+[33m2d73375[m Update index.html
+[33m85568c7[m Update index.html
+[33m7aeac70[m Update index.html
+[33m9b8e4b6[m Update index.html
+[33m03d7639[m Update index.html
+[33m1ef4f08[m Update index.html
+[33mc6bd7e1[m Update index.html
+[33mc3d5659[m Update README.md
+[33mbc7d429[m Create README.md
+[33m0c7b72e[m Update index.html
+[33m3a6f960[m Update index.html
+[33m4bf6727[m Update index.html
+[33me9dae99[m Update index.html
+[33m478188e[m Update index.html
+[33m6b3176a[m Update index.html
+[33m69c3aaa[m Update index.html
+[33m5732a1e[m Update index.html
+[33md0a96a3[m Update index.html
+[33m5b1cd2b[m Update index.html
+[33mbb0739b[m Update index.html
+[33m15b2d11[m Update index.html
+[33mbcd5690[m Update index.html
+[33me8026dc[m Update index.html
+[33m4b9468b[m Update index.html
+[33m948b015[m Update index.html
+[33m9e7b9ff[m Update index.html
+[33mda2d451[m Update index.html
+[33m5015686[m Update index.html
+[33m2ff6941[m Update index.html
+[33m2e1a622[m Update index.html
+[33m973eae4[m Update index.html
+[33mc0ab322[m Update index.html
+[33m01b21a2[m Update index.html
+[33ma3e7fa4[m Update index.html
+[33m9abc5ff[m Update index.html
+[33m97f675a[m Update index.html
+[33m4aa87c7[m Update index.html
+[33md1e4eed[m Update index.html
+[33ma5cb3f0[m Update index.html
+[33m708b135[m Update index.html
+[33mf6ab4c0[m Update index.html
+[33m9e09e05[m Update index.html
+[33m9080309[m Update index.html
+[33maac30fb[m Update index.html
+[33me83a580[m Update index.html
+[33md59ab3f[m Update index.html
+[33m8461333[m Update index.html
+[33m6730550[m Update index.html
+[33m7f61b37[m Update index.html
+[33m68c16f3[m Update index.html
+[33m1f41667[m Update index.html
+[33maa994e1[m Update index.html
+[33m90bebff[m Update index.html
+[33m893c550[m Update index.html
+[33md403b95[m Update index.html
+[33m880c8ad[m Update index.html
+[33m0185893[m Update index.html
+[33md3d6d9f[m Update index.html
+[33m005d2e6[m Update index.html
+[33m849f5a6[m Update index.html
+[33m6822bbc[m Update index.html
+[33mb57bb77[m Update index.html
+[33m19fe327[m Update index.html
+[33mbd58ec9[m Update index.html
+[33m8e4864b[m Update index.html
+[33ma70d30f[m Update index.html
+[33m88203a0[m Update index.html
+[33m8f68798[m Update index.html
+[33m487aac5[m Update index.html
+[33m4b04445[m Update index.html
+[33m21fcf70[m Update index.html
+[33mf5334bf[m Update index.html
+[33m125b791[m Update index.html
+[33m8bc2d1a[m Update index.html
+[33mf801b51[m Update index.html
+[33m49c8200[m Update index.html
+[33m3caab27[m Update index.html
+[33me7bb8b9[m Update index.html
+[33meafb4c2[m Update index.html
+[33m446599e[m Update index.html
+[33m2eb93ea[m Update index.html
+[33m707a17f[m Update index.html
+[33mf4787fb[m Update index.html
+[33m521f590[m Update index.html
+[33m01d2bd3[m Update index.html
+[33m897d2a6[m Update index.html
+[33mc68f9a2[m Update index.html
+[33m68e808d[m Update index.html
+[33m445bb60[m Update index.html
+[33ma2f76fc[m Update index.html
+[33me89c569[m Update index.html
+[33mda99eb3[m Update index.html
+[33m35d49be[m Update index.html
+[33mcc533d3[m Update index.html
+[33m431b18f[m Update index.html
+[33m96bb86a[m Update index.html
+[33m4514ad4[m Update index.html
+[33mc110a2f[m Update index.html
+[33me57783b[m Update index.html
+[33mf1fde22[m Add files via upload
+[33m716c0cc[m Add files via upload
+[33me74a59b[m Update index.html
+[33m3718c4a[m Update index.html
+[33m6f34c1f[m Update index.html
+[33m3052ec2[m Update index.html
+[33m919703a[m Update index.html
+[33m53618c5[m Update index.html
+[33mce2773b[m Update index.html
+[33m324fea2[m Update index.html
+[33m604302f[m Update index.html
+[33m142c5d5[m Update index.html
+[33m9db3580[m Update index.html
+[33m12a78cf[m Update index.html
+[33m2d4ddfd[m Update index.html
+[33mc6dd472[m Update index.html
+[33me041b6d[m Update index.html
+[33m491041a[m Update index.html
+[33mfa09915[m Update index.html
+[33mde4ed5d[m Update index.html
+[33ma898eb9[m Update index.html
+[33mfc47fbe[m Update index.html
+[33m073b861[m Update index.html
+[33mf510ded[m Update index.html
+[33m8d0f3b2[m Update index.html
+[33m2600aca[m Update index.html
+[33ma8f6100[m Update index.html
+[33ma3b1bb1[m Update index.html
+[33md529413[m Update index.html
+[33m5cd4f32[m Update index.html
+[33m8e71cf6[m Update index.html
+[33mfe2a1a8[m Update index.html
+[33m95a1927[m Update index.html
+[33madb154d[m Update index.html
+[33m1277e11[m Update index.html
+[33m3204489[m Update index.html
+[33mc842782[m Update index.html
+[33m4055c51[m Update index.html
+[33m15fbcb3[m Update index.html
+[33mb79642e[m Update index.html
+[33m7d65993[m Update index.html
+[33mccb2814[m Add files via upload
