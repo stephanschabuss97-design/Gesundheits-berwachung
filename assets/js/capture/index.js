@@ -135,11 +135,6 @@
   function prepareIntakeStatusHeader(){
     try {
       const wrap = document.getElementById('capturePillsRow');
-      const nab = wrap ? wrap.querySelector('#nextApptBadge') : document.getElementById('nextApptBadge');
-      if (nab) {
-        nab.textContent = 'Kein Termin geplant';
-        nab.title = 'Kein Termin geplant';
-      }
       if (!wrap) return;
 
       wrap.style.gap = '8px';
