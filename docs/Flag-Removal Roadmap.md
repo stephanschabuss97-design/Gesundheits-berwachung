@@ -1,55 +1,52 @@
-## Flag-Removal Roadmap (Updated)
+## Flag-Removal Roadmap
 
 ### Status Recap
-- **Step 1 – Charts**: Flag-Layer, Tooltip-Hinweise und Styles entfernt. Diagramm rendert nur Messwerte/Notizen.
-- **Step 2 – Arzt-Ansicht**: Badge- und Flag-Spalten entfernt, Renderpfad verarbeitet keine Flag-Felder mehr.
-- **Step 3 – Capture-UI**: Flags-Akkordeon, Toggle-State und Speicherung entfernt; Supabase-APIs synchronisiert.
-- **Offen**: Inline-Style-Nutzung verhindert eine strenge CSP. Sicherheitsniveau muss wiederhergestellt werden, bevor Backend-Spalten fallen.
+- **Step 1 – Charts** ✅  
+  Flag-Layer, Tooltip-Badges und Styles sind entfernt; das Diagramm verarbeitet nur Messwerte und Notizen.
+- **Step 2 – Arzt-Ansicht** ✅  
+  Flag-Pills, KPI-Badges und zugehörige Styles/Logs wurden entfernt; Renderpfad ignoriert Flag-Felder.
+- **Step 3 – Capture-UI** ✅  
+  Flags-Akkordeon, Toggle-State und Supabase-Sync entfallen; Capture speichert ausschließlich BP/Body/Intake-Daten.
+- **Step 4 – UI Hardening & CSP Recovery** ⏳ (optional / noch nicht gestartet)  
+  Nur relevant, wenn wir künftig eine strengere CSP ohne Inline-Styles erzwingen wollen.
+- **Step 5 – Codebase Cleanup** ✅  
+  Volltextsuche (`rg -n "flag" assets/ docs/`) liefert keine Treffer mehr außerhalb der SQL-Skripte; tote Module wie `capture/flags.js` existieren nicht mehr.
+- **Next up: Step 6 – Backend & Daten**  
+  Die Supabase-SQL-Skripte enthalten weiterhin `day_flags`. Dort setzen wir als nächstes an.
 
 ---
 
-### Step 4 – UI Hardening & CSP Recovery
-1. **Inline-Style-Inventar**  
-   - Script-Suche nach `.style.` und dynamischen `style.cssText`.  
-   - Gruppiere nach Komponenten (Login/App-Lock, Busy/Banner, Chart-Panel, PIN-Prompt, Diagnostics, Capture Status).
-2. **Utility-Klassen & States**  
-   - Ergänze generische Klassen (`.is-hidden`, `.is-flex`, `.is-inline-flex`, `.is-active`, `.has-error`, Tooltip-States).  
-   - Für komplexere Komponenten (Chart-Tip, PIN-Dialog) dedizierte CSS-Blöcke anlegen, damit JS nur noch Klassen toggelt.
-3. **Refactor JS-Module**  
-   - `assets/js/supabase/auth/ui.js`, `auth/guard.js`, `main.js`, `charts/index.js`, `capture/index.js`, `diagnostics.js` etc. auf Klassenwechsel umstellen.  
-   - Dynamische Stile (Positionierung) über CSS-Variablen oder Inline-Styles mit `<style nonce>` ersetzen, damit CSP-konform.
-4. **CSP wieder verschärfen**  
-   - Sobald alle sichtbaren Inline-Styles verschwunden sind, stelle `<meta http-equiv="Content-Security-Policy">` auf  
-     `style-src 'self'; style-src-attr 'self'; style-src-elem 'self' https://cdn.jsdelivr.net` (oder analog) zurück.  
-   - Optional: Nonce-basierten Mechanismus einführen, falls wenige dynamische Styles übrig bleiben.
-5. **QA**  
-   - Login-Overlay, App-Lock, Chart-Panel, Diagnose-Panel, PIN-Dialog, Capture-Speichern in allen States testen.  
-   - DevTools müssen ohne „Applying inline style“ Warnungen bleiben.
+### Step 4 – UI Hardening & CSP Recovery (Backlog)
+1. Inline-Style-Inventur (`rg ".style"`), gruppiert nach Komponenten (Login/App-Lock, Busy/Banner, Chart-Panel, PIN-Prompt, Diagnostics, Capture-Status).
+2. Utility-Klassen ergänzen (z. B. `.is-hidden`, `.is-flex`, Tooltip-/Dialog-States) und Komponenten-spezifische CSS-Blöcke anlegen.
+3. JS-Module (`assets/js/supabase/auth/ui.js`, `auth/guard.js`, `main.js`, `charts/index.js`, `capture/index.js`, `diagnostics.js`, …) so refactoren, dass nur noch Klassen oder CSS-Variablen gesetzt werden.
+4. CSP wieder verschärfen (`style-src 'self'; style-src-attr 'self'; style-src-elem 'self' https://cdn.jsdelivr.net`) sobald keine Inline-Styles mehr nötig sind.
+5. QA: Alle Overlays/Panels triggern; DevTools dürfen keine „Applying inline style“-Warnungen anzeigen.
 
 ---
 
-### Step 5 – Codebase Cleanup
-- Volltextsuche nach `flag`, `training`, `valsartan`, `nsar`, `saltHigh`, `forxiga`, `dayFlags`, `flagsComment`.  
-  Entferne Restreferenzen in JS, CSS, Docs, Tests, Telemetrie.
-- Entferne tote Module (z. B. `capture/flags.js`), die nach Step 3 übrig bleiben könnten.
-- Linting laufen lassen (ESLint) und Build prüfen, um ungenutzte Variablen/Im-ports zu entdecken.
+### Step 5 – Codebase Cleanup (Erledigt)
+- `rg -n "flag" assets/` liefert keine Funde mehr; README ist ebenfalls sauber.  
+  `CHANGELOG.md` behält historische Hinweise auf `day_flags`, die für Release-Notizen relevant bleiben.  
+  Aktive Referenzen existieren nur noch in den SQL-Skripten (siehe Step 6).
+- Entfernte Dateien: `assets/js/capture/flags.js`, Supabase `api/toggles.js`, Flag-spezifische CSS-Blöcke.
+- Empfohlen: gelegentlich `npm run lint` (falls vorhanden) ausführen, um ungenutzte Exporte nach weiteren Refactors aufzuspüren.
 
 ---
 
-### Step 6 – Backend & Daten
+### Step 6 – Backend & Daten (Als nächstes)
 1. **Schema-Aufräumung**  
-   - Supabase-Migration vorbereiten: Flag-Spalten/Constraints aus `health_events` entfernen oder archivieren.  
-   - Backup-Skript (SQL/CSV) erstellen, falls historische Flag-Daten benötigt werden.
+   - Supabase-Migration schreiben: `day_flags`-Spalten/Constraints/Views (`v_events_day_flags`) entfernen oder archivieren.  
+   - Backup/Export für historische Flag-Daten bereitstellen (SQL/CSV).
 2. **API-Contracts**  
-   - PostgREST Policies/Views aktualisieren, damit Flag-Felder nicht mehr exposed werden.  
-   - Frontend-DTOs anpassen (Typdefinitionen, Zod-Schemas, eventuell TS-Deklarationen).
+   - PostgREST Policies und Views aktualisieren, damit Flag-Felder nicht länger exposed werden.  
+   - Frontend-Typdefinitionen (sofern vorhanden) anpassen.
 3. **Integrationstest**  
-   - Capture → Supabase → Doctor → Chart einmal komplett durchspielen, um sicherzustellen, dass keine Flag-Felder mehr erwartet werden.
+   - Capture → Supabase → Doctor → Chart durchspielen, um sicherzustellen, dass das Backend ohne `day_flags` funktioniert.
 
 ---
 
-### Step 7 – Dokumentation & Release
-- `docs/QA_CHECKS.md`, `CHANGELOG.md`, README und Benutzerhilfen aktualisieren (Hinweis „Flags entfernt in Version …“).  
-- Roadmap nach jedem abgeschlossenen Schritt anpassen, damit zukünftige Arbeiten nachvollziehbar bleiben.  
-- Finaler Smoke-Test (Login → Capture → Doctor → Chart → Logout) unter strenger CSP.  
-- Danach Tag/Release erstellen und ggf. Backend-Migration deployen.
+### Step 7 – Dokumentation & Release
+- `docs/QA_CHECKS.md`, `CHANGELOG.md`, README, Benutzerhilfen auf den Flag-Abbau aktualisieren.  
+- Nach Step 6 finalen Smoke-Test (Login → Capture → Doctor → Chart → Logout) durchführen.  
+- Release-Tag/Migrations-Hinweise schreiben und Deployment anstoßen.
