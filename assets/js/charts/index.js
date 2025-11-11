@@ -657,7 +657,6 @@ const metric = $("#metricSel")?.value || "bp";
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
-    // Wenn es Flags gibt, soll das Chart nicht fruehzeitig abbrechen
     const hasBarData = barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
