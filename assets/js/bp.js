@@ -104,11 +104,7 @@
       return false;
     }
 
-    const currentISO = new Date(date + "T" + time).toISOString();
-    const ts = new Date(date + "T" + time).getTime();
-
-    const entry = baseEntry(date, time, contextLabel);
-    entry.sys = sys;
+    const entry = baseEntry(date, time, contextLabel);    entry.sys = sys;
     entry.dia = dia;
     entry.pulse = pulse;
     entry.map = (sys!=null && dia!=null) ? calcMAP(sys, dia) : null;
