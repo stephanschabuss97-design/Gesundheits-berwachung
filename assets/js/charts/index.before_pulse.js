@@ -42,7 +42,8 @@ const chartPanel = {
   tip: null,
   tipSticky: false,
   hoverSeries: null,
-  pulseLink: null,
+  crosshair: null,
+  crosshairBounds: null,
   SHOW_BODY_COMP_BARS: true,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
@@ -102,16 +103,16 @@ const chartPanel = {
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
         const isBar = !!(tgt && tgt.classList?.contains("chart-bar"));
         const isHit = !!(tgt && tgt.classList?.contains("chart-hit")) || isBar;
-        if (!(isPt || isHit)) { this.hideTip(); this.hidePulseLink(); return; }
-        if (!this.fillTipFromTarget(tgt)) { this.hideTip(); this.hidePulseLink(); return; }
-        this.showPulseLinkForTarget(tgt);
+        if (!(isPt || isHit)) { this.hideTip(); this.hideCrosshair(); return; }
+        if (!this.fillTipFromTarget(tgt)) { this.hideTip(); this.hideCrosshair(); return; }
+        this.showCrosshairForTarget(tgt);
         this.positionTip(e);
       });
 
       this.svg.addEventListener("pointerleave", () => {
         if (this.tipSticky) return;
         this.hideTip();
-        this.hidePulseLink();
+        this.hideCrosshair();
       });
 
       // Click/Tap: Tooltip toggeln (mobil-freundlich)
@@ -121,15 +122,19 @@ const chartPanel = {
         const isBar = !!(tgt && tgt.classList?.contains("chart-bar"));
         const isHit = !!(tgt && tgt.classList?.contains("chart-hit")) || isBar;
         if (!(isPt || isHit)) {
-          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hidePulseLink(); }
+          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hideCrosshair(); }
           return;
         }
         if (!this.fillTipFromTarget(tgt)) {
-          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hidePulseLink(); }
+          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hideCrosshair(); }
           return;
         }
         this.tipSticky = !this.tipSticky;
-        this.showPulseLinkForTarget(tgt);
+        if (this.tipSticky) {
+          this.showCrosshairForTarget(tgt);
+        } else {
+          this.hideCrosshair();
+        }
         this.positionTip(e);
       });
 
@@ -144,11 +149,15 @@ const chartPanel = {
           e.preventDefault();
           if (!this.fillTipFromTarget(tgt)) return;
           this.tipSticky = !this.tipSticky;
-          this.showPulseLinkForTarget(tgt);
+          if (this.tipSticky) {
+            this.showCrosshairForTarget(tgt);
+          } else {
+            this.hideCrosshair();
+          }
         } else if (e.key === "Escape") {
           this.tipSticky = false;
           this.hideTip();
-          this.hidePulseLink();
+          this.hideCrosshair();
         }
       });
     }
@@ -308,7 +317,32 @@ async getFiltered() {
       }, 160);
     }
     this.setHoverSeries(null);
-    this.hidePulseLink();
+  },
+  showCrosshairForTarget(tgt) {
+    if (!this.svg || !tgt) return;
+    const bounds = this.crosshairBounds;
+    if (!bounds) return;
+    const cxAttr = tgt.getAttribute("cx") || tgt.getAttribute("data-cx");
+    if (cxAttr == null || cxAttr === "") return;
+    const cx = Number(cxAttr);
+    if (!Number.isFinite(cx)) return;
+    let line = this.crosshair;
+    if (!line) {
+      line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.classList.add("chart-crosshair");
+      this.crosshair = line;
+      this.svg.appendChild(line);
+    }
+    line.setAttribute("x1", cx.toFixed(1));
+    line.setAttribute("x2", cx.toFixed(1));
+    line.setAttribute("y1", bounds.top.toFixed(1));
+    line.setAttribute("y2", bounds.bottom.toFixed(1));
+    line.style.display = "block";
+  },
+  hideCrosshair() {
+    if (this.crosshair) {
+      this.crosshair.style.display = "none";
+    }
   },
   // SUBMODULE: chartPanel.setHoverSeries @internal - hebt aktuelle Serie in Chart/Legende hervor
   setHoverSeries(seriesKey) {
@@ -365,7 +399,6 @@ async getFiltered() {
     const valueLabel = (tgt.getAttribute("data-value-label") || "").trim();
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
-    const kind = tgt.getAttribute("data-kind") || "";
 
     const parts = [];
     const hdrText = [date, ctx].filter(Boolean).join(" . ");
@@ -378,17 +411,6 @@ async getFiltered() {
     if (valueLabel) {
       parts.push(`<div class="chart-tip-value">${esc(valueLabel)}</div>`);
     }
-    if (this.currentMetric === "bp" && (kind === "sys" || kind === "dia")) {
-      const sysVal = Number(tgt.getAttribute("data-sys"));
-      const diaVal = Number(tgt.getAttribute("data-dia"));
-      if (Number.isFinite(sysVal) && Number.isFinite(diaVal)) {
-        const pulsePressure = Math.round(sysVal - diaVal);
-        parts.push(`<div class="chart-tip-value">${esc(`Pulsdruck: ${pulsePressure} mmHg`)}</div>`);
-      }
-      this.showPulseLinkForTarget(tgt);
-    } else {
-      this.hidePulseLink();
-    }
     if (!parts.length) return false;
     this.tip.innerHTML = parts.join("");
     this.tip.dataset.visible = "1";
@@ -396,43 +418,6 @@ async getFiltered() {
     this.tip.style.opacity = "1";
     if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note || valueLabel || ''}`.trim();
     return true;
-  },
-  showPulseLinkForTarget(tgt) {
-    if (!this.svg || !tgt) return;
-    if (this.currentMetric !== "bp") { this.hidePulseLink(); return; }
-    const kind = tgt.getAttribute("data-kind");
-    if (kind !== "sys" && kind !== "dia") { this.hidePulseLink(); return; }
-    const ctx = tgt.getAttribute("data-ctx");
-    const date = tgt.getAttribute("data-date");
-    if (!date || !ctx) { this.hidePulseLink(); return; }
-    const counterpartCtx = ctx === "Morgen" ? "Abend" : ctx === "Abend" ? "Morgen" : null;
-    if (!counterpartCtx) { this.hidePulseLink(); return; }
-    const siblings = Array.from(this.svg.querySelectorAll('.pt[data-kind="' + kind + '"][data-date="' + date + '"]'));
-    const other = siblings.find((node) => node !== tgt && node.getAttribute("data-ctx") === counterpartCtx);
-    if (!other) { this.hidePulseLink(); return; }
-    const cx1 = Number(tgt.getAttribute("cx"));
-    const cy1 = Number(tgt.getAttribute("cy"));
-    const cx2 = Number(other.getAttribute("cx"));
-    const cy2 = Number(other.getAttribute("cy"));
-    if (!Number.isFinite(cx1) || !Number.isFinite(cy1) || !Number.isFinite(cx2) || !Number.isFinite(cy2)) {
-      this.hidePulseLink();
-      return;
-    }
-    let line = this.pulseLink;
-    if (!line) {
-      line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.classList.add("pulse-link");
-      this.pulseLink = line;
-      this.svg.appendChild(line);
-    }
-    line.setAttribute("x1", cx1.toFixed(1));
-    line.setAttribute("y1", cy1.toFixed(1));
-    line.setAttribute("x2", cx2.toFixed(1));
-    line.setAttribute("y2", cy2.toFixed(1));
-    line.style.display = "block";
-  },
-  hidePulseLink() {
-    if (this.pulseLink) this.pulseLink.style.display = "none";
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
@@ -444,7 +429,6 @@ async getFiltered() {
       { k: "sys",  label: "Durchschnitt Sys: -" },
       { k: "dia",  label: "Durchschnitt Dia: -" },
       { k: "map",  label: "Durchschnitt MAP: -" },
-      { k: "pulsepressure", label: "Pulsdruck: -" },
       { k: "bmi",  label: "BMI (letzter): -" },
       { k: "whtr", label: "WHtR (letzter): -" },
     ];
@@ -549,7 +533,6 @@ if (!(await isLoggedIn())) {
   return;
 }
 const metric = $("#metricSel")?.value || "bp";
-this.currentMetric = metric;
 const BASE_WEIGHT_MIN = 75;
 
     const data   = await this.getFiltered();
@@ -628,9 +611,6 @@ const BASE_WEIGHT_MIN = 75;
         const avgSys = avg(mData.map(e => (e.sys != null ? Number(e.sys) : null)));
         const avgDia = avg(mData.map(e => (e.dia != null ? Number(e.dia) : null)));
         const avgMap = avg(mapArr);
-        const avgPulsePressure = avg(mData.map(e => (
-          e.sys != null && e.dia != null ? Number(e.sys) - Number(e.dia) : null
-        )));
 
         const f0 = (v) => (v == null ? "-" : Math.round(v).toString());
 
@@ -638,13 +618,11 @@ const BASE_WEIGHT_MIN = 75;
         const sEl  = avgBox.querySelector('[data-k="sys"]');
         const dEl  = avgBox.querySelector('[data-k="dia"]');
         const mEl  = avgBox.querySelector('[data-k="map"]');
-        const ppEl = avgBox.querySelector('[data-k="pulsepressure"]');
         const bmiEl  = avgBox.querySelector('[data-k="bmi"]');
         const whtrEl = avgBox.querySelector('[data-k="whtr"]');
         if (sEl)  { sEl.style.display  = ""; sEl.textContent  = "Durchschnitt Sys: " + f0(avgSys); }
         if (dEl)  { dEl.style.display  = ""; dEl.textContent  = "Durchschnitt Dia: " + f0(avgDia); }
         if (mEl)  { mEl.style.display  = ""; mEl.textContent  = "Durchschnitt MAP: " + f0(avgMap); }
-        if (ppEl) { ppEl.style.display = ""; ppEl.textContent = `Pulsdruck: ${f0(avgPulsePressure)}`; }
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
 
@@ -727,6 +705,8 @@ const BASE_WEIGHT_MIN = 75;
       void this.svg.offsetWidth;
       this.svg.classList.add("chart-refresh");
     }
+    this.crosshair = null;
+    this.crosshairBounds = null;
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
@@ -739,6 +719,7 @@ const BASE_WEIGHT_MIN = 75;
     const hasBarData = includeBars && barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
+      this.hideCrosshair();
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
     }
@@ -751,6 +732,7 @@ const BASE_WEIGHT_MIN = 75;
 
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
+    this.crosshairBounds = { top: PT, bottom: H - PB };
 
     // Skalen
     const xVals = X.filter(t => Number.isFinite(t));
@@ -911,8 +893,7 @@ const mkDots = (seriesItem) => {
     const valueLabel = name ? `${name}: ${formattedVal}` : formattedVal;
     const aria = `${date} ${ctx} ${valueLabel}`.trim();
 
-    const attrs = [
-      `<circle class="pt"`,
+    const attrParts = [
       `cx="${cx}"`,
       `cy="${cy}"`,
       `r="2.6"`,
@@ -932,13 +913,8 @@ const mkDots = (seriesItem) => {
       `stroke-width="12"`,
       `pointer-events="stroke"`
     ];
-    if (kind === "sys" || kind === "dia") {
-      attrs.push(`data-sys="${esc(m.sys != null ? m.sys : "")}"`);
-      attrs.push(`data-dia="${esc(m.dia != null ? m.dia : "")}"`);
-    }
-    if (key) attrs.push(`data-series="${esc(key)}"`);
-    attrs.push("/>");
-    out += attrs.filter(Boolean).join(" ");
+    if (key) attrParts.push(`data-series="${esc(key)}"`);
+    out += `<circle class="pt" ${attrParts.join(" ")} />`;
   });
   return out;
 };
@@ -1001,6 +977,7 @@ const mkBars = () => {
         `opacity="0.35"`,
         `data-kind="body-bar"`,
         `data-date="${esc(date)}"`,
+        `data-cx="${cx.toFixed(1)}"`,
         `data-series-label="${esc(seriesItem.name || "")}"`,
         `data-value-label="${esc(valueLabel)}"`,
         `tabindex="0"`,
