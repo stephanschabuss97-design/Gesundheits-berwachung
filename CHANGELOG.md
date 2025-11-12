@@ -8,6 +8,9 @@ Removed:
 Docs:
 - `docs/QA_CHECKS.md` aktualisiert (UI-Refresh Steps nur noch doctor/lifestyle/chart).
 
+Changed:
+- Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
+
 ## v1.8.2 - Guard/Resume Cleanup
 
 Added:

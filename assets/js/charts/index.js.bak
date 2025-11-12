@@ -657,8 +657,7 @@ const metric = $("#metricSel")?.value || "bp";
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
-    const includeBars = metric === "weight" && this.SHOW_BODY_COMP_BARS;
-    const hasBarData = includeBars && barSeries.some(s => s.values.some(v => v != null));
+    const hasBarData = barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
@@ -690,16 +689,15 @@ const metric = $("#metricSel")?.value || "bp";
     xmin -= xPad; xmax += xPad;
 
     const lineVals = series.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
-    const barVals  = includeBars
-      ? barSeries.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)))
-      : [];
+    const barVals  = metric === "weight"
+      ? []
+      : barSeries.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
     let allY = [...lineVals, ...barVals];
     if (metric === "weight") {
       const weightValsOnly = series
         .filter(s => s.key === "body-weight" || s.key === "body-waist")
         .flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
-      const combined = [...weightValsOnly, ...barVals];
-      allY = combined.length ? combined : [75, 110];
+      allY = weightValsOnly.length ? weightValsOnly : [75, 110];
     }
     if (!allY.length) allY = [0];
     let yminRaw = Math.min(...allY);
@@ -855,40 +853,7 @@ const mkAlertDots = (seriesItem) => {
   return out;
 };
 
-const mkBars = () => {
-  if (metric !== "weight" || !barSeries.length || !this.SHOW_BODY_COMP_BARS) return "";
-  const activeBars = barSeries.filter((s) => s.values.some((v) => v != null && Number.isFinite(v)));
-  if (!activeBars.length) return "";
-  const slots = Math.max(1, data.length);
-  const baseWidth = Math.min(28, Math.max(6, innerW / Math.max(8, slots)));
-  const barWidth = baseWidth * 0.75;
-  const offsetStep = baseWidth;
-  const baseY = y(y0);
-  let out = "";
-  activeBars.forEach((seriesItem, idx) => {
-    const offset = (idx - (activeBars.length - 1) / 2) * offsetStep;
-    seriesItem.values.forEach((rawVal, i) => {
-      if (rawVal == null || !Number.isFinite(X[i])) return;
-      const val = Number(rawVal);
-      const cx = x(X[i]);
-      const rectX = cx + offset - barWidth / 2;
-      const yVal = y(val);
-      const rectY = Math.min(yVal, baseY);
-      const rectH = Math.abs(baseY - yVal);
-      if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
-      out += `<rect class="chart-bar" x="${rectX.toFixed(1)}" y="${rectY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectH.toFixed(1)}" fill="${seriesItem.color}" opacity="0.35"${seriesItem.key ? ` data-series="${esc(seriesItem.key)}"` : ""}></rect>`;
-    });
-  });
-  return out;
-};
-
     // Zeichnen
-    if (metric === "weight" && this.svg) {
-      const bars = mkBars();
-      if (bars) {
-        this.svg.insertAdjacentHTML("beforeend", bars);
-      }
-    }
     series.forEach((s) => {
       if (!this.svg) return;
       this.svg.insertAdjacentHTML("beforeend", mkPath(s));
@@ -919,7 +884,7 @@ const mkBars = () => {
       this.svg.insertAdjacentHTML("beforeend", pendingBodyHitsSvg);
     }
 
-    if (metric === "weight" && includeBars && this.legend) {
+    if (metric === "weight" && this.legend) {
       barSeries.forEach((s) => {
         if (!s.values.some(v => v != null)) return;
         const wrap = document.createElement("span");
