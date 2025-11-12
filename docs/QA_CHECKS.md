@@ -653,6 +653,8 @@ Save-Flow (saveBlock) uebermittelt salt_high/sugar_high; toggle-Status wird beim
 **Smoke**
 - Mehrere Refresh-Anst  e werden koalesziert (nur ein Durchlauf aktiv).
 - Pro Sub-Step (doctor/lifestyle/chart) Timeout (~8s) ? Log + Weiterlauf.
+- Diagramm (Daily) – Blutdruck: Tooltip zeigt Sys/Dia sowie berechneten Pulsdruck; beim Hover wird die Differenz zwischen Morgen/Abend exakt verknüpft (Sys↔Dia je Kontext).
+- Diagramm (Daily) – Körper: Muskel-/Fett-Balken reagieren auf Hover/Click (Tooltip, Fokus, Tastatur).
 
 **Sanity**
 - Start/Ende-Logs mit Dauer vorhanden; Promise resolved immer.
