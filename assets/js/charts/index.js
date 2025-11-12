@@ -483,6 +483,7 @@ if (!(await isLoggedIn())) {
   return;
 }
 const metric = $("#metricSel")?.value || "bp";
+const BASE_WEIGHT_MIN = 75;
 
     const data   = await this.getFiltered();
 
@@ -639,7 +640,6 @@ const metric = $("#metricSel")?.value || "bp";
     this.layoutKpis();
   }
 
-  const BASE_WEIGHT_MIN = 75;
   const muscleKg = data.map(e => e.muscle_kg != null ? Number(e.muscle_kg) : null);
   const fatKg    = data.map(e => e.fat_kg    != null ? Number(e.fat_kg)    : null);
   barSeries = [
@@ -692,7 +692,11 @@ const metric = $("#metricSel")?.value || "bp";
 
     const lineVals = series.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
     const barVals  = includeBars
-      ? barSeries.flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)))
+      ? barSeries.flatMap(s =>
+          s.values
+            .map(normalizeBarVal)
+            .filter(v => v != null && Number.isFinite(v))
+        )
       : [];
     let allY = [...lineVals, ...barVals];
     if (metric === "weight") {
@@ -871,11 +875,11 @@ const mkBars = () => {
     const offset = (idx - (activeBars.length - 1) / 2) * offsetStep;
     seriesItem.values.forEach((rawVal, i) => {
       if (rawVal == null || !Number.isFinite(X[i])) return;
-      const val = Math.max(0, Number(rawVal));
-      const adjustedVal = baseline + val;
+      const normalized = normalizeBarVal(rawVal);
+      if (normalized == null || normalized === baseline) return;
       const cx = x(X[i]);
       const rectX = cx + offset - barWidth / 2;
-      const yVal = y(adjustedVal);
+      const yVal = y(normalized);
       const rectY = Math.min(yVal, baseY);
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
