@@ -385,7 +385,6 @@ async getFiltered() {
         const pulsePressure = Math.round(sysVal - diaVal);
         parts.push(`<div class="chart-tip-value">${esc(`Pulsdruck: ${pulsePressure} mmHg`)}</div>`);
       }
-      this.showPulseLinkForTarget(tgt);
     } else {
       this.hidePulseLink();
     }
@@ -407,13 +406,26 @@ async getFiltered() {
     if (!date || !ctx) { this.hidePulseLink(); return; }
     const counterpartCtx = ctx === "Morgen" ? "Abend" : ctx === "Abend" ? "Morgen" : null;
     if (!counterpartCtx) { this.hidePulseLink(); return; }
-    const siblings = Array.from(this.svg.querySelectorAll('.pt[data-kind="' + kind + '"][data-date="' + date + '"]'));
+    const escapeCss = (value) => {
+      if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(value);
+      return `${value}`.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+    };
+    const selector = `.pt[data-kind="${escapeCss(kind)}"][data-date="${escapeCss(date)}"]`;
+    const siblings = Array.from(this.svg.querySelectorAll(selector));
     const other = siblings.find((node) => node !== tgt && node.getAttribute("data-ctx") === counterpartCtx);
     if (!other) { this.hidePulseLink(); return; }
-    const cx1 = Number(tgt.getAttribute("cx"));
-    const cy1 = Number(tgt.getAttribute("cy"));
-    const cx2 = Number(other.getAttribute("cx"));
-    const cy2 = Number(other.getAttribute("cy"));
+    const cxAttr1 = tgt.getAttribute("cx");
+    const cyAttr1 = tgt.getAttribute("cy");
+    const cxAttr2 = other.getAttribute("cx");
+    const cyAttr2 = other.getAttribute("cy");
+    if ([cxAttr1, cyAttr1, cxAttr2, cyAttr2].some((attr) => attr == null || attr === "")) {
+      this.hidePulseLink();
+      return;
+    }
+    const cx1 = Number(cxAttr1);
+    const cy1 = Number(cyAttr1);
+    const cx2 = Number(cxAttr2);
+    const cy2 = Number(cyAttr2);
     if (!Number.isFinite(cx1) || !Number.isFinite(cy1) || !Number.isFinite(cx2) || !Number.isFinite(cy2)) {
       this.hidePulseLink();
       return;
