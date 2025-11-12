@@ -659,6 +659,11 @@ const BASE_WEIGHT_MIN = 75;
     if (!this.tipSticky) this.hideTip();
 
     const includeBars = metric === "weight" && this.SHOW_BODY_COMP_BARS;
+    const normalizeBarVal = (val) => {
+      const parsed = Number(val);
+      if (!Number.isFinite(parsed)) return null;
+      return Math.max(BASE_WEIGHT_MIN, parsed);
+    };
     const hasBarData = includeBars && barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
