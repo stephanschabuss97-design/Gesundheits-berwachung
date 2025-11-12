@@ -404,15 +404,13 @@ async getFiltered() {
     const ctx = tgt.getAttribute("data-ctx");
     const date = tgt.getAttribute("data-date");
     if (!date || !ctx) { this.hidePulseLink(); return; }
-    const counterpartCtx = ctx === "Morgen" ? "Abend" : ctx === "Abend" ? "Morgen" : null;
-    if (!counterpartCtx) { this.hidePulseLink(); return; }
+    const counterpartKind = kind === "sys" ? "dia" : "sys";
     const escapeCss = (value) => {
       if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(value);
       return `${value}`.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
     };
-    const selector = `.pt[data-kind="${escapeCss(kind)}"][data-date="${escapeCss(date)}"]`;
-    const siblings = Array.from(this.svg.querySelectorAll(selector));
-    const other = siblings.find((node) => node !== tgt && node.getAttribute("data-ctx") === counterpartCtx);
+    const selector = `.pt[data-kind="${escapeCss(counterpartKind)}"][data-date="${escapeCss(date)}"][data-ctx="${escapeCss(ctx)}"]`;
+    const other = this.svg.querySelector(selector);
     if (!other) { this.hidePulseLink(); return; }
     const cxAttr1 = tgt.getAttribute("cx");
     const cyAttr1 = tgt.getAttribute("cy");
