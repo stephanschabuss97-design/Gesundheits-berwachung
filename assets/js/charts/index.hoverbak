@@ -42,8 +42,6 @@ const chartPanel = {
   tip: null,
   tipSticky: false,
   hoverSeries: null,
-  crosshair: null,
-  crosshairBounds: null,
   SHOW_BODY_COMP_BARS: true,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
@@ -101,40 +99,31 @@ const chartPanel = {
         if (this.tipSticky) return;
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isBar = !!(tgt && tgt.classList?.contains("chart-bar"));
-        const isHit = !!(tgt && tgt.classList?.contains("chart-hit")) || isBar;
-        if (!(isPt || isHit)) { this.hideTip(); this.hideCrosshair(); return; }
-        if (!this.fillTipFromTarget(tgt)) { this.hideTip(); this.hideCrosshair(); return; }
-        this.showCrosshairForTarget(tgt);
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
+        if (!(isPt || isHit)) { this.hideTip(); return; }
+        const date = tgt.getAttribute("data-date") || "";
+        const hasNote = !!(tgt.getAttribute("data-note"));
+        if (!hasNote) { this.hideTip(); return; }
+        this.fillTipFromTarget(tgt);
         this.positionTip(e);
       });
 
       this.svg.addEventListener("pointerleave", () => {
         if (this.tipSticky) return;
         this.hideTip();
-        this.hideCrosshair();
       });
 
       // Click/Tap: Tooltip toggeln (mobil-freundlich)
       this.svg.addEventListener("click", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isBar = !!(tgt && tgt.classList?.contains("chart-bar"));
-        const isHit = !!(tgt && tgt.classList?.contains("chart-hit")) || isBar;
-        if (!(isPt || isHit)) {
-          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hideCrosshair(); }
-          return;
-        }
-        if (!this.fillTipFromTarget(tgt)) {
-          if (this.tipSticky) { this.tipSticky = false; this.hideTip(); this.hideCrosshair(); }
-          return;
-        }
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
+        if (!(isPt || isHit)) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
+        const date = tgt.getAttribute("data-date") || "";
+        const hasNote = !!(tgt.getAttribute("data-note"));
+        if (!hasNote) { if (this.tipSticky) { this.tipSticky = false; this.hideTip(); } return; }
+        this.fillTipFromTarget(tgt);
         this.tipSticky = !this.tipSticky;
-        if (this.tipSticky) {
-          this.showCrosshairForTarget(tgt);
-        } else {
-          this.hideCrosshair();
-        }
         this.positionTip(e);
       });
 
@@ -142,22 +131,16 @@ const chartPanel = {
       this.svg.addEventListener("keydown", (e) => {
         const tgt = e.target;
         const isPt  = !!(tgt && tgt.classList?.contains("pt"));
-        const isBar = !!(tgt && tgt.classList?.contains("chart-bar"));
-        const isHit = !!(tgt && tgt.classList?.contains("chart-hit")) || isBar;
+        const isHit = !!(tgt && tgt.classList?.contains("chart-hit"));
         if (!(isPt || isHit)) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          if (!this.fillTipFromTarget(tgt)) return;
+          const hasNote = !!(tgt.getAttribute("data-note"));
+          if (!hasNote) return;
+          this.fillTipFromTarget(tgt);
           this.tipSticky = !this.tipSticky;
-          if (this.tipSticky) {
-            this.showCrosshairForTarget(tgt);
-          } else {
-            this.hideCrosshair();
-          }
         } else if (e.key === "Escape") {
-          this.tipSticky = false;
-          this.hideTip();
-          this.hideCrosshair();
+          this.tipSticky = false; this.hideTip();
         }
       });
     }
@@ -318,31 +301,6 @@ async getFiltered() {
     }
     this.setHoverSeries(null);
   },
-  showCrosshairForTarget(tgt) {
-    if (!this.svg || !tgt) return;
-    const bounds = this.crosshairBounds;
-    if (!bounds) return;
-    const cxAttr = tgt.getAttribute("cx") || tgt.getAttribute("data-cx");
-    const cx = Number(cxAttr);
-    if (!Number.isFinite(cx)) return;
-    let line = this.crosshair;
-    if (!line) {
-      line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.classList.add("chart-crosshair");
-      this.crosshair = line;
-      this.svg.appendChild(line);
-    }
-    line.setAttribute("x1", cx.toFixed(1));
-    line.setAttribute("x2", cx.toFixed(1));
-    line.setAttribute("y1", bounds.top.toFixed(1));
-    line.setAttribute("y2", bounds.bottom.toFixed(1));
-    line.style.display = "block";
-  },
-  hideCrosshair() {
-    if (this.crosshair) {
-      this.crosshair.style.display = "none";
-    }
-  },
   // SUBMODULE: chartPanel.setHoverSeries @internal - hebt aktuelle Serie in Chart/Legende hervor
   setHoverSeries(seriesKey) {
     if (!this.svg && !this.legend) return;
@@ -392,31 +350,24 @@ async getFiltered() {
   },
   // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt
   fillTipFromTarget(tgt) {
-    if (!this.tip || !tgt) return false;
+    if (!this.tip) return;
     this.setHoverSeries(tgt?.getAttribute("data-series") || null);
-    const note = (tgt.getAttribute("data-note") || "").trim();
-    const valueLabel = (tgt.getAttribute("data-value-label") || "").trim();
+    const note = tgt.getAttribute("data-note") || "";
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
 
     const parts = [];
-    const hdrText = [date, ctx].filter(Boolean).join(" . ");
-    if (hdrText) {
-      parts.push(`<div class="chart-tip-header">${esc(hdrText)}</div>`);
-    }
+    const hdr = (date || ctx) ? `<div class="chart-tip-header">${esc([date, ctx].filter(Boolean).join(" . "))}</div>` : "";
+    if (hdr) parts.push(hdr);
     if (note) {
       parts.push(`<div class="chart-tip-note">${esc(note)}</div>`);
     }
-    if (valueLabel) {
-      parts.push(`<div class="chart-tip-value">${esc(valueLabel)}</div>`);
-    }
-    if (!parts.length) return false;
+    if (!parts.length) { this.hideTip(); return; }
     this.tip.innerHTML = parts.join("");
     this.tip.dataset.visible = "1";
     this.tip.style.display = "block";
     this.tip.style.opacity = "1";
-    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note || valueLabel || ''}`.trim();
-    return true;
+    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note ? 'Notiz vorhanden.' : ''}`.trim();
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
@@ -704,8 +655,6 @@ const BASE_WEIGHT_MIN = 75;
       void this.svg.offsetWidth;
       this.svg.classList.add("chart-refresh");
     }
-    this.crosshair = null;
-    this.crosshairBounds = null;
     if (this.legend) this.legend.innerHTML = "";
     if (!this.tipSticky) this.hideTip();
 
@@ -718,7 +667,6 @@ const BASE_WEIGHT_MIN = 75;
     const hasBarData = includeBars && barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
     if (!hasAny) {
-      this.hideCrosshair();
       if (this.svg) this.svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#9aa3af" font-size="14">Keine darstellbaren Werte</text>';
       return;
     }
@@ -731,7 +679,6 @@ const BASE_WEIGHT_MIN = 75;
 
     const PL = 48, PR = 16, PT = 12, PB = 28;
     const innerW = W - PL - PR, innerH = H - PT - PB;
-    this.crosshairBounds = { top: PT, bottom: H - PB };
 
     // Skalen
     const xVals = X.filter(t => Number.isFinite(t));
@@ -871,7 +818,7 @@ const mkPath = (seriesItem) => {
 };
 
 const mkDots = (seriesItem) => {
-  const { values = [], color = "#fff", type, key, name = "" } = seriesItem || {};
+  const { values = [], color = "#fff", type, key } = seriesItem || {};
   const kind = (type === "sys" || type === "dia") ? type : "misc";
   let out = "";
   values.forEach((v, i) => {
@@ -884,20 +831,14 @@ const mkDots = (seriesItem) => {
     const date = (m.date || (data?.[i]?.date || ""));
     const ctx  = (m.ctx  || (kind === "misc" ? "Tag" : ""));
     const note = (m.note || "");
-    const numericVal = Number(v);
-    const formattedVal =
-      Number.isFinite(numericVal)
-        ? (kind === "misc" ? numericVal.toFixed(1) : Math.round(numericVal).toString())
-        : `${v}`;
-    const valueLabel = name ? `${name}: ${formattedVal}` : formattedVal;
-    const labelBase = `${formattedVal}`;
-    const aria = `${date} ${ctx} ${valueLabel}`.trim();
+    const labelBase = (kind === "sys" || kind === "dia") ? `${kind.toUpperCase()} ${v}` : `${v}`;
+    const aria = `${date} ${ctx} ${labelBase}`.trim();
 
     const seriesAttr = key ? ` data-series="${esc(key)}"` : "";
     out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
                 data-kind="${esc(kind)}" data-val="${v}"
                 data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-               data-note="${esc(note)}" data-series-label="${esc(name)}" data-value-label="${esc(valueLabel)}"${seriesAttr} tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
+               data-note="${esc(note)}"${seriesAttr} tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
                stroke="rgba(0,0,0,0)" stroke-width="12" pointer-events="stroke" />`;
   });
   return out;
@@ -941,18 +882,13 @@ const mkBars = () => {
       if (rawVal == null || !Number.isFinite(X[i])) return;
       const plotted = barStackValue(rawVal);
       if (!Number.isFinite(plotted) || plotted === baseline) return;
-      const displayVal = Number(rawVal);
-      if (!Number.isFinite(displayVal)) return;
       const cx = x(X[i]);
       const rectX = cx + offset - barWidth / 2;
       const yVal = y(plotted);
       const rectY = Math.min(yVal, baseY);
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
-      const date = data?.[i]?.date || "";
-      const valueLabel = `${seriesItem.name || ''}: ${displayVal.toFixed(1)} kg`.trim();
-      const seriesAttr = seriesItem.key ? ` data-series="${esc(seriesItem.key)}"` : "";
-      out += `<rect class="chart-bar" x="${rectX.toFixed(1)}" y="${rectY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectH.toFixed(1)}" fill="${seriesItem.color}" opacity="0.35"${seriesAttr} data-kind="body-bar" data-date="${esc(date)}" data-cx="${cx.toFixed(1)}" data-series-label="${esc(seriesItem.name || "")}" data-value-label="${esc(valueLabel)}" tabindex="0" role="button" aria-label="${esc(valueLabel)}"></rect>`;
+      out += `<rect class="chart-bar" x="${rectX.toFixed(1)}" y="${rectY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectH.toFixed(1)}" fill="${seriesItem.color}" opacity="0.35"${seriesItem.key ? ` data-series="${esc(seriesItem.key)}"` : ""}></rect>`;
     });
   });
   return out;

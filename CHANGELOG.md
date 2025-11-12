@@ -10,6 +10,7 @@ Docs:
 
 Changed:
 - Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
+- Hover-Tooltips wurden vereinheitlicht: Körperpunkte und -balken zeigen jetzt Werte beim Überfahren/Klicken an, inkl. Crosshair-Linie und Pin-Funktion wie im Blutdruck-Chart.
 
 ## v1.8.2 - Guard/Resume Cleanup
 

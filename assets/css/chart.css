@@ -164,6 +164,12 @@
 }
 #chartSvg .chart-hit{cursor:pointer;}
 #chartSvg .chart-hit:focus-visible{outline:2px solid var(--color-accent); outline-offset:2px;}
+#chartSvg .chart-bar{cursor:pointer;}
+#chartSvg .chart-crosshair{
+  stroke:rgba(255,255,255,.25);
+  stroke-width:1;
+  pointer-events:none;
+}
 
 /* SUBMODULE: Tooltip Styling @public - dynamische Tooltips mit Farbthema, Schatten und responsivem Layout */
 .chart-tip{
@@ -188,3 +194,4 @@
 }
 .chart-tip-header{opacity:.85; margin-bottom:4px;}
 .chart-tip-note{white-space:pre-wrap; margin-bottom:0;}
+.chart-tip-value{white-space:pre-wrap; margin-bottom:0; color:#e5e7eb;}
