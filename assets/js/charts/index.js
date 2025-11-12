@@ -323,6 +323,7 @@ async getFiltered() {
     const bounds = this.crosshairBounds;
     if (!bounds) return;
     const cxAttr = tgt.getAttribute("cx") || tgt.getAttribute("data-cx");
+    if (cxAttr == null || cxAttr === "") return;
     const cx = Number(cxAttr);
     if (!Number.isFinite(cx)) return;
     let line = this.crosshair;
@@ -890,15 +891,30 @@ const mkDots = (seriesItem) => {
         ? (kind === "misc" ? numericVal.toFixed(1) : Math.round(numericVal).toString())
         : `${v}`;
     const valueLabel = name ? `${name}: ${formattedVal}` : formattedVal;
-    const labelBase = `${formattedVal}`;
     const aria = `${date} ${ctx} ${valueLabel}`.trim();
 
-    const seriesAttr = key ? ` data-series="${esc(key)}"` : "";
-    out += `<circle class="pt" cx="${cx}" cy="${cy}" r="2.6" fill="${color}"
-                data-kind="${esc(kind)}" data-val="${v}"
-                data-date="${esc(date)}" data-ctx="${esc(ctx)}"
-               data-note="${esc(note)}" data-series-label="${esc(name)}" data-value-label="${esc(valueLabel)}"${seriesAttr} tabindex="0" role="button" aria-label="${esc(aria)}" title="${esc(aria)}"
-               stroke="rgba(0,0,0,0)" stroke-width="12" pointer-events="stroke" />`;
+    const attrParts = [
+      `cx="${cx}"`,
+      `cy="${cy}"`,
+      `r="2.6"`,
+      `fill="${color}"`,
+      `data-kind="${esc(kind)}"`,
+      `data-val="${v}"`,
+      `data-date="${esc(date)}"`,
+      `data-ctx="${esc(ctx)}"`,
+      `data-note="${esc(note)}"`,
+      `data-series-label="${esc(name)}"`,
+      `data-value-label="${esc(valueLabel)}"`,
+      `tabindex="0"`,
+      `role="button"`,
+      `aria-label="${esc(aria)}"`,
+      `title="${esc(aria)}"`,
+      `stroke="rgba(0,0,0,0)"`,
+      `stroke-width="12"`,
+      `pointer-events="stroke"`
+    ];
+    if (key) attrParts.push(`data-series="${esc(key)}"`);
+    out += `<circle class="pt" ${attrParts.join(" ")} />`;
   });
   return out;
 };
@@ -951,8 +967,25 @@ const mkBars = () => {
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
       const date = data?.[i]?.date || "";
       const valueLabel = `${seriesItem.name || ''}: ${displayVal.toFixed(1)} kg`.trim();
-      const seriesAttr = seriesItem.key ? ` data-series="${esc(seriesItem.key)}"` : "";
-      out += `<rect class="chart-bar" x="${rectX.toFixed(1)}" y="${rectY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${rectH.toFixed(1)}" fill="${seriesItem.color}" opacity="0.35"${seriesAttr} data-kind="body-bar" data-date="${esc(date)}" data-cx="${cx.toFixed(1)}" data-series-label="${esc(seriesItem.name || "")}" data-value-label="${esc(valueLabel)}" tabindex="0" role="button" aria-label="${esc(valueLabel)}"></rect>`;
+      const attrParts = [
+        `class="chart-bar"`,
+        `x="${rectX.toFixed(1)}"`,
+        `y="${rectY.toFixed(1)}"`,
+        `width="${barWidth.toFixed(1)}"`,
+        `height="${rectH.toFixed(1)}"`,
+        `fill="${seriesItem.color}"`,
+        `opacity="0.35"`,
+        `data-kind="body-bar"`,
+        `data-date="${esc(date)}"`,
+        `data-cx="${cx.toFixed(1)}"`,
+        `data-series-label="${esc(seriesItem.name || "")}"`,
+        `data-value-label="${esc(valueLabel)}"`,
+        `tabindex="0"`,
+        `role="button"`,
+        `aria-label="${esc(valueLabel)}"`
+      ];
+      if (seriesItem.key) attrParts.push(`data-series="${esc(seriesItem.key)}"`);
+      out += `<rect ${attrParts.join(" ")}></rect>`;
     });
   });
   return out;

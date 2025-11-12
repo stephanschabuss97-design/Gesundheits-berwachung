@@ -194,4 +194,4 @@
 }
 .chart-tip-header{opacity:.85; margin-bottom:4px;}
 .chart-tip-note{white-space:pre-wrap; margin-bottom:0;}
-.chart-tip-value{white-space:pre-wrap; margin-bottom:0; color:#e5e7eb;}
+.chart-tip-value{white-space:pre-wrap; margin-bottom:0; color:var(--color-text-muted, #e5e7eb);}
