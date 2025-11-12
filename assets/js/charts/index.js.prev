@@ -639,7 +639,6 @@ const metric = $("#metricSel")?.value || "bp";
     this.layoutKpis();
   }
 
-  const BASE_WEIGHT_MIN = 75;
   const muscleKg = data.map(e => e.muscle_kg != null ? Number(e.muscle_kg) : null);
   const fatKg    = data.map(e => e.fat_kg    != null ? Number(e.fat_kg)    : null);
   barSeries = [
@@ -700,7 +699,7 @@ const metric = $("#metricSel")?.value || "bp";
         .filter(s => s.key === "body-weight" || s.key === "body-waist")
         .flatMap(s => s.values.filter(v => v != null && Number.isFinite(v)));
       const combined = [...weightValsOnly, ...barVals];
-      allY = combined.length ? combined : [BASE_WEIGHT_MIN, 110];
+      allY = combined.length ? combined : [75, 110];
     }
     if (!allY.length) allY = [0];
     let yminRaw = Math.min(...allY);
@@ -715,7 +714,7 @@ const metric = $("#metricSel")?.value || "bp";
     };
     let yPad = 1;
     if (metric === "weight") {
-      const baseMin = BASE_WEIGHT_MIN;
+      const baseMin = 75;
       const baseMax = 110;
       const belowBase = yminRaw < baseMin;
       const aboveBase = ymaxRaw > baseMax;
@@ -864,18 +863,16 @@ const mkBars = () => {
   const baseWidth = Math.min(28, Math.max(6, innerW / Math.max(8, slots)));
   const barWidth = baseWidth * 0.75;
   const offsetStep = baseWidth;
-  const baseline = BASE_WEIGHT_MIN;
-  const baseY = y(baseline);
+  const baseY = y(y0);
   let out = "";
   activeBars.forEach((seriesItem, idx) => {
     const offset = (idx - (activeBars.length - 1) / 2) * offsetStep;
     seriesItem.values.forEach((rawVal, i) => {
       if (rawVal == null || !Number.isFinite(X[i])) return;
-      const val = Math.max(0, Number(rawVal));
-      const adjustedVal = baseline + val;
+      const val = Number(rawVal);
       const cx = x(X[i]);
       const rectX = cx + offset - barWidth / 2;
-      const yVal = y(adjustedVal);
+      const yVal = y(val);
       const rectY = Math.min(yVal, baseY);
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
