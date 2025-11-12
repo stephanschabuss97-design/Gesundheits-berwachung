@@ -659,10 +659,10 @@ const BASE_WEIGHT_MIN = 75;
     if (!this.tipSticky) this.hideTip();
 
     const includeBars = metric === "weight" && this.SHOW_BODY_COMP_BARS;
-    const barStackValue = (val) => {
+    const normalizeBarVal = (val) => {
       const parsed = Number(val);
-      if (!Number.isFinite(parsed) || parsed <= 0) return BASE_WEIGHT_MIN;
-      return BASE_WEIGHT_MIN + parsed;
+      if (!Number.isFinite(parsed)) return null;
+      return Math.max(BASE_WEIGHT_MIN, parsed);
     };
     const hasBarData = includeBars && barSeries.some(s => s.values.some(v => v != null));
     const hasAny = series.some(s => s.values.some(v => v != null)) || hasBarData;
@@ -699,8 +699,8 @@ const BASE_WEIGHT_MIN = 75;
     const barVals  = includeBars
       ? barSeries.flatMap(s =>
           s.values
-            .map(barStackValue)
-            .filter(v => Number.isFinite(v) && v !== BASE_WEIGHT_MIN)
+            .map(normalizeBarVal)
+            .filter(v => v != null && Number.isFinite(v))
         )
       : [];
     let allY = [...lineVals, ...barVals];
@@ -880,11 +880,11 @@ const mkBars = () => {
     const offset = (idx - (activeBars.length - 1) / 2) * offsetStep;
     seriesItem.values.forEach((rawVal, i) => {
       if (rawVal == null || !Number.isFinite(X[i])) return;
-      const plotted = barStackValue(rawVal);
-      if (!Number.isFinite(plotted) || plotted === baseline) return;
+      const normalized = normalizeBarVal(rawVal);
+      if (normalized == null || normalized === baseline) return;
       const cx = x(X[i]);
       const rectX = cx + offset - barWidth / 2;
-      const yVal = y(plotted);
+      const yVal = y(normalized);
       const rectY = Math.min(yVal, baseY);
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
