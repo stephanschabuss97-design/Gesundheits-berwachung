@@ -81,9 +81,9 @@ const classifyMapValue = (mapVal) => {
 const classifyPulsePressure = (pp) => {
   const v = Number(pp);
   if (!Number.isFinite(v)) return null;
-  if (v < 40) return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck < 40 mmHg (niedrig/abnormal)" };
+  if (v < 40) return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck < 40 mmHg (niedrig)" };
   if (v <= 60) return { color: "rgba(34,197,94,0.95)", label: "Pulsdruck 40–60 mmHg (normal)" };
-  return { color: "rgba(249,115,22,0.95)", label: "Pulsdruck > 60 mmHg (hoch/abnormal)" };
+  return { color: "rgba(249,115,22,0.95)", label: "Pulsdruck > 60 mmHg (hoch)" };
 };
 
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
