@@ -991,12 +991,14 @@ Regression
 
 **Smoke**
 - BP-Chart: Hover/Click auf Sys- oder Dia-Punkte zeigt einen kombinierten Tooltip (Datum/Kontext + Sys/Dia/MAP/Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
-- Body-Chart: Muskel-/Fettbalken sowie Punkte erhalten identische Tooltip-/Focus-Verhalten; beim Öffnen zeichnet sich das Diagramm animiert von links nach rechts auf.
+- Body-Chart: Hover auf Gewicht/Bauchumfang oder die Muskel-/Fettbalken blendet eine gemeinsame Tooltip-Karte mit allen vier Werten ein; beim Öffnen zeichnet sich das Diagramm animiert von links nach rechts auf.
 
 **Sanity**
-- SHOW_CHART_ANIMATIONS=false oder prefers-reduced-motion: reduce schalten alle neuen Animationen ab; keine Inline-Styles bleiben mit stroke-dashoffset != 0.
+- `SHOW_CHART_ANIMATIONS=false` oder `prefers-reduced-motion: reduce` schalten alle neuen Animationen ab; keine Inline-Styles bleiben mit `stroke-dashoffset != 0`.
 - Pulse-Link/Tooltip erscheinen nur, wenn das Gegenstück (Sys↔Dia) existiert; fehlende Werte zeigen weiterhin Einzel-Labels ohne Fehler im Log.
+- KPI-Leiste: Pulsdruck-Pill heißt „Durchschnittlicher Pulsdruck“ und erscheint ausschließlich, wenn die BP-Metrik aktiv ist.
 
 **Regression**
 - Range-Wechsel sowie Tab-Switches (BP ↔ Körper) rendern weiterhin ohne JS-Fehler; Tooltips funktionieren nach jedem Redraw.
 - Doctor-/Capture-Ansichten, CSV/JSON-Export und übrige Panels bleiben von den Chart-Animationen unberührt.
+

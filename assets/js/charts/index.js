@@ -46,6 +46,7 @@ const chartPanel = {
   currentMeta: null,
   currentBpPairs: null,
   currentMetric: 'bp',
+  currentBodyMeta: null,
   SHOW_CHART_ANIMATIONS: true,
   SHOW_BODY_COMP_BARS: true,
 
@@ -368,7 +369,7 @@ async getFiltered() {
   // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt
   fillTipFromTarget(tgt) {
     if (!this.tip || !tgt) return false;
-    const note = (tgt.getAttribute("data-note") || "").trim();
+    let note = (tgt.getAttribute("data-note") || "").trim();
     const valueLabel = (tgt.getAttribute("data-value-label") || "").trim();
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
@@ -379,11 +380,18 @@ async getFiltered() {
     if (this.currentMetric === "bp" && (kind === "sys" || kind === "dia")) {
       bpDetails = this.getBpPairDetails(tgt);
     }
+    let bodyDetails = null;
+    if (this.currentMetric === "weight" && (kind === "misc" || kind === "body-bar")) {
+      bodyDetails = this.getBodyDetails(tgt);
+      if (!note && bodyDetails?.note) note = bodyDetails.note;
+    }
 
     const highlightKeys = [];
     if (bpDetails?.seriesKeys) {
       if (bpDetails.seriesKeys.sys) highlightKeys.push(bpDetails.seriesKeys.sys);
       if (bpDetails.seriesKeys.dia) highlightKeys.push(bpDetails.seriesKeys.dia);
+    } else if (bodyDetails?.seriesKeys?.length) {
+      highlightKeys.push(...bodyDetails.seriesKeys);
     } else if (seriesKey) {
       highlightKeys.push(seriesKey);
     }
@@ -412,6 +420,21 @@ async getFiltered() {
         parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
         liveParts.push(txt);
       });
+    } else if (bodyDetails) {
+      const formatLine = (label, val, unit) => {
+        if (val == null || !Number.isFinite(val)) return null;
+        const formatted = unit === "cm" ? `${val.toFixed(1)} cm` : `${val.toFixed(1)} kg`;
+        return `${label}: ${formatted}`;
+      };
+      const weightTxt = formatLine("Gewicht", bodyDetails.weight, "kg");
+      const waistTxt  = formatLine("Bauchumfang", bodyDetails.waist_cm, "cm");
+      const muscleTxt = formatLine("Muskelmasse", bodyDetails.muscle_kg, "kg");
+      const fatTxt    = formatLine("Fettmasse", bodyDetails.fat_kg, "kg");
+      [weightTxt, waistTxt, muscleTxt, fatTxt].forEach(txt => {
+        if (!txt) return;
+        parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
+        liveParts.push(txt);
+      });
     } else if (valueLabel) {
       parts.push(`<div class="chart-tip-value">${esc(valueLabel)}</div>`);
       liveParts.push(valueLabel);
@@ -434,6 +457,22 @@ async getFiltered() {
     const pairId = tgt.getAttribute("data-pair");
     if (!pairId) return null;
     return this.currentBpPairs?.get(pairId) || null;
+  },
+  getBodyDetails(tgt) {
+    if (!tgt || this.currentMetric !== "weight") return null;
+    const date = tgt.getAttribute("data-date");
+    if (!date) return null;
+    const meta = this.currentBodyMeta?.get(date);
+    if (!meta) return null;
+    return {
+      date: meta.date,
+      note: meta.note || "",
+      weight: Number.isFinite(meta.weight) ? Number(meta.weight) : null,
+      waist_cm: Number.isFinite(meta.waist_cm) ? Number(meta.waist_cm) : null,
+      muscle_kg: Number.isFinite(meta.muscle_kg) ? Number(meta.muscle_kg) : null,
+      fat_kg: Number.isFinite(meta.fat_kg) ? Number(meta.fat_kg) : null,
+      seriesKeys: Array.isArray(meta.seriesKeys) ? meta.seriesKeys.slice() : [],
+    };
   },
   showPulseLinkForTarget(tgt) {
     if (!this.svg || !tgt) return;
@@ -556,7 +595,7 @@ async getFiltered() {
       { k: "sys",  label: "Durchschnitt Sys: -" },
       { k: "dia",  label: "Durchschnitt Dia: -" },
       { k: "map",  label: "Durchschnitt MAP: -" },
-      { k: "pulsepressure", label: "Pulsdruck: -" },
+      { k: "pulsepressure", label: "Durchschnittlicher Pulsdruck: -" },
       { k: "bmi",  label: "BMI (letzter): -" },
       { k: "whtr", label: "WHtR (letzter): -" },
     ];
@@ -688,15 +727,46 @@ const BASE_WEIGHT_MIN = 75;
     };
     const pairIdFor = (date, ctx) => `${date || ""}__${ctx || ""}`;
 
+    const firstLineOf = (txt) => {
+      if (typeof txt !== "string") return "";
+      const first = txt.split(/\r?\n/)[0];
+      return first ? first.trim() : "";
+    };
+
     // Tageskommentare (erste Zeile)
     const notesByDate = new Map();
     for (const e of data) {
       const hasDayLike = e?.context === "Tag" || isWeightOnly(e);
       const txt = (e?.notes || "").trim();
       if (hasDayLike && txt) {
-        const firstLine = txt.split(/\r?\n/)[0].trim();
+        const firstLine = firstLineOf(txt);
         if (firstLine) notesByDate.set(e.date, firstLine);
       }
+    }
+
+    const bodyMetaByDate = new Map();
+    for (const e of data) {
+      const hasBody =
+        e &&
+        (e.weight != null || e.waist_cm != null || e.fat_kg != null || e.muscle_kg != null);
+      if (!hasBody) continue;
+      const note = notesByDate.get(e.date) || firstLineOf(e.notes || "");
+      const ensure = () => {
+        if (bodyMetaByDate.has(e.date)) return bodyMetaByDate.get(e.date);
+        const next = { date: e.date, note, seriesKeys: [] };
+        bodyMetaByDate.set(e.date, next);
+        return next;
+      };
+      const metaEntry = ensure();
+      if (!metaEntry.note && note) metaEntry.note = note;
+      const pushKey = (key) => {
+        if (!key) return;
+        if (!metaEntry.seriesKeys.includes(key)) metaEntry.seriesKeys.push(key);
+      };
+      if (e.weight != null) { metaEntry.weight = Number(e.weight); pushKey("body-weight"); }
+      if (e.waist_cm != null) { metaEntry.waist_cm = Number(e.waist_cm); pushKey("body-waist"); }
+      if (e.muscle_kg != null) { metaEntry.muscle_kg = Number(e.muscle_kg); pushKey("body-muscle"); }
+      if (e.fat_kg != null) { metaEntry.fat_kg = Number(e.fat_kg); pushKey("body-fat"); }
     }
 
     // Fuer BP benoetigen wir Meta je Punkt
@@ -704,6 +774,7 @@ const BASE_WEIGHT_MIN = 75;
     let bpPairs = null;
     this.currentMeta = null;
     this.currentBpPairs = null;
+    this.currentBodyMeta = null;
 
     if (metric === "bp") {
       // Nur echte Messungen
@@ -785,7 +856,7 @@ const BASE_WEIGHT_MIN = 75;
         if (sEl)  { sEl.style.display  = ""; sEl.textContent  = "Durchschnitt Sys: " + f0(avgSys); }
         if (dEl)  { dEl.style.display  = ""; dEl.textContent  = "Durchschnitt Dia: " + f0(avgDia); }
         if (mEl)  { mEl.style.display  = ""; mEl.textContent  = "Durchschnitt MAP: " + f0(avgMap); }
-        if (ppEl) { ppEl.style.display = ""; ppEl.textContent = `Pulsdruck: ${f0(avgPulsePressure)}`; }
+        if (ppEl) { ppEl.style.display = ""; ppEl.textContent = `Durchschnittlicher Pulsdruck: ${f0(avgPulsePressure)}`; }
         if (bmiEl)  bmiEl.style.display  = "none";
         if (whtrEl) whtrEl.style.display = "none";
 
@@ -826,7 +897,7 @@ const BASE_WEIGHT_MIN = 75;
   // KPI-Leiste: BMI & WHtR aus dem LETZTEN verfuegbaren Wert
   if (avgBox) {
     // BP-KPIs ausblenden
-    ["sys","dia","map"].forEach(k => {
+    ["sys","dia","map","pulsepressure"].forEach(k => {
       const el = avgBox.querySelector(`[data-k="${k}"]`);
       if (el) el.style.display = "none";
     });
@@ -861,6 +932,7 @@ const BASE_WEIGHT_MIN = 75;
     { key: "body-muscle", name: "Muskelmasse (kg)", values: muscleKg, color: "var(--chart-bar-muscle)" },
     { key: "body-fat",    name: "Fettmasse (kg)",   values: fatKg,    color: "var(--chart-bar-fat)" },
   ];
+  this.currentBodyMeta = bodyMetaByDate;
 }
 
   // --- Render-Prep ---
@@ -1045,7 +1117,11 @@ const mkDots = (seriesItem) => {
     const m = (kind === "sys" || kind === "dia") ? (meta?.[i] || {}) : {};
     const date = (m.date || (data?.[i]?.date || ""));
     const ctx  = (m.ctx  || (kind === "misc" ? "Tag" : ""));
-    const note = (m.note || "");
+    let note = (m.note || "");
+    if (!note && kind === "misc") {
+      const bodyMeta = bodyMetaByDate.get(date);
+      if (bodyMeta?.note) note = bodyMeta.note;
+    }
     const numericVal = Number(v);
     const formattedVal =
       Number.isFinite(numericVal)
@@ -1079,6 +1155,8 @@ const mkDots = (seriesItem) => {
       attrs.push(`data-sys="${esc(m.sys != null ? m.sys : "")}"`);
       attrs.push(`data-dia="${esc(m.dia != null ? m.dia : "")}"`);
       if (m.pairId) attrs.push(`data-pair="${esc(m.pairId)}"`);
+    } else if (this.currentMetric === "weight") {
+      attrs.push(`data-body="1"`);
     }
     if (key) attrs.push(`data-series="${esc(key)}"`);
     attrs.push("/>");
@@ -1134,6 +1212,7 @@ const mkBars = () => {
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
       const date = data?.[i]?.date || "";
+      const note = bodyMetaByDate.get(date)?.note || "";
       const valueLabel = `${seriesItem.name || ''}: ${displayVal.toFixed(1)} kg`.trim();
       const attrParts = [
         `class="chart-bar"`,
@@ -1145,6 +1224,8 @@ const mkBars = () => {
         `opacity="0.35"`,
         `data-kind="body-bar"`,
         `data-date="${esc(date)}"`,
+        `data-ctx="Tag"`,
+        `data-note="${esc(note)}"`,
         `data-series-label="${esc(seriesItem.name || "")}"`,
         `data-value-label="${esc(valueLabel)}"`,
         `tabindex="0"`,
