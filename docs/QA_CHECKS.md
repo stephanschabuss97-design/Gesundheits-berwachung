@@ -991,12 +991,14 @@ Regression
 
 **Smoke**
 - BP-Chart: Hover/Click auf Sys- oder Dia-Punkte zeigt einen kombinierten Tooltip (Datum/Kontext + Sys/Dia/MAP/Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
+- BP-Tooltip-Hintergrund übernimmt die ESC-2018 Kategorie (optimal bis Grad III); MAP- und Pulsdruck-Zeilen tragen farbige Status-Kugeln passend zur Klassifikation.
 - Body-Chart: Hover auf Gewicht/Bauchumfang oder die Muskel-/Fettbalken blendet eine gemeinsame Tooltip-Karte mit allen vier Werten ein; beim Öffnen zeichnet sich das Diagramm animiert von links nach rechts auf.
 
 **Sanity**
 - `SHOW_CHART_ANIMATIONS=false` oder `prefers-reduced-motion: reduce` schalten alle neuen Animationen ab; keine Inline-Styles bleiben mit `stroke-dashoffset != 0`.
 - Pulse-Link/Tooltip erscheinen nur, wenn das Gegenstück (Sys↔Dia) existiert; fehlende Werte zeigen weiterhin Einzel-Labels ohne Fehler im Log.
 - KPI-Leiste: Pulsdruck-Pill heißt „Durchschnittlicher Pulsdruck“ und erscheint ausschließlich, wenn die BP-Metrik aktiv ist.
+- MAP- und Pulsdruck-Indikatoren benutzen die im Konzept definierten Schwellen (MAP: 70-90 grün, 91-100 gelb, 101-110 orange, >110 rot; Pulsdruck: 30-50 grün, 51-60 gelb, 61-70 orange, >70 rot).
 
 **Regression**
 - Range-Wechsel sowie Tab-Switches (BP ↔ Körper) rendern weiterhin ohne JS-Fehler; Tooltips funktionieren nach jedem Redraw.

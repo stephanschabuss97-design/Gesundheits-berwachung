@@ -13,6 +13,7 @@ Changed:
 - Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
 - Körper-Metrik-Tooltips fassen Gewicht, Bauchumfang sowie verfügbares Muskel-/Fettprofil zusammen und highlighten alle Body-Serien gleichzeitig.
 - KPI-Leiste benennt den Pulsdruck eindeutig als Durchschnitt und blendet die Pill aus, sobald Körper-Metrik aktiv ist.
+- Blutdruck-Tooltips übernehmen die ESC-2018 Farbkategorie des Messwerts und zeigen MAP sowie Pulsdruck mit farbigen Indikatorkugeln an.
 - Chart-Render animiert sanft (Linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
 
 ## v1.8.2 - Guard/Resume Cleanup

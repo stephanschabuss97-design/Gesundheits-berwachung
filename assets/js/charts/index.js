@@ -47,6 +47,44 @@ const normalizeBodyVal = (val) => {
   return Number.isFinite(num) ? num.toString() : String(val);
 };
 
+const ESC_BP_BANDS = [
+  { key: "grad3", label: "Grad III", color: "rgba(153,27,27,0.9)", sys: 180, dia: 110 },
+  { key: "grad2", label: "Grad II", color: "rgba(185,28,28,0.88)", sys: 160, dia: 100 },
+  { key: "grad1", label: "Grad I", color: "rgba(245,158,11,0.9)", sys: 140, dia: 90 },
+  { key: "high-normal", label: "Hoch-normal", color: "rgba(250,204,21,0.9)", sys: 130, dia: 85 },
+  { key: "normal", label: "Normal", color: "rgba(52,211,153,0.9)", sys: 120, dia: 80 },
+  { key: "optimal", label: "Optimal", color: "rgba(16,185,129,0.92)", sys: 0, dia: 0 },
+];
+
+const classifyEscBp = (sys, dia) => {
+  if (!Number.isFinite(sys) || !Number.isFinite(dia)) return null;
+  for (const band of ESC_BP_BANDS) {
+    if (band.key === "optimal") return band;
+    if (sys >= band.sys || dia >= band.dia) return band;
+  }
+  return null;
+};
+
+const classifyMapValue = (mapVal) => {
+  const v = Number(mapVal);
+  if (!Number.isFinite(v)) return null;
+  if (v > 110) return { color: "rgba(220,38,38,0.95)", label: "MAP > 110 mmHg" };
+  if (v >= 101) return { color: "rgba(249,115,22,0.95)", label: "MAP 101–110 mmHg" };
+  if (v >= 91)  return { color: "rgba(234,179,8,0.95)", label: "MAP 91–100 mmHg" };
+  if (v >= 70)  return { color: "rgba(34,197,94,0.95)", label: "MAP 70–90 mmHg" };
+  return { color: "rgba(59,130,246,0.85)", label: "MAP < 70 mmHg" };
+};
+
+const classifyPulsePressure = (pp) => {
+  const v = Number(pp);
+  if (!Number.isFinite(v)) return null;
+  if (v > 70) return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck > 70 mmHg" };
+  if (v >= 61) return { color: "rgba(249,115,22,0.95)", label: "Pulsdruck 61–70 mmHg" };
+  if (v >= 51) return { color: "rgba(234,179,8,0.95)", label: "Pulsdruck 51–60 mmHg" };
+  if (v >= 30) return { color: "rgba(34,197,94,0.95)", label: "Pulsdruck 30–50 mmHg" };
+  return { color: "rgba(59,130,246,0.85)", label: "Pulsdruck < 30 mmHg" };
+};
+
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
 const chartPanel = {
   el: null,
@@ -64,6 +102,8 @@ const chartPanel = {
   bodyMetaCacheHash: null,
   SHOW_CHART_ANIMATIONS: true,
   SHOW_BODY_COMP_BARS: true,
+  tipDefaultBg: null,
+  tipDefaultBorder: null,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
   initialized: false,
@@ -93,6 +133,11 @@ const chartPanel = {
     contentHost.style.position = "relative";
     contentHost.appendChild(tip);
     this.tip = tip;
+    if (typeof window !== "undefined" && window.getComputedStyle) {
+      const cs = window.getComputedStyle(tip);
+      this.tipDefaultBg = cs.backgroundColor;
+      this.tipDefaultBorder = cs.borderColor;
+    }
     this.tipHideTimer = null;
 
     // ARIA Live-Region (nur Text, fuer Screenreader)
@@ -329,6 +374,7 @@ async getFiltered() {
     }
     this.setHoverSeries(null);
     this.hidePulseLink();
+    this.setTipTheme(null);
   },
   // SUBMODULE: chartPanel.setHoverSeries @internal - hebt aktuelle Serie in Chart/Legende hervor
   setHoverSeries(seriesKey) {
@@ -423,19 +469,31 @@ async getFiltered() {
       liveParts.push(note);
     }
 
+    const pushMetricLine = (label, valueText, indicator) => {
+      if (!valueText) return;
+      const indicatorHtml = indicator?.color
+        ? `<span class="chart-tip-indicator" style="background:${esc(indicator.color)}" title="${esc(indicator.label || "")}" aria-hidden="true"></span>`
+        : "";
+      const html = `<div class="chart-tip-value chart-tip-metric">${indicatorHtml}<span class="chart-tip-metric-label">${esc(label)}</span><span class="chart-tip-metric-value">${esc(valueText)}</span></div>`;
+      parts.push(html);
+      liveParts.push(`${label} ${valueText}${indicator?.label ? ` (${indicator.label})` : ""}`);
+    };
+
     if (bpDetails) {
-      const sysTxt = bpDetails.sys != null ? `Sys: ${Math.round(bpDetails.sys)} mmHg` : null;
-      const diaTxt = bpDetails.dia != null ? `Dia: ${Math.round(bpDetails.dia)} mmHg` : null;
-      const mapTxt = bpDetails.map != null ? `MAP: ${Math.round(bpDetails.map)} mmHg` : null;
-      const pulseTxt = bpDetails.pulsePressure != null
-        ? `Pulsdruck: ${Math.round(bpDetails.pulsePressure)} mmHg`
+      const sysTxt = Number.isFinite(bpDetails.sys) ? `${Math.round(bpDetails.sys)} mmHg` : null;
+      const diaTxt = Number.isFinite(bpDetails.dia) ? `${Math.round(bpDetails.dia)} mmHg` : null;
+      const mapTxt = Number.isFinite(bpDetails.map) ? `${Math.round(bpDetails.map)} mmHg` : null;
+      const pulseTxt = Number.isFinite(bpDetails.pulsePressure)
+        ? `${Math.round(bpDetails.pulsePressure)} mmHg`
         : null;
-      [sysTxt, diaTxt, mapTxt, pulseTxt].forEach(txt => {
-        if (!txt) return;
-        parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
-        liveParts.push(txt);
-      });
+      const escClass = classifyEscBp(bpDetails.sys, bpDetails.dia);
+      this.setTipTheme(escClass?.color || null);
+      pushMetricLine("Sys (mmHg)", sysTxt);
+      pushMetricLine("Dia (mmHg)", diaTxt);
+      if (mapTxt) pushMetricLine("MAP (mmHg)", mapTxt, classifyMapValue(bpDetails.map));
+      if (pulseTxt) pushMetricLine("Pulsdruck (mmHg)", pulseTxt, classifyPulsePressure(bpDetails.pulsePressure));
     } else if (bodyDetails) {
+      this.setTipTheme(null);
       const formatLine = (label, val, unit) => {
         if (val == null || !Number.isFinite(val)) return null;
         const formatted = unit === "cm" ? `${val.toFixed(1)} cm` : `${val.toFixed(1)} kg`;
@@ -451,8 +509,11 @@ async getFiltered() {
         liveParts.push(txt);
       });
     } else if (valueLabel) {
+      this.setTipTheme(null);
       parts.push(`<div class="chart-tip-value">${esc(valueLabel)}</div>`);
       liveParts.push(valueLabel);
+    } else {
+      this.setTipTheme(null);
     }
 
     if (this.currentMetric !== "bp" || (kind !== "sys" && kind !== "dia")) {
@@ -536,6 +597,20 @@ async getFiltered() {
   },
   hidePulseLink() {
     if (this.pulseLink) this.pulseLink.style.display = "none";
+  },
+  setTipTheme(color) {
+    if (!this.tip) return;
+    if (color) {
+      this.tip.dataset.bpTheme = "1";
+      this.tip.style.background = color;
+      if (this.tipDefaultBorder) {
+        this.tip.style.borderColor = this.tipDefaultBorder;
+      }
+    } else {
+      this.tip.dataset.bpTheme = "";
+      this.tip.style.background = this.tipDefaultBg || "";
+      this.tip.style.borderColor = "";
+    }
   },
   hashBodyData(entries) {
     if (!Array.isArray(entries) || !entries.length) return "body:empty";
