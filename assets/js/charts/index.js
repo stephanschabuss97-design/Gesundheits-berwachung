@@ -1,4 +1,4 @@
-﻿'use strict';
+﻿﻿'use strict';
 /**
  * MODULE: app/charts/index.js
  * Description: Rendert SVG/Canvas-Charts für Blutdruck- und Körperdaten, inklusive KPI-Leiste und Tooltip-Logik.
@@ -34,7 +34,7 @@ const getFocusTrap = () => {
 };
 
 const firstLine = (txt) => {
-  if (txt == null) return "";
+  if (txt == null || typeof txt !== 'string') return "";
   const raw = String(txt);
   const idx = raw.search(/\r?\n/);
   const slice = idx === -1 ? raw : raw.slice(0, idx);
@@ -441,10 +441,10 @@ async getFiltered() {
         const formatted = unit === "cm" ? `${val.toFixed(1)} cm` : `${val.toFixed(1)} kg`;
         return `${label}: ${formatted}`;
       };
-      const weightTxt = formatLine("Gewicht (kg)", bodyDetails.weight, "kg");
-      const waistTxt  = formatLine("Bauchumfang (cm)", bodyDetails.waist_cm, "cm");
-      const muscleTxt = formatLine("Muskelmasse (kg)", bodyDetails.muscle_kg, "kg");
-      const fatTxt    = formatLine("Fettmasse (kg)", bodyDetails.fat_kg, "kg");
+      const weightTxt = formatLine("Gewicht", bodyDetails.weight, "kg");
+      const waistTxt  = formatLine("Bauchumfang", bodyDetails.waist_cm, "cm");
+      const muscleTxt = formatLine("Muskelmasse", bodyDetails.muscle_kg, "kg");
+      const fatTxt    = formatLine("Fettmasse", bodyDetails.fat_kg, "kg");
       [weightTxt, waistTxt, muscleTxt, fatTxt].forEach(txt => {
         if (!txt) return;
         parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
