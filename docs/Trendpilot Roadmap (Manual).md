@@ -10,7 +10,7 @@
 ## 2) Phase 1 – Basis ohne KI
 
 ### 2.1 Daten & Helpers
-1. `fetchBpSeries()` erweitern: liefert 180 Tage Abendmessungen + Wochenaggregation (Median sys/dia, Count).
+1. `fetchBpSeries()` erweitern: liefert 180 Tage Tagesmittel (Morgen+Abend, wenn verf0gbar) + Wochenaggregation (Median sys/dia, Count).
 2. Helper-Module: `groupBpByWeek`, `calcBaseline`, `calcDelta`, `classifyTrend`, `applyHysteresis`.
 3. Tests für Aggregation & Klassifikation.
 
@@ -58,4 +58,5 @@
 2. Capture-Hook + System-Comments + Dialoge.
 3. Arztansicht/Chart/UI-Layer.
 4. Flags, Diagnostics, Docs.
+
 
