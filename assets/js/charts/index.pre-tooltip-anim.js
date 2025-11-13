@@ -43,10 +43,6 @@ const chartPanel = {
   tipSticky: false,
   hoverSeries: null,
   pulseLink: null,
-  currentMeta: null,
-  currentBpPairs: null,
-  currentMetric: 'bp',
-  SHOW_CHART_ANIMATIONS: true,
   SHOW_BODY_COMP_BARS: true,
 
   // SUBMODULE: chartPanel.init @internal - richtet Panel, Tooltip und Event-Handler ein
@@ -317,12 +313,9 @@ async getFiltered() {
   // SUBMODULE: chartPanel.setHoverSeries @internal - hebt aktuelle Serie in Chart/Legende hervor
   setHoverSeries(seriesKey) {
     if (!this.svg && !this.legend) return;
-    const keys = Array.isArray(seriesKey)
-      ? seriesKey.filter(Boolean)
-      : (seriesKey ? [seriesKey] : []);
-    const signature = keys.length ? [...keys].sort().join("|") : null;
-    if (this.hoverSeries === signature) return;
-    this.hoverSeries = signature;
+    const nextKey = seriesKey || null;
+    if (this.hoverSeries === nextKey) return;
+    this.hoverSeries = nextKey;
 
     const svgNodes = this.svg ? Array.from(this.svg.querySelectorAll('[data-series]')) : [];
     const legendNodes = this.legend ? Array.from(this.legend.querySelectorAll('[data-series]')) : [];
@@ -330,17 +323,16 @@ async getFiltered() {
       node.classList.remove('is-hover', 'is-dim');
     });
 
-    if (!keys.length) return;
-    const keySet = new Set(keys);
+    if (!nextKey) return;
     svgNodes.forEach(node => {
       const key = node.getAttribute('data-series');
       if (!key) return;
-      node.classList.add(keySet.has(key) ? 'is-hover' : 'is-dim');
+      node.classList.add(key === nextKey ? 'is-hover' : 'is-dim');
     });
     legendNodes.forEach(node => {
       const key = node.getAttribute('data-series');
       if (!key) return;
-      node.classList.add(keySet.has(key) ? 'is-hover' : 'is-dim');
+      node.classList.add(key === nextKey ? 'is-hover' : 'is-dim');
     });
   },
   // SUBMODULE: chartPanel.positionTip @internal - positioniert Tooltip relativ zum Cursor
@@ -368,72 +360,41 @@ async getFiltered() {
   // SUBMODULE: chartPanel.fillTipFromTarget @internal - generiert Tooltip-Inhalt
   fillTipFromTarget(tgt) {
     if (!this.tip || !tgt) return false;
+    this.setHoverSeries(tgt?.getAttribute("data-series") || null);
     const note = (tgt.getAttribute("data-note") || "").trim();
     const valueLabel = (tgt.getAttribute("data-value-label") || "").trim();
     const date = tgt.getAttribute("data-date") || "";
     const ctx  = tgt.getAttribute("data-ctx")  || "";
     const kind = tgt.getAttribute("data-kind") || "";
-    const seriesKey = tgt.getAttribute("data-series") || null;
-
-    let bpDetails = null;
-    if (this.currentMetric === "bp" && (kind === "sys" || kind === "dia")) {
-      bpDetails = this.getBpPairDetails(tgt);
-    }
-
-    const highlightKeys = [];
-    if (bpDetails?.seriesKeys) {
-      if (bpDetails.seriesKeys.sys) highlightKeys.push(bpDetails.seriesKeys.sys);
-      if (bpDetails.seriesKeys.dia) highlightKeys.push(bpDetails.seriesKeys.dia);
-    } else if (seriesKey) {
-      highlightKeys.push(seriesKey);
-    }
-    this.setHoverSeries(highlightKeys);
 
     const parts = [];
-    const liveParts = [date, ctx];
     const hdrText = [date, ctx].filter(Boolean).join(" . ");
     if (hdrText) {
       parts.push(`<div class="chart-tip-header">${esc(hdrText)}</div>`);
     }
     if (note) {
       parts.push(`<div class="chart-tip-note">${esc(note)}</div>`);
-      liveParts.push(note);
     }
-
-    if (bpDetails) {
-      const sysTxt = bpDetails.sys != null ? `Sys: ${Math.round(bpDetails.sys)} mmHg` : null;
-      const diaTxt = bpDetails.dia != null ? `Dia: ${Math.round(bpDetails.dia)} mmHg` : null;
-      const mapTxt = bpDetails.map != null ? `MAP: ${Math.round(bpDetails.map)} mmHg` : null;
-      const pulseTxt = bpDetails.pulsePressure != null
-        ? `Pulsdruck: ${Math.round(bpDetails.pulsePressure)} mmHg`
-        : null;
-      [sysTxt, diaTxt, mapTxt, pulseTxt].forEach(txt => {
-        if (!txt) return;
-        parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
-        liveParts.push(txt);
-      });
-    } else if (valueLabel) {
+    if (valueLabel) {
       parts.push(`<div class="chart-tip-value">${esc(valueLabel)}</div>`);
-      liveParts.push(valueLabel);
     }
-
-    if (this.currentMetric !== "bp" || !(kind === "sys" || kind === "dia")) {
+    if (this.currentMetric === "bp" && (kind === "sys" || kind === "dia")) {
+      const sysVal = Number(tgt.getAttribute("data-sys"));
+      const diaVal = Number(tgt.getAttribute("data-dia"));
+      if (Number.isFinite(sysVal) && Number.isFinite(diaVal)) {
+        const pulsePressure = Math.round(sysVal - diaVal);
+        parts.push(`<div class="chart-tip-value">${esc(`Pulsdruck: ${pulsePressure} mmHg`)}</div>`);
+      }
+    } else {
       this.hidePulseLink();
     }
-
     if (!parts.length) return false;
     this.tip.innerHTML = parts.join("");
     this.tip.dataset.visible = "1";
     this.tip.style.display = "block";
     this.tip.style.opacity = "1";
-    if (this.live) this.live.textContent = liveParts.filter(Boolean).join(" ").trim();
+    if (this.live) this.live.textContent = `${date || ''} ${ctx || ''} ${note || valueLabel || ''}`.trim();
     return true;
-  },
-  getBpPairDetails(tgt) {
-    if (!tgt || this.currentMetric !== "bp") return null;
-    const pairId = tgt.getAttribute("data-pair");
-    if (!pairId) return null;
-    return this.currentBpPairs?.get(pairId) || null;
   },
   showPulseLinkForTarget(tgt) {
     if (!this.svg || !tgt) return;
@@ -482,69 +443,6 @@ async getFiltered() {
   },
   hidePulseLink() {
     if (this.pulseLink) this.pulseLink.style.display = "none";
-  },
-  shouldAnimateCharts() {
-    if (!this.SHOW_CHART_ANIMATIONS) return false;
-    try {
-      if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        if (mq?.matches) return false;
-      }
-    } catch(_) {}
-    return true;
-  },
-  applyChartAnimations() {
-    if (!this.svg || !this.shouldAnimateCharts()) return;
-    const raf = typeof requestAnimationFrame === "function"
-      ? requestAnimationFrame
-      : (cb) => setTimeout(cb, 16);
-
-    const dataPaths = Array.from(this.svg.querySelectorAll("path[data-series]"));
-    dataPaths.forEach((path) => {
-      if (typeof path.getTotalLength !== "function") return;
-      const len = path.getTotalLength();
-      if (!Number.isFinite(len) || len <= 0) return;
-      const seg = len.toFixed(1);
-      path.style.transition = "none";
-      path.style.strokeDasharray = seg;
-      path.style.strokeDashoffset = seg;
-    });
-    raf(() => {
-      dataPaths.forEach((path, idx) => {
-        if (!path.style.strokeDasharray) return;
-        const delay = idx * 80;
-        path.style.transition = `stroke-dashoffset 0.9s ease ${delay}ms`;
-        path.style.strokeDashoffset = "0";
-      });
-    });
-
-    const animateNodes = (nodes, opts = {}) => {
-      const {
-        delayStep = 18,
-        baseDelay = 160,
-        scale = 0.78,
-        origin = "center"
-      } = opts;
-      if (!nodes.length) return;
-      nodes.forEach((node) => {
-        node.style.transition = "none";
-        node.style.opacity = "0";
-        node.style.transform = `scale(${scale})`;
-        if ("transformBox" in node.style) node.style.transformBox = "fill-box";
-        node.style.transformOrigin = origin;
-      });
-      raf(() => {
-        nodes.forEach((node, idx) => {
-          const delay = baseDelay + idx * delayStep;
-          node.style.transition = `opacity 0.4s ease ${delay}ms, transform 0.45s ease ${delay}ms`;
-          node.style.opacity = "1";
-          node.style.transform = "scale(1)";
-        });
-      });
-    };
-
-    animateNodes(Array.from(this.svg.querySelectorAll(".pt")), { delayStep: 14, baseDelay: 200, scale: 0.82 });
-    animateNodes(Array.from(this.svg.querySelectorAll(".chart-bar")), { delayStep: 22, baseDelay: 260, scale: 0.65, origin: "center bottom" });
   },
 
   /* ---------- KPI-Felder + WHO-Ampellogik ---------- */
@@ -686,7 +584,6 @@ const BASE_WEIGHT_MIN = 75;
       const [y, m, d] = isoDate.split("-").map(Number);
       return Date.UTC(y, (m || 1) - 1, d || 1);
     };
-    const pairIdFor = (date, ctx) => `${date || ""}__${ctx || ""}`;
 
     // Tageskommentare (erste Zeile)
     const notesByDate = new Map();
@@ -701,9 +598,6 @@ const BASE_WEIGHT_MIN = 75;
 
     // Fuer BP benoetigen wir Meta je Punkt
     let meta = null;
-    let bpPairs = null;
-    this.currentMeta = null;
-    this.currentBpPairs = null;
 
     if (metric === "bp") {
       // Nur echte Messungen
@@ -712,34 +606,13 @@ const BASE_WEIGHT_MIN = 75;
       );
 
       // Meta
-      bpPairs = new Map();
-      meta = mData.map(e => {
-        const sysVal = e.sys != null ? Number(e.sys) : null;
-        const diaVal = e.dia != null ? Number(e.dia) : null;
-        const ctxLabel = e.context;
-        const pairId = pairIdFor(e.date, ctxLabel);
-        const mapVal =
-          sysVal != null && diaVal != null
-            ? Number(diaVal) + (Number(sysVal) - Number(diaVal)) / 3
-            : null;
-        const pulsePressure = (sysVal != null && diaVal != null) ? Number(sysVal) - Number(diaVal) : null;
-        const entry = {
-          date: e.date,
-          ctx:  ctxLabel,
-          sys:  sysVal,
-          dia:  diaVal,
-          note: notesByDate.get(e.date) || "",
-          pairId,
-          map: mapVal,
-          pulsePressure,
-          seriesKeys: {
-            sys: ctxLabel === "Morgen" ? "bp-sys-m" : "bp-sys-a",
-            dia: ctxLabel === "Morgen" ? "bp-dia-m" : "bp-dia-a",
-          },
-        };
-        if (pairId) bpPairs.set(pairId, entry);
-        return entry;
-      });
+      meta = mData.map(e => ({
+        date: e.date,
+        ctx:  e.context,
+        sys:  e.sys != null ? Number(e.sys) : null,
+        dia:  e.dia != null ? Number(e.dia) : null,
+        note: notesByDate.get(e.date) || "",
+      }));
 
       // X auf Tage normalisieren
       const xsBP = mData.map(e => toDayTs(e.date));
@@ -798,8 +671,6 @@ const BASE_WEIGHT_MIN = 75;
       ];
 
       X = xsBP; // wichtig
-      this.currentMeta = meta;
-      this.currentBpPairs = bpPairs;
 } else if (metric === "weight") {
   // Serien: Gewicht + Bauchumfang
   series = [
@@ -1074,7 +945,6 @@ const mkDots = (seriesItem) => {
     if (kind === "sys" || kind === "dia") {
       attrs.push(`data-sys="${esc(m.sys != null ? m.sys : "")}"`);
       attrs.push(`data-dia="${esc(m.dia != null ? m.dia : "")}"`);
-      if (m.pairId) attrs.push(`data-pair="${esc(m.pairId)}"`);
     }
     if (key) attrs.push(`data-series="${esc(key)}"`);
     attrs.push("/>");
@@ -1212,7 +1082,6 @@ const mkBars = () => {
     }
 
     if (this.tipSticky) { this.tipSticky = false; this.hideTip(); }
-    this.applyChartAnimations();
 
     const sPerf = (perfStats.add?.("drawChart", (performance.now?.() ?? Date.now()) - t0), perfStats.snap?.("drawChart")) || {p50:0,p90:0,p95:0,p99:0,count:0};
     if (sPerf && typeof sPerf.count === 'number' && (sPerf.count % 25 === 0)) {

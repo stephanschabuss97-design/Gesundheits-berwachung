@@ -10,7 +10,8 @@ Docs:
 
 Changed:
 - Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
-- Hover-Tooltips wurden vereinheitlicht: Körperpunkte und -balken zeigen jetzt Werte beim Überfahren/Klicken an; Blutdruck-Punkte heben zusätzlich den Pulsdruck hervor und verbinden Morgen/Abend-Messungen (statt Crosshair).
+- Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
+- Chart-Render animiert sanft (linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
 
 ## v1.8.2 - Guard/Resume Cleanup
 
