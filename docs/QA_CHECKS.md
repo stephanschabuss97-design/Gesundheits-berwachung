@@ -998,7 +998,7 @@ Regression
 - `SHOW_CHART_ANIMATIONS=false` oder `prefers-reduced-motion: reduce` schalten alle neuen Animationen ab; keine Inline-Styles bleiben mit `stroke-dashoffset != 0`.
 - Pulse-Link/Tooltip erscheinen nur, wenn das Gegenstück (Sys↔Dia) existiert; fehlende Werte zeigen weiterhin Einzel-Labels ohne Fehler im Log.
 - KPI-Leiste: Pulsdruck-Pill heißt „Durchschnittlicher Pulsdruck“ und erscheint ausschließlich, wenn die BP-Metrik aktiv ist.
-- MAP- und Pulsdruck-Indikatoren benutzen die im Konzept definierten Schwellen (MAP: 70-90 grün, 91-100 gelb, 101-110 orange, >110 rot; Pulsdruck: 30-50 grün, 51-60 gelb, 61-70 orange, >70 rot).
+ - MAP- und Pulsdruck-Indikatoren nutzen die aktualisierten Schwellen (MAP: <60 rot, 60–64 orange, 65–100 grün, 101–110 gelb, >110 rot; Pulsdruck: <40 rot, 40–60 grün, >60 orange).
 
 **Regression**
 - Range-Wechsel sowie Tab-Switches (BP ↔ Körper) rendern weiterhin ohne JS-Fehler; Tooltips funktionieren nach jedem Redraw.

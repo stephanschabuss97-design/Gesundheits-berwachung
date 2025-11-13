@@ -213,7 +213,7 @@
 .chart-tip-indicator{
   width:10px;
   height:10px;
-  border-radius:999px;
+  border-radius:50%;
   box-shadow:0 0 4px rgba(0,0,0,.4);
   flex:0 0 auto;
 }

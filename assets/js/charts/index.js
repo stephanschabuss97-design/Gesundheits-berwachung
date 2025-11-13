@@ -1,4 +1,4 @@
-﻿﻿'use strict';
+﻿'use strict';
 /**
  * MODULE: app/charts/index.js
  * Description: Rendert SVG/Canvas-Charts für Blutdruck- und Körperdaten, inklusive KPI-Leiste und Tooltip-Logik.
@@ -53,14 +53,17 @@ const ESC_BP_BANDS = [
   { key: "grad1", label: "Grad I", color: "rgba(245,158,11,0.9)", sys: 140, dia: 90 },
   { key: "high-normal", label: "Hoch-normal", color: "rgba(250,204,21,0.9)", sys: 130, dia: 85 },
   { key: "normal", label: "Normal", color: "rgba(52,211,153,0.9)", sys: 120, dia: 80 },
-  { key: "optimal", label: "Optimal", color: "rgba(16,185,129,0.92)", sys: 0, dia: 0 },
+  { key: "optimal", label: "Optimal", color: "rgba(16,185,129,0.92)", sys: 120, dia: 80 },
 ];
 
 const classifyEscBp = (sys, dia) => {
   if (!Number.isFinite(sys) || !Number.isFinite(dia)) return null;
   for (const band of ESC_BP_BANDS) {
-    if (band.key === "optimal") return band;
+    if (band.key === "optimal") continue;
     if (sys >= band.sys || dia >= band.dia) return band;
+  }
+  if (sys < 120 && dia < 80) {
+    return ESC_BP_BANDS.find(b => b.key === "optimal") || null;
   }
   return null;
 };
@@ -68,21 +71,19 @@ const classifyEscBp = (sys, dia) => {
 const classifyMapValue = (mapVal) => {
   const v = Number(mapVal);
   if (!Number.isFinite(v)) return null;
-  if (v > 110) return { color: "rgba(220,38,38,0.95)", label: "MAP > 110 mmHg" };
-  if (v >= 101) return { color: "rgba(249,115,22,0.95)", label: "MAP 101–110 mmHg" };
-  if (v >= 91)  return { color: "rgba(234,179,8,0.95)", label: "MAP 91–100 mmHg" };
-  if (v >= 70)  return { color: "rgba(34,197,94,0.95)", label: "MAP 70–90 mmHg" };
-  return { color: "rgba(59,130,246,0.85)", label: "MAP < 70 mmHg" };
+  if (v < 60) return { color: "rgba(220,38,38,0.95)", label: "MAP < 60 mmHg (kritisch)" };
+  if (v < 65) return { color: "rgba(249,115,22,0.95)", label: "MAP 60–64 mmHg (Grenzwert)" };
+  if (v <= 100) return { color: "rgba(34,197,94,0.95)", label: "MAP 65–100 mmHg (normal)" };
+  if (v <= 110) return { color: "rgba(234,179,8,0.95)", label: "MAP 101–110 mmHg (hoch)" };
+  return { color: "rgba(220,38,38,0.95)", label: "MAP > 110 mmHg (kritisch)" };
 };
 
 const classifyPulsePressure = (pp) => {
   const v = Number(pp);
   if (!Number.isFinite(v)) return null;
-  if (v > 70) return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck > 70 mmHg" };
-  if (v >= 61) return { color: "rgba(249,115,22,0.95)", label: "Pulsdruck 61–70 mmHg" };
-  if (v >= 51) return { color: "rgba(234,179,8,0.95)", label: "Pulsdruck 51–60 mmHg" };
-  if (v >= 30) return { color: "rgba(34,197,94,0.95)", label: "Pulsdruck 30–50 mmHg" };
-  return { color: "rgba(59,130,246,0.85)", label: "Pulsdruck < 30 mmHg" };
+  if (v < 40) return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck < 40 mmHg (niedrig/abnormal)" };
+  if (v <= 60) return { color: "rgba(34,197,94,0.95)", label: "Pulsdruck 40–60 mmHg (normal)" };
+  return { color: "rgba(249,115,22,0.95)", label: "Pulsdruck > 60 mmHg (hoch/abnormal)" };
 };
 
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
@@ -609,7 +610,7 @@ async getFiltered() {
     } else {
       this.tip.dataset.bpTheme = "";
       this.tip.style.background = this.tipDefaultBg || "";
-      this.tip.style.borderColor = "";
+      this.tip.style.borderColor = this.tipDefaultBorder || "";
     }
   },
   hashBodyData(entries) {
