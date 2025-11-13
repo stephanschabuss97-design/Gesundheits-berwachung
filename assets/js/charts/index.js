@@ -33,6 +33,20 @@ const getFocusTrap = () => {
   return trap;
 };
 
+const firstLine = (txt) => {
+  if (txt == null) return "";
+  const raw = String(txt);
+  const idx = raw.search(/\r?\n/);
+  const slice = idx === -1 ? raw : raw.slice(0, idx);
+  return slice.trim();
+};
+
+const normalizeBodyVal = (val) => {
+  if (val == null) return "";
+  const num = Number(val);
+  return Number.isFinite(num) ? num.toString() : String(val);
+};
+
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
 const chartPanel = {
   el: null,
@@ -47,6 +61,7 @@ const chartPanel = {
   currentBpPairs: null,
   currentMetric: 'bp',
   currentBodyMeta: null,
+  bodyMetaCacheHash: null,
   SHOW_CHART_ANIMATIONS: true,
   SHOW_BODY_COMP_BARS: true,
 
@@ -426,10 +441,10 @@ async getFiltered() {
         const formatted = unit === "cm" ? `${val.toFixed(1)} cm` : `${val.toFixed(1)} kg`;
         return `${label}: ${formatted}`;
       };
-      const weightTxt = formatLine("Gewicht", bodyDetails.weight, "kg");
-      const waistTxt  = formatLine("Bauchumfang", bodyDetails.waist_cm, "cm");
-      const muscleTxt = formatLine("Muskelmasse", bodyDetails.muscle_kg, "kg");
-      const fatTxt    = formatLine("Fettmasse", bodyDetails.fat_kg, "kg");
+      const weightTxt = formatLine("Gewicht (kg)", bodyDetails.weight, "kg");
+      const waistTxt  = formatLine("Bauchumfang (cm)", bodyDetails.waist_cm, "cm");
+      const muscleTxt = formatLine("Muskelmasse (kg)", bodyDetails.muscle_kg, "kg");
+      const fatTxt    = formatLine("Fettmasse (kg)", bodyDetails.fat_kg, "kg");
       [weightTxt, waistTxt, muscleTxt, fatTxt].forEach(txt => {
         if (!txt) return;
         parts.push(`<div class="chart-tip-value">${esc(txt)}</div>`);
@@ -521,6 +536,52 @@ async getFiltered() {
   },
   hidePulseLink() {
     if (this.pulseLink) this.pulseLink.style.display = "none";
+  },
+  hashBodyData(entries) {
+    if (!Array.isArray(entries) || !entries.length) return "body:empty";
+    const parts = [];
+    for (const e of entries) {
+      if (!e) continue;
+      if (e.weight == null && e.waist_cm == null && e.fat_kg == null && e.muscle_kg == null) continue;
+      parts.push([
+        e.date || "",
+        normalizeBodyVal(e.weight),
+        normalizeBodyVal(e.waist_cm),
+        normalizeBodyVal(e.fat_kg),
+        normalizeBodyVal(e.muscle_kg),
+        firstLine(e.notes || "")
+      ].join("|"));
+    }
+    return parts.length ? parts.join("||") : "body:none";
+  },
+  buildBodyMetaMap(entries, notesByDate) {
+    const map = new Map();
+    if (!Array.isArray(entries)) return map;
+    const noteLookup = (date, fallbackNote) => {
+      const fromDay = notesByDate?.get?.(date);
+      if (fromDay) return fromDay;
+      return firstLine(fallbackNote || "");
+    };
+    entries.forEach((e) => {
+      if (!e) return;
+      const hasBody = e.weight != null || e.waist_cm != null || e.fat_kg != null || e.muscle_kg != null;
+      if (!hasBody) return;
+      const note = noteLookup(e.date, e.notes);
+      if (!map.has(e.date)) {
+        map.set(e.date, { date: e.date, note, seriesKeys: [] });
+      }
+      const meta = map.get(e.date);
+      if (!meta.note && note) meta.note = note;
+      const pushKey = (key) => {
+        if (!key) return;
+        if (!meta.seriesKeys.includes(key)) meta.seriesKeys.push(key);
+      };
+      if (e.weight != null) { meta.weight = Number(e.weight); pushKey("body-weight"); }
+      if (e.waist_cm != null) { meta.waist_cm = Number(e.waist_cm); pushKey("body-waist"); }
+      if (e.muscle_kg != null) { meta.muscle_kg = Number(e.muscle_kg); pushKey("body-muscle"); }
+      if (e.fat_kg != null) { meta.fat_kg = Number(e.fat_kg); pushKey("body-fat"); }
+    });
+    return map;
   },
   shouldAnimateCharts() {
     if (!this.SHOW_CHART_ANIMATIONS) return false;
@@ -727,54 +788,38 @@ const BASE_WEIGHT_MIN = 75;
     };
     const pairIdFor = (date, ctx) => `${date || ""}__${ctx || ""}`;
 
-    const firstLineOf = (txt) => {
-      if (typeof txt !== "string") return "";
-      const first = txt.split(/\r?\n/)[0];
-      return first ? first.trim() : "";
-    };
-
     // Tageskommentare (erste Zeile)
     const notesByDate = new Map();
     for (const e of data) {
       const hasDayLike = e?.context === "Tag" || isWeightOnly(e);
       const txt = (e?.notes || "").trim();
       if (hasDayLike && txt) {
-        const firstLine = firstLineOf(txt);
-        if (firstLine) notesByDate.set(e.date, firstLine);
+        const firstLineTxt = firstLine(txt);
+        if (firstLineTxt) notesByDate.set(e.date, firstLineTxt);
       }
     }
 
-    const bodyMetaByDate = new Map();
-    for (const e of data) {
-      const hasBody =
-        e &&
-        (e.weight != null || e.waist_cm != null || e.fat_kg != null || e.muscle_kg != null);
-      if (!hasBody) continue;
-      const note = notesByDate.get(e.date) || firstLineOf(e.notes || "");
-      const ensure = () => {
-        if (bodyMetaByDate.has(e.date)) return bodyMetaByDate.get(e.date);
-        const next = { date: e.date, note, seriesKeys: [] };
-        bodyMetaByDate.set(e.date, next);
-        return next;
-      };
-      const metaEntry = ensure();
-      if (!metaEntry.note && note) metaEntry.note = note;
-      const pushKey = (key) => {
-        if (!key) return;
-        if (!metaEntry.seriesKeys.includes(key)) metaEntry.seriesKeys.push(key);
-      };
-      if (e.weight != null) { metaEntry.weight = Number(e.weight); pushKey("body-weight"); }
-      if (e.waist_cm != null) { metaEntry.waist_cm = Number(e.waist_cm); pushKey("body-waist"); }
-      if (e.muscle_kg != null) { metaEntry.muscle_kg = Number(e.muscle_kg); pushKey("body-muscle"); }
-      if (e.fat_kg != null) { metaEntry.fat_kg = Number(e.fat_kg); pushKey("body-fat"); }
-    }
+    let bodyMetaByDate = new Map();
 
     // Fuer BP benoetigen wir Meta je Punkt
     let meta = null;
     let bpPairs = null;
     this.currentMeta = null;
     this.currentBpPairs = null;
-    this.currentBodyMeta = null;
+
+    if (metric === "weight") {
+      const nextHash = this.hashBodyData(data);
+      const canReuse = nextHash === this.bodyMetaCacheHash && this.currentBodyMeta instanceof Map;
+      if (canReuse) {
+        bodyMetaByDate = this.currentBodyMeta;
+      } else {
+        bodyMetaByDate = this.buildBodyMetaMap(data, notesByDate);
+        this.currentBodyMeta = bodyMetaByDate;
+        this.bodyMetaCacheHash = nextHash;
+      }
+    } else {
+      bodyMetaByDate = this.currentBodyMeta instanceof Map ? this.currentBodyMeta : new Map();
+    }
 
     if (metric === "bp") {
       // Nur echte Messungen
@@ -1093,6 +1138,8 @@ grid += text(W - PR - 2, yDia  + 4, "Dia 90",  "end");
     // Linien + Punkte
 const isFiniteTs = (t) => Number.isFinite(t);
 
+const getBodyNote = (date) => (date ? (bodyMetaByDate.get(date)?.note || "") : "");
+
 const mkPath = (seriesItem) => {
   const { values = [], color = "#fff", key } = seriesItem || {};
   let d = "";
@@ -1119,8 +1166,7 @@ const mkDots = (seriesItem) => {
     const ctx  = (m.ctx  || (kind === "misc" ? "Tag" : ""));
     let note = (m.note || "");
     if (!note && kind === "misc") {
-      const bodyMeta = bodyMetaByDate.get(date);
-      if (bodyMeta?.note) note = bodyMeta.note;
+      note = getBodyNote(date);
     }
     const numericVal = Number(v);
     const formattedVal =
@@ -1212,7 +1258,7 @@ const mkBars = () => {
       const rectH = Math.abs(baseY - yVal);
       if (!Number.isFinite(rectX) || !Number.isFinite(rectY) || rectH <= 0) return;
       const date = data?.[i]?.date || "";
-      const note = bodyMetaByDate.get(date)?.note || "";
+      const note = getBodyNote(date);
       const valueLabel = `${seriesItem.name || ''}: ${displayVal.toFixed(1)} kg`.trim();
       const attrParts = [
         `class="chart-bar"`,
