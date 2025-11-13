@@ -474,23 +474,9 @@ async getFiltered() {
 
     const pushMetricLine = (label, valueText, indicator) => {
       if (!valueText) return;
-      const isDark = indicator?.color
-        ? (() => {
-            try {
-              const ctx = document.createElement("canvas").getContext("2d");
-              if (!ctx) return false;
-              ctx.fillStyle = indicator.color;
-              const rgba = ctx.fillStyle;
-              const parts = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-              if (!parts) return false;
-              const [r,g,b] = parts.slice(1).map(Number);
-              const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
-              return luminance > 0.65;
-            } catch(_) { return false; }
-          })()
-        : false;
-      const labelClass = isDark ? "chart-tip-metric-label is-contrast" : "chart-tip-metric-label";
-      const valueClass = isDark ? "chart-tip-metric-value is-contrast" : "chart-tip-metric-value";
+      const isLight = indicator?.color ? this.isLightColor(indicator.color) : false;
+      const labelClass = isLight ? "chart-tip-metric-label is-contrast" : "chart-tip-metric-label";
+      const valueClass = isLight ? "chart-tip-metric-value is-contrast" : "chart-tip-metric-value";
       const indicatorHtml = indicator?.color
         ? `<span class="chart-tip-indicator" style="background:${esc(indicator.color)}" title="${esc(indicator.label || "")}" aria-hidden="true"></span>`
         : "";
@@ -838,12 +824,21 @@ async getFiltered() {
       } else if (k === "pulsepressure") {
         color = classifyPulsePressure(v)?.color || "#60a5fa";
       } else if (k === "sys" || k === "dia") {
-        const paired = this.currentMeta?.find?.((entry) => {
-          if (entry?.sys == null && entry?.dia == null) return false;
-          const val = Number(k === "sys" ? entry.sys : entry.dia);
-          if (!Number.isFinite(val)) return false;
-          return Math.round(val) === Math.round(v ?? val);
-        }) || null;
+        // Suche im Tages-Meta nach einem Messpaar, dessen Wert (sys/dia) dem KPI-Mittel entspricht
+        const tolerance = 1; // mmHg
+        const targetVal = Number.isFinite(v) ? v : null;
+        const paired = Array.isArray(this.currentMeta)
+          ? this.currentMeta.find((entry) => {
+              if (!entry) return false;
+              const sysVal = Number(entry.sys);
+              const diaVal = Number(entry.dia);
+              if (!Number.isFinite(sysVal) && !Number.isFinite(diaVal)) return false;
+              const metricVal = k === "sys" ? sysVal : diaVal;
+              if (!Number.isFinite(metricVal) || targetVal == null) return false;
+              return Math.abs(metricVal - targetVal) <= tolerance;
+            }) || null
+          : null;
+        // fallback comment: pair search ensures KPI color mirrors tooltip classification
         color = classifyEscBp(
           paired?.sys ?? (k === "sys" ? v : null),
           paired?.dia ?? (k === "dia" ? v : null)
@@ -1483,3 +1478,48 @@ const mkBars = () => {
     initChartPanelSafe();
   }
 })(typeof window !== 'undefined' ? window : globalThis);
+  getColorParserCtx() {
+    if (!this._colorCtx) {
+      this._colorCtx = document.createElement("canvas")?.getContext?.("2d") || null;
+    }
+    return this._colorCtx;
+  },
+  parseColorToRgb(color) {
+    if (!color) return null;
+    const hexMatch = color.trim().match(/^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch?.groups?.hex) {
+      let hex = hexMatch.groups.hex;
+      if (hex.length === 3) {
+        hex = hex.split("").map(c => c + c).join("");
+      }
+      const intVal = parseInt(hex, 16);
+      return {
+        r: (intVal >> 16) & 255,
+        g: (intVal >> 8) & 255,
+        b: intVal & 255
+      };
+    }
+    const ctx = this.getColorParserCtx();
+    if (ctx) {
+      try {
+        ctx.fillStyle = color;
+        const computed = ctx.fillStyle;
+        const parts = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (parts) {
+          return {
+            r: Number(parts[1]),
+            g: Number(parts[2]),
+            b: Number(parts[3])
+          };
+        }
+      } catch(_) {}
+    }
+    return null;
+  },
+  isLightColor(color) {
+    const rgb = this.parseColorToRgb(color);
+    if (!rgb) return false;
+    const { r, g, b } = rgb;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.65;
+  },
