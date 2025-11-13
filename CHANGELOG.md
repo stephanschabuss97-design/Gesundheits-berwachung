@@ -14,7 +14,7 @@ Changed:
 - Körper-Metrik-Tooltips fassen Gewicht, Bauchumfang sowie verfügbares Muskel-/Fettprofil zusammen und highlighten alle Body-Serien gleichzeitig.
 - KPI-Leiste benennt den Pulsdruck eindeutig als Durchschnitt und blendet die Pill aus, sobald Körper-Metrik aktiv ist.
 - Blutdruck-Tooltips übernehmen die ESC-2018 Farbkategorie des Messwerts und zeigen MAP sowie Pulsdruck mit farbigen Indikatorkugeln an.
-- MAP-Indikatoren folgen jetzt den klinischen Bändern (MAP <60 kritisch, 60–64 Grenzwert, 65–100 normal, 101–110 hoch, >110 kritisch); Pulsdruck-Indikatoren unterscheiden ≤29 (sehr niedrig), 30–50 (normal), 51–60 (gelb), 61–70 (orange) und ≥71 (rot).
+- MAP-Indikatoren (Tooltip + KPI-Dots) folgen jetzt den klinischen Bändern (MAP <60 kritisch, 60–64 Grenzwert, 65–100 normal, 101–110 hoch, >110 kritisch); Pulsdruck-Indikatoren übernehmen dieselben Farben (≤29 sehr niedrig, 30–50 normal, 51–60 gelb, 61–70 orange, ≥71 rot) und passen Schriftkontraste automatisch an.
 - Chart-Render animiert sanft (Linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
 
 ## v1.8.2 - Guard/Resume Cleanup

@@ -474,10 +474,27 @@ async getFiltered() {
 
     const pushMetricLine = (label, valueText, indicator) => {
       if (!valueText) return;
+      const isDark = indicator?.color
+        ? (() => {
+            try {
+              const ctx = document.createElement("canvas").getContext("2d");
+              if (!ctx) return false;
+              ctx.fillStyle = indicator.color;
+              const rgba = ctx.fillStyle;
+              const parts = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+              if (!parts) return false;
+              const [r,g,b] = parts.slice(1).map(Number);
+              const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+              return luminance > 0.65;
+            } catch(_) { return false; }
+          })()
+        : false;
+      const labelClass = isDark ? "chart-tip-metric-label is-contrast" : "chart-tip-metric-label";
+      const valueClass = isDark ? "chart-tip-metric-value is-contrast" : "chart-tip-metric-value";
       const indicatorHtml = indicator?.color
         ? `<span class="chart-tip-indicator" style="background:${esc(indicator.color)}" title="${esc(indicator.label || "")}" aria-hidden="true"></span>`
         : "";
-      const html = `<div class="chart-tip-value chart-tip-metric">${indicatorHtml}<span class="chart-tip-metric-label">${esc(label)}</span><span class="chart-tip-metric-value">${esc(valueText)}</span></div>`;
+      const html = `<div class="chart-tip-value chart-tip-metric">${indicatorHtml}<span class="${labelClass}">${esc(label)}</span><span class="${valueClass}">${esc(valueText)}</span></div>`;
       parts.push(html);
       liveParts.push(`${label} ${valueText}${indicator?.label ? ` (${indicator.label})` : ""}`);
     };
@@ -816,8 +833,22 @@ async getFiltered() {
         color = this.kpiColorBMI(Number.isFinite(v) ? v : null);
       } else if (k === "whtr") {
         color = this.kpiColorWHtR(Number.isFinite(v) ? v : null);
+      } else if (k === "map") {
+        color = classifyMapValue(v)?.color || "#60a5fa";
+      } else if (k === "pulsepressure") {
+        color = classifyPulsePressure(v)?.color || "#60a5fa";
+      } else if (k === "sys" || k === "dia") {
+        const paired = this.currentMeta?.find?.((entry) => {
+          if (entry?.sys == null && entry?.dia == null) return false;
+          const val = Number(k === "sys" ? entry.sys : entry.dia);
+          if (!Number.isFinite(val)) return false;
+          return Math.round(val) === Math.round(v ?? val);
+        }) || null;
+        color = classifyEscBp(
+          paired?.sys ?? (k === "sys" ? v : null),
+          paired?.dia ?? (k === "dia" ? v : null)
+        )?.color || "#60a5fa";
       } else {
-        // BP-KPIs neutral blau
         color = "#60a5fa";
       }
 

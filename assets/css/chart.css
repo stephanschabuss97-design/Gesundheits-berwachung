@@ -205,15 +205,20 @@
 .chart-tip-metric-label{
   color:var(--color-text-primary);
   font-weight:600;
+  transition:color .15s ease;
 }
+.chart-tip-metric-label.is-contrast{color:#0f172a;}
 .chart-tip-metric-value{
   margin-left:auto;
   color:var(--color-text-primary);
+  transition:color .15s ease;
 }
+.chart-tip-metric-value.is-contrast{color:#0f172a;}
 .chart-tip-indicator{
   width:10px;
   height:10px;
   border-radius:50%;
   box-shadow:0 0 4px rgba(0,0,0,.4);
   flex:0 0 auto;
+  border:1px solid rgba(15,23,42,.5);
 }
