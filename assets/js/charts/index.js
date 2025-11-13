@@ -103,6 +103,8 @@ const chartPanel = {
   currentMetric: 'bp',
   currentBodyMeta: null,
   bodyMetaCacheHash: null,
+  _colorCtx: null,
+  _colorCache: null,
   SHOW_CHART_ANIMATIONS: true,
   SHOW_BODY_COMP_BARS: true,
   tipDefaultBg: null,
@@ -663,6 +665,60 @@ async getFiltered() {
       if (e.fat_kg != null) { meta.fat_kg = Number(e.fat_kg); pushKey("body-fat"); }
     });
     return map;
+  },
+  getColorParserCtx() {
+    if (!this._colorCtx) {
+      this._colorCtx = document.createElement("canvas")?.getContext?.("2d") || null;
+    }
+    return this._colorCtx;
+  },
+  parseColorToRgb(color) {
+    if (!color) return null;
+    this._colorCache = this._colorCache || new Map();
+    if (this._colorCache.has(color)) {
+      return this._colorCache.get(color);
+    }
+    const hexMatch = color.trim().match(/^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/i); // #rgb oder #rrggbb
+    if (hexMatch?.groups?.hex) {
+      let hex = hexMatch.groups.hex;
+      if (hex.length === 3) {
+        hex = hex.split("").map(c => c + c).join("");
+      }
+      const intVal = parseInt(hex, 16);
+      const rgb = {
+        r: (intVal >> 16) & 255,
+        g: (intVal >> 8) & 255,
+        b: intVal & 255
+      };
+      this._colorCache.set(color, rgb);
+      return rgb;
+    }
+    const ctx = this.getColorParserCtx();
+    if (ctx) {
+      try {
+        ctx.fillStyle = color;
+        const computed = ctx.fillStyle;
+        const parts = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (parts) {
+          const rgb = {
+            r: Number(parts[1]),
+            g: Number(parts[2]),
+            b: Number(parts[3])
+          };
+          this._colorCache.set(color, rgb);
+          return rgb;
+        }
+      } catch(_) {}
+    }
+    return null;
+  },
+  isLightColor(color) {
+    // ITU-R BT.601 Luma; Schwelle 0.65 = ab hier wirkt Schrift in dunklem Blau/Schwarz besser lesbar
+    const rgb = this.parseColorToRgb(color);
+    if (!rgb) return false;
+    const { r, g, b } = rgb;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.65;
   },
   shouldAnimateCharts() {
     if (!this.SHOW_CHART_ANIMATIONS) return false;
@@ -1478,57 +1534,3 @@ const mkBars = () => {
     initChartPanelSafe();
   }
 })(typeof window !== 'undefined' ? window : globalThis);
-  getColorParserCtx() {
-    if (!this._colorCtx) {
-      this._colorCtx = document.createElement("canvas")?.getContext?.("2d") || null;
-    }
-    return this._colorCtx;
-  },
-  parseColorToRgb(color) {
-    if (!color) return null;
-    this._colorCache = this._colorCache || new Map();
-    if (this._colorCache.has(color)) {
-      return this._colorCache.get(color);
-    }
-    const hexMatch = color.trim().match(/^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/i); // #rgb oder #rrggbb
-    if (hexMatch?.groups?.hex) {
-      let hex = hexMatch.groups.hex;
-      if (hex.length === 3) {
-        hex = hex.split("").map(c => c + c).join("");
-      }
-      const intVal = parseInt(hex, 16);
-      const rgb = {
-        r: (intVal >> 16) & 255,
-        g: (intVal >> 8) & 255,
-        b: intVal & 255
-      };
-      this._colorCache.set(color, rgb);
-      return rgb;
-    }
-    const ctx = this.getColorParserCtx();
-    if (ctx) {
-      try {
-        ctx.fillStyle = color;
-        const computed = ctx.fillStyle;
-        const parts = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-        if (parts) {
-          const rgb = {
-            r: Number(parts[1]),
-            g: Number(parts[2]),
-            b: Number(parts[3])
-          };
-          this._colorCache.set(color, rgb);
-          return rgb;
-        }
-      } catch(_) {}
-    }
-    return null;
-  },
-  isLightColor(color) {
-    // ITU-R BT.601 Luma; Schwelle 0.65 = ab hier wirkt Schrift in dunklem Blau/Schwarz besser lesbar
-    const rgb = this.parseColorToRgb(color);
-    if (!rgb) return false;
-    const { r, g, b } = rgb;
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.65;
-  },
