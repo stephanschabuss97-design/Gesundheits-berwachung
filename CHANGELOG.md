@@ -11,7 +11,7 @@ Docs:
 Changed:
 - Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
 - Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
-- Chart-Render animiert sanft (linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
+- Chart-Render animiert sanft (Linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
 
 ## v1.8.2 - Guard/Resume Cleanup
 

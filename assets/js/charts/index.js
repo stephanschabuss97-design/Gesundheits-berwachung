@@ -417,7 +417,7 @@ async getFiltered() {
       liveParts.push(valueLabel);
     }
 
-    if (this.currentMetric !== "bp" || !(kind === "sys" || kind === "dia")) {
+    if (this.currentMetric !== "bp" || (kind !== "sys" && kind !== "dia")) {
       this.hidePulseLink();
     }
 
@@ -737,7 +737,11 @@ const BASE_WEIGHT_MIN = 75;
             dia: ctxLabel === "Morgen" ? "bp-dia-m" : "bp-dia-a",
           },
         };
-        if (pairId) bpPairs.set(pairId, entry);
+        const hasValidPairId = typeof pairId === "string" && pairId.trim().length > 0;
+        const hasContext = typeof entry.ctx === "string" && entry.ctx.trim().length > 0;
+        if (hasValidPairId && entry.date && hasContext) {
+          bpPairs.set(pairId, entry);
+        }
         return entry;
       });
 
