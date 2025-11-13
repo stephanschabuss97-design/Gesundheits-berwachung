@@ -1486,18 +1486,24 @@ const mkBars = () => {
   },
   parseColorToRgb(color) {
     if (!color) return null;
-    const hexMatch = color.trim().match(/^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/i);
+    this._colorCache = this._colorCache || new Map();
+    if (this._colorCache.has(color)) {
+      return this._colorCache.get(color);
+    }
+    const hexMatch = color.trim().match(/^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/i); // #rgb oder #rrggbb
     if (hexMatch?.groups?.hex) {
       let hex = hexMatch.groups.hex;
       if (hex.length === 3) {
         hex = hex.split("").map(c => c + c).join("");
       }
       const intVal = parseInt(hex, 16);
-      return {
+      const rgb = {
         r: (intVal >> 16) & 255,
         g: (intVal >> 8) & 255,
         b: intVal & 255
       };
+      this._colorCache.set(color, rgb);
+      return rgb;
     }
     const ctx = this.getColorParserCtx();
     if (ctx) {
@@ -1506,17 +1512,20 @@ const mkBars = () => {
         const computed = ctx.fillStyle;
         const parts = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
         if (parts) {
-          return {
+          const rgb = {
             r: Number(parts[1]),
             g: Number(parts[2]),
             b: Number(parts[3])
           };
+          this._colorCache.set(color, rgb);
+          return rgb;
         }
       } catch(_) {}
     }
     return null;
   },
   isLightColor(color) {
+    // ITU-R BT.601 Luma; Schwelle 0.65 = ab hier wirkt Schrift in dunklem Blau/Schwarz besser lesbar
     const rgb = this.parseColorToRgb(color);
     if (!rgb) return false;
     const { r, g, b } = rgb;
