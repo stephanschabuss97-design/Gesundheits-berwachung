@@ -9,6 +9,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 - **Safety first:** Jede Phase endet mit einem lauffähigen Stand (Charts/Trendpilot/Capture müssen immer funktionieren).
 - **Docs & QA pflegen:** Nach jedem Step `CHANGELOG.md` und relevante Modul-Overviews aktualisieren.
 - **Kleine PRs bevorzugen:** Lieber viele überschaubare Moves statt eines Big-Bang-Rewrites.
+- **Lessons learned:** Beim nächsten Versuch erst eine Deploy-Pipeline aufsetzen, die `app/` → `assets/` spiegelt (bis GitHub Pages die neue Struktur direkt bedient). Chart mit kleinem Smoke-Test absichern (Linien + Punkte).
 
 ---
 
@@ -27,10 +28,10 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 ## Phase 1 – Dokumentation & Namespace-Alignment (leicht → mittel)
 
-1. 🔲 **Docs nachziehen:** `docs/modules/*` prüfen, ob neue Pfade erwähnt werden müssen (z. B. `app/modules/capture` statt `assets/js/capture`).
-2. 🔲 **Namespace vorbereiten:** In bestehenden Dateien `AppModules.*` vs. globale Variablen dokumentieren; optional Soft-Aliase anlegen (z. B. `window.AppModules.capture = window.AppModules.capture || { ... }`).
-3. 🔲 **Lint/Format:** sicherstellen, dass alle neuen Dateien ASCII/UTF-8 ohne BOM nutzen (bereitet spätere mass moves vor).
-4. 🔲 **Touch-Log & diag:** zentrale Helper (`diag.add`, `touchLog`) in `app/core/diag.js` beschreiben; ggf. `assets/js/core/diag.js` schon so strukturieren, dass später nur ein Move nötig ist.
+1. 🔲 **Docs nachziehen:** `docs/modules/*` zeigen nun die künftigen `app/...`-Pfade statt der alten `assets/...`-Referenzen.
+2. 🔲 **Namespace vorbereiten:** Übersicht der `AppModules.*`-Belegungen dokumentiert (siehe `docs/AppModules Namespace.md`); Soft-Aliase bleiben beim Move erhalten.
+3. 🔲 **Lint/Format:** BOM-Check für neue Docs durchgeführt; `docs/QA_Notes.md` neu geschrieben (UTF-8 ohne BOM), alle übrigen Dateien bereits konform.
+4. 🔲 **Touch-Log & diag:** aktuelles Verhalten dokumentiert (`docs/Core Diagnostics.md`); Move nach `app/core/diag.js` vorbereitet.
 
 ### Go/No-Go
 - Sobald alle Overviews die neuen Modulnamen kennen und `AppModules.*` konsistent ist, Phase 2 starten.
@@ -39,11 +40,11 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 ## Phase 2 – Assets → App (CSS + JS Basisschicht) (mittel)
 
-1. 🔲 **Styles verschieben:**  
-   - `assets/css/core/*` → `app/styles/`.  
-   - `assets/css/chart.css` → `app/modules/charts/chart.css`.  
-   - `app/app.css` als Composer anlegen (`@import "./styles/variables.css"; …`).  
-   - `index.html` auf neue Pfade umstellen (Testen: Chart, Trendpilot, Capture).
+1. 🔲 **Styles verschoben:**  
+   - Kern-CSS liegt jetzt unter `app/styles/` (inkl. ehemaligem `assets/css/app.css` → `ui.css`).  
+   - Chart-Styles unter `app/modules/charts/chart.css`.  
+   - Neuer Composer `app/app.css` importiert alle Teilstyles; `index.html` lädt nur noch diesen Pfad.
+   - **Lessons learned:** Beim nächsten Versuch erst eine Deploy-Pipeline aufsetzen, die `app/` → `assets/` spiegelt (bis GitHub Pages die neue Struktur direkt bedient). Chart mit kleinem Smoke-Test absichern (Linien + Punkte).
 2. 🔲 **Core JS verschieben:**  
    - `assets/js/config.js`, `utils.js`, `diag.js`, `capture/globals.js` → `app/core/…`.  
    - Beim Move `import`/`require` Pfade aktualisieren (zunächst relative Pfade, später optional bundler).
@@ -80,6 +81,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 ### Tipps
 - Nach jedem Modul-Move `docs/modules/<Modul>.md` aktualisieren.
 - Git-Verlauf beibehalten (z. B. `git mv` nutzen).
+- Lessons learned: Vorher einen Chart-Snapshot testen (Linien + Punkte) und sicherstellen, dass `app/`-Dateien wirklich deployed werden (Cache-Buster + Pages-Build). Erst dann Pfade umstellen.
 
 ---
 
