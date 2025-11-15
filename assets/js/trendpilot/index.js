@@ -69,19 +69,19 @@
     fetchSystemCommentsRange
   } = grabTrendpilotDeps();
 
-  const hasDependencies =
-    typeof buildTrendWindow === 'function' &&
-    typeof calcLatestDelta === 'function' &&
-    typeof classifyTrendDelta === 'function' &&
-    TREND_PILOT_DEFAULTS &&
-    typeof fetchDailyOverviewFn === 'function' &&
-    typeof upsertSystemCommentRemote === 'function' &&
-    typeof setSystemCommentAck === 'function';
+  const missingDeps = [];
+  if (typeof buildTrendWindow !== 'function') missingDeps.push('buildTrendWindow');
+  if (typeof calcLatestDelta !== 'function') missingDeps.push('calcLatestDelta');
+  if (typeof classifyTrendDelta !== 'function') missingDeps.push('classifyTrendDelta');
+  if (!TREND_PILOT_DEFAULTS) missingDeps.push('TREND_PILOT_DEFAULTS');
+  if (typeof fetchDailyOverviewFn !== 'function') missingDeps.push('fetchDailyOverview');
+  if (typeof upsertSystemCommentRemote !== 'function') missingDeps.push('upsertSystemCommentRemote');
+  if (typeof setSystemCommentAck !== 'function') missingDeps.push('setSystemCommentAck');
 
-  if (!hasDependencies) {
+  if (missingDeps.length) {
     if (!dependencyWarned) {
       console.warn(
-        '[trendpilot] Dependencies missing; waiting for Supabase/system comments to load.'
+        `[trendpilot] Dependencies missing; waiting: ${missingDeps.join(', ')}`
       );
       dependencyWarned = true;
     }
