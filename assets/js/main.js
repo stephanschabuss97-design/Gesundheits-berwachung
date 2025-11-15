@@ -1132,7 +1132,7 @@ prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
 setTab("capture");
-try{ window.AppModules.capture.resetCapturePanels(); window.AppModules.bp.clearBpCommentWarnings?.(); }catch(_){ }
+try{ window.AppModules.capture.resetCapturePanels?.(); window.AppModules.bp.clearBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()

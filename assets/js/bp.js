@@ -28,7 +28,7 @@
     throw new Error(`Invalid BP context "${ctx}"`);
   };
 
-  const getCommentElement = (ctx) => document.getElementById(bpFieldId('bpComment', ctx));
+  const getCommentElement = (ctx) => document.getElementById(bpFieldId('bpComment', normalizeContext(ctx)));
 
   function requiresBpComment(which) {
     let ctx;
@@ -85,25 +85,27 @@
 
   // SUBMODULE: blockHasData @internal - detects if BP panel has any input before saving
   function blockHasData(which){
+    const ctx = normalizeContext(which);
     const getVal = (sel) => document.querySelector(sel)?.value?.trim();
-    const sys = getVal(bpSelector('sys', which));
-    const dia = getVal(`#dia${which}`);
-    const pulse = getVal(`#pulse${which}`);
-    const commentEl = getCommentElement(which);
+    const sys = getVal(bpSelector('sys', ctx));
+    const dia = getVal(`#dia${ctx}`);
+    const pulse = getVal(`#pulse${ctx}`);
+    const commentEl = getCommentElement(ctx);
     const comment = (commentEl?.value || "").trim();
     return !!(sys || dia || pulse || comment);
   }
 
   // SUBMODULE: saveBlock @internal - persists BP measurements and optional comments
   async function saveBlock(contextLabel, which, includeWeight=false, force=false){
+  const ctx = normalizeContext(which);
   const date = $("#date").value || todayStr();
-  const time = which === 'M' ? '07:00' : '22:00';
+  const time = ctx === 'M' ? '07:00' : '22:00';
 
-  const sys   = $(bpSelector('sys', which)).value   ? toNumDE($(bpSelector('sys', which)).value)   : null;
-  const dia   = $(`#dia${which}`).value   ? toNumDE($(`#dia${which}`).value)   : null;
-  const pulse = $(`#pulse${which}`).value ? toNumDE($(`#pulse${which}`).value) : null;
+  const sys   = $(bpSelector('sys', ctx)).value   ? toNumDE($(bpSelector('sys', ctx)).value)   : null;
+  const dia   = $(`#dia${ctx}`).value   ? toNumDE($(`#dia${ctx}`).value)   : null;
+  const pulse = $(`#pulse${ctx}`).value ? toNumDE($(`#pulse${ctx}`).value) : null;
 
-  const commentEl = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
+  const commentEl = getCommentElement(ctx);
   const comment = (commentEl?.value || '').trim();
 
   const hasAny = (sys != null) || (dia != null) || (pulse != null);
@@ -133,7 +135,7 @@
 
   if (hasComment){
     try {
-      await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
+      await appendNote(date, ctx === 'M' ? '[Morgens] ' : '[Abends] ', comment);
       if (commentEl) commentEl.value = '';
       clearBpCommentWarnings();
     } catch(err) {
