@@ -8,6 +8,7 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let trendpilotInitialized = false;
+  const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
 
   const initTrendpilot = () => {
     if (trendpilotInitialized) return;
@@ -38,7 +39,7 @@
     global.fetchDailyOverview ||
     appModules.fetchDailyOverview ||
     appModules.vitals?.fetchDailyOverview;
-  const supabaseApi = global.SupabaseAPI || appModules.supabase || {};
+  const supabaseApi = getSupabaseApi();
   const upsertSystemCommentRemote = supabaseApi.upsertSystemCommentRemote;
   const setSystemCommentAck = supabaseApi.setSystemCommentAck;
   const fetchSystemCommentsRange =
@@ -51,7 +52,8 @@
     TREND_PILOT_DEFAULTS &&
     typeof fetchDailyOverview === 'function' &&
     typeof upsertSystemCommentRemote === 'function' &&
-    typeof setSystemCommentAck === 'function';
+    typeof setSystemCommentAck === 'function' &&
+    typeof fetchSystemCommentsRange === 'function';
 
   if (!dependenciesReady) {
     console.error(
