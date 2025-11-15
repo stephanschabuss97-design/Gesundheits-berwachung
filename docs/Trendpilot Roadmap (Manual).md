@@ -7,22 +7,24 @@
 
 ---
 
-## 2) Phase 1 – Basis ohne KI
+## 2) Phase 1 – Basis ohne KI (Ist-Stand)
 
 ### 2.1 Daten & Helpers
-1. `fetchBpSeries()` erweitern: liefert 180 Tage Tagesmittel (Morgen+Abend, wenn verfügbar) + Wochenaggregation (Median sys/dia, Count).
-2. Helper-Module: `groupBpByWeek`, `calcBaseline`, `calcDelta`, `classifyTrend`, `applyHysteresis`.
-3. Tests für Aggregation & Klassifikation.
+Status: ✔ erledigt.
+1. `fetchBpSeries()` liefert Tagesmittel (Morgen+Abend) für 180 Tage.
+2. Helper-Module (`trendpilot/data.js`) implementiert: `computeDailyBpStats`, `groupDailyStatsByWeek`, `calcMovingBaseline`, `calcLatestDelta`, `classifyTrendDelta`, `applyHysteresis`, `buildTrendWindow`.
 
 ### 2.2 Capture-Hook
-1. Nach jedem Abend-Save `runTrendpilotAnalysis(day)` triggern (Analyse nutzt den Tagesmittelwert aus Morgen+Abend).
-2. Wenn <8 Wochen Daten → `info` → Toast nur.
-3. `warning`/`critical`: Dialog mit Text + Button „Zur Kenntnis genommen“.
+Status: ⚙ in Arbeit.
+1. `runTrendpilotAnalysis(day)` existiert (einschließlich Timeout, strenger ISO-Check, Pflichtdialog + Supabase-upsert).
+2. Capture-BP-Save ruft Trendpilot noch nicht auf → TODO.
+3. Dialog muss Ack-Fluss + system_comment-ID handling bekommen → TODO.
 
 ### 2.3 System Comments (Supabase)
-1. `system_comment` POST/PATCH Helper (`createSystemComment`, `updateSystemComment`, `findSystemCommentByDay`).
-2. Warning/Critical → DB-Eintrag (ack=false, doctorStatus="none").
-3. Dialog-Ack setzt ack=true via PATCH.
+Status: ✔ erledigt.
+1. Neue Supabase-API `system-comments.js`: POST/PATCH, Ack/Doctor-Status bleiben erhalten.
+2. Trendpilot ruft `upsertSystemCommentRemote` bereits für Warning/Critical (automatisch ack=false).
+3. Dialog-Ack → TODO (Pending UI).
 
 ### 2.4 Arztansicht + Chart
 1. Arztansicht: Tabelle/Abschnitt „Trendpilot-Hinweise“ mit Severity-Badge, Buttons „Arztabklärung geplant“/„Erledigt“.
@@ -30,9 +32,10 @@
 3. Capture: optional Hinweis „Letzte Trendpilot-Meldung.“ im Intake-Header.
 
 ### 2.5 Konfiguration & Diagnostics
-1. Feature-Flag `TREND_PILOT_ENABLED`, Parameter (`windowDays`, Schwellen, hysteresisWeeks).
-2. `diag`-Log-Einträge (`[trendpilot] classification=warning delta_sys=...`).
-3. QA: Save-Flows, Arzt-Buttons, Chart-Overlay.
+Status: ⚙ teilweise.
+1. Feature-Flag `TREND_PILOT_ENABLED` (config.js) vorhanden, liest aus global/localStorage/body-data.
+2. Diagnostik (`diag.add`) vorhanden (severity + deltas).
+3. QA-Sektion noch offen (Charts/Arzt/Save).
 
 ---
 
