@@ -125,12 +125,16 @@
       const stats = await loadDailyStats(normalizedDay);
       const weekly = Array.isArray(stats?.weekly) ? stats.weekly : [];
       const baseline = Array.isArray(stats?.baseline) ? stats.baseline : [];
-      const minWeeks =
+      const defaultMinWeeks =
         Number.isInteger(TREND_PILOT_DEFAULTS.minWeeks) && TREND_PILOT_DEFAULTS.minWeeks > 0
-          ? TREND_PILOT_DEFAULTS.minWeeks
+          ? Math.max(4, TREND_PILOT_DEFAULTS.minWeeks)
           : 8;
+      const minWeeks = Math.max(4, Math.min(defaultMinWeeks, weekly.length));
       if (weekly.length < minWeeks) {
         lastStatus = { severity: 'info', reason: 'not_enough_data', delta: null, day: normalizedDay };
+        diag.add?.(
+          `[trendpilot] not_enough_data: have ${weekly.length} weeks, need ${minWeeks}`
+        );
         toast('Trendpilot: Zu wenige Messwochen für Trendanalyse.');
         return lastStatus;
       }
