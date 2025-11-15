@@ -605,7 +605,7 @@
     document.querySelectorAll('.bp-pane').forEach(pane => {
       pane.classList.toggle('active', pane.dataset.context === 'M');
     });
-    try { updateBpCommentWarnings?.(); } catch(_){ }
+    try { clearBpCommentWarnings?.(); } catch(_){ }
     if (focus) {
       const first = document.getElementById('captureAmount');
       if (first) first.focus();

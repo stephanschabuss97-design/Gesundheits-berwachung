@@ -4,7 +4,7 @@
  * Description: Verwaltet Blutdruck-Erfassung, Validierung und Persistierung inkl. Kommentar-Pflicht, Panel-Reset und Datensynchronisation.
  * Submodules:
  *  - requiresBpComment (public, Kommentar-Pflichtprüfung)
- *  - updateBpCommentWarnings (public, UI-Hinweislogik)
+ *  - clearBpCommentWarnings (public, UI-Hinweislogik)
  *  - bpFieldId / bpSelector (internal, ID-Mapping)
  *  - resetBpPanel (public, Panel-Reset)
  *  - blockHasData (internal, Eingabe-Erkennung)
@@ -21,7 +21,7 @@
   const appModules = global.AppModules;
    
   function requiresBpComment() { return false; }
-  function updateBpCommentWarnings() {
+  function clearBpCommentWarnings() {
     ['M','A'].forEach(which => {
       const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
       if (el) {
@@ -50,7 +50,7 @@
       const el = document.getElementById(bpFieldId(id, ctx));
       if (el) el.value = '';
     });
-    try { updateBpCommentWarnings?.(); } catch(_){}
+    try { clearBpCommentWarnings?.(); } catch(_){}
     if (focus) {
       const target = document.getElementById(bpFieldId('sys', ctx));
       if (target) target.focus();
@@ -109,7 +109,7 @@
     try {
       await appendNote(date, which === 'M' ? '[Morgens] ' : '[Abends] ', comment);
       if (commentEl) commentEl.value = '';
-      updateBpCommentWarnings();
+      clearBpCommentWarnings();
     } catch(err) {
       diag.add?.('BP-Kommentar Fehler: ' + (err?.message || err));
     }
@@ -165,7 +165,7 @@
 // SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden unter AppModules.bp
   const bpApi = {
     requiresBpComment: requiresBpComment,
-    updateBpCommentWarnings: updateBpCommentWarnings,
+    clearBpCommentWarnings: clearBpCommentWarnings,
     bpFieldId: bpFieldId,
     bpSelector: bpSelector,
     resetBpPanel: resetBpPanel,

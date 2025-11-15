@@ -1,4 +1,4 @@
-ï»¿'use strict';
+'use strict';
 /**
  * MODULE: assets/js/main.js
  * Description: Haupt-Bootstrapping und Orchestrierung des Monolith-Systems (Supabase, Capture, Doctor, UI)
@@ -15,13 +15,13 @@
  *  - Online Sync & Realtime Resume
  */
 
-// SUBMODULE: getSupabaseApi @internal - prÃ¼ft SupabaseAPI-VerfÃ¼gbarkeit und loggt fehlende Instanz
+// SUBMODULE: getSupabaseApi @internal - prüft SupabaseAPI-Verfügbarkeit und loggt fehlende Instanz
 let supabaseMissingLogged = false;
 const getSupabaseApi = () => {
   const api = window.SupabaseAPI;
   if (!api) {
     if (!supabaseMissingLogged) {
-      console.error('[BOOT] SupabaseAPI nicht geladen â€“ prÃ¼fe assets/js/supabase/index.js / Script-Reihenfolge.');
+      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe assets/js/supabase/index.js / Script-Reihenfolge.');
       supabaseMissingLogged = true;
     }
     return null;
@@ -32,7 +32,7 @@ const getSupabaseApi = () => {
 const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
 
-// SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper fÃ¼r Supabase-Funktionsaufrufe
+// SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
   const fn = getSupabaseApi()?.[name];
   if (typeof fn !== 'function') {
@@ -71,7 +71,7 @@ const getLockUi = () => {
   return typeof fn === 'function' ? fn : null;
 };
 
-// SUBMODULE: getAuthGuardState / setAuthPendingAfterUnlock @internal - verwaltet Auth-ZustÃ¤nde zwischen Unlock-Phasen
+// SUBMODULE: getAuthGuardState / setAuthPendingAfterUnlock @internal - verwaltet Auth-Zustände zwischen Unlock-Phasen
 const getAuthGuardState = () => {
   const state = getSupabaseApi()?.authGuardState;
   return state && typeof state === 'object' ? state : null;
@@ -86,7 +86,7 @@ const setAuthPendingAfterUnlock = (value) => {
 };
 const delay = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
-// SUBMODULE: waitForSupabaseApi @public - wartet auf Supabase-Initialisierung Ã¼ber Polling + Event
+// SUBMODULE: waitForSupabaseApi @public - wartet auf Supabase-Initialisierung über Polling + Event
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
   return ({ timeout = 6000, pollInterval = 25 } = {}) => {
@@ -976,7 +976,7 @@ function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
 
   select.value = desired;
   applyBpContext(desired);
-  updateBpCommentWarnings?.();
+  clearBpCommentWarnings?.();
   diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`);
 }
 
@@ -1132,7 +1132,7 @@ prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
 setTab("capture");
-try{ window.AppModules.capture.resetCapturePanels(); updateBpCommentWarnings?.(); }catch(_){ }
+try{ window.AppModules.capture.resetCapturePanels(); clearBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
@@ -1170,9 +1170,9 @@ if (!savedUrl || !savedKey) {
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
 ['#captureAmount','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
   const el = $(sel); if(!el) return;
-  el.addEventListener('input', updateBpCommentWarnings);
+  el.addEventListener('input', clearBpCommentWarnings);
 });
-window.AppModules.bp.updateBpCommentWarnings();
+window.AppModules.bp.clearBpCommentWarnings();
 
 
 // Toggle-Handler
@@ -1184,7 +1184,7 @@ if (bpContextSel){
   bpContextSel.addEventListener('change', (e)=>{
     AppModules.captureGlobals.setBpUserOverride(true);
     applyBpContext(e.target.value);
-    window.AppModules.bp.updateBpCommentWarnings();
+    window.AppModules.bp.clearBpCommentWarnings();
   });
 }
 
@@ -1203,7 +1203,7 @@ if (saveBpPanelBtn){
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
-    window.AppModules.bp.updateBpCommentWarnings();
+    window.AppModules.bp.clearBpCommentWarnings();
     withBusy(btn, true);
     let savedOk = false;
     try{
@@ -1223,7 +1223,7 @@ if (saveBpPanelBtn){
       withBusy(btn, false);
     }
     if (savedOk){
-      window.AppModules.bp.updateBpCommentWarnings();
+      window.AppModules.bp.clearBpCommentWarnings();
       window.AppModules.bp.resetBpPanel(which);
       flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
     }
@@ -1279,7 +1279,7 @@ const dateEl = document.getElementById('date');
         // was du beim Datum aendern haben willst:
         await window.AppModules.capture.refreshCaptureIntake();
         window.AppModules.capture.resetCapturePanels();
-        updateBpCommentWarnings?.();
+        clearBpCommentWarnings?.();
         await window.AppModules.body.prefillBodyInputs();
       } catch(_) {}
     });
@@ -1461,6 +1461,7 @@ if (!window.__bootDone) {
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
+
 
 
 
