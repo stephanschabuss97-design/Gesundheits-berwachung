@@ -20,23 +20,14 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
    
-  // SUBMODULE: requiresBpComment @internal - enforces comment when vitals exceed thresholds
-  function requiresBpComment(which){
-    const sys = Number($(bpSelector('sys', which))?.value);
-    const dia = Number($(bpSelector('dia', which))?.value);
-    const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-    const comment = (el?.value || "").trim();
-    return ((sys > 130) || (dia > 90)) && !comment;
-  }
-  // SUBMODULE: updateBpCommentWarnings @internal - highlights comment fields requiring input
-  function updateBpCommentWarnings(){
+  function requiresBpComment() { return false; }
+  function updateBpCommentWarnings() {
     ['M','A'].forEach(which => {
       const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
-      if (!el) return;
-      const needs = requiresBpComment(which);
-      el.style.outline = needs ? "2px solid var(--danger)" : "";
-      if (needs) el.setAttribute("aria-invalid","true");
-      else el.removeAttribute("aria-invalid");
+      if (el) {
+        el.style.outline = "";
+        el.removeAttribute("aria-invalid");
+      }
     });
   }
 

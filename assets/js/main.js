@@ -1204,12 +1204,6 @@ if (saveBpPanelBtn){
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
     window.AppModules.bp.updateBpCommentWarnings();
-    if (window.AppModules.bp.requiresBpComment(which)){
-      alert("Bitte Kommentar eingeben bei Grenzwertueberschreitung (Sys>130 oder Dia>90).");
-      const target = document.getElementById(which === 'M' ? 'bpCommentM' : 'bpCommentA');
-      if (target) target.focus();
-      return;
-    }
     withBusy(btn, true);
     let savedOk = false;
     try{
@@ -1230,7 +1224,8 @@ if (saveBpPanelBtn){
     }
     if (savedOk){
       window.AppModules.bp.updateBpCommentWarnings();
-      window.AppModules.bp.resetBpPanel(which); flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
+      window.AppModules.bp.resetBpPanel(which);
+      flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
     }
   });
 }
