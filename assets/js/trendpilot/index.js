@@ -7,6 +7,11 @@
 (function (global) {
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  let trendpilotInitialized = false;
+
+  const initTrendpilot = () => {
+    if (trendpilotInitialized) return;
+    trendpilotInitialized = true;
 
   const diag =
     global.diag ||
@@ -306,4 +311,15 @@
   appModules.trendpilot = Object.assign(appModules.trendpilot || {}, trendpilotApi);
   global.runTrendpilotAnalysis = runTrendpilotAnalysis;
   refreshLatestSystemComment({ silent: true }).catch(() => {});
+  };
+
+  if (global.SupabaseAPI || appModules.supabase) {
+    initTrendpilot();
+  } else if (global.document) {
+    const onReady = () => {
+      global.document.removeEventListener('supabase:ready', onReady);
+      initTrendpilot();
+    };
+    global.document.addEventListener('supabase:ready', onReady);
+  }
 })(typeof window !== 'undefined' ? window : globalThis);
