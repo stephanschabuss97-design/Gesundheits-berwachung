@@ -33,10 +33,10 @@ Status: ✅ erledigt.
 3. Capture-Kopfzeile enthält eine zusätzliche Trendpilot-Pill („Trendpilot: Warnung/Kritisch (Datum)“) mit Text-Vorschau.
 
 ### 2.5 Konfiguration & Diagnostics
-Status: ⚙ teilweise.
-1. Feature-Flag `TREND_PILOT_ENABLED` (config.js) vorhanden, liest aus global/localStorage/body-data.
-2. Diagnostik (`diag.add`) vorhanden (severity + deltas).
-3. QA-Sektion noch offen (Charts/Arzt/Save).
+Status: ✅ erledigt.
+1. Feature-Flag `TREND_PILOT_ENABLED` (config.js) regelt Capture/Doctor/Chart; LocalStorage/Config-Umschaltung wird abgefangen.
+2. Diagnostik (`diag.add`) loggt Severity, Delta, Fetch-/System-Comment-Fehler sowie Hook-Ausnahmen.
+3. QA-Checks dokumentieren Trendpilot-Flows (Capture-Pill, Arztblock, Chart-Bänder, Supabase-Statuswechsel).
 
 ---
 

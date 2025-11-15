@@ -1003,9 +1003,18 @@ Regression
 - MAP- und Pulsdruck-Indikatoren nutzen die aktualisierten Schwellen (MAP: <60 rot, 60-64 orange, 65-100 grün, 101-110 gelb, >110 rot; Pulsdruck: ≤29 rot, 30-50 grün, 51-60 gelb, 61-70 orange, ≥71 rot).
 - KPI-Dots verwenden dieselbe Farbskala wie Tooltip-Indikatoren. Im Chart oben sind die Farben für Sys/Dia/MAP/Pulsdruck identisch mit denen in den Tooltip-Indikatoren.
 - BP-Chart: Trendpilot-Hintergrundbänder folgen exakt den Supabase-Systemkommentaren (Warnung=gelb, Kritisch=rot), werden hinter Grid/Lines gerendert und blockieren keine Pointer-Events; die Legende ergänzt zwei Swatches nur bei vorhandenen Bändern.
+- Trendpilot-Block in der Arztansicht listet alle Warnungen/Kritiken im gewählten Zeitraum; Buttons („Arztabklärung geplant“, „Erledigt“, „Zurücksetzen“) aktualisieren `doctorStatus` via Supabase und zeigen einen Toast.
+- Capture-Header blendet eine Trendpilot-Pill nur ein, wenn `getLatestSystemComment()` einen Eintrag liefert; Wechsel auf Tage ohne Meldung versteckt Pill/ARIA-Text zuverlässig.
 
 **Regression**
 - Range-Wechsel sowie Tab-Switches (BP ↔ Körper) rendern weiterhin ohne JS-Fehler; Tooltips funktionieren nach jedem Redraw.
 - Doctor-/Capture-Ansichten, CSV/JSON-Export und übrige Panels bleiben von den Chart-Animationen unberührt.
 - Neue Supabase-Exporte (`fetchSystemCommentsRange`, `setSystemCommentDoctorStatus`) sind via `SupabaseAPI` verfügbar; fehlende Berechtigungen führen zu stillen Trendpilot-Placeholders, nicht zu JS-Abbrüchen.
+
+### Trendpilot QA Pack
+- Feature-Flag: `TREND_PILOT_ENABLED=false` (LocalStorage/Config) entfernt Trendpilot-Pill, Arztblock und Chart-Overlays vollständig; diag-Logs melden `severity=disabled`.
+- Capture-Hook: Abend-Save mit WARN/CRIT erzeugt `[trendpilot] severity=…` Log, zwingt Dialog und schreibt `system_comment` (ack=false) – danach Pill zeigt Datum/Vorschau.
+- Doctor-Block: Buttons feuern nur bei Statuswechsel; Supabase-PATCH aktualisiert `doctorStatus` und UI markiert aktiven Button + Label (geplant/erledigt/kein Status).
+- Chart-Bänder: Tage mit Warn/Kritisch zeigen genau einen transluzenten Streifen (Gelb/Rot). Range-Filter ohne Einträge entfernt Legenden-Swatch + Bänder.
+- Offline/Fallback: Wenn `fetchSystemCommentsRange` scheitert, erscheint Placeholder „Trendpilot-Hinweise momentan nicht verfügbar“, capture Pill bleibt verborgen und diag loggt `[chart] trendpilot bands failed`.
 
