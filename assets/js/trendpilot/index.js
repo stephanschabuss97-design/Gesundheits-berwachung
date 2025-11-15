@@ -21,6 +21,7 @@
     { add() {} };
 
   const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[trendpilot]', msg));
+  let dependencyWarned = false;
 
   const stubApi = {
     getLastTrendpilotStatus: () => null,
@@ -39,13 +40,20 @@
     global.fetchDailyOverview ||
     appModules.fetchDailyOverview ||
     appModules.vitals?.fetchDailyOverview;
-  const supabaseApi = getSupabaseApi();
-  const upsertSystemCommentRemote = supabaseApi.upsertSystemCommentRemote;
-  const setSystemCommentAck = supabaseApi.setSystemCommentAck;
-  const fetchSystemCommentsRange =
-    supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange;
+  const grabTrendpilotDeps = () => {
+    const supabaseApi = getSupabaseApi();
+    return {
+      supabaseApi,
+      upsertSystemCommentRemote: supabaseApi.upsertSystemCommentRemote,
+      setSystemCommentAck: supabaseApi.setSystemCommentAck,
+      fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange
+    };
+  };
 
-  const dependenciesReady =
+  const { supabaseApi, upsertSystemCommentRemote, setSystemCommentAck, fetchSystemCommentsRange } =
+    grabTrendpilotDeps();
+
+  const hasDependencies =
     typeof buildTrendWindow === 'function' &&
     typeof calcLatestDelta === 'function' &&
     typeof classifyTrendDelta === 'function' &&
@@ -55,12 +63,20 @@
     typeof setSystemCommentAck === 'function' &&
     typeof fetchSystemCommentsRange === 'function';
 
-  if (!dependenciesReady) {
-    console.error(
-      '[trendpilot] Missing dependencies: load trendpilot/data.js and Supabase API before trendpilot/index.js.'
-    );
+  if (!hasDependencies) {
+    if (!dependencyWarned) {
+      console.warn(
+        '[trendpilot] Dependencies missing; waiting for Supabase/system comments to load.'
+      );
+      dependencyWarned = true;
+    }
+    setTimeout(() => {
+      trendpilotInitialized = false;
+      initTrendpilot();
+    }, 250);
     return;
   }
+  dependencyWarned = false;
 
   const ISO_DAY_RE = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
   const config = appModules.config || {};
