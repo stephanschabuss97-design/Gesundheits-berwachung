@@ -248,3 +248,26 @@ const safeErrorMessage = async (res) => {
     return '';
   }
 };
+
+const attachToGlobalSupabase = () => {
+  if (!globalWindow) return;
+  globalWindow.AppModules = globalWindow.AppModules || {};
+  globalWindow.AppModules.supabase = globalWindow.AppModules.supabase || {};
+  const target = globalWindow.AppModules.supabase;
+  if (typeof target.upsertSystemCommentRemote !== 'function') {
+    target.upsertSystemCommentRemote = upsertSystemCommentRemote;
+  }
+  if (typeof target.setSystemCommentAck !== 'function') {
+    target.setSystemCommentAck = setSystemCommentAck;
+  }
+  if (typeof target.fetchSystemCommentsRange !== 'function') {
+    target.fetchSystemCommentsRange = fetchSystemCommentsRange;
+  }
+  if (typeof target.setSystemCommentDoctorStatus !== 'function') {
+    target.setSystemCommentDoctorStatus = setSystemCommentDoctorStatus;
+  }
+  globalWindow.SupabaseAPI = globalWindow.SupabaseAPI || {};
+  Object.assign(globalWindow.SupabaseAPI, target);
+};
+
+attachToGlobalSupabase();
