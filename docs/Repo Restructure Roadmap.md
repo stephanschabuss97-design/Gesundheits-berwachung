@@ -16,8 +16,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 1. ✅ `Repo Tree v2.md` erstellen und mit Team reviewen.
 2. ✅ Inventar der aktuellen Imports erstellen (`rg "assets/js"`), um Refactor-Impact abzuschätzen. → siehe `docs/Import Inventory.md`.
-3. 🔲 Build-/Deploy-Pfade dokumentieren (GitHub Pages, SW preload) → sicherstellen, dass künftiges `app/`-Bundle kompatibel ist.
-4. 🔲 QA/Docs anweisen, neue Struktur spätestens nach Phase 2 zu spiegeln.
+3. ✅ Build-/Deploy-Pfade dokumentieren (GitHub Pages, SW preload) → sichergestellt, dass künftiges `app/`-Bundle kompatibel ist (siehe `docs/Build Deploy Paths.md`).
+4. ✅ QA/Docs anweisen, neue Struktur spätestens nach Phase 2 zu spiegeln (Reminder siehe `docs/QA_Notes.md`).
 
 ### Deliverables
 - Liste aller Top-Level-Dateien + Import-Abhängigkeiten.
