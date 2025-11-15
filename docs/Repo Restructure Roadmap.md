@@ -23,6 +23,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 ### Deliverables
 - Liste aller Top-Level-Dateien + Import-Abhängigkeiten.
 - Klarheit, welche Skripte direkt in `index.html` eingebunden werden.
+- **Arbeitsprinzip für alle weiteren Phasen:** Neue Dateien/Strukturen immer parallel aufbauen, vollständig testen (Capture/Doctor/Chart Smoke), auf GitHub Pages kontrollieren – erst wenn alles stabil läuft, alte Pfade/Assets entfernen.
+- **Code-Stil:** Jede neue Datei erhält sofort einen MODULE-Header (Name, Description, Submodules, Notes) und kommentierte `// SUBMODULE:`-Abschnitte – so bleibt die spätere Doku konsistent.
 
 ---
 
@@ -35,6 +37,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 ### Go/No-Go
 - Sobald alle Overviews die neuen Modulnamen kennen und `AppModules.*` konsistent ist, Phase 2 starten.
+- Reminder: Bei jedem Schritt zuerst neue Dateien/Namespaces aufsetzen, parallel testen/deployen, erst danach die alten Referenzen ausbauen.
+- Neue Dateien immer direkt mit vollständigem MODULE-Header + `// SUBMODULE:` Kommentaren anlegen (gleiches Pattern wie `assets/js/ui-tabs.js`), damit Phase 1–5 nicht nachdokumentieren müssen.
 
 ---
 
@@ -46,8 +50,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Neuer Composer `app/app.css` importiert alle Teilstyles; `index.html` lädt nur noch diesen Pfad.
    - **Lessons learned:** Beim nächsten Versuch erst eine Deploy-Pipeline aufsetzen, die `app/` → `assets/` spiegelt (bis GitHub Pages die neue Struktur direkt bedient). Chart mit kleinem Smoke-Test absichern (Linien + Punkte).
 2. 🔲 **Core JS verschieben:**  
-   - `assets/js/config.js`, `utils.js`, `diag.js`, `capture/globals.js` → `app/core/…`.  
-   - Beim Move `import`/`require` Pfade aktualisieren (zunächst relative Pfade, später optional bundler).
+- `assets/js/config.js`, `utils.js`, `diag.js`, `capture/globals.js` → `app/core/…`.  
+- Beim Move `import`/`require` Pfade aktualisieren (zunächst relative Pfade, später optional bundler).
 3. 🔲 **Supabase Barrel angleichen:**  
    - `assets/js/supabase/index.js` + Submodule nach `app/supabase/`.  
    - Exporte unverändert lassen, damit bestehende Module weiter funktionieren.
@@ -82,6 +86,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 - Nach jedem Modul-Move `docs/modules/<Modul>.md` aktualisieren.
 - Git-Verlauf beibehalten (z. B. `git mv` nutzen).
 - Lessons learned: Vorher einen Chart-Snapshot testen (Linien + Punkte) und sicherstellen, dass `app/`-Dateien wirklich deployed werden (Cache-Buster + Pages-Build). Erst dann Pfade umstellen.
+- Neue Module zuerst in `app/...` hinzufügen, parallel testen/deployen und erst nach erfolgreicher Verifikation die alten `assets/...`-Quellen entfernen.
 
 ---
 
@@ -94,6 +99,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Service Worker aktualisieren (`app/` + `public/` cache).  
    - Optional TWA Skeleton (`twa/android/`).  
    - Lighthouse-Check (PWA score ≥ 90).
+- Reminder: Auch hier neue Ordner (assistant, diagnostics, etc.) zunächst parallel anlegen und verifizieren, bevor alte Reste gelöscht werden.
 
 ---
 
@@ -106,6 +112,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - `CHANGELOG.md` zusammenfassen.  
    - QA-Run (Unlock, Capture, Doctor, Trendpilot, Chart, Offline).  
    - Tag/Release (z. B. `vNext-restructure`).
+- Im Cleanup weiterhin das „Neu zuerst, dann Entfernen“-Prinzip anwenden (z. B. `assets/` erst löschen, wenn GitHub Pages definitiv nur noch `app/` benötigt).
 
 ---
 
