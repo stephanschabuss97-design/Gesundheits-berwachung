@@ -30,6 +30,13 @@
     appModules.fetchDailyOverview ||
     appModules.vitals?.fetchDailyOverview;
 
+  if (!buildTrendWindow || !calcLatestDelta || !classifyTrendDelta || !TREND_PILOT_DEFAULTS || !fetchDailyOverview) {
+    console.error(
+      '[trendpilot] Missing dependencies: ensure trendpilot/data.js and fetchDailyOverview are loaded before trendpilot/index.js.'
+    );
+    return;
+  }
+
   const TREND_PILOT_FLAG = true;
 
   let lastStatus = null;
@@ -41,13 +48,6 @@
 
   appModules.trendpilot = Object.assign({}, appModules.trendpilot, trendpilotApi);
   global.runTrendpilotAnalysis = runTrendpilotAnalysis;
-
-  if (!buildTrendWindow || !calcLatestDelta || !classifyTrendDelta || !TREND_PILOT_DEFAULTS || !fetchDailyOverview) {
-    console.error(
-      '[trendpilot] Missing dependencies: ensure trendpilot/data.js and fetchDailyOverview are loaded before trendpilot/index.js.'
-    );
-    return;
-  }
 
   async function runTrendpilotAnalysis(dayIso) {
     if (!TREND_PILOT_FLAG) return { severity: 'info', reason: 'disabled' };
