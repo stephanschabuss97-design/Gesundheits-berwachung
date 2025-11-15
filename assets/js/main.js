@@ -1,4 +1,4 @@
-'use strict';
+ï»¿'use strict';
 /**
  * MODULE: assets/js/main.js
  * Description: Haupt-Bootstrapping und Orchestrierung des Monolith-Systems (Supabase, Capture, Doctor, UI)
@@ -15,13 +15,13 @@
  *  - Online Sync & Realtime Resume
  */
 
-// SUBMODULE: getSupabaseApi @internal - prüft SupabaseAPI-Verfügbarkeit und loggt fehlende Instanz
+// SUBMODULE: getSupabaseApi @internal - prÃ¼ft SupabaseAPI-VerfÃ¼gbarkeit und loggt fehlende Instanz
 let supabaseMissingLogged = false;
 const getSupabaseApi = () => {
   const api = window.SupabaseAPI;
   if (!api) {
     if (!supabaseMissingLogged) {
-      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe assets/js/supabase/index.js / Script-Reihenfolge.');
+      console.error('[BOOT] SupabaseAPI nicht geladen â€“ prÃ¼fe assets/js/supabase/index.js / Script-Reihenfolge.');
       supabaseMissingLogged = true;
     }
     return null;
@@ -32,7 +32,7 @@ const getSupabaseApi = () => {
 const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
 
-// SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
+// SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper fÃ¼r Supabase-Funktionsaufrufe
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
   const fn = getSupabaseApi()?.[name];
   if (typeof fn !== 'function') {
@@ -71,7 +71,7 @@ const getLockUi = () => {
   return typeof fn === 'function' ? fn : null;
 };
 
-// SUBMODULE: getAuthGuardState / setAuthPendingAfterUnlock @internal - verwaltet Auth-Zustände zwischen Unlock-Phasen
+// SUBMODULE: getAuthGuardState / setAuthPendingAfterUnlock @internal - verwaltet Auth-ZustÃ¤nde zwischen Unlock-Phasen
 const getAuthGuardState = () => {
   const state = getSupabaseApi()?.authGuardState;
   return state && typeof state === 'object' ? state : null;
@@ -86,7 +86,7 @@ const setAuthPendingAfterUnlock = (value) => {
 };
 const delay = (ms = 0) => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
 
-// SUBMODULE: waitForSupabaseApi @public - wartet auf Supabase-Initialisierung über Polling + Event
+// SUBMODULE: waitForSupabaseApi @public - wartet auf Supabase-Initialisierung Ã¼ber Polling + Event
 const waitForSupabaseApi = (() => {
   let pendingPromise = null;
   return ({ timeout = 6000, pollInterval = 25 } = {}) => {
@@ -1203,7 +1203,6 @@ if (saveBpPanelBtn){
     const btn = e.currentTarget;
     const ctxSel = document.getElementById('bpContextSel');
     const which = (ctxSel?.value === 'A') ? 'A' : 'M';
-    window.AppModules.bp.clearBpCommentWarnings();
     withBusy(btn, true);
     let savedOk = false;
     try{
@@ -1461,6 +1460,7 @@ if (!window.__bootDone) {
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
+
 
 
 

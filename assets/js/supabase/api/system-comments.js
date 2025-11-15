@@ -19,11 +19,7 @@ const diag =
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') return Promise.resolve(null);
-  try {
-    return Promise.resolve(fn(...args));
-  } catch (err) {
-    return Promise.reject(err);
-  }
+  return Promise.resolve(fn(...args));
 };
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,7 +35,7 @@ const resolveRestEndpoint = async () => {
   const base = baseUrlFromRest(restUrl);
   if (!base) {
     const err = new Error('system-comment: missing REST endpoint');
-    err.status = 401;
+    err.status = 500;
     throw err;
   }
   return `${base}/rest/v1/${TABLE_NAME}`;
@@ -62,13 +58,13 @@ export async function upsertSystemCommentRemote({ day, severity, metric = 'bp', 
   return await postSystemComment({ endpoint, userId, day, payload });
 }
 
-const buildPayload = ({ severity, metric, context, text }) => ({
+const buildPayload = ({ severity, metric, context = {}, text }) => ({
   metric,
   severity,
   ack: false,
   doctorStatus: 'none',
   text: text || defaultTextBySeverity[severity] || 'Trendpilot-Hinweis',
-  context: context || {}
+  context
 });
 
 const loadExistingComment = async ({ userId, day, metric }) => {
@@ -82,10 +78,10 @@ const loadExistingComment = async ({ userId, day, metric }) => {
         ['day', `eq.${day}`]
       ],
       order: 'ts.desc',
-      limit: 5
+      limit: 10
     });
     if (!Array.isArray(rows)) return null;
-    return rows.find((row) => (row?.payload?.metric || 'bp') === metric) || rows[0] || null;
+    return rows.find((row) => (row?.payload?.metric || 'bp') === metric) || null;
   } catch (err) {
     diag.add?.(`[system-comment] loadExisting failed: ${err?.message || err}`);
     return null;

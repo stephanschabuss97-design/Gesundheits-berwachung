@@ -59,20 +59,11 @@
     typeof global.TREND_PILOT_ENABLED === 'boolean' ? global.TREND_PILOT_ENABLED : undefined;
   const TREND_PILOT_FLAG = Boolean(configFlag ?? globalFlag ?? false);
 
-  let lastStatus = null;
-
-  const trendpilotApi = {
-    getLastTrendpilotStatus: () => lastStatus,
-    runTrendpilotAnalysis
-  };
-
-  appModules.trendpilot = Object.assign(appModules.trendpilot || {}, trendpilotApi);
-  global.runTrendpilotAnalysis = runTrendpilotAnalysis;
-
   function normalizeDayIso(value) {
     if (typeof value === 'string' && ISO_DAY_RE.test(value)) return value;
     return new Date().toISOString().slice(0, 10);
   }
+  let lastStatus = null;
 
   async function runTrendpilotAnalysis(dayIso) {
     const normalizedDay = normalizeDayIso(dayIso);
@@ -90,7 +81,7 @@
           : 8;
       if (weekly.length < minWeeks) {
         lastStatus = { severity: 'info', reason: 'not_enough_data', delta: null, day: normalizedDay };
-      toast('Trendpilot: Zu wenige Messwochen fuer Trendanalyse.');
+        toast('Trendpilot: Zu wenige Messwochen für Trendanalyse.');
         return lastStatus;
       }
       const delta = calcLatestDelta(weekly, baseline);
@@ -130,37 +121,60 @@
       const deltaDia = Number.isFinite(delta?.deltaDia) ? Math.round(delta.deltaDia) : 'n/a';
       const text =
         severity === 'critical'
-          ? 'Trendpilot: deutlicher Anstieg - aerztliche Abklaerung empfohlen.'
-          : 'Trendpilot: leichter Aufwaertstrend - bitte beobachten.';
+          ? 'Trendpilot: deutlicher Anstieg – ärztliche Abklärung empfohlen.'
+          : 'Trendpilot: leichter Aufwärtstrend – bitte beobachten.';
       if (!doc || !doc.body) {
-        toast(`${text} deltaSys=${deltaSys} mmHg / deltaDia=${deltaDia} mmHg`);
+        toast(`${text} Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`);
         resolve();
         return;
       }
       const overlay = doc.createElement('div');
-      overlay.style.cssText =
-        'position:fixed;inset:0;background:rgba(2,6,23,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      overlay.className = 'trendpilot-overlay';
       const card = doc.createElement('div');
-      card.style.cssText =
-        'background:#0f172a;padding:20px 24px;border-radius:14px;max-width:360px;color:#f1f5f9;box-shadow:0 24px 60px rgba(0,0,0,.65);font-size:15px;line-height:1.4;';
+      card.className = 'trendpilot-dialog';
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-modal', 'true');
       const msg = doc.createElement('div');
+      const msgId = 'trendpilotDialogMessage';
+      msg.id = msgId;
       msg.textContent = text;
       msg.style.marginBottom = '10px';
+      card.setAttribute('aria-labelledby', msgId);
       const deltas = doc.createElement('div');
-      deltas.textContent = `deltaSys=${deltaSys} mmHg / deltaDia=${deltaDia} mmHg`;
+      deltas.textContent = `Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`;
       deltas.style.marginBottom = '18px';
       deltas.style.opacity = '0.85';
       const btn = doc.createElement('button');
       btn.textContent = 'Okay';
-      btn.style.cssText =
-        'background:#2563eb;color:#f8fafc;border:none;border-radius:8px;padding:10px 18px;font-size:14px;cursor:pointer;';
-      btn.addEventListener('click', () => {
+      btn.type = 'button';
+      btn.className = 'trendpilot-dialog-btn';
+      const previousActive = doc.activeElement;
+      const previousOverflow = doc.body.style.overflow;
+      doc.body.style.overflow = 'hidden';
+      const closeDialog = () => {
+        doc.removeEventListener('keydown', onKeydown, true);
+        doc.body.style.overflow = previousOverflow;
         overlay.remove();
+        if (previousActive && typeof previousActive.focus === 'function') {
+          previousActive.focus();
+        }
         resolve();
-      });
+      };
+      const onKeydown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeDialog();
+        } else if (event.key === 'Tab') {
+          event.preventDefault();
+          btn.focus();
+        }
+      };
+      doc.addEventListener('keydown', onKeydown, true);
+      btn.addEventListener('click', closeDialog);
       card.append(msg, deltas, btn);
       overlay.appendChild(card);
       doc.body.appendChild(overlay);
+      setTimeout(() => btn.focus(), 0);
     });
   }
 
@@ -181,4 +195,12 @@
       diag.add?.(`[trendpilot] system_comment failed: ${err?.message || err}`);
     }
   }
+
+  const trendpilotApi = {
+    getLastTrendpilotStatus: () => lastStatus,
+    runTrendpilotAnalysis
+  };
+
+  appModules.trendpilot = Object.assign(appModules.trendpilot || {}, trendpilotApi);
+  global.runTrendpilotAnalysis = runTrendpilotAnalysis;
 })(typeof window !== 'undefined' ? window : globalThis);

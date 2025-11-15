@@ -19,10 +19,22 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
-   
-  function requiresBpComment() { return false; }
+  const BP_CONTEXTS = Object.freeze(['M','A']);
+
+  function requiresBpComment(which) {
+    const ctx = which === 'A' ? 'A' : 'M';
+    const sys = Number($(bpSelector('sys', ctx))?.value);
+    const dia = Number($(bpSelector('dia', ctx))?.value);
+    const el = document.getElementById(ctx === 'M' ? 'bpCommentM' : 'bpCommentA');
+    const comment = (el?.value || "").trim();
+    const sysHigh = Number.isFinite(sys) && sys > 130;
+    const diaHigh = Number.isFinite(dia) && dia > 90;
+    if (!sysHigh && !diaHigh) return false;
+    return comment.length === 0;
+  }
+
   function clearBpCommentWarnings() {
-    ['M','A'].forEach(which => {
+    BP_CONTEXTS.forEach(which => {
       const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
       if (el) {
         el.style.outline = "";
@@ -50,7 +62,7 @@
       const el = document.getElementById(bpFieldId(id, ctx));
       if (el) el.value = '';
     });
-    try { clearBpCommentWarnings?.(); } catch(_){}
+    clearBpCommentWarnings();
     if (focus) {
       const target = document.getElementById(bpFieldId('sys', ctx));
       if (target) target.focus();
