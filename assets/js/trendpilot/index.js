@@ -20,12 +20,22 @@
 
   const toast = global.toast || appModules.ui?.toast || ((msg) => alert(msg));
 
-  const {
-    buildTrendWindow,
-    calcLatestDelta,
-    classifyTrendDelta,
-    TREND_PILOT_DEFAULTS
-  } = appModules.trendpilot || {};
+  const tpData = appModules.trendpilot || {};
+  const buildTrendWindow = tpData.buildTrendWindow;
+  const calcLatestDelta = tpData.calcLatestDelta;
+  const classifyTrendDelta = tpData.classifyTrendDelta;
+  const TREND_PILOT_DEFAULTS = tpData.TREND_PILOT_DEFAULTS;
+  const fetchDailyOverview =
+    global.fetchDailyOverview ||
+    appModules.fetchDailyOverview ||
+    appModules.vitals?.fetchDailyOverview;
+
+  if (!buildTrendWindow || !calcLatestDelta || !classifyTrendDelta || !TREND_PILOT_DEFAULTS || !fetchDailyOverview) {
+    console.error(
+      '[trendpilot] Missing dependencies: ensure trendpilot/data.js and fetchDailyOverview are loaded before trendpilot/index.js.'
+    );
+    return;
+  }
 
   const TREND_PILOT_FLAG = true;
 
@@ -62,7 +72,8 @@
     } catch (err) {
       diag.add?.(`[trendpilot] analysis failed: ${err?.message || err}`);
       console.error('Trendpilot analysis failed', err);
-      return { severity: 'info', reason: 'error' };
+      lastStatus = { severity: 'info', reason: 'error', delta: null, day: dayIso || null };
+      return lastStatus;
     }
   }
 
