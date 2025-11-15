@@ -60,8 +60,7 @@
     TREND_PILOT_DEFAULTS &&
     typeof fetchDailyOverview === 'function' &&
     typeof upsertSystemCommentRemote === 'function' &&
-    typeof setSystemCommentAck === 'function' &&
-    typeof fetchSystemCommentsRange === 'function';
+    typeof setSystemCommentAck === 'function';
 
   if (!hasDependencies) {
     if (!dependencyWarned) {
