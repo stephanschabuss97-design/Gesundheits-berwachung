@@ -28,9 +28,13 @@
     throw new Error(`Invalid BP context "${ctx}"`);
   };
 
+const getCommentElementUnsafe = (normalizedCtx) => {
+  return document.getElementById(bpFieldId('bpComment', normalizedCtx));
+};
+
   const getCommentElement = (ctx) => {
     const normalized = normalizeContext(ctx);
-    return document.getElementById(bpFieldId('bpComment', normalized));
+    return getCommentElementUnsafe(normalized);
   };
 
   function requiresBpComment(which) {
