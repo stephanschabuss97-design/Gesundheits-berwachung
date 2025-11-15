@@ -53,33 +53,51 @@ export async function upsertSystemCommentRemote({ day, severity, metric = 'bp', 
 
   const endpoint = await resolveRestEndpoint();
   const existing = await loadExistingComment({ userId, day, metric });
-  const payload = buildPayload({ severity, metric, context, text });
+  const built = buildPayload({ severity, metric, context, text, existing });
 
   if (existing) {
-    return await patchSystemComment({ endpoint, id: existing.id, payload });
+    return await patchSystemComment({
+      endpoint,
+      id: existing.id,
+      payload: built.payload,
+      ack: built.ack,
+      doctorStatus: built.doctorStatus
+    });
   }
-  return await postSystemComment({ endpoint, userId, day, payload });
+  return await postSystemComment({
+    endpoint,
+    userId,
+    day,
+    payload: built.payload,
+    ack: built.ack,
+    doctorStatus: built.doctorStatus
+  });
 }
 
-const buildPayload = ({ severity, metric, context = {}, text }) => ({
-  metric,
-  severity,
-  ack: false,
-  doctorStatus: 'none',
-  text: text || defaultTextBySeverity[severity] || 'Trendpilot-Hinweis',
-  context
-});
+const buildPayload = ({ severity, metric, context = {}, text, existing }) => {
+  const payload = {
+    metric,
+    severity,
+    text: text || defaultTextBySeverity[severity] || 'Trendpilot-Hinweis',
+    context
+  };
+  return {
+    payload,
+    ack: existing?.ack ?? false,
+    doctorStatus: existing?.doctorStatus ?? 'none'
+  };
+};
 
 const loadExistingComment = async ({ userId, day, metric }) => {
   try {
     const rows = await sbSelect({
       table: TABLE_NAME,
-      select: 'id,payload',
+      select: 'id,payload,ack,doctorStatus',
       filters: [
         ['user_id', `eq.${userId}`],
         ['type', 'eq.system_comment'],
         ['day', `eq.${day}`],
-+       ['payload->metric', `eq.${metric}`]
+        ['payload->>metric', `eq.${metric}`]
       ],
       order: 'ts.desc',
       limit: 1
@@ -92,7 +110,7 @@ const loadExistingComment = async ({ userId, day, metric }) => {
   }
 };
 
-const postSystemComment = async ({ endpoint, userId, day, payload }) => {
+const postSystemComment = async ({ endpoint, userId, day, payload, ack, doctorStatus }) => {
   const res = await fetchWithAuth(
     (headers) =>
       fetch(endpoint, {
@@ -102,7 +120,9 @@ const postSystemComment = async ({ endpoint, userId, day, payload }) => {
           user_id: userId,
           day,
           type: 'system_comment',
-          payload
+          payload,
+          ack,
+          doctorStatus
         })
       }),
     { tag: 'systemComment:post', maxAttempts: 2 }
@@ -115,14 +135,14 @@ const postSystemComment = async ({ endpoint, userId, day, payload }) => {
   return { id: data?.[0]?.id ?? null, mode: 'insert' };
 };
 
-const patchSystemComment = async ({ endpoint, id, payload }) => {
+const patchSystemComment = async ({ endpoint, id, payload, ack, doctorStatus }) => {
   const url = `${endpoint}?id=eq.${encodeURIComponent(id)}`;
   const res = await fetchWithAuth(
     (headers) =>
       fetch(url, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload, ack: false, type: 'system_comment' })
+        body: JSON.stringify({ payload, ack, doctorStatus })
       }),
     { tag: 'systemComment:patch', maxAttempts: 2 }
   );

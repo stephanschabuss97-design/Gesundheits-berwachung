@@ -119,7 +119,7 @@
       try {
         await global.refreshCaptureIntake?.();
         global.resetCapturePanels?.();
-        global.AppModules?.bp?.clearBpCommentWarnings?.();
+        global.AppModules?.bp?.updateBpCommentWarnings?.();
       } catch (err) {
         console.warn('[uiTabs:setTab] Capture refresh failed:', err);
       }
@@ -175,3 +175,4 @@
     }
   });
 })(window);
+

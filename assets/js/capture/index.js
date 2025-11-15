@@ -605,7 +605,7 @@
     document.querySelectorAll('.bp-pane').forEach(pane => {
       pane.classList.toggle('active', pane.dataset.context === 'M');
     });
-    window.AppModules?.bp?.clearBpCommentWarnings?.();
+    window.AppModules?.bp?.updateBpCommentWarnings?.();
     if (focus) {
       const first = document.getElementById('captureAmount');
       if (first) first.focus();
@@ -654,3 +654,4 @@
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
+

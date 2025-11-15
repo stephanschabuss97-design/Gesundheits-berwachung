@@ -4,7 +4,7 @@
  * Description: Verwaltet Blutdruck-Erfassung, Validierung und Persistierung inkl. Kommentar-Pflicht, Panel-Reset und Datensynchronisation.
  * Submodules:
  *  - requiresBpComment (public, Kommentar-Pflichtprüfung)
- *  - clearBpCommentWarnings (public, UI-Hinweislogik)
+ *  - updateBpCommentWarnings (public, UI-Hinweislogik)
  *  - bpFieldId / bpSelector (internal, ID-Mapping)
  *  - resetBpPanel (public, Panel-Reset)
  *  - blockHasData (internal, Eingabe-Erkennung)
@@ -28,7 +28,10 @@
     throw new Error(`Invalid BP context "${ctx}"`);
   };
 
-  const getCommentElement = (ctx) => document.getElementById(bpFieldId('bpComment', normalizeContext(ctx)));
+  const getCommentElement = (ctx) => {
+    const normalized = normalizeContext(ctx);
+    return document.getElementById(bpFieldId('bpComment', normalized));
+  };
 
   function requiresBpComment(which) {
     let ctx;
@@ -47,10 +50,20 @@
     return comment.length === 0;
   }
 
-  function clearBpCommentWarnings() {
+  function updateBpCommentWarnings() {
     BP_CONTEXTS.forEach(which => {
+      let needs = false;
+      try {
+        needs = requiresBpComment(which);
+      } catch (_) {
+        needs = false;
+      }
       const el = getCommentElement(which);
-      if (el) {
+      if (!el) return;
+      if (needs) {
+        el.style.outline = "2px solid var(--danger)";
+        el.setAttribute("aria-invalid", "true");
+      } else {
         el.style.outline = "";
         el.removeAttribute("aria-invalid");
       }
@@ -71,12 +84,17 @@
   // SUBMODULE: resetBpPanel @internal - clears BP inputs per context
   function resetBpPanel(which, opts = {}) {
     const { focus = true } = opts;
-    const ctx = which === 'A' ? 'A' : 'M';
+    let ctx;
+    try {
+      ctx = normalizeContext(which);
+    } catch (_) {
+      ctx = 'M';
+    }
     ['sys','dia','pulse','bpComment'].forEach(id => {
       const el = document.getElementById(bpFieldId(id, ctx));
       if (el) el.value = '';
     });
-    clearBpCommentWarnings();
+    updateBpCommentWarnings();
     if (focus) {
       const target = document.getElementById(bpFieldId('sys', ctx));
       if (target) target.focus();
@@ -85,7 +103,12 @@
 
   // SUBMODULE: blockHasData @internal - detects if BP panel has any input before saving
   function blockHasData(which){
-    const ctx = normalizeContext(which);
+    let ctx;
+    try {
+      ctx = normalizeContext(which);
+    } catch (_) {
+      return false;
+    }
     const getVal = (sel) => document.querySelector(sel)?.value?.trim();
     const sys = getVal(bpSelector('sys', ctx));
     const dia = getVal(`#dia${ctx}`);
@@ -137,7 +160,7 @@
     try {
       await appendNote(date, ctx === 'M' ? '[Morgens] ' : '[Abends] ', comment);
       if (commentEl) commentEl.value = '';
-      clearBpCommentWarnings();
+      updateBpCommentWarnings();
     } catch(err) {
       diag.add?.('BP-Kommentar Fehler: ' + (err?.message || err));
     }
@@ -193,7 +216,7 @@
 // SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden unter AppModules.bp
   const bpApi = {
     requiresBpComment: requiresBpComment,
-    clearBpCommentWarnings: clearBpCommentWarnings,
+    updateBpCommentWarnings: updateBpCommentWarnings,
     bpFieldId: bpFieldId,
     bpSelector: bpSelector,
     resetBpPanel: resetBpPanel,
