@@ -34,14 +34,12 @@
     return false;
   };
 
-  const configApi = {
-    DEV_ALLOW_DEFAULTS,
-    get TREND_PILOT_ENABLED() {
-      return readTrendPilotFlag();
-    }
-  };
+  const TREND_PILOT_ENABLED = readTrendPilotFlag();
 
-  Object.freeze(configApi);
+  const configApi = Object.freeze({
+    DEV_ALLOW_DEFAULTS,
+    TREND_PILOT_ENABLED
+  });
 
   global.AppModules = global.AppModules || {};
   global.AppModules.config = configApi;

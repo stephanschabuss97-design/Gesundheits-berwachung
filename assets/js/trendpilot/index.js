@@ -155,8 +155,12 @@
         doc.removeEventListener('keydown', onKeydown, true);
         doc.body.style.overflow = previousOverflow;
         overlay.remove();
-        if (previousActive && typeof previousActive.focus === 'function') {
-          previousActive.focus();
+        if (previousActive && typeof previousActive.focus === 'function' && doc.contains(previousActive)) {
+          try {
+            previousActive.focus();
+          } catch (_) {
+            /* ignore */
+          }
         }
         resolve();
       };
