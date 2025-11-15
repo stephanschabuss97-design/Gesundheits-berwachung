@@ -207,14 +207,34 @@
   }
 
   function buildTrendWindow(days = [], options = {}) {
-    const cfg = { ...TREND_PILOT_DEFAULTS, ...options };
-    const cutoff = cfg.windowDays ? days.filter((d) => d?.date).filter((entry) => {
-      if (!entry?.date) return false;
-      const targetTs = Date.parse(`${entry.date}T00:00:00`);
-      if (!Number.isFinite(targetTs)) return false;
-      const windowStart = Date.now() - cfg.windowDays * 86400000;
-      return targetTs >= windowStart;
-    }) : days;
+    const cfg = {
+      windowDays: options?.windowDays ?? TREND_PILOT_DEFAULTS.windowDays,
+      minWeeks: options?.minWeeks ?? TREND_PILOT_DEFAULTS.minWeeks,
+      baselineWeeks: options?.baselineWeeks ?? TREND_PILOT_DEFAULTS.baselineWeeks,
+      hysteresisWeeks: {
+        ...TREND_PILOT_DEFAULTS.hysteresisWeeks,
+        ...(options?.hysteresisWeeks || {})
+      },
+      thresholds: {
+        warning: {
+          ...TREND_PILOT_DEFAULTS.thresholds.warning,
+          ...(options?.thresholds?.warning || {})
+        },
+        critical: {
+          ...TREND_PILOT_DEFAULTS.thresholds.critical,
+          ...(options?.thresholds?.critical || {})
+        }
+      }
+    };
+    const cutoff = cfg.windowDays
+      ? days.filter((entry) => {
+          if (!entry?.date) return false;
+          const targetTs = Date.parse(`${entry.date}T00:00:00`);
+          if (!Number.isFinite(targetTs)) return false;
+          const windowStart = Date.now() - cfg.windowDays * 86400000;
+          return targetTs >= windowStart;
+        })
+      : days;
     const daily = computeDailyBpStats(cutoff);
     const weekly = groupDailyStatsByWeek(daily);
     const baseline = calcMovingBaseline(weekly, cfg.baselineWeeks);
