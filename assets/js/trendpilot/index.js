@@ -80,8 +80,9 @@
 
   if (missingDeps.length) {
     if (!dependencyWarned) {
+      const supaKeys = Object.keys(supabaseApi || {});
       console.warn(
-        `[trendpilot] Dependencies missing; waiting: ${missingDeps.join(', ')}`
+        `[trendpilot] Dependencies missing; waiting: ${missingDeps.join(', ')}; SupabaseAPI keys=${supaKeys.join(', ')}`
       );
       dependencyWarned = true;
     }
