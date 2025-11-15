@@ -51,7 +51,7 @@
     return;
   }
 
-  const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const ISO_DAY_RE = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
   const config = appModules.config || {};
   const configFlag =
     typeof config.TREND_PILOT_ENABLED === 'boolean' ? config.TREND_PILOT_ENABLED : undefined;
@@ -60,8 +60,22 @@
   const TREND_PILOT_FLAG = Boolean(configFlag ?? globalFlag ?? false);
 
   function normalizeDayIso(value) {
-    if (typeof value === 'string' && ISO_DAY_RE.test(value)) return value;
-    return new Date().toISOString().slice(0, 10);
+    const fallback = new Date().toISOString().slice(0, 10);
+    if (typeof value !== 'string') return fallback;
+    const match = ISO_DAY_RE.exec(value);
+    if (!match) return fallback;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month - 1 &&
+      parsed.getUTCDate() === day
+    ) {
+      return match[0];
+    }
+    return fallback;
   }
   let lastStatus = null;
 
@@ -110,8 +124,30 @@
     const start = new Date(`${end}T00:00:00Z`);
     start.setUTCDate(start.getUTCDate() - (TREND_PILOT_DEFAULTS.windowDays || 180));
     const fromIso = start.toISOString().slice(0, 10);
-    const days = await fetchDailyOverview(fromIso, end);
+    const timeoutMs = TREND_PILOT_DEFAULTS.fetchTimeoutMs || 6000;
+    const days = await withTimeout(
+      fetchDailyOverview(fromIso, end),
+      timeoutMs,
+      'Trendpilot fetch timed out'
+    );
     return buildTrendWindow(days, TREND_PILOT_DEFAULTS);
+  }
+
+  function withTimeout(promise, timeoutMs, message) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(message || 'Operation timed out'));
+      }, timeoutMs);
+      promise
+        .then((val) => {
+          clearTimeout(timer);
+          resolve(val);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
   }
 
   function showSeverityDialog(severity, delta) {
@@ -135,24 +171,24 @@
       card.setAttribute('role', 'dialog');
       card.setAttribute('aria-modal', 'true');
       const msg = doc.createElement('div');
+      msg.className = 'trendpilot-dialog-message';
       const msgId = 'trendpilotDialogMessage';
       msg.id = msgId;
       msg.textContent = text;
-      msg.style.marginBottom = '10px';
       card.setAttribute('aria-labelledby', msgId);
       const deltas = doc.createElement('div');
+      deltas.className = 'trendpilot-dialog-deltas';
       deltas.textContent = `Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`;
-      deltas.style.marginBottom = '18px';
-      deltas.style.opacity = '0.85';
       const btn = doc.createElement('button');
       btn.textContent = 'Okay';
       btn.type = 'button';
-      btn.className = 'trendpilot-dialog-btn';
+      btn.className = 'btn primary trendpilot-dialog-btn';
       const previousActive = doc.activeElement;
       const previousOverflow = doc.body.style.overflow;
-      doc.body.style.overflow = 'hidden';
+      doc.body.classList.add('trendpilot-lock');
       const closeDialog = () => {
         doc.removeEventListener('keydown', onKeydown, true);
+        doc.body.classList.remove('trendpilot-lock');
         doc.body.style.overflow = previousOverflow;
         overlay.remove();
         if (previousActive && typeof previousActive.focus === 'function' && doc.contains(previousActive)) {
@@ -170,10 +206,15 @@
           closeDialog();
         } else if (event.key === 'Tab') {
           event.preventDefault();
+          // Single focusable element - Tab and Shift+Tab both focus button
           btn.focus();
         }
       };
       doc.addEventListener('keydown', onKeydown, true);
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closeDialog();
+      });
+      card.addEventListener('click', (event) => event.stopPropagation());
       btn.addEventListener('click', closeDialog);
       card.append(msg, deltas, btn);
       overlay.appendChild(card);

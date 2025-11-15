@@ -119,7 +119,7 @@
       try {
         await global.refreshCaptureIntake?.();
         global.resetCapturePanels?.();
-        global.clearBpCommentWarnings?.();
+        global.AppModules?.bp?.clearBpCommentWarnings?.();
       } catch (err) {
         console.warn('[uiTabs:setTab] Capture refresh failed:', err);
       }

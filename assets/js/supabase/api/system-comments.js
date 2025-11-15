@@ -19,7 +19,11 @@ const diag =
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
   if (typeof fn !== 'function') return Promise.resolve(null);
-  return Promise.resolve(fn(...args));
+  try {
+    return Promise.resolve(fn(...args));
+  } catch (err) {
+    return Promise.reject(err);
+  }
 };
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -52,8 +56,7 @@ export async function upsertSystemCommentRemote({ day, severity, metric = 'bp', 
   const payload = buildPayload({ severity, metric, context, text });
 
   if (existing) {
-    await patchSystemComment({ endpoint, id: existing.id, payload });
-    return { id: existing.id, mode: 'patch' };
+    return await patchSystemComment({ endpoint, id: existing.id, payload });
   }
   return await postSystemComment({ endpoint, userId, day, payload });
 }
@@ -75,13 +78,14 @@ const loadExistingComment = async ({ userId, day, metric }) => {
       filters: [
         ['user_id', `eq.${userId}`],
         ['type', 'eq.system_comment'],
-        ['day', `eq.${day}`]
+        ['day', `eq.${day}`],
++       ['payload->metric', `eq.${metric}`]
       ],
       order: 'ts.desc',
-      limit: 10
+      limit: 1
     });
     if (!Array.isArray(rows)) return null;
-    return rows.find((row) => (row?.payload?.metric || 'bp') === metric) || null;
+    return rows[0] || null;
   } catch (err) {
     diag.add?.(`[system-comment] loadExisting failed: ${err?.message || err}`);
     return null;
@@ -126,6 +130,7 @@ const patchSystemComment = async ({ endpoint, id, payload }) => {
     const msg = await safeErrorMessage(res);
     throw new Error(`system-comment patch failed ${res.status} ${msg}`);
   }
+  return { id, mode: 'patch' };
 };
 
 const safeErrorMessage = async (res) => {

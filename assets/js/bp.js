@@ -20,22 +20,36 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   const BP_CONTEXTS = Object.freeze(['M','A']);
+  const BP_SYS_THRESHOLD = 130;
+  const BP_DIA_THRESHOLD = 90;
+
+  const normalizeContext = (ctx) => {
+    if (ctx === 'A' || ctx === 'M') return ctx;
+    throw new Error(`Invalid BP context "${ctx}"`);
+  };
+
+  const getCommentElement = (ctx) => document.getElementById(bpFieldId('bpComment', ctx));
 
   function requiresBpComment(which) {
-    const ctx = which === 'A' ? 'A' : 'M';
+    let ctx;
+    try {
+      ctx = normalizeContext(which);
+    } catch (_) {
+      return false;
+    }
     const sys = Number($(bpSelector('sys', ctx))?.value);
     const dia = Number($(bpSelector('dia', ctx))?.value);
-    const el = document.getElementById(ctx === 'M' ? 'bpCommentM' : 'bpCommentA');
+    const el = getCommentElement(ctx);
     const comment = (el?.value || "").trim();
-    const sysHigh = Number.isFinite(sys) && sys > 130;
-    const diaHigh = Number.isFinite(dia) && dia > 90;
+    const sysHigh = Number.isFinite(sys) && sys > BP_SYS_THRESHOLD;
+    const diaHigh = Number.isFinite(dia) && dia > BP_DIA_THRESHOLD;
     if (!sysHigh && !diaHigh) return false;
     return comment.length === 0;
   }
 
   function clearBpCommentWarnings() {
     BP_CONTEXTS.forEach(which => {
-      const el = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+      const el = getCommentElement(which);
       if (el) {
         el.style.outline = "";
         el.removeAttribute("aria-invalid");
@@ -75,7 +89,7 @@
     const sys = getVal(bpSelector('sys', which));
     const dia = getVal(`#dia${which}`);
     const pulse = getVal(`#pulse${which}`);
-    const commentEl = document.getElementById(which === "M" ? "bpCommentM" : "bpCommentA");
+    const commentEl = getCommentElement(which);
     const comment = (commentEl?.value || "").trim();
     return !!(sys || dia || pulse || comment);
   }

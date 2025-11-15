@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /**
  * MODULE: assets/js/main.js
  * Description: Haupt-Bootstrapping und Orchestrierung des Monolith-Systems (Supabase, Capture, Doctor, UI)
@@ -976,7 +976,7 @@ function maybeAutoApplyBpContext({ force = false, source = '' } = {}){
 
   select.value = desired;
   applyBpContext(desired);
-  clearBpCommentWarnings?.();
+  window.AppModules.bp.clearBpCommentWarnings?.();
   diag.add?.(`bp:auto (${source || 'auto'}) -> ${desired}`);
 }
 
@@ -1132,7 +1132,7 @@ prepareIntakeStatusHeader();
 $("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
 $("#to").value = todayIso;
 setTab("capture");
-try{ window.AppModules.capture.resetCapturePanels(); clearBpCommentWarnings?.(); }catch(_){ }
+try{ window.AppModules.capture.resetCapturePanels(); window.AppModules.bp.clearBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
 if (sbClient) watchAuthState()
@@ -1170,9 +1170,9 @@ if (!savedUrl || !savedKey) {
 // === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
 ['#captureAmount','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
   const el = $(sel); if(!el) return;
-  el.addEventListener('input', clearBpCommentWarnings);
+  el.addEventListener('input', () => window.AppModules.bp.clearBpCommentWarnings?.());
 });
-window.AppModules.bp.clearBpCommentWarnings();
+window.AppModules.bp.clearBpCommentWarnings?.();
 
 
 // Toggle-Handler
@@ -1184,7 +1184,7 @@ if (bpContextSel){
   bpContextSel.addEventListener('change', (e)=>{
     AppModules.captureGlobals.setBpUserOverride(true);
     applyBpContext(e.target.value);
-    window.AppModules.bp.clearBpCommentWarnings();
+    window.AppModules.bp.clearBpCommentWarnings?.();
   });
 }
 
@@ -1222,7 +1222,7 @@ if (saveBpPanelBtn){
       withBusy(btn, false);
     }
     if (savedOk){
-      window.AppModules.bp.clearBpCommentWarnings();
+      window.AppModules.bp.clearBpCommentWarnings?.();
       window.AppModules.bp.resetBpPanel(which);
       flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
     }
@@ -1278,7 +1278,7 @@ const dateEl = document.getElementById('date');
         // was du beim Datum aendern haben willst:
         await window.AppModules.capture.refreshCaptureIntake();
         window.AppModules.capture.resetCapturePanels();
-        clearBpCommentWarnings?.();
+        window.AppModules.bp.clearBpCommentWarnings?.();
         await window.AppModules.body.prefillBodyInputs();
       } catch(_) {}
     });
@@ -1460,6 +1460,8 @@ if (!window.__bootDone) {
 - Realtime-Events: INSERT/UPDATE ? upsert, DELETE ? lokal entfernen.
 - UI-Refresh: Arzt-Ansicht sofort; Charts nur, wenn Panel offen.
 === */
+
+
 
 
 
