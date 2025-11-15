@@ -8,6 +8,8 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let trendpilotInitialized = false;
+  let dependencyWarned = false;
+
   const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
 
   const initTrendpilot = () => {
@@ -21,7 +23,6 @@
     { add() {} };
 
   const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[trendpilot]', msg));
-  let dependencyWarned = false;
 
   const stubApi = {
     getLastTrendpilotStatus: () => null,
@@ -36,29 +37,31 @@
   const calcLatestDelta = tpData.calcLatestDelta;
   const classifyTrendDelta = tpData.classifyTrendDelta;
   const TREND_PILOT_DEFAULTS = tpData.TREND_PILOT_DEFAULTS;
-  const fetchDailyOverview =
-    global.fetchDailyOverview ||
-    appModules.fetchDailyOverview ||
-    appModules.vitals?.fetchDailyOverview;
   const grabTrendpilotDeps = () => {
     const supabaseApi = getSupabaseApi();
     return {
       supabaseApi,
+      fetchDailyOverview: supabaseApi.fetchDailyOverview || global.fetchDailyOverview,
       upsertSystemCommentRemote: supabaseApi.upsertSystemCommentRemote,
       setSystemCommentAck: supabaseApi.setSystemCommentAck,
       fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange
     };
   };
 
-  const { supabaseApi, upsertSystemCommentRemote, setSystemCommentAck, fetchSystemCommentsRange } =
-    grabTrendpilotDeps();
+  const {
+    supabaseApi,
+    fetchDailyOverview: fetchDailyOverviewFn,
+    upsertSystemCommentRemote,
+    setSystemCommentAck,
+    fetchSystemCommentsRange
+  } = grabTrendpilotDeps();
 
   const hasDependencies =
     typeof buildTrendWindow === 'function' &&
     typeof calcLatestDelta === 'function' &&
     typeof classifyTrendDelta === 'function' &&
     TREND_PILOT_DEFAULTS &&
-    typeof fetchDailyOverview === 'function' &&
+    typeof fetchDailyOverviewFn === 'function' &&
     typeof upsertSystemCommentRemote === 'function' &&
     typeof setSystemCommentAck === 'function';
 
@@ -157,7 +160,7 @@
     const fromIso = start.toISOString().slice(0, 10);
     const timeoutMs = TREND_PILOT_DEFAULTS.fetchTimeoutMs || 6000;
     const days = await withTimeout(
-      fetchDailyOverview(fromIso, end),
+      fetchDailyOverviewFn(fromIso, end),
       timeoutMs,
       'Trendpilot fetch timed out'
     );
