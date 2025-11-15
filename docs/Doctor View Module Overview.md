@@ -1,0 +1,103 @@
+# Doctor View Module – Functional Overview
+
+Dieses Dokument beschreibt die Arzt-Ansicht (Doktor-Tab) im Gesundheits-Logger. Ziel ist eine vollständige Referenz über UI-Struktur, Datenflüsse, Supabase-Abhängigkeiten sowie Diagnose- und Sicherheitsmechanismen.
+
+---
+
+## 1. Zielsetzung & Funktionen
+
+Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Aktionen für Ärzt:innen oder Patienten im „Doctor“-Modus. Kerneigenschaften:
+
+- Zeitraumfilter (Von/Bis) mit Anbindung an Supabase `fetchDailyOverview`.
+- Darstellung aller Tage (Blutdruck Morgen/Abend, Puls, MAP, Körperwerte, Notizen).
+- Trendpilot-Hinweisblock (Severity, Ack, Arztstatus samt Buttons).
+- JSON-Export und Remote-Löschen einzelner Tage.
+- Integration mit Chart-Panel (`Werte anzeigen`).
+- Zugriffsschutz via Doctor-Unlock (Finger/PIN).
+
+---
+
+## 2. Kernkomponenten & Dateien
+
+| Datei | Zweck |
+|-------|-------|
+| `assets/js/doctor/index.js` | Hauptlogik: Rendern, Scroll-Restore, Trendpilot-Block, Delete/Export, Chart-Button. |
+| `assets/css/doctor.css` | Layout/Stil (Toolbar, Badge, Trendpilot-Karten, Tagesgrid). |
+| `assets/js/main.js` | Bindet Tab-Wechsel, Unlock-Flow, `requestUiRefresh({ doctor: true })`. |
+| `assets/js/supabase/api/vitals.js` & `api/system-comments.js` | REST-Fetch für Tageswerte und Trendpilot-Kommentare. |
+| `assets/js/trendpilot/index.js` | Liefert `trendpilot:latest` Events, Ack-Patching etc. |
+| `assets/js/charts/index.js` | Chart-Button nutzt das gleiche Range, um Diagramm zu öffnen. |
+| `docs/QA_CHECKS.md` | Enthält Tests (Unlock, Trendpilot-Block, Delete, Chart). |
+
+---
+
+## 3. Ablauf / Datenfluss
+
+### 3.1 Unlock & Setup
+
+1. Beim Tab-Wechsel zu „Arzt-Ansicht“ (`setTab('doctor')`) prüft `requireDoctorUnlock`. Ohne Freigabe bleibt Ansicht verborgen.
+2. Nach Unlock ruft `requestUiRefresh({ doctor: true })` die Renderlogik.
+
+### 3.2 Render (`renderDoctor`)
+
+1. Liest `from/to` Felder, validiert sie (sonst Placeholder „Bitte Zeitraum wählen“).
+2. Ruft `fetchDailyOverview(from, to)` → Supabase `v_events_bp`, `v_events_body`, `notes`.
+3. Sortiert Tage absteigend, mappt in DOM-Blöcke:
+   - Datum + Cloud/Actions (Löschen).
+   - Messgrid (Sys/Dia/Puls/MAP morgens/abends, rot markiert bei Schwellen).
+   - Körperwerte (Gewicht/Bauchumfang) & Notizen.
+
+4. Scroll-Restore: Merkt Scroll-Position (`__doctorScrollSnapshot`), setzt sie nach Render zurück.
+
+### 3.3 Aktionen
+
+- **Löschen:** Button `data-del-day` ruft `deleteRemoteDay(date)` (Supabase RPC) → anschl. `requestUiRefresh`.
+- **JSON-Export:** `exportDoctorJson()` ruft `getAllEntries()` (lokal) und lädt `gesundheitslog.json` herunter.
+- **Chart-Button:** `#doctorChartBtn` öffnet Chart-Panel, nutzt dieselben Range-Felder.
+
+### 3.4 Trendpilot-Hinweise
+
+1. `loadTrendpilotEntries(from, to)` ruft `fetchSystemCommentsRange`.
+2. Trendpilot-Sektion zeigt jede Meldung (Datum, Severity-Badge, Ack-Status, Text, Buttons).
+3. Buttons patchen `doctorStatus` via `setSystemCommentDoctorStatus`.
+4. Ack-Status wird aus `payload.context.ack` gelesen; falls acked, Pill `is-ack`.
+5. Fehler beim Laden loggt `logDoctorError('[doctor] trendpilot fetch failed ...')` + Touch-Log.
+
+---
+
+## 4. Styling / Layout (Kurz)
+
+- Toolbar: Titel, Range, Buttons (Apply, Chart, Export).
+- Trendpilot-Block (`.doctor-trendpilot`): Card mit Head + List; List → `.tp-row` pro Eintrag.
+- Tagescards (`.doctor-day`): Grid (Datum / Messungen / Spezial).
+- Badge/Buttons nutzen App-Design-Token (`var(--color-...)`).
+
+---
+
+## 5. Diagnose & Logging
+
+- `logDoctorError` schreibt Fehler in `diag` + Konsole (z. B. Supabase 400/401).
+- Touch-Log-Einträge (`[doctor] ...`, `[sbSelect] ... failed`) zeigen REST-Probleme.
+- Unlock-Warnungen: `[doctor] requireDoctorUnlock missing` etc., falls Guard nicht konfiguriert.
+- Trendpilot-Button-Fehler (Patch) werden als `alert` + diag gemeldet.
+
+---
+
+## 6. Speicherfluss & Abhängigkeiten
+
+1. `main.js` orchestriert Unlock, Tab, Refresh.
+2. `doctor/index.js` ruft Supabase APIs (Vitals, System-Comments).
+3. `trendpilot/index.js` sorgt dafür, dass `fetchSystemCommentsRange`/`setSystemCommentAck`/`setSystemCommentDoctorStatus` bereitstehen; Capture-Hook sendet `trendpilot:latest`, was an die Arzt-Ansicht weitergegeben wird.
+4. Chart-Benutzung (gleicher Zeitraum) -> `assets/js/charts/index.js`.
+
+---
+
+## 7. Erweiterungsvorschläge
+
+- Filter auf Serien (nur Morgen/Abend, nur Tage mit Kommentaren).
+- Bulk-Aktionen (alle acken, CSV-Export) oder Tagging.
+- Medikation / Symptome Spalten, falls Supabase-Datenmodell erweitert wird.
+
+---
+
+Aktualisiere dieses Dokument bei Änderungen (z. B. weitere Buttons, neue Felder oder Supabase-Integrationen), damit alle Beteiligten denselben Wissenstand haben.
