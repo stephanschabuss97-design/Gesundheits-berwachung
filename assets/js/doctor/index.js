@@ -16,6 +16,19 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
+  const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
+  const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[doctor]', msg));
+  const escapeAttr = (value = '') =>
+    String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+  const TRENDPILOT_SEVERITY_META = {
+    warning: { label: 'Warnung', className: 'is-warning' },
+    critical: { label: 'Kritisch', className: 'is-critical' }
+  };
+  const TRENDPILOT_STATUS_LABELS = {
+    none: 'Kein Arzt-Status',
+    planned: 'Arztabklärung geplant',
+    done: 'Arztabklärung erledigt'
+  };
 
   // SUBMODULE: access-control @internal - Unlock- und Authentifizierungslogik
   const fallbackRequireDoctorUnlock = async () => {
@@ -50,6 +63,119 @@
       console.error(`[doctor] ${msg}`);
     }
   };
+
+  const resolveTrendpilotFetcher = () => {
+    const api = getSupabaseApi();
+    return typeof api.fetchSystemCommentsRange === 'function' ? api.fetchSystemCommentsRange : null;
+  };
+
+  const resolveTrendpilotStatusSetter = () => {
+    const api = getSupabaseApi();
+    return typeof api.setSystemCommentDoctorStatus === 'function'
+      ? api.setSystemCommentDoctorStatus
+      : null;
+  };
+
+  const renderTrendpilotActionButton = (status, current) => {
+    const isActive = status === (current || 'none');
+    const label =
+      status === 'planned'
+        ? 'Arztabklärung geplant'
+        : status === 'done'
+          ? 'Erledigt'
+          : 'Zurücksetzen';
+    return `<button class="btn ghost ${isActive ? 'is-active' : ''}" data-doctor-status="${status}">${label}</button>`;
+  };
+
+  const renderTrendpilotRow = (entry, fmtDateDE) => {
+    const severity = getSeverityMeta(entry.severity);
+    const ackLabel = entry.ack ? 'Bestätigt' : 'Offen';
+    const ackClass = entry.ack ? 'is-ack' : 'is-open';
+    const safeText = entry.text
+      ? (typeof esc === 'function' ? esc(entry.text) : entry.text.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch)))
+      : 'Trendpilot-Hinweis';
+    const dateLabel = fmtDateDE(entry.day);
+    const currentStatus = entry.doctorStatus || 'none';
+    return `
+<article class="tp-row" data-trendpilot-id="${escapeAttr(entry.id || '')}" data-day="${escapeAttr(entry.day || '')}" data-doctor-status="${escapeAttr(currentStatus)}">
+  <div class="tp-meta">
+    <span class="tp-date">${dateLabel}</span>
+    <span class="tp-badge ${severity.className}">${severity.label}</span>
+    <span class="tp-ack ${ackClass}">${ackLabel}</span>
+  </div>
+  <div class="tp-text">${safeText}</div>
+  <div class="tp-status" data-status-label>${getDoctorStatusLabel(currentStatus)}</div>
+  <div class="tp-actions" role="group" aria-label="Trendpilot-Aktion">
+    ${renderTrendpilotActionButton('planned', currentStatus)}
+    ${renderTrendpilotActionButton('done', currentStatus)}
+    ${renderTrendpilotActionButton('none', currentStatus)}
+  </div>
+</article>`;
+  };
+
+  const renderTrendpilotSection = (host, entries, fmtDateDE, { unavailable = false } = {}) => {
+    if (!host) return;
+    const countText = `${entries?.length || 0} Hinweis${entries?.length === 1 ? '' : 'e'}`;
+    let inner = `<div class="doctor-trendpilot-head"><strong>Trendpilot-Hinweise</strong><span class="small">${countText}</span></div>`;
+    if (unavailable) {
+      inner += `<div class="doctor-trendpilot-empty">Trendpilot-Hinweise momentan nicht verfügbar.</div>`;
+    } else if (!entries?.length) {
+      inner += `<div class="doctor-trendpilot-empty">Keine Trendpilot-Hinweise in diesem Zeitraum.</div>`;
+    } else {
+      const rows = entries.map((entry) => renderTrendpilotRow(entry, fmtDateDE)).join('');
+      inner += `<div class="doctor-trendpilot-list">${rows}</div>`;
+    }
+    host.innerHTML = inner;
+  };
+
+  const updateTrendpilotStatusUi = (row, status) => {
+    if (!row) return;
+    row.querySelectorAll('[data-doctor-status]').forEach((btn) => {
+      const btnStatus = btn.getAttribute('data-doctor-status');
+      btn.classList.toggle('is-active', btnStatus === status);
+    });
+    const labelEl = row.querySelector('[data-status-label]');
+    if (labelEl) labelEl.textContent = getDoctorStatusLabel(status);
+  };
+
+  async function loadTrendpilotEntries(from, to) {
+    const fetcher = resolveTrendpilotFetcher();
+    if (typeof fetcher !== 'function') return [];
+    const result = await fetcher({ from, to, metric: 'bp', order: 'day.desc' });
+    return Array.isArray(result) ? result : [];
+  }
+
+  async function onTrendpilotAction(event) {
+    const btn = event.target.closest('[data-doctor-status]');
+    if (!btn) return;
+    const row = btn.closest('[data-trendpilot-id]');
+    if (!row) return;
+    const nextStatus = btn.getAttribute('data-doctor-status');
+    if (!nextStatus) return;
+    const currentStatus = row.getAttribute('data-doctor-status') || 'none';
+    if (nextStatus === currentStatus) return;
+    const setter = resolveTrendpilotStatusSetter();
+    if (typeof setter !== 'function') {
+      toast('Trendpilot-Status kann nicht aktualisiert werden.');
+      return;
+    }
+    const id = row.getAttribute('data-trendpilot-id');
+    if (!id) return;
+    row.classList.add('is-loading');
+    btn.disabled = true;
+    try {
+      await setter({ id, doctorStatus: nextStatus });
+      row.setAttribute('data-doctor-status', nextStatus);
+      updateTrendpilotStatusUi(row, nextStatus);
+      toast(`Trendpilot: ${getDoctorStatusLabel(nextStatus)}.`);
+    } catch (err) {
+      logDoctorError('trendpilot status update failed', err);
+      uiError?.('Trendpilot-Status konnte nicht aktualisiert werden.');
+    } finally {
+      row.classList.remove('is-loading');
+      btn.disabled = false;
+    }
+  }
 
 /* ===== Doctor view ===== */
 
@@ -127,6 +253,23 @@ async function renderDoctor(){
   }
 
   daysArr.sort((a,b)=> b.date.localeCompare(a.date));
+
+  const trendpilotWrap = document.getElementById('doctorTrendpilot');
+  if (trendpilotWrap) {
+    let trendpilotEntries = [];
+    let trendpilotUnavailable = false;
+    try {
+      trendpilotEntries = await loadTrendpilotEntries(from, to);
+    } catch (err) {
+      trendpilotUnavailable = true;
+      logDoctorError('trendpilot fetch failed', err);
+    }
+    renderTrendpilotSection(trendpilotWrap, trendpilotEntries, fmtDateDE, { unavailable: trendpilotUnavailable });
+    if (!trendpilotWrap.dataset.tpBound) {
+      trendpilotWrap.addEventListener('click', onTrendpilotAction);
+      trendpilotWrap.dataset.tpBound = '1';
+    }
+  }
 
   const formatNotesHtml = (notes) => {
     const raw = (notes || '').trim();
@@ -283,3 +426,5 @@ async function exportDoctorJson(){
   global.exportDoctorJson = exportDoctorJson;
 })(typeof window !== 'undefined' ? window : globalThis);
 
+  const getDoctorStatusLabel = (status) => TRENDPILOT_STATUS_LABELS[status] || TRENDPILOT_STATUS_LABELS.none;
+  const getSeverityMeta = (severity) => TRENDPILOT_SEVERITY_META[severity] || { label: 'Info', className: 'is-info' };

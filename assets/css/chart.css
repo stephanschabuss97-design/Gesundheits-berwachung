@@ -222,3 +222,23 @@
   flex:0 0 auto;
   border:1px solid rgba(15,23,42,.5);
 }
+
+.trendpilot-band{
+  fill:rgba(250,204,21,.15);
+}
+.trendpilot-band.tp-band-warning{
+  fill:rgba(250,204,21,.2);
+}
+.trendpilot-band.tp-band-critical{
+  fill:rgba(239,68,68,.22);
+}
+.tp-legend-swatch{
+  display:inline-block;
+  width:16px;
+  height:8px;
+  border-radius:4px;
+  background:rgba(250,204,21,.45);
+}
+.tp-legend-swatch.tp-band-critical{
+  background:rgba(239,68,68,.55);
+}

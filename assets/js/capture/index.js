@@ -6,6 +6,52 @@
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
   const MAX_PROTEIN_G = 300;
+  const escapeAttr = (value = '') =>
+    String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+  const TREND_PILOT_SEVERITY_META = {
+    warning: { cls: 'warn', shortLabel: 'Warnung', longLabel: 'Trendpilot (Warnung)' },
+    critical: { cls: 'bad', shortLabel: 'Kritisch', longLabel: 'Trendpilot (kritisch)' }
+  };
+  let latestTrendpilotEntry = null;
+  let trendpilotHookBound = false;
+  const getTrendpilotSeverityMeta = (severity) => {
+    if (!severity) return null;
+    return TREND_PILOT_SEVERITY_META[severity] || null;
+  };
+
+  const formatTrendpilotDay = (dayIso) => {
+    if (!dayIso) return '';
+    const date = new Date(`${dayIso}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return dayIso;
+    return date.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const setLatestTrendpilotEntry = (entry) => {
+    if (entry && entry.metric && entry.metric !== 'bp') {
+      latestTrendpilotEntry = null;
+      return;
+    }
+    latestTrendpilotEntry = entry && entry.severity ? entry : null;
+  };
+
+  function initTrendpilotCaptureHook() {
+    if (trendpilotHookBound) return;
+    trendpilotHookBound = true;
+    const doc = global.document;
+    if (!doc) return;
+    doc.addEventListener('trendpilot:latest', (event) => {
+      const entry = event?.detail?.entry || null;
+      setLatestTrendpilotEntry(entry);
+      updateCaptureIntakeStatus();
+    });
+    const trendpilotMod = appModules.trendpilot || global.AppModules?.trendpilot || {};
+    const current = trendpilotMod?.getLatestSystemComment?.();
+    if (current) {
+      setLatestTrendpilotEntry(current);
+    }
+    trendpilotMod?.refreshLatestSystemComment?.();
+  }
+
   // SUBMODULE: setCaptureIntakeDisabled @public - toggles capture inputs and buttons
   function setCaptureIntakeDisabled(disabled){
     const state = !!disabled;
@@ -225,11 +271,30 @@
         { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` }
       ];
 
+      if (latestTrendpilotEntry && latestTrendpilotEntry.severity) {
+        const tpMeta = getTrendpilotSeverityMeta(latestTrendpilotEntry.severity);
+        if (tpMeta) {
+          const dayLabel = formatTrendpilotDay(latestTrendpilotEntry.day);
+          const preview = (latestTrendpilotEntry.text || '').split(/\r?\n/)[0].trim();
+          const ariaParts = [`Trendpilot: ${tpMeta.longLabel}`];
+          if (dayLabel) ariaParts.push(`am ${dayLabel}`);
+          if (preview) ariaParts.push(preview);
+          pills.push({
+            cls: tpMeta.cls,
+            label: 'Trendpilot',
+            value: `${tpMeta.shortLabel}${dayLabel ? ` (${dayLabel})` : ''}`,
+            ariaOverride: ariaParts.join(', '),
+            title: preview
+          });
+        }
+      }
+
       const summary = pills.map(p => `${p.label} ${p.value} (${describe(p.cls)})`).join(', ');
       const html = pills.map(p => {
         const statusText = describe(p.cls);
-        const aria = `${p.label}: ${p.value}, Status: ${statusText}`;
-        return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"><span class="dot" aria-hidden="true"></span>${p.label}: ${p.value}</span>`;
+        const aria = p.ariaOverride || `${p.label}: ${p.value}, Status: ${statusText}`;
+        const titleAttr = p.title ? ` title="${escapeAttr(p.title)}"` : '';
+        return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"${titleAttr}><span class="dot" aria-hidden="true"></span>${p.label}: ${p.value}</span>`;
       }).join(' ');
 
       if (statusEl) {
@@ -625,6 +690,8 @@
     const resetBodyPanelFn = getResetBodyPanel();
     bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanelFn?.());
   }
+
+  initTrendpilotCaptureHook();
 
   const captureApi = {
     clearCaptureIntakeInputs: clearCaptureIntakeInputs,

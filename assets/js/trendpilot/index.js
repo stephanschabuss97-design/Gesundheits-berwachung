@@ -36,6 +36,8 @@
   const supabaseApi = global.SupabaseAPI || appModules.supabase || {};
   const upsertSystemCommentRemote = supabaseApi.upsertSystemCommentRemote;
   const setSystemCommentAck = supabaseApi.setSystemCommentAck;
+  const fetchSystemCommentsRange =
+    supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange;
 
   const dependenciesReady =
     typeof buildTrendWindow === 'function' &&
@@ -80,6 +82,7 @@
     return fallback;
   }
   let lastStatus = null;
+  let latestSystemComment = null;
 
   async function runTrendpilotAnalysis(dayIso) {
     const normalizedDay = normalizeDayIso(dayIso);
@@ -115,6 +118,7 @@
       if (acknowledged) {
         await acknowledgeSystemComment(record?.id);
       }
+      refreshLatestSystemComment({ silent: true }).catch(() => {});
       return lastStatus;
     } catch (err) {
       diag.add?.(`[trendpilot] analysis failed: ${err?.message || err}`);
@@ -261,11 +265,45 @@
     }
   }
 
+  function emitLatestTrendpilot(entry) {
+    const doc = global.document;
+    if (!doc || typeof doc.dispatchEvent !== 'function') return;
+    try {
+      doc.dispatchEvent(new CustomEvent('trendpilot:latest', { detail: { entry } }));
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  async function refreshLatestSystemComment({ silent = false } = {}) {
+    const fetcher =
+      (typeof fetchSystemCommentsRange === 'function' && fetchSystemCommentsRange) ||
+      supabaseApi.fetchSystemCommentsRange;
+    if (typeof fetcher !== 'function') {
+      if (!silent) {
+        diag.add?.('[trendpilot] fetchSystemCommentsRange not available');
+      }
+      return null;
+    }
+    try {
+      const rows = await fetcher({ metric: 'bp', order: 'day.desc', limit: 1 });
+      latestSystemComment = Array.isArray(rows) && rows.length ? rows[0] : null;
+      emitLatestTrendpilot(latestSystemComment);
+      return latestSystemComment;
+    } catch (err) {
+      diag.add?.(`[trendpilot] latest load failed: ${err?.message || err}`);
+      return null;
+    }
+  }
+
   const trendpilotApi = {
     getLastTrendpilotStatus: () => lastStatus,
-    runTrendpilotAnalysis
+    runTrendpilotAnalysis,
+    getLatestSystemComment: () => latestSystemComment,
+    refreshLatestSystemComment
   };
 
   appModules.trendpilot = Object.assign(appModules.trendpilot || {}, trendpilotApi);
   global.runTrendpilotAnalysis = runTrendpilotAnalysis;
+  refreshLatestSystemComment({ silent: true }).catch(() => {});
 })(typeof window !== 'undefined' ? window : globalThis);

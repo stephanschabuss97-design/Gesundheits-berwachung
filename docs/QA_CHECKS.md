@@ -993,15 +993,19 @@ Regression
 - BP-Chart: Hover/Click auf Sys- oder Dia-Punkte zeigt einen kombinierten Tooltip (Datum/Kontext + Sys/Dia/MAP/Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
 - BP-Tooltip-Hintergrund übernimmt die ESC-2018 Kategorie (optimal bis Grad III); MAP- und Pulsdruck-Zeilen tragen farbige Status-Kugeln passend zur Klassifikation.
 - Body-Chart: Hover auf Gewicht/Bauchumfang oder die Muskel-/Fettbalken blendet eine gemeinsame Tooltip-Karte mit allen vier Werten ein; beim Öffnen zeichnet sich das Diagramm animiert von links nach rechts auf.
+- Arzt-Ansicht: Im Trendpilot-Block erscheinen alle Warning/Critical-Meldungen (Datum, Badge, Text) und die Buttons „Arztabklärung geplant/Erledigt/Zurücksetzen“ aktualisieren den doctorStatus via Supabase.
+- Capture-Header: Sobald eine Trendpilot-Meldung existiert, zeigt die Pill „Trendpilot: Warnung/Kritisch (Datum)“ inklusive Kurztext an; Wechsel auf einen Tag ohne Meldung blendet sie aus.
 
 **Sanity**
 - `SHOW_CHART_ANIMATIONS=false` oder `prefers-reduced-motion: reduce` schalten alle neuen Animationen ab; keine Inline-Styles bleiben mit `stroke-dashoffset != 0`.
 - Pulse-Link/Tooltip erscheinen nur, wenn das Gegenstück (Sys↔Dia) existiert; fehlende Werte zeigen weiterhin Einzel-Labels ohne Fehler im Log.
 - KPI-Leiste: Pulsdruck-Pill heißt „Durchschnittlicher Pulsdruck“ und erscheint ausschließlich, wenn die BP-Metrik aktiv ist.
-- MAP- und Pulsdruck-Indikatoren nutzen die aktualisierten Schwellen (MAP: <60 rot, 60–64 orange, 65–100 grün, 101–110 gelb, >110 rot; Pulsdruck: ≤29 rot, 30–50 grün, 51–60 gelb, 61–70 orange, ≥71 rot).
+- MAP- und Pulsdruck-Indikatoren nutzen die aktualisierten Schwellen (MAP: <60 rot, 60-64 orange, 65-100 grün, 101-110 gelb, >110 rot; Pulsdruck: ≤29 rot, 30-50 grün, 51-60 gelb, 61-70 orange, ≥71 rot).
 - KPI-Dots verwenden dieselbe Farbskala wie Tooltip-Indikatoren. Im Chart oben sind die Farben für Sys/Dia/MAP/Pulsdruck identisch mit denen in den Tooltip-Indikatoren.
+- BP-Chart: Trendpilot-Hintergrundbänder folgen exakt den Supabase-Systemkommentaren (Warnung=gelb, Kritisch=rot), werden hinter Grid/Lines gerendert und blockieren keine Pointer-Events; die Legende ergänzt zwei Swatches nur bei vorhandenen Bändern.
 
 **Regression**
 - Range-Wechsel sowie Tab-Switches (BP ↔ Körper) rendern weiterhin ohne JS-Fehler; Tooltips funktionieren nach jedem Redraw.
 - Doctor-/Capture-Ansichten, CSV/JSON-Export und übrige Panels bleiben von den Chart-Animationen unberührt.
+- Neue Supabase-Exporte (`fetchSystemCommentsRange`, `setSystemCommentDoctorStatus`) sind via `SupabaseAPI` verfügbar; fehlende Berechtigungen führen zu stillen Trendpilot-Placeholders, nicht zu JS-Abbrüchen.
 

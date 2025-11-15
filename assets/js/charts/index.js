@@ -27,6 +27,7 @@ const safeGetConf = async (k) => {
   try { if (typeof getConf === "function") return await getConf(k); } catch(_) {}
   return null;
 };
+const getSupabaseApi = () => global.AppModules?.supabase || global.SupabaseAPI || {};
 
 const getFocusTrap = () => {
   const trap = global.AppModules?.uiCore?.focusTrap || global.focusTrap || null;
@@ -103,6 +104,7 @@ const chartPanel = {
   currentMetric: 'bp',
   currentBodyMeta: null,
   bodyMetaCacheHash: null,
+  currentTrendpilotBands: [],
   _colorCtx: null,
   _colorCache: null,
   SHOW_CHART_ANIMATIONS: true,
@@ -346,6 +348,31 @@ async getFiltered() {
   })
     .sort((a,b) => (a.ts ?? Date.parse(a.dateTime)) - (b.ts ?? Date.parse(b.dateTime)));
 },
+
+  async loadTrendpilotBands({ from, to } = {}) {
+    const api = getSupabaseApi();
+    if (typeof api.fetchSystemCommentsRange !== "function") {
+      this.currentTrendpilotBands = [];
+      return [];
+    }
+    try {
+      const rows = await api.fetchSystemCommentsRange({
+        from,
+        to,
+        metric: "bp",
+        order: "day.asc"
+      });
+      const filtered = Array.isArray(rows)
+        ? rows.filter((entry) => entry && (entry.severity === "warning" || entry.severity === "critical"))
+        : [];
+      this.currentTrendpilotBands = filtered;
+      return filtered;
+    } catch (err) {
+      diag.add?.(`[chart] trendpilot bands failed: ${err?.message || err}`);
+      this.currentTrendpilotBands = [];
+      return [];
+    }
+  },
 
   // Hoehe laden (Konfig oder Fallback 183 cm)
   // SUBMODULE: chartPanel.getHeightCm @internal - liest Nutzerkoerpergroesse aus Supabase/Lokal
@@ -923,6 +950,13 @@ if (!(await isLoggedIn())) {
 const metric = $("#metricSel")?.value || "bp";
 this.currentMetric = metric;
 const BASE_WEIGHT_MIN = 75;
+const rangeFrom = $("#from")?.value;
+const rangeTo = $("#to")?.value;
+if (metric === "bp") {
+  await this.loadTrendpilotBands({ from: rangeFrom, to: rangeTo });
+} else {
+  this.currentTrendpilotBands = [];
+}
 
     const data   = await this.getFiltered();
 
@@ -1243,6 +1277,7 @@ const BASE_WEIGHT_MIN = 75;
       `<line x1="${x1}" y1="${y1_}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1" ${dash ? `stroke-dasharray="${dash}"` : ""} />`;
     const text = (tx,ty,str,anchor="end") =>
       `<text x="${tx}" y="${ty}" fill="#9aa3af" font-size="11" text-anchor="${anchor}">${esc(str)}</text>`;
+    let trendpilotLegendKeys = [];
 
     // Zielbereiche (BP)
     if (this.svg) {
@@ -1257,6 +1292,25 @@ const BASE_WEIGHT_MIN = 75;
         band(110, 130, "goal-sys") +
         band(70, 85, "goal-dia");
       this.svg.insertAdjacentHTML("beforeend", goalLayers);
+    }
+    if (this.svg && metric === "bp" && Array.isArray(this.currentTrendpilotBands) && this.currentTrendpilotBands.length) {
+      const daySpan = 24 * 3600 * 1000;
+      const severitySeen = new Set();
+      let overlays = "";
+      this.currentTrendpilotBands.forEach((entry) => {
+        const dayTs = toDayTs(entry.day);
+        if (!Number.isFinite(dayTs)) return;
+        const start = x(dayTs);
+        const end = x(dayTs + daySpan);
+        const width = Math.max(2, end - start);
+        const cls = entry.severity === "critical" ? "tp-band-critical" : "tp-band-warning";
+        overlays += `<rect class="trendpilot-band ${cls}" x="${start.toFixed(1)}" y="${PT}" width="${width.toFixed(1)}" height="${innerH}" pointer-events="none"></rect>`;
+        severitySeen.add(cls);
+      });
+      if (overlays) {
+        this.svg.insertAdjacentHTML("beforeend", overlays);
+        trendpilotLegendKeys = Array.from(severitySeen);
+      }
     }
 
     // Grid + Labels
@@ -1473,10 +1527,26 @@ const mkBars = () => {
         dot.style.borderRadius = "50%";
         const label = document.createElement("span");
         label.textContent = s.name;
-        wrap.append(dot, label);
+      wrap.append(dot, label);
+      this.legend.appendChild(wrap);
+    }
+  });
+
+    if (metric === "bp" && this.legend && trendpilotLegendKeys.length) {
+      trendpilotLegendKeys.forEach((cls) => {
+        const wrap = document.createElement("span");
+        wrap.style.display = "inline-flex";
+        wrap.style.alignItems = "center";
+        wrap.style.gap = "6px";
+        wrap.setAttribute("data-series", cls);
+        const swatch = document.createElement("span");
+        swatch.className = `tp-legend-swatch ${cls}`;
+        const label = document.createElement("span");
+        label.textContent = cls === "tp-band-critical" ? "Trendpilot (kritisch)" : "Trendpilot (Warnung)";
+        wrap.append(swatch, label);
         this.legend.appendChild(wrap);
-      }
-    });
+      });
+    }
 
     if (pendingBodyHitsSvg && this.svg) {
       this.svg.insertAdjacentHTML("beforeend", pendingBodyHitsSvg);

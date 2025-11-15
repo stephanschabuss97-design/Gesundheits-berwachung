@@ -52,6 +52,8 @@ const saveIntakeTotalsRpc = createSupabaseFn('saveIntakeTotalsRpc');
 const cleanupOldIntake = createSupabaseFn('cleanupOldIntake', { optional: true });
 const fetchDailyOverview = createSupabaseFn('fetchDailyOverview');
 const deleteRemoteDay = createSupabaseFn('deleteRemoteDay');
+const fetchSystemCommentsRange = createSupabaseFn('fetchSystemCommentsRange', { optional: true });
+const setSystemCommentDoctorStatus = createSupabaseFn('setSystemCommentDoctorStatus', { optional: true });
 const setupRealtime = createSupabaseFn('setupRealtime');
 const setConfigStatus = createSupabaseFn('setConfigStatus');
 const showLoginOverlay = createSupabaseFn('showLoginOverlay');
@@ -610,6 +612,7 @@ const REQUIRED_SUPABASE_EXPORTS = [
   'cleanupOldIntake',
   'fetchDailyOverview',
   'deleteRemoteDay',
+  'fetchSystemCommentsRange',
   'setupRealtime',
   'setConfigStatus',
   'showLoginOverlay',
@@ -620,7 +623,8 @@ const REQUIRED_SUPABASE_EXPORTS = [
   'baseUrlFromRest',
   'requireDoctorUnlock',
   'bindAppLockButtons',
-  'resumeFromBackground'
+  'resumeFromBackground',
+  'setSystemCommentDoctorStatus'
 ];
 
 function resolveGlobal(path) {

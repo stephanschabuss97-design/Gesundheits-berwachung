@@ -34,6 +34,8 @@ const defaultTextBySeverity = {
   critical: 'Trendpilot: deutlicher Anstieg – ärztliche Abklärung empfohlen.'
 };
 
+const ALLOWED_DOCTOR_STATUS = new Set(['none', 'planned', 'done']);
+
 const resolveRestEndpoint = async () => {
   const restUrl = await getConf('webhookUrl');
   const base = baseUrlFromRest(restUrl);
@@ -88,6 +90,21 @@ const buildPayload = ({ severity, metric, context = {}, text, existing }) => {
   };
 };
 
+const normalizeSystemCommentRow = (row = {}, fallbackMetric = 'bp') => {
+  const payload = row.payload || {};
+  return {
+    id: row.id ?? null,
+    day: row.day || null,
+    ts: row.ts ?? null,
+    ack: !!row.ack,
+    doctorStatus: row.doctorStatus || 'none',
+    metric: payload.metric || fallbackMetric,
+    severity: payload.severity || 'info',
+    text: payload.text || '',
+    context: payload.context || {}
+  };
+};
+
 const loadExistingComment = async ({ userId, day, metric }) => {
   try {
     const rows = await sbSelect({
@@ -109,6 +126,33 @@ const loadExistingComment = async ({ userId, day, metric }) => {
     return null;
   }
 };
+
+export async function fetchSystemCommentsRange({
+  from,
+  to,
+  metric = 'bp',
+  limit,
+  order = 'day.asc'
+} = {}) {
+  const userId = await getUserId();
+  if (!userId) return [];
+  const filters = [
+    ['user_id', `eq.${userId}`],
+    ['type', 'eq.system_comment']
+  ];
+  if (from) filters.push(['day', `gte.${from}`]);
+  if (to) filters.push(['day', `lte.${to}`]);
+  if (metric) filters.push(['payload->>metric', `eq.${metric}`]);
+  const rows = await sbSelect({
+    table: TABLE_NAME,
+    select: 'id,day,ts,payload,ack,doctorStatus',
+    filters,
+    order,
+    ...(limit ? { limit: Number(limit) } : {})
+  });
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => normalizeSystemCommentRow(row, metric));
+}
 
 const postSystemComment = async ({ endpoint, userId, day, payload, ack, doctorStatus }) => {
   const res = await fetchWithAuth(
@@ -171,6 +215,29 @@ export async function setSystemCommentAck({ id, ack = true }) {
     throw new Error(`system-comment ack failed ${res.status} ${msg}`);
   }
   return { id, mode: 'ack' };
+}
+
+export async function setSystemCommentDoctorStatus({ id, doctorStatus }) {
+  if (!id) throw new Error('system-comment doctorStatus: id required');
+  const normalized =
+    typeof doctorStatus === 'string' && ALLOWED_DOCTOR_STATUS.has(doctorStatus) ? doctorStatus : null;
+  if (!normalized) throw new Error('system-comment doctorStatus: invalid status');
+  const endpoint = await resolveRestEndpoint();
+  const url = `${endpoint}?id=eq.${encodeURIComponent(id)}`;
+  const res = await fetchWithAuth(
+    (headers) =>
+      fetch(url, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorStatus: normalized })
+      }),
+    { tag: 'systemComment:doctorStatus', maxAttempts: 2 }
+  );
+  if (!res.ok) {
+    const msg = await safeErrorMessage(res);
+    throw new Error(`system-comment doctorStatus failed ${res.status} ${msg}`);
+  }
+  return { id, mode: 'doctorStatus' };
 }
 
 const safeErrorMessage = async (res) => {

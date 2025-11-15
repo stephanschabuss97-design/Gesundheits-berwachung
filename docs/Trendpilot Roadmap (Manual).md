@@ -27,9 +27,10 @@ Status: ✔ erledigt.
 3. Dialog-Ack → erledigt (Pflichtdialog bestätigt, ack-Status wird gesetzt).
 
 ### 2.4 Arztansicht + Chart
-1. Arztansicht: Tabelle/Abschnitt „Trendpilot-Hinweise“ mit Severity-Badge, Buttons „Arztabklärung geplant“/„Erledigt“.
-2. Chart: Layer/Balken (gelb/orange/rot) für Zeiträume mit active warning/critical; Tooltip/Legend-Erklärung.
-3. Capture: optional Hinweis „Letzte Trendpilot-Meldung.“ im Intake-Header.
+Status: ✅ erledigt.
+1. Arztansicht zeigt einen neuen „Trendpilot-Hinweise“-Block (Severity-Badge, Ack-Status, Buttons „Arztabklärung geplant“/„Erledigt“/„Zurücksetzen“ mit Supabase-Patch).
+2. Chart (BP) blendet für jedes Warning/Critical einen transluzenten Tagesstreifen ein + Legendenswatch; Capture-Tooltip/Bars bleiben klickbar.
+3. Capture-Kopfzeile enthält eine zusätzliche Trendpilot-Pill („Trendpilot: Warnung/Kritisch (Datum)“) mit Text-Vorschau.
 
 ### 2.5 Konfiguration & Diagnostics
 Status: ⚙ teilweise.
