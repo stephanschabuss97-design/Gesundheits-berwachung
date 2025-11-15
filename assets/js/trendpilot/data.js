@@ -229,7 +229,7 @@
     const cutoff = cfg.windowDays
       ? days.filter((entry) => {
           if (!entry?.date) return false;
-          const targetTs = Date.parse(`${entry.date}T00:00:00`);
+          const targetTs = Date.parse(`${entry.date}T00:00:00Z`);
           if (!Number.isFinite(targetTs)) return false;
           const windowStart = Date.now() - cfg.windowDays * 86400000;
           return targetTs >= windowStart;
