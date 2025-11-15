@@ -31,7 +31,7 @@
     }
     const attr = parseBoolean(global?.document?.body?.dataset?.trendPilotEnabled);
     if (attr != null) return attr;
-    return false;
+    return true;
   };
 
   const TREND_PILOT_ENABLED = readTrendPilotFlag();
