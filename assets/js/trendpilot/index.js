@@ -111,8 +111,10 @@
         return lastStatus;
       }
       const record = await persistSystemComment(normalizedDay, severity, delta);
-      await showSeverityDialog(severity, delta);
-      await acknowledgeSystemComment(record?.id);
+      const acknowledged = await showSeverityDialog(severity, delta);
+      if (acknowledged) {
+        await acknowledgeSystemComment(record?.id);
+      }
       return lastStatus;
     } catch (err) {
       diag.add?.(`[trendpilot] analysis failed: ${err?.message || err}`);
@@ -160,11 +162,11 @@
       const deltaDia = Number.isFinite(delta?.deltaDia) ? Math.round(delta.deltaDia) : 'n/a';
       const text =
         severity === 'critical'
-          ? 'Trendpilot: deutlicher Anstieg – ärztliche Abklärung empfohlen.'
-          : 'Trendpilot: leichter Aufwärtstrend – bitte beobachten.';
+          ? 'Trendpilot: deutlicher Anstieg - aerztliche Klaerung empfohlen.'
+          : 'Trendpilot: leichter Aufwaertstrend - bitte beobachten.';
       if (!doc || !doc.body) {
-        toast(`${text} Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`);
-        resolve();
+        toast(`${text} · Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`);
+        resolve(false);
         return;
       }
       const overlay = doc.createElement('div');
@@ -183,13 +185,16 @@
       deltas.className = 'trendpilot-dialog-deltas';
       deltas.textContent = `Δsys=${deltaSys} mmHg / Δdia=${deltaDia} mmHg`;
       const btn = doc.createElement('button');
-      btn.textContent = 'Okay';
+      btn.textContent = 'Zur Kenntnis genommen';
       btn.type = 'button';
       btn.className = 'btn primary trendpilot-dialog-btn';
       const previousActive = doc.activeElement;
       const previousOverflow = doc.body.style.overflow;
       doc.body.classList.add('trendpilot-lock');
-      const closeDialog = () => {
+      let resolved = false;
+      const closeDialog = (acknowledged) => {
+        if (resolved) return;
+        resolved = true;
         doc.removeEventListener('keydown', onKeydown, true);
         doc.body.classList.remove('trendpilot-lock');
         doc.body.style.overflow = previousOverflow;
@@ -201,30 +206,33 @@
             /* ignore */
           }
         }
-        resolve();
+        resolve(Boolean(acknowledged));
       };
+      const confirmAndClose = () => closeDialog(true);
       const onKeydown = (event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
-          closeDialog();
+          confirmAndClose();
         } else if (event.key === 'Tab') {
           event.preventDefault();
           btn.focus();
+        } else if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          confirmAndClose();
         }
       };
       doc.addEventListener('keydown', onKeydown, true);
       overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) closeDialog();
+        if (event.target === overlay) confirmAndClose();
       });
       card.addEventListener('click', (event) => event.stopPropagation());
-      btn.addEventListener('click', closeDialog);
+      btn.addEventListener('click', confirmAndClose);
       card.append(msg, deltas, btn);
       overlay.appendChild(card);
       doc.body.appendChild(overlay);
       setTimeout(() => btn.focus(), 0);
     });
   }
-
   async function persistSystemComment(dayIso, severity, delta) {
     const context = {
       window_days: TREND_PILOT_DEFAULTS.windowDays,

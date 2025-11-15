@@ -15,16 +15,16 @@ Status: ✔ erledigt.
 2. Helper-Module (`trendpilot/data.js`) implementiert: `computeDailyBpStats`, `groupDailyStatsByWeek`, `calcMovingBaseline`, `calcLatestDelta`, `classifyTrendDelta`, `applyHysteresis`, `buildTrendWindow`.
 
 ### 2.2 Capture-Hook
-Status: ⚙ in Arbeit.
+Status: ✅ erledigt.
 1. `runTrendpilotAnalysis(day)` existiert (einschließlich Timeout, strenger ISO-Check, Pflichtdialog + Supabase-upsert).
-2. Capture-BP-Save ruft Trendpilot noch nicht auf → TODO.
-3. Dialog muss Ack-Fluss + system_comment-ID handling bekommen → TODO.
+2. Capture-BP-Save triggert Trendpilot nach dem Abend-Save (inkl. Tages-ISO-Ermittlung) → erledigt.
+3. Pflichtdialog erzwingt Ack-Button & patched system_comment nach Bestätigung → erledigt.
 
 ### 2.3 System Comments (Supabase)
 Status: ✔ erledigt.
 1. Neue Supabase-API `system-comments.js`: POST/PATCH, Ack/Doctor-Status bleiben erhalten.
 2. Trendpilot ruft `upsertSystemCommentRemote` bereits für Warning/Critical (automatisch ack=false).
-3. Dialog-Ack → TODO (Pending UI).
+3. Dialog-Ack → erledigt (Pflichtdialog bestätigt, ack-Status wird gesetzt).
 
 ### 2.4 Arztansicht + Chart
 1. Arztansicht: Tabelle/Abschnitt „Trendpilot-Hinweise“ mit Severity-Badge, Buttons „Arztabklärung geplant“/„Erledigt“.
