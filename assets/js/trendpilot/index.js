@@ -16,6 +16,13 @@
     if (trendpilotInitialized) return;
     trendpilotInitialized = true;
 
+  const config = appModules.config || {};
+  const configFlag =
+    typeof config.TREND_PILOT_ENABLED === 'boolean' ? config.TREND_PILOT_ENABLED : undefined;
+  const globalFlag =
+    typeof global.TREND_PILOT_ENABLED === 'boolean' ? global.TREND_PILOT_ENABLED : undefined;
+  const TREND_PILOT_FLAG = Boolean(configFlag ?? globalFlag ?? false);
+
   const diag =
     global.diag ||
     appModules.diag ||
@@ -47,6 +54,12 @@
       fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange
     };
   };
+
+  if (!TREND_PILOT_FLAG) {
+    trendpilotInitialized = true;
+    dependencyWarned = false;
+    return;
+  }
 
   const {
     supabaseApi,
@@ -81,13 +94,6 @@
   dependencyWarned = false;
 
   const ISO_DAY_RE = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-  const config = appModules.config || {};
-  const configFlag =
-    typeof config.TREND_PILOT_ENABLED === 'boolean' ? config.TREND_PILOT_ENABLED : undefined;
-  const globalFlag =
-    typeof global.TREND_PILOT_ENABLED === 'boolean' ? global.TREND_PILOT_ENABLED : undefined;
-  const TREND_PILOT_FLAG = Boolean(configFlag ?? globalFlag ?? false);
-
   function normalizeDayIso(value) {
     const fallback = new Date().toISOString().slice(0, 10);
     if (typeof value !== 'string') return fallback;
