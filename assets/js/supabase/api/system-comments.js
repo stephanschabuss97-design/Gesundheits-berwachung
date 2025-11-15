@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * MODULE: supabase/api/system-comments.js
  * Description: Schreibt und aktualisiert system_comment-Einträge (Trendpilot etc.) in der Tabelle health_events.
@@ -152,6 +152,26 @@ const patchSystemComment = async ({ endpoint, id, payload, ack, doctorStatus }) 
   }
   return { id, mode: 'patch' };
 };
+
+export async function setSystemCommentAck({ id, ack = true }) {
+  if (!id) throw new Error('system-comment ack: id required');
+  const endpoint = await resolveRestEndpoint();
+  const url = `${endpoint}?id=eq.${encodeURIComponent(id)}`;
+  const res = await fetchWithAuth(
+    (headers) =>
+      fetch(url, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ack })
+      }),
+    { tag: 'systemComment:ack', maxAttempts: 2 }
+  );
+  if (!res.ok) {
+    const msg = await safeErrorMessage(res);
+    throw new Error(`system-comment ack failed ${res.status} ${msg}`);
+  }
+  return { id, mode: 'ack' };
+}
 
 const safeErrorMessage = async (res) => {
   try {

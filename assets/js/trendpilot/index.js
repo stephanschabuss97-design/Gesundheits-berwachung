@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * MODULE: trendpilot/index.js
  * Description: Orchestriert Trendpilot-Analysen nach Abendmessungen (Severity, Dialog, system_comment).
@@ -35,6 +35,7 @@
     appModules.vitals?.fetchDailyOverview;
   const supabaseApi = global.SupabaseAPI || appModules.supabase || {};
   const upsertSystemCommentRemote = supabaseApi.upsertSystemCommentRemote;
+  const setSystemCommentAck = supabaseApi.setSystemCommentAck;
 
   const dependenciesReady =
     typeof buildTrendWindow === 'function' &&
@@ -42,7 +43,8 @@
     typeof classifyTrendDelta === 'function' &&
     TREND_PILOT_DEFAULTS &&
     typeof fetchDailyOverview === 'function' &&
-    typeof upsertSystemCommentRemote === 'function';
+    typeof upsertSystemCommentRemote === 'function' &&
+    typeof setSystemCommentAck === 'function';
 
   if (!dependenciesReady) {
     console.error(
@@ -108,8 +110,9 @@
         toast('Trendpilot: Trend stabil. Weiter so!');
         return lastStatus;
       }
+      const record = await persistSystemComment(normalizedDay, severity, delta);
       await showSeverityDialog(severity, delta);
-      await upsertSystemComment(normalizedDay, severity, delta);
+      await acknowledgeSystemComment(record?.id);
       return lastStatus;
     } catch (err) {
       diag.add?.(`[trendpilot] analysis failed: ${err?.message || err}`);
@@ -206,7 +209,6 @@
           closeDialog();
         } else if (event.key === 'Tab') {
           event.preventDefault();
-          // Single focusable element - Tab and Shift+Tab both focus button
           btn.focus();
         }
       };
@@ -223,14 +225,14 @@
     });
   }
 
-  async function upsertSystemComment(dayIso, severity, delta) {
+  async function persistSystemComment(dayIso, severity, delta) {
     const context = {
       window_days: TREND_PILOT_DEFAULTS.windowDays,
       delta_sys: Number.isFinite(delta?.deltaSys) ? delta.deltaSys : null,
       delta_dia: Number.isFinite(delta?.deltaDia) ? delta.deltaDia : null
     };
     try {
-      await upsertSystemCommentRemote({
+      return await upsertSystemCommentRemote({
         day: dayIso,
         severity,
         metric: 'bp',
@@ -238,6 +240,16 @@
       });
     } catch (err) {
       diag.add?.(`[trendpilot] system_comment failed: ${err?.message || err}`);
+      return null;
+    }
+  }
+
+  async function acknowledgeSystemComment(id) {
+    if (!id) return;
+    try {
+      await setSystemCommentAck({ id, ack: true });
+    } catch (err) {
+      diag.add?.(`[trendpilot] system_comment ack failed: ${err?.message || err}`);
     }
   }
 

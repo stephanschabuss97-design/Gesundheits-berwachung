@@ -1188,6 +1188,29 @@ if (bpContextSel){
   });
 }
 
+function getCaptureDayIso() {
+  const input = document.getElementById('date');
+  const raw = typeof input?.value === 'string' ? input.value.trim() : '';
+  if (raw) return raw;
+  const captureState = window.AppModules?.captureGlobals?.captureIntakeState;
+  if (captureState?.dayIso) return captureState.dayIso;
+  return todayStr();
+}
+
+async function maybeRunTrendpilotAfterBpSave(which) {
+  if (which !== 'A') return;
+  const trendpilot = window.AppModules?.trendpilot;
+  const runTrendpilotAnalysis = trendpilot?.runTrendpilotAnalysis;
+  if (typeof runTrendpilotAnalysis !== 'function') return;
+  const dayIso = getCaptureDayIso();
+  try {
+    await runTrendpilotAnalysis(dayIso);
+  } catch (err) {
+    diag.add?.(`[trendpilot] hook failed: ${err?.message || err}`);
+    console.error('Trendpilot hook failed', err);
+  }
+}
+
 const saveBpPanelBtn = document.getElementById('saveBpPanelBtn');
 if (saveBpPanelBtn){
   saveBpPanelBtn.addEventListener('click', async (e)=>{
@@ -1225,6 +1248,7 @@ if (saveBpPanelBtn){
       window.AppModules.bp.updateBpCommentWarnings?.();
       window.AppModules.bp.resetBpPanel(which);
       flashButtonOk(btn, '&#x2705; Blutdruck gespeichert');
+      await maybeRunTrendpilotAfterBpSave(which);
     }
   });
 }
