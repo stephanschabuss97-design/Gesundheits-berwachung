@@ -62,7 +62,6 @@ export async function upsertSystemCommentRemote({ day, severity, metric = 'bp', 
       endpoint,
       id: existing.id,
       payload: built.payload,
-      ack: built.ack,
       doctorStatus: built.doctorStatus
     });
   }
@@ -71,21 +70,25 @@ export async function upsertSystemCommentRemote({ day, severity, metric = 'bp', 
     userId,
     day,
     payload: built.payload,
-    ack: built.ack,
     doctorStatus: built.doctorStatus
   });
 }
 
 const buildPayload = ({ severity, metric, context = {}, text, existing }) => {
+  const payloadContext = { ...(existing?.payload?.context || {}), ...context };
+  if (typeof context.ack === 'boolean') {
+    payloadContext.ack = context.ack;
+  } else if (typeof payloadContext.ack !== 'boolean') {
+    payloadContext.ack = Boolean(existing?.payload?.context?.ack);
+  }
   const payload = {
     metric,
     severity,
     text: text || defaultTextBySeverity[severity] || 'Trendpilot-Hinweis',
-    context
+    context: payloadContext
   };
   return {
     payload,
-    ack: existing?.ack ?? false,
     doctorStatus: existing?.doctorStatus ?? 'none'
   };
 };
@@ -96,7 +99,7 @@ const normalizeSystemCommentRow = (row = {}, fallbackMetric = 'bp') => {
     id: row.id ?? null,
     day: row.day || null,
     ts: row.ts ?? null,
-    ack: !!row.ack,
+    ack: Boolean(payload?.context?.ack),
     doctorStatus: row.doctorStatus || 'none',
     metric: payload.metric || fallbackMetric,
     severity: payload.severity || 'info',
@@ -109,7 +112,7 @@ const loadExistingComment = async ({ userId, day, metric }) => {
   try {
     const rows = await sbSelect({
       table: TABLE_NAME,
-      select: 'id,payload,ack,doctorStatus',
+      select: 'id,payload,doctorStatus',
       filters: [
         ['user_id', `eq.${userId}`],
         ['type', 'eq.system_comment'],
@@ -120,7 +123,9 @@ const loadExistingComment = async ({ userId, day, metric }) => {
       limit: 1
     });
     if (!Array.isArray(rows)) return null;
-    return rows[0] || null;
+    const first = rows[0] || null;
+    if (first) first.ack = Boolean(first.payload?.context?.ack);
+    return first;
   } catch (err) {
     diag.add?.(`[system-comment] loadExisting failed: ${err?.message || err}`);
     return null;
@@ -145,7 +150,7 @@ export async function fetchSystemCommentsRange({
   if (metric) filters.push(['payload->>metric', `eq.${metric}`]);
   const rows = await sbSelect({
     table: TABLE_NAME,
-    select: 'id,day,ts,payload,ack,doctorStatus',
+    select: 'id,day,ts,payload,doctorStatus',
     filters,
     order,
     ...(limit ? { limit: Number(limit) } : {})
@@ -154,7 +159,7 @@ export async function fetchSystemCommentsRange({
   return rows.map((row) => normalizeSystemCommentRow(row, metric));
 }
 
-const postSystemComment = async ({ endpoint, userId, day, payload, ack, doctorStatus }) => {
+const postSystemComment = async ({ endpoint, userId, day, payload, doctorStatus }) => {
   const res = await fetchWithAuth(
     (headers) =>
       fetch(endpoint, {
@@ -165,7 +170,6 @@ const postSystemComment = async ({ endpoint, userId, day, payload, ack, doctorSt
           day,
           type: 'system_comment',
           payload,
-          ack,
           doctorStatus
         })
       }),
@@ -179,14 +183,14 @@ const postSystemComment = async ({ endpoint, userId, day, payload, ack, doctorSt
   return { id: data?.[0]?.id ?? null, mode: 'insert' };
 };
 
-const patchSystemComment = async ({ endpoint, id, payload, ack, doctorStatus }) => {
+const patchSystemComment = async ({ endpoint, id, payload, doctorStatus }) => {
   const url = `${endpoint}?id=eq.${encodeURIComponent(id)}`;
   const res = await fetchWithAuth(
     (headers) =>
       fetch(url, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload, ack, doctorStatus })
+        body: JSON.stringify({ payload, doctorStatus })
       }),
     { tag: 'systemComment:patch', maxAttempts: 2 }
   );
@@ -200,20 +204,22 @@ const patchSystemComment = async ({ endpoint, id, payload, ack, doctorStatus }) 
 export async function setSystemCommentAck({ id, ack = true }) {
   if (!id) throw new Error('system-comment ack: id required');
   const endpoint = await resolveRestEndpoint();
-  const url = `${endpoint}?id=eq.${encodeURIComponent(id)}`;
-  const res = await fetchWithAuth(
-    (headers) =>
-      fetch(url, {
-        method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ack })
-      }),
-    { tag: 'systemComment:ack', maxAttempts: 2 }
-  );
-  if (!res.ok) {
-    const msg = await safeErrorMessage(res);
-    throw new Error(`system-comment ack failed ${res.status} ${msg}`);
-  }
+  const rows = await sbSelect({
+    table: TABLE_NAME,
+    select: 'id,payload,doctorStatus',
+    filters: [['id', `eq.${id}`]],
+    limit: 1
+  });
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row) throw new Error('system-comment ack: entry not found');
+  const payload = row.payload || {};
+  payload.context = { ...(payload.context || {}), ack: Boolean(ack) };
+  await patchSystemComment({
+    endpoint,
+    id,
+    payload,
+    doctorStatus: row.doctorStatus || 'none'
+  });
   return { id, mode: 'ack' };
 }
 
