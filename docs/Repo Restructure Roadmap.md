@@ -103,7 +103,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Hinweis: Solange `ui-tabs.js`, `main.js` & Co. noch globale Symbole (`resetBpPanel`, `resetBodyPanel`, `saveBlock` …) erwarten, behalten wir temporäre Fallback-Exports in `app/modules/capture/{bp,body}.js`. Später müssen die Aufrufer auf `AppModules.bp.*`/`AppModules.body.*` umgestellt werden, damit die Globals endgültig entfallen können.
 
 2. 🔧 **Doctor Modul:**  
-   - `assets/js/doctor/index.js`, CSS nach `app/modules/doctor/`.  
+   - `app/modules/doctor/index.js`, CSS nach `app/modules/doctor/`.  
    - Trendpilot-Block isolieren (`trendpilot-block.js`).  
    - Scroll-Restore prüfen.
 
