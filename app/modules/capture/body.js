@@ -152,8 +152,15 @@
   Object.entries(bodyApi).forEach(([name, fn]) => {
     if (typeof global[name] === 'undefined') {
       global[name] = fn;
-    } else if (BODY_WARN_ON_COLLISION) {
-      console.warn(`[body] Global "${name}" bereits definiert, überspringe Exposition.`);
+      return;
+    }
+    if (BODY_WARN_ON_COLLISION) {
+      const existing = global[name];
+      console.warn('[body] global collision', {
+        name,
+        existingType: typeof existing,
+        incomingType: typeof fn
+      });
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
