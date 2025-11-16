@@ -53,8 +53,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 2. 🔲 **Core JS verschieben:**  
 - `assets/js/config.js`, `utils.js`, `diag.js`, `capture/globals.js` → `app/core/…`.  
 - Beim Move `import`/`require` Pfade aktualisieren (zunächst relative Pfade, später optional bundler).
-3. 🔲 **Supabase Barrel angleichen:**  
-   - `assets/js/supabase/index.js` + Submodule nach `app/supabase/`.  
+3. ✅ **Supabase Barrel angleichen:**  
+   - `assets/js/supabase/index.js` + Submodule nach `app/supabase/` gespiegelt (inkl. `core/`, `auth/`, `api/`, `realtime/`).  
    - Exporte unverändert lassen, damit bestehende Module weiter funktionieren.
 4. 🔲 Smoke-Tests (manuell): Capture-Eingaben, Chart öffnen, Trendpilot kommentieren.
 
