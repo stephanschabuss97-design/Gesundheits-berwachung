@@ -99,7 +99,8 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 1. 🔧 **Capture Modul:**  
    - `assets/js/capture/*.js`, `bp.js`, `body.js`, `intake.js` nach `app/modules/capture/`.  
    - Update der Imports.  
-   - Tests: Wasser/Salt/Protein, BP-Save, Body-Save.
+   - Tests: Wasser/Salt/Protein, BP-Save, Body-Save.  
+   - Hinweis: Solange `ui-tabs.js`, `main.js` & Co. noch globale Symbole (`resetBpPanel`, `resetBodyPanel`, `saveBlock` …) erwarten, behalten wir temporäre Fallback-Exports in `app/modules/capture/{bp,body}.js`. Später müssen die Aufrufer auf `AppModules.bp.*`/`AppModules.body.*` umgestellt werden, damit die Globals endgültig entfallen können.
 
 2. 🔧 **Doctor Modul:**  
    - `assets/js/doctor/index.js`, CSS nach `app/modules/doctor/`.  

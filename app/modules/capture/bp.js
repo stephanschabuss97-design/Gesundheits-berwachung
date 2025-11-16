@@ -1,9 +1,9 @@
-'use strict';
+﻿'use strict';
 /**
  * MODULE: bp.js
  * Description: Verwaltet Blutdruck-Erfassung, Validierung und Persistierung inkl. Kommentar-Pflicht, Panel-Reset und Datensynchronisation.
  * Submodules:
- *  - requiresBpComment (public, Kommentar-Pflichtprüfung)
+ *  - requiresBpComment (public, Kommentar-PflichtprÃ¼fung)
  *  - updateBpCommentWarnings (public, UI-Hinweislogik)
  *  - bpFieldId / bpSelector (internal, ID-Mapping)
  *  - resetBpPanel (public, Panel-Reset)
@@ -131,7 +131,7 @@ const getCommentElementUnsafe = (normalizedCtx) => {
     try {
       diag.add?.(`[bp] invalid context "${which}": ${err?.message || err}`);
     } catch (_) { /* noop */ }
-    uiError?.('Ungültiger Messkontext – bitte morgens oder abends auswählen.');
+    uiError?.('UngÃ¼ltiger Messkontext â€“ bitte morgens oder abends auswÃ¤hlen.');
     return false;
   }
   const date = $("#date").value || todayStr();
@@ -226,7 +226,7 @@ const getCommentElementUnsafe = (normalizedCtx) => {
     return { iso, ts: base.getTime(), time: iso.slice(11,16) };
   }
 
-// SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden unter AppModules.bp
+// SUBMODULE: API export & global attach @internal - registriert Ã¶ffentliche Methoden unter AppModules.bp
   const bpApi = {
     requiresBpComment,
     updateBpCommentWarnings,
@@ -236,4 +236,9 @@ const getCommentElementUnsafe = (normalizedCtx) => {
   };
   appModules.bp = Object.assign(appModules.bp || {}, bpApi);
   global.AppModules.bp = appModules.bp;
+  Object.entries(bpApi).forEach(([name, fn]) => {
+    if (typeof global[name] === 'undefined') {
+      global[name] = fn;
+    }
+  });
 })(typeof window !== 'undefined' ? window : globalThis);
