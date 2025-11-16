@@ -25,6 +25,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 - Klarheit, welche Skripte direkt in `index.html` eingebunden werden.
 - **Arbeitsprinzip für alle weiteren Phasen:** Neue Dateien/Strukturen immer parallel aufbauen, vollständig testen (Capture/Doctor/Chart Smoke), auf GitHub Pages kontrollieren – erst wenn alles stabil läuft, alte Pfade/Assets entfernen.
 - **Code-Stil:** Jede neue Datei erhält sofort einen MODULE-Header (Name, Description, Submodules, Notes) und kommentierte `// SUBMODULE:`-Abschnitte – so bleibt die spätere Doku konsistent.
+- **Neu angelegte/aktualisierte Docs:** `docs/Repo Tree v2.md`, `docs/Import Inventory.md`, `docs/Build Deploy Paths.md`, `docs/QA_Notes.md`.
 
 ---
 
@@ -125,3 +126,4 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 ---
 
 Durch das schrittweise Vorgehen können wir jederzeit stoppen, ohne eine halbfertige Codebasis zu hinterlassen. Sobald Phase 3 abgeschlossen ist, entspricht die Struktur bereits grob dem gewünschten Baum; Phase 4+5 sorgen für zukünftige Features und finale Aufräumarbeiten.
+- **Neu angelegte/aktualisierte Docs:** `docs/Trendpilot Module Overview.md`, `docs/Charts Module Overview.md`, `docs/Doctor View Module Overview.md`, `docs/Intake Module Overview.md`, `docs/Capture Module Overview.md`, `docs/Supabase Core Overview.md`, `docs/Auth Module Overview.md`, `docs/Main Router Flow Overview.md`, `docs/Unlock Flow Overview.md`, `docs/State Layer Overview.md`, `docs/AppModules Namespace.md`, `docs/Core Diagnostics.md`.
