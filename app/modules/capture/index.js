@@ -18,6 +18,12 @@
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
   const MAX_PROTEIN_G = 300;
+  const roundValue = (key, value) => {
+    if (key === 'water_ml') {
+      return Math.round(value);
+    }
+    return Math.round(value * 100) / 100;
+  };
   const escapeAttr = (value = '') =>
     String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
   const TREND_PILOT_SEVERITY_META = {
@@ -418,15 +424,15 @@
     let message = '';
     if (kind === 'water'){
       const total = Math.max(0, Math.min(MAX_WATER_ML, (totals.water_ml || 0) + value));
-      totals.water_ml = Math.round(total);
+      totals.water_ml = roundValue('water_ml', total);
       message = 'Wasser aktualisiert.';
     } else if (kind === 'salt'){
       const total = Math.max(0, Math.min(MAX_SALT_G, (totals.salt_g || 0) + value));
-      totals.salt_g = Number(total.toFixed(2));
+      totals.salt_g = roundValue('salt_g', total);
       message = 'Salz aktualisiert.';
     } else {
       const total = Math.max(0, Math.min(MAX_PROTEIN_G, (totals.protein_g || 0) + value));
-      totals.protein_g = Number(total.toFixed(2));
+      totals.protein_g = roundValue('protein_g', total);
       message = 'Protein aktualisiert.';
     }
     diag.add?.(`[capture] totals ${JSON.stringify(totals)}`);
@@ -589,13 +595,6 @@
     const addWaterBtn = document.getElementById('ls-water-add-btn');
     const addSaltBtn = document.getElementById('ls-salt-add-btn');
     const addProtBtn = document.getElementById('ls-protein-add-btn');
-
-    const roundValue = (key, value) => {
-      if (key === 'water_ml') {
-        return Math.round(value);
-      }
-      return Math.round(value * 100) / 100;
-    };
 
     const updateIntake = async ({
       key,
