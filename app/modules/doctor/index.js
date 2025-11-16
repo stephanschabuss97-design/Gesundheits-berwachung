@@ -1,4 +1,4 @@
-﻿'use strict';
+﻿﻿'use strict';
 /**
  * MODULE: app/doctor.js
  * Description: Steuert die Arzt-Ansicht – lädt Tagesdaten, verwaltet Sperrlogik (Unlock), Scrollstatus und Exportfunktionen.
@@ -96,7 +96,7 @@
     const ackLabel = entry.ack ? 'Bestätigt' : 'Offen';
     const ackClass = entry.ack ? 'is-ack' : 'is-open';
     const safeText = entry.text
-      ? (typeof esc === 'function' ? esc(entry.text) : escapeAttr(entry.text))
+      ? escapeAttr(entry.text)
       : 'Trendpilot-Hinweis';
     const dateLabel = fmtDateDE(entry.day);
     const currentStatus = entry.doctorStatus || 'none';
@@ -278,7 +278,7 @@ async function renderDoctor(){
   const formatNotesHtml = (notes) => {
     const raw = (notes || '').trim();
     if (!raw) return '-';
-    const escaped = typeof esc === 'function' ? esc(raw) : escapeAttr(raw);
+    const escaped = escapeAttr(raw);
     if (typeof nl2br === 'function') {
       return nl2br(escaped);
     }
