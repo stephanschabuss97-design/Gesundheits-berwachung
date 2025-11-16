@@ -17,6 +17,23 @@ Changed:
 - MAP-Indikatoren (Tooltip + KPI-Dots) folgen jetzt den klinischen Bändern (MAP <60 kritisch, 60–64 Grenzwert, 65–100 normal, 101–110 hoch, >110 kritisch); Pulsdruck-Indikatoren übernehmen dieselben Farben (≤29 sehr niedrig, 30–50 normal, 51–60 gelb, 61–70 orange, ≥71 rot) und passen Schriftkontraste automatisch an.
 - Chart-Render animiert sanft (Linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
 
+## v1.8.2 – Phase 2 Step 4-6 (App CSS/JS Switch)
+
+Added:
+- Smoke-Test-Suite für den neuen `app/`-Bundle: Headless Edge (`msedge --headless --dump-dom`) + statischer Pages-Check (`python -m http.server` + `Invoke-WebRequest http://127.0.0.1:8765/app/app.css`). Ergebnisse wurden in `docs/QA_CHECKS.md` und `docs/QA_Notes.md` protokolliert.
+
+Changed:
+- `index.html` lädt nun `app/app.css` sowie `app/core/{diag,utils,config,capture-globals}` und `app/supabase/index.js`; Reihenfolge/Kommentare wurden aktualisiert.
+- `assets/js/boot-auth.js` importiert `../../app/supabase/index.js`, `assets/js/main.js`-Logmeldungen verweisen auf den neuen Pfad.
+- Build-/Roadmap-/Modul-Dokumentation reflektiert die `app/`-Pfadstruktur (`docs/Build Deploy Paths.md`, modulare Overviews, Roadmap Phase 2).
+
+Removed:
+- Legacy-Dubletten `assets/css/*`, `assets/js/{config.js,utils.js,diagnostics.js,capture/globals.js,supabase.js,supabase/**}` – alle Funktionen leben jetzt ausschließlich unter `app/`.
+
+Notes:
+- `app/supabase.js` fungiert als neuer Legacy-Proxy, damit `window.SupabaseAPI` unverändert für alte Module bereitgestellt wird.
+- Nach jedem weiteren Modul-Move weiterhin „Neu → Test → Umschalten → Entfernen“ befolgen; Import-Inventar/QA-Checklisten wurden entsprechend ergänzt.
+
 ## v1.8.2 - Guard/Resume Cleanup
 
 Added:
@@ -566,6 +583,7 @@ Fixed:
 
 Notes:
 - Grenzwerte: Sys > 130 mmHg oder Dia > 90 mmHg (Morgens wie Abends) verlangen einen Kommentar; Prüfung erfolgt vor `saveBlock`/`saveDaySummary` und bricht den Speichervorgang ab.
+
 
 ## v1.0.0 (PREVIEW)
 

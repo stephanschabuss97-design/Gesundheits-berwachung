@@ -61,14 +61,20 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 3. ✔️ **Supabase Barrel angleichen:**
    - `assets/js/supabase/index.js` + Submodule (core/, auth/, api/, realtime/) nach `app/supabase/` kopiert.
 
-4. 🔲 **Smoke-Tests & Pages-Check:**  
-   Capture, Doctor, Chart, Trendpilot mit den neuen Dateien (lokal + Pages/Disable cache) testen; MODULE-/SUBMODULE-Kommentare prüfen.
+4. ✅ **Smoke-Tests & Pages-Check:**
+   - msedge --headless --dump-dom file://.../index.html gegen das neue App-Bundle ausgeführt (Capture/Doctor/Chart/Trendpilot DOM vorhanden, keine konsolenrelevanten Fehler).
+   - Mini-Pages-Check über python -m http.server + Invoke-WebRequest http://127.0.0.1:8765/app/app.css bestätigt, dass relative pp/...-Pfade auf einem GitHub-Pages-äquivalenten Static-Server funktionieren.
+   - MODULE-/SUBMODULE-Header der migrierten Dateien mit den Legacy-Pendants gehasht (Parity-Log siehe QA-Notes).
 
-5. 🔲 **Referenzen umstellen:**  
-   `<link>`/`<script>` in index.html (und ggf. boot-auth.js) schrittweise auf `app/...` ändern; `assets/...` nur noch als Fallback.
+5. ✅ **Referenzen umstellen:**
+   - Head-Link referenziert jetzt pp/app.css als Composer.
+   - Script-Stack bindet pp/core/{diag,utils,config,capture-globals} sowie pp/supabase/index.js; ssets/js/boot-auth.js importiert ../../app/supabase/index.js.
+   - ssets/js/main.js-Logtext sowie Build-/Roadmap-Dokumentation wurden aktualisiert.
 
-6. 🔲 **Altbestände abbauen:**  
-   Wenn `app/...` stabil läuft, doppelte `assets/css/` und `assets/js/`-Dateien entfernen oder als Build-Artefakt kennzeichnen.
+6. ✅ **Altbestände abbauen:**
+   - ssets/css/ entfernt (Base/Layout/Capture/Doctor/Chart/Auth/Utilities/App).
+   - ssets/js/{config.js,utils.js,diagnostics.js,capture/globals.js,supabase.js,supabase/**} gelöscht; Kommentare verweisen auf pp/core/*.
+   - QA-/Roadmap-Notizen ergänzt, damit keine neuen ssets/...-Pfade entstehen.
 
 ### Ergänzung: Neu → Test → Umschalten → Entfernen
 - Neue CSS/JS-Dateien **immer zuerst vollständig unter `app/` vorbereiten**, ohne bestehende Abläufe zu gefährden.

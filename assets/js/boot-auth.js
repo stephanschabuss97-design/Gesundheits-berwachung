@@ -9,7 +9,7 @@
  */
 
 // SUBMODULE: imports @internal - bindet zentrale Supabase-Schnittstelle ein
-import { SupabaseAPI } from "./supabase/index.js";
+import { SupabaseAPI } from "../../app/supabase/index.js";
 
 // SUBMODULE: bootAuth @public - initialisiert Auth-Callbacks und synchronisiert UI mit Login-Status
 const bootAuth = () => {

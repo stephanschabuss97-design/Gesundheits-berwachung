@@ -20,9 +20,9 @@ Das Intake-Modul erlaubt das tägliche Erfassen von Wasser (ml), Salz (g) und Pr
 |-------|-------|
 | `assets/js/capture/index.js` | Hauptmodul für Intake-UI: Buttons, Inputs, Status-Pills, RPC-Aufrufe, Timer (Mitternacht/Noon), Warnungen. |
 | `assets/js/capture/globals.js` | Shared State (Totals, Timer, Flags), Getter/Setter, Hilfsfunktionen `softWarnRange`, `setBusy`. |
-| `assets/css/capture.css` | Layout der Accordions/Buttons, Pill-Styling, Responsiveness. |
+| `app/styles/capture.css` | Layout der Accordions/Buttons, Pill-Styling, Responsiveness (via `app/app.css`). |
 | `assets/js/main.js` | Bindet Tab-/Unlock-Events, `requestUiRefresh`, setzt Standarddatum und reagiert auf Intake-Status (z.B. `bp:auto`). |
-| `assets/js/supabase/api/intake.js` | RPCs: `loadIntakeToday`, `saveIntakeTotalsRpc`, `cleanupOldIntake`. |
+| `app/supabase/api/intake.js` | RPCs: `loadIntakeToday`, `saveIntakeTotalsRpc`, `cleanupOldIntake`. |
 | `docs/QA_CHECKS.md` | Tests für Capture-Flow, Accessibility, Reset und RPC-Fehler. |
 
 ---

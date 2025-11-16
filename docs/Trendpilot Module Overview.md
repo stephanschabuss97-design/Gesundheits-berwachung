@@ -16,11 +16,11 @@ Der Trendpilot überwacht mittel- bis langfristige Veränderungen im Blutdruckve
 |-------|-------|
 | `assets/js/trendpilot/data.js` | Mathematischer Unterbau: transformiert Tagesdaten (`computeDailyBpStats`), gruppiert Wochen, berechnet gleitende Baselines und Deltas (`calcMovingBaseline`, `buildTrendWindow`), legt Defaults (`TREND_PILOT_DEFAULTS`) fest. |
 | `assets/js/trendpilot/index.js` | Orchestriert Trendanalyse: Hook nach Abend-Save, Supabase-Integration, Dialoganzeige, Pill/Legend Events. Registriert API (`AppModules.trendpilot`). |
-| `assets/js/supabase/api/system-comments.js` | REST-Client für `health_events`: erstellt/patcht `system_comment`-Einträge, verwaltet Ack/Doctor-Status im JSON-Payload. Exportiert `fetchSystemCommentsRange`, `upsertSystemCommentRemote`, `setSystemCommentAck`, `setSystemCommentDoctorStatus`. |
+| `app/supabase/api/system-comments.js` | REST-Client für `health_events`: erstellt/patcht `system_comment`-Einträge, verwaltet Ack/Doctor-Status im JSON-Payload. Exportiert `fetchSystemCommentsRange`, `upsertSystemCommentRemote`, `setSystemCommentAck`, `setSystemCommentDoctorStatus`. |
 | `assets/js/main.js` | Bindet den Capture-Hook: Nach Abend-Save → `runTrendpilotAnalysis(day)`; Handles log + Fehlermeldung. |
 | `assets/js/capture/index.js` | Zeigt im Capture-Header eine Trendpilot-Pill (Severity, Datum, Kurztext); reagiert auf `trendpilot:latest` Events. |
 | `assets/js/doctor/index.js` | Rendert den Trendpilot-Hinweisblock, ruft `fetchSystemCommentsRange`, erlaubt Statusbuttons („geplant“, „erledigt“, „zurücksetzen“), loggt Fehler. |
-| `assets/js/charts/index.js` & `assets/css/chart.css` | Zeichnen Trendpilot-Hintergrundbänder auf dem BP-Chart, ergänzen Legende. |
+| `assets/js/charts/index.js` & `app/modules/charts/chart.css` | Zeichnen Trendpilot-Hintergrundbänder auf dem BP-Chart, ergänzen Legende. |
 | `docs/QA_CHECKS.md` & `docs/Trendpilot Roadmap (Manual).md` | Dokumentation und QA-Guidelines. |
 
 ---

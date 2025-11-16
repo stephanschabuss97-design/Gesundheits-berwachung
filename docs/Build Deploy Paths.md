@@ -21,39 +21,33 @@ Phase 0 / Schritt 3 der Repo-Roadmap. Dieses Dokument fasst zusammen, wie der Ge
 
 ## 2. Asset-/Import-Pfade
 
-`index.html` lädt derzeit ausschließlich relative Ressourcen aus `assets/`:
+`index.html` lädt inzwischen den gemischten Satz aus `app/` (neue Struktur) und den verbleibenden Legacy-Modulen unter `assets/`:
 
 ### CSS (`<head>`)
-- `assets/css/base.css`
-- `assets/css/layout.css`
-- `assets/css/capture.css`
-- `assets/css/doctor.css`
-- `assets/css/chart.css`
-- `assets/css/auth.css`
-- `assets/css/utilities.css`
-- `assets/css/app.css`
+- `app/app.css` (Composer, importiert `app/styles/*` + `app/modules/charts/chart.css`)
 
 ### JavaScript (`</body>` vor Abschluss)
-- `assets/js/diagnostics.js`
+- `app/core/diag.js`
 - `assets/js/ui.js`
 - `assets/js/ui-layout.js`
 - `assets/js/ui-errors.js`
-- `assets/js/utils.js`
+- `app/core/utils.js`
 - `assets/js/format.js`
-- `assets/js/config.js`
-- `assets/js/capture/globals.js`
+- `app/core/config.js`
+- `app/core/capture-globals.js`
 - `assets/js/data-local.js`
 - `assets/js/capture/index.js`
 - `assets/js/bp.js`
 - `assets/js/body.js`
 - `assets/js/trendpilot/data.js`
+- `app/supabase/index.js`
 - `assets/js/ui-tabs.js`
 - `assets/js/trendpilot/index.js`
 - `assets/js/doctor/index.js`
 - `assets/js/charts/index.js`
 - `assets/js/main.js`
 
-Diese Liste deckt alle Ressourcen ab, die später nach `app/` verschoben werden sollen. Sobald die Dateien migriert sind, müssen die `<link>`/`<script>`-Pfade angepasst werden (z. B. `app/styles/base.css`, `app/modules/capture/index.js`, …). GitHub Pages stellt auch diese Pfade statisch bereit, solange `index.html` sie korrekt referenziert.
+Diese Liste zeigt den aktuellen Mischbetrieb (Phase 2). Verbleibende `assets/js/*`-Module werden in späteren Phasen in `app/modules/**` überführt; bis dahin stellt GitHub Pages beide Pfadtypen unverändert bereit.
 
 ---
 

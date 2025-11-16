@@ -19,9 +19,9 @@ Dieses Dokument beschreibt den App-Lock / Unlock-Mechanismus (Passkey/PIN) im Ge
 |-------|-------|
 | `assets/js/guard.js` (oder entsprechendes Modul im Supabase-Auth-Space) | Implementiert `requireDoctorUnlock`, Passkey/PIN Handlers, `authGuardState`. |
 | `assets/js/main.js` | Ruft `requireDoctorUnlock` beim Tab-Wechsel, triggert Pending Actions (`setAuthPendingAfterUnlock`). |
-| `assets/js/supabase/index.js` | Exportiert Guard-Funktionen (`requireDoctorUnlock`, `bindAppLockButtons`, `lockUi`, `authGuardState`). |
+| `app/supabase/index.js` | Exportiert Guard-Funktionen (`requireDoctorUnlock`, `bindAppLockButtons`, `lockUi`, `authGuardState`). |
 | `assets/js/ui-tabs.js` | Stellt Tab-Switch-Events, ruft Unlock-Flow. |
-| `assets/css/auth.css` | Styling für Lock-Overlay (`#appLock`). |
+| `app/styles/auth.css` | Styling für Lock-Overlay (`#appLock`). |
 | `index.html` | Enthält Lock-Overlay HTML (Titel, Buttons). |
 
 ---

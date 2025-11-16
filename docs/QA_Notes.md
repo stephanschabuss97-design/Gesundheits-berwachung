@@ -9,3 +9,11 @@ Empfohlene ToDos:
 2. docs/modules/* vorbereiten: Hinweise einfügen, dass Pfadangaben nach Phase 2 auf pp/ aktualisiert werden.
 3. Bei jedem QA-Run g "assets/js" als Kontrollpunkt aufnehmen.
 
+---
+
+## 2025-11-16 – Phase 2 Step 4 (Smoke & Pages-Check)
+
+- msedge --headless --disable-gpu --dump-dom file://.../index.html gegen den App-Build gefahren – Capture/Doctor/Chart/Trendpilot DOM vorhanden, keine neuen Konsolenfehler im Dump.
+- Mini-Pages-Probe mit python -m http.server 8765 + Invoke-WebRequest http://127.0.0.1:8765/app/app.css bestätigt, dass pp/...-Pfade unter einem statischen Server (GitHub-Pages-Äquivalent) erreichbar sind.
+- Hash-Parity: Compare-Object über ssets/css/* vs. pp/styles/* sowie ssets/js/{config,utils,diagnostics,capture/globals}.js → keine Divergenzen (Log in QA_CHECKS).
+- Ergebnis: Freigabe für Step 5 (Pfadumschaltung) erteilt.

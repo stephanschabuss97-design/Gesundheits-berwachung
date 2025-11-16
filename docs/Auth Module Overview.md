@@ -19,13 +19,13 @@ Das Auth-Modul stellt sowohl die klassische Supabase-Auth (Login, Token-Refresh)
 
 | Datei | Zweck |
 |-------|-------|
-| `assets/js/supabase/auth/index.js` | Kapselt Supabase-Auth (Login, Logout, token change). |
-| `assets/js/supabase/index.js` | Aggregiert Auth-Exports (`requireSession`, `watchAuthState`, `afterLoginBoot`). |
+| `app/supabase/auth/index.js` | Kapselt Supabase-Auth (Login, Logout, token change). |
+| `app/supabase/index.js` | Aggregiert Auth-Exports (`requireSession`, `watchAuthState`, `afterLoginBoot`). |
 | `assets/js/main.js` | Nutzt Auth-Wrapper (`createSupabaseFn`), steuert UI/Router nach Login. |
 | `assets/js/boot-auth.js` | Entry-Point beim Laden: setzt Auth-Status, bindet Buttons. |
 | `assets/js/guard.js` (falls vorhanden) | App-Lock/Unlock (Passkey, PIN), `requireDoctorUnlock`. |
-| `assets/js/config.js` | Flag `DEV_ALLOW_DEFAULTS` steuert, ob Default-Config angezeigt werden darf. |
-| UI-Dateien (`index.html`, `assets/css/auth.css`) | Login-Overlay, Buttons, Fehleranzeigen. |
+| `app/core/config.js` | Flag `DEV_ALLOW_DEFAULTS` steuert, ob Default-Config angezeigt werden darf. |
+| UI-Dateien (`index.html`, `app/styles/auth.css`) | Login-Overlay, Buttons, Fehleranzeigen. |
 
 ---
 

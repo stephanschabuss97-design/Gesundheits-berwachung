@@ -1,14 +1,17 @@
+'use strict';
 /**
- * MODULE: assets/js/supabase/index.js
- * Description: Stellt die Supabase-Funktionalität über ein Legacy-Fensterobjekt (window.SupabaseAPI) bereit und forwardet Kernmodule.
+ * MODULE: app/supabase.js
+ * Description: Übergangs-Proxy für Supabase – spiegelt die modularen Komponenten aus `app/supabase/*`
+ *              in ein globales SupabaseAPI-Objekt (window.AppModules.supabase), damit Legacy-Code
+ *              ohne Refactor weiterläuft.
  * Submodules:
  *  - imports (core, auth, api, realtime)
  *  - Supabase State Binding (window.sbClient, __authState, __lastLoggedIn)
- *  - SupabaseAPI Aggregation (core exports + helpers)
- *  - Legacy Window Exposure (window.AppModules.supabase, warnLegacy)
+ *  - SupabaseAPI Aggregation (Forwarder für Core-/Auth-/API-/Realtime-Funktionen)
+ *  - Legacy Window Exposure (AppModules.supabase, warnLegacy)
  * Notes:
- *  - Dient als Übergangs-Proxy zwischen modernem Modulcode und Monolith-kompatiblen Fensteraufrufen.
- *  - Enthält keine eigene Logik, nur Funktions-Forwarder.
+ *  - Setzt keinerlei eigene Logik um, sondern delegiert nur an die modularen Dateien.
+ *  - Dient Phase 2 als Brücke, bis alle Verbraucher direkt die neuen Module importieren.
  */
 
 // SUBMODULE: imports @internal - bindet Supabase-Kernmodule, Auth- und API-Komponenten

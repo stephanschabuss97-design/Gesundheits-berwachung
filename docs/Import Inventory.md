@@ -19,7 +19,7 @@ Phase 0 / Schritt 2 der Repo-Roadmap: Übersicht aller Dateien, die aktuell dire
 | HTML      | `index.html`, `index.html.bak` |
 | Dokumentation / Planung | `docs/Capture Module Overview.md`, `docs/Charts Module Overview.md`, `docs/Doctor View Module Overview.md`, `docs/Intake Module Overview.md`, `docs/Main Router Flow Overview.md`, `docs/Auth Module Overview.md`, `docs/Trendpilot Module Overview.md`, `docs/Unlock Flow Overview.md`, `docs/State Layer Overview.md`, `docs/Repo Tree v2.md`, `docs/Repo Restructure Roadmap.md`, `docs/Appointment-Removal Roadmap.md`, `docs/QA_CHECKS.md` |
 | Change/History | `CHANGELOG.md` |
-| JS-Quellen | `assets/js/main.js`, `assets/js/main.js.bak`, `assets/js/supabase.js`, `assets/js/ui.js`, `assets/js/ui-layout.js`, `assets/js/ui-errors.js`, `assets/js/ui-tabs.js`, `assets/js/utils.js`, `assets/js/utils/debounce-fallback.js` |
+| JS-Quellen | `assets/js/main.js`, `assets/js/main.js.bak`, `app/supabase/index.js`, `assets/js/ui.js`, `assets/js/ui-layout.js`, `assets/js/ui-errors.js`, `assets/js/ui-tabs.js`, `app/core/utils.js`, `assets/js/utils/debounce-fallback.js` |
 
 ---
 
@@ -28,4 +28,3 @@ Phase 0 / Schritt 2 der Repo-Roadmap: Übersicht aller Dateien, die aktuell dire
 - Bei der Migration sollten zuerst `index.html` und `assets/js/main.js` angepasst werden; diese decken den Großteil der `<script>`-Imports ab.
 - Die Dokumentationen können in Phase 1 parallel aktualisiert werden (Suche nach `assets/js` → ersetze durch neue `app/…`-Pfade, sobald bekannt).
 - Für Phase 2 empfiehlt sich ein automatischer Check (`rg "assets/js"`) nach jedem Move, um sicherzustellen, dass keine Legacy-Pfade übrig bleiben.
-

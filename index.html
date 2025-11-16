@@ -11,14 +11,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
 <title>Gesundheits-Logger (V1.7.6)</title>
-<link rel="stylesheet" href="assets/css/base.css">
-<link rel="stylesheet" href="assets/css/layout.css">
-<link rel="stylesheet" href="assets/css/capture.css">
-<link rel="stylesheet" href="assets/css/doctor.css">
-<link rel="stylesheet" href="assets/css/chart.css">
-<link rel="stylesheet" href="assets/css/auth.css">
-<link rel="stylesheet" href="assets/css/utilities.css">
-<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="app/app.css">
 <!-- END MODULE -->
 </head>
 <body>
@@ -296,21 +289,21 @@
 ></script>
 
 
-<script src="assets/js/diagnostics.js"></script>
+<script src="app/core/diag.js"></script>
 <!-- @refactor: moved to assets/js/ui.js -->
 <script src="assets/js/ui.js"></script>
 <!-- @refactor: moved to assets/js/ui-layout.js -->
 <script src="assets/js/ui-layout.js"></script>
 <!-- @refactor: moved to assets/js/ui-errors.js -->
 <script src="assets/js/ui-errors.js"></script>
-<!-- @refactor: moved to assets/js/utils.js -->
-<script src="assets/js/utils.js"></script>
+<!-- @refactor: Phase 2 – app/core/utils.js -->
+<script src="app/core/utils.js"></script>
 <!-- @refactor: moved to assets/js/format.js -->
 <script src="assets/js/format.js"></script>
-<!-- @refactor: moved to assets/js/config.js -->
-<script src="assets/js/config.js"></script>
-<!-- @refactor: moved to assets/js/capture/globals.js -->
-<script src="assets/js/capture/globals.js"></script>
+<!-- @refactor: Phase 2 – app/core/config.js -->
+<script src="app/core/config.js"></script>
+<!-- @refactor: Phase 2 – app/core/capture-globals.js -->
+<script src="app/core/capture-globals.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
 <!-- @refactor: moved to assets/js/capture/index.js -->
@@ -321,8 +314,8 @@
 <script src="assets/js/body.js"></script>
 <!-- @refactor: moved to assets/js/trendpilot/data.js -->
 <script src="assets/js/trendpilot/data.js"></script>
-<!-- @refactor: moved to assets/js/supabase/index.js -->
-<script type="module" src="assets/js/supabase/index.js"></script>
+<!-- @refactor: Phase 2 – app/supabase/index.js -->
+<script type="module" src="app/supabase/index.js"></script>
 <script type="module" src="assets/js/boot-auth.js"></script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->
 <script src="assets/js/ui-tabs.js"></script>

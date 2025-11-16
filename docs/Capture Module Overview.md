@@ -24,8 +24,8 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 | `assets/js/bp.js` | Blutdruck-spezifische Funktionen (`saveBlock`, Kommentar-Pflicht, Panel-Reset). |
 | `assets/js/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen. |
 | `assets/js/main.js` | Bindet Buttons, Datum, Unlock-Logik, orchestriert `requestUiRefresh`. |
-| `assets/css/capture.css` | Styles für Accordion, Buttons, Pill-Reihe, Responsive Layout. |
-| `assets/js/config.js` | Flags (z.B. `TREND_PILOT_ENABLED` indirekt, `DEV_ALLOW_DEFAULTS`). |
+| `app/styles/capture.css` | Styles für Accordion, Buttons, Pill-Reihe, Responsive Layout (eingebunden via `app/app.css`). |
+| `app/core/config.js` | Flags (z.B. `TREND_PILOT_ENABLED` indirekt, `DEV_ALLOW_DEFAULTS`). |
 
 ---
 

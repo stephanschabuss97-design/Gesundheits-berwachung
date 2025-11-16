@@ -21,12 +21,12 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, Körpergewicht/Bauc
 | Datei | Zweck |
 |-------|-------|
 | `assets/js/charts/index.js` | Hauptmodul: Daten laden (`getFiltered`), Skalen berechnen, SVG rendern (Linien, Punkte, Bars, Trendpilot-Bänder), Tooltip-/Legend-Logik, Pulse-Link. |
-| `assets/css/chart.css` | Styling für Chart-Panel, KPI-Leiste, Tooltip, Punkte/Bars und Trendpilot-Bänder/Legende. |
+| `app/modules/charts/chart.css` | Styling für Chart-Panel, KPI-Leiste, Tooltip, Punkte/Bars und Trendpilot-Bänder/Legende (wird über `app/app.css` importiert). |
 | `assets/js/main.js` | Triggert Chart-Refresh via `requestUiRefresh({ chart: true })`, setzt Panel/Hooks (z.B. `setTab('doctor')`). |
 | `assets/js/capture/index.js` | Stellt KPI-Werte (Wasser/Salz/Protein) bereit, so dass Chart-Daten/Panel mit Capture-Status synchronisiert sind. |
 | `assets/js/trendpilot/index.js` | Liefert Trendpilot-Bänder (Warnung/Kritik) für das Chart (`chartPanel.loadTrendpilotBands`). |
 | `assets/js/doctor/index.js` | Chart-Button im Arzt-Bereich (`#doctorChartBtn` öffnet das Chart-Panel mit gewähltem Zeitraum). |
-| `assets/js/config.js` | Enthält Flags (z.B. `SHOW_CHART_ANIMATIONS`, `TREND_PILOT_ENABLED`), die das Chart respektiert. |
+| `app/core/config.js` | Enthält Flags (z.B. `SHOW_CHART_ANIMATIONS`, `TREND_PILOT_ENABLED`), die das Chart respektiert. |
 
 ---
 

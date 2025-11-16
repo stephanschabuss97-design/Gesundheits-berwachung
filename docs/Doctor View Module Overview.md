@@ -22,9 +22,9 @@ Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Akt
 | Datei | Zweck |
 |-------|-------|
 | `assets/js/doctor/index.js` | Hauptlogik: Rendern, Scroll-Restore, Trendpilot-Block, Delete/Export, Chart-Button. |
-| `assets/css/doctor.css` | Layout/Stil (Toolbar, Badge, Trendpilot-Karten, Tagesgrid). |
+| `app/styles/doctor.css` | Layout/Stil (Toolbar, Badge, Trendpilot-Karten, Tagesgrid). |
 | `assets/js/main.js` | Bindet Tab-Wechsel, Unlock-Flow, `requestUiRefresh({ doctor: true })`. |
-| `assets/js/supabase/api/vitals.js` & `api/system-comments.js` | REST-Fetch für Tageswerte und Trendpilot-Kommentare. |
+| `app/supabase/api/vitals.js` & `app/supabase/api/system-comments.js` | REST-Fetch für Tageswerte und Trendpilot-Kommentare. |
 | `assets/js/trendpilot/index.js` | Liefert `trendpilot:latest` Events, Ack-Patching etc. |
 | `assets/js/charts/index.js` | Chart-Button nutzt das gleiche Range, um Diagramm zu öffnen. |
 | `docs/QA_CHECKS.md` | Enthält Tests (Unlock, Trendpilot-Block, Delete, Chart). |

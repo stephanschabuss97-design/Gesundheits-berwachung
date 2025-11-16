@@ -21,7 +21,7 @@ const getSupabaseApi = () => {
   const api = window.SupabaseAPI;
   if (!api) {
     if (!supabaseMissingLogged) {
-      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe assets/js/supabase/index.js / Script-Reihenfolge.');
+      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe app/supabase/index.js / Script-Reihenfolge.');
       supabaseMissingLogged = true;
     }
     return null;
@@ -343,7 +343,7 @@ function toNumDE(s) {
   return Number.isFinite(n) ? n : null;
 }
 
-// @refactor: moved to assets/js/diagnostics.js (uiError, uiInfo)
+// @refactor: now in app/core/diag.js (uiError, uiInfo)
 
 // @refactor: moved to assets/js/ui.js (debounce)
 
@@ -406,7 +406,7 @@ function setDoctorAccess(enabled){
  * exports: $, $$, fmtNum, todayStr, timeStr, esc, nl2br
  * notes: deterministische Hilfsfunktionen; rein funktional belassen
  */
-// @refactor: moved to assets/js/utils.js ($, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br)
+// @refactor: now in app/core/utils.js ($, $$, fmtNum, pad2, todayStr, timeStr, esc, nl2br)
 
 /** END MODULE */
 

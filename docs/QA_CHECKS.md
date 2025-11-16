@@ -1,4 +1,18 @@
-﻿# QA Checklists
+# QA Checklists
+
+## Phase 2 – Assets→App Smoke (2025-11-16)
+
+**Scope:** pp/app.css, pp/core/{diag,utils,config,capture-globals}, pp/supabase/index.js (inkl. boot-auth Import-Pfad) – Ziel: sicherstellen, dass Capture/Doctor/Chart/Trendpilot mit neuen Pfaden laufen, bevor Legacy-Assets gelöscht werden.
+
+- [x] **Capture View:** Headless Edge (msedge --headless --dump-dom) zeigt vollständiges Capture-Markup (Accordion, Buttons, Diagnose-Panel). Keine Script-Errors; Buttons/Toggles vorhanden.
+- [x] **Doctor View + Trendpilot:** DOM-Dump enthält .doctor-view, Trendpilot-Bereich (Trendpilot-Panel, Chart-Button). Tabs aktiv laut Dump (ARIA).
+- [x] **Charts:** SVG-Panel + KPI-Leiste vorhanden, Chart-Skripte geladen; Trendpilot-Bänder (	rendpilot-band) sichtbar.
+- [x] **Supabase/Auth:** ssets/js/boot-auth.js importiert ../../app/supabase/index.js; window.SupabaseAPI per headless Dump sichtbar. Login-Overlay DOM vorhanden.
+- [x] **Static-Server-Probe:** python -m http.server 8765 + Invoke-WebRequest http://127.0.0.1:8765/app/app.css liefert HTTP 200 → GitHub-Pages-Parität.
+- [x] **Parity-Hashes:** Compare-Object über alte/neue CSS/JS-Paare → keine Diff; Ergebnis in QA_Notes dokumentiert.
+
+---
+
 
 ## v0.1.0 - Prototype
 
