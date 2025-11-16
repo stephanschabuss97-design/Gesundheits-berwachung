@@ -3,7 +3,7 @@
  * MODULE: bp.js
  * Description: Verwaltet Blutdruck-Erfassung, Validierung und Persistierung inkl. Kommentar-Pflicht, Panel-Reset und Datensynchronisation.
  * Submodules:
- *  - requiresBpComment (public, Kommentar-PflichtprÃ¼fung)
+ *  - requiresBpComment (public, Kommentar-Pflichtprüfung)
  *  - updateBpCommentWarnings (public, UI-Hinweislogik)
  *  - bpFieldId / bpSelector (internal, ID-Mapping)
  *  - resetBpPanel (public, Panel-Reset)
@@ -237,6 +237,7 @@ const getCommentElementUnsafe = (normalizedCtx) => {
   };
   appModules.bp = Object.assign(appModules.bp || {}, bpApi);
   global.AppModules.bp = appModules.bp;
+  // Expose functions globally, skip silently on collision (warn if debug enabled)
   Object.entries(bpApi).forEach(([name, fn]) => {
     if (typeof global[name] !== 'undefined') {
       if (BP_WARN_ON_COLLISION) {

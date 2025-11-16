@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * MODULE: body.js
  * Description: Verarbeitet Körperdaten und Tageszusammenfassungen inkl. Validierung und automatischer UI-Synchronisierung.
@@ -13,6 +13,7 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const BODY_WARN_ON_COLLISION = Boolean(global?.BP_DEBUG_COLLISIONS);
 
   // SUBMODULE: resetBodyPanel @internal - leert Body-Eingaben und stellt optional den Fokus wieder her
   function resetBodyPanel(opts = {}) {
@@ -151,8 +152,8 @@
   Object.entries(bodyApi).forEach(([name, fn]) => {
     if (typeof global[name] === 'undefined') {
       global[name] = fn;
-        } else {
-    console.warn(`[body] Global "${name}" bereits definiert, überspringe Exposition.`);
+    } else if (BODY_WARN_ON_COLLISION) {
+      console.warn(`[body] Global "${name}" bereits definiert, überspringe Exposition.`);
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
