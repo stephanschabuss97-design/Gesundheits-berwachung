@@ -24,6 +24,8 @@
     }
     return Math.round(value * 100) / 100;
   };
+  const getBpModule = () => global.AppModules?.bp;
+  const invokeResetBpPanel = (ctx, opts) => getBpModule()?.resetBpPanel?.(ctx, opts);
   const escapeAttr = (value = '') =>
     String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
   const TREND_PILOT_SEVERITY_META = {
@@ -680,13 +682,12 @@
   const getResetBodyPanel = () => {
   const mod = global.AppModules?.body;
   if (mod && typeof mod.resetBodyPanel === 'function') return mod.resetBodyPanel;
-  if (typeof global.resetBodyPanel === 'function') return global.resetBodyPanel;
   return null;
 };
   function resetCapturePanels(opts = {}) {
     const { focus = true } = opts;
-    resetBpPanel('M', { focus: false });
-    resetBpPanel('A', { focus: false });
+    invokeResetBpPanel('M', { focus: false });
+    invokeResetBpPanel('A', { focus: false });
     const resetBodyPanelFn = getResetBodyPanel();
     if (resetBodyPanelFn) resetBodyPanelFn({ focus: false });
     const ctxSel = document.getElementById('bpContextSel');
@@ -709,8 +710,8 @@
         });
       });
     };
-    bind('#captureAmount, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('M'));
-    bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => resetBpPanel('A'));
+    bind('#captureAmount, #diaM, #pulseM, #bpCommentM', () => document.getElementById('saveBpPanelBtn')?.click(), () => invokeResetBpPanel('M'));
+    bind('#sysA, #diaA, #pulseA, #bpCommentA', () => document.getElementById('saveBpPanelBtn')?.click(), () => invokeResetBpPanel('A'));
     const resetBodyPanelFn = getResetBodyPanel();
     bind('#weightDay, #input-waist-cm, #fatPctDay, #musclePctDay', () => document.getElementById('saveBodyPanelBtn')?.click(), () => resetBodyPanelFn?.());
   }
