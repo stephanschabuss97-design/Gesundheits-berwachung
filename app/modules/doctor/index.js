@@ -1,4 +1,4 @@
-﻿﻿'use strict';
+﻿'use strict';
 /**
  * MODULE: app/doctor.js
  * Description: Steuert die Arzt-Ansicht – lädt Tagesdaten, verwaltet Sperrlogik (Unlock), Scrollstatus und Exportfunktionen.
@@ -29,6 +29,10 @@
     planned: 'Arztabklärung geplant',
     done: 'Arztabklärung erledigt'
   };
+  const getDoctorStatusLabel = (status) =>
+    TRENDPILOT_STATUS_LABELS[status] || TRENDPILOT_STATUS_LABELS.none;
+  const getSeverityMeta = (severity) =>
+    TRENDPILOT_SEVERITY_META[severity] || { label: 'Info', className: 'is-info' };
 
   // SUBMODULE: access-control @internal - Unlock- und Authentifizierungslogik
   const fallbackRequireDoctorUnlock = async () => {
@@ -92,7 +96,7 @@
     const ackLabel = entry.ack ? 'Bestätigt' : 'Offen';
     const ackClass = entry.ack ? 'is-ack' : 'is-open';
     const safeText = entry.text
-      ? (typeof esc === 'function' ? esc(entry.text) : entry.text.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch)))
+      ? (typeof esc === 'function' ? esc(entry.text) : escapeAttr(entry.text))
       : 'Trendpilot-Hinweis';
     const dateLabel = fmtDateDE(entry.day);
     const currentStatus = entry.doctorStatus || 'none';
@@ -274,10 +278,7 @@ async function renderDoctor(){
   const formatNotesHtml = (notes) => {
     const raw = (notes || '').trim();
     if (!raw) return '-';
-    const escapeFallbackMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-    const escaped = typeof esc === 'function'
-      ? esc(raw)
-      : raw.replace(/[&<>"']/g, (c) => escapeFallbackMap[c] || c);
+    const escaped = typeof esc === 'function' ? esc(raw) : escapeAttr(raw);
     if (typeof nl2br === 'function') {
       return nl2br(escaped);
     }
@@ -425,6 +426,3 @@ async function exportDoctorJson(){
   global.renderDoctor = renderDoctor;
   global.exportDoctorJson = exportDoctorJson;
 })(typeof window !== 'undefined' ? window : globalThis);
-
-  const getDoctorStatusLabel = (status) => TRENDPILOT_STATUS_LABELS[status] || TRENDPILOT_STATUS_LABELS.none;
-  const getSeverityMeta = (severity) => TRENDPILOT_SEVERITY_META[severity] || { label: 'Info', className: 'is-info' };
