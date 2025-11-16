@@ -103,9 +103,9 @@
     const delay = Math.min(RETRY_DELAY_BASE * Math.pow(2, initRetryCount), MAX_RETRY_DELAY);
     initRetryCount += 1;
     setTimeout(() => {
-      initializingTrendpilot = false;
       initTrendpilot();
     }, delay);
+    initializingTrendpilot = false;
     return;
   }
   dependencyWarned = false;
