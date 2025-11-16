@@ -135,26 +135,19 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 ---
 
-## Phase 4 – Neue Module & Future-Proofing (schwer)
+## Phase 4 - Neue Module & Future-Proofing (schwer)
 
-1. 🔧 **Appointments/Training Re-Enable:** Verzeichnis anlegen, Placeholder-Dateien + TODO-Markierungen setzen.  
-2. 🔧 **Assistant (KI):** Unter `app/modules/assistant/` API + Prompt-Struktur vorbereiten; Keys via Supabase Functions, damit keine Secrets im Client landen.  
-3. 🔧 **Diagnostics:** `app/diagnostics/` nur im Dev-Build laden (Feature-Flag in `app/core/config.js`).  
-4. 🔧 **PWA/TWA-Feinschliff:**  
-   - Service Worker aktualisieren (`app/` + `public/` cache).  
-   - Optional TWA Skeleton (`twa/android/`).  
-   - Lighthouse-Check (PWA score ≥ 90).
+1. ?? **Diagnostics:**
+   - pp/diagnostics/ vorbereiten (Feature-Flag in pp/core/config.js).
+   - Nur Struktur + Readiness-Check; Implementierung folgt separat.
 
-### Ergänzung: Neu → Test → Umschalten → Entfernen
-- Neue Module (Assistant, Diagnostics, Training) **zuerst vollständig anlegen**.
-- Dann **parallel testen**, zunächst unter Dev-Flag.
-- Erst wenn stabil: **in den produktiven Flow umschalten**.
-- Danach alte diagnostische Hilfsdateien / Legacy-Reste **entfernen**.
+2. ?? **Assistant (KI) Readiness:**
+   - Ordner pp/modules/assistant/ anlegen (ohne Dateien), prüfen ob Supabase-Hooks + Tree bereit für KI-Modul (OpenAI API via Functions).
+   - Keine Logik implementieren (eigene Roadmap später).
 
-- Reminder: Auch hier neue Ordner (assistant, diagnostics, etc.) zunächst parallel anlegen und verifizieren, bevor alte Reste gelöscht werden.
-
----
-
+3. ?? **PWA/TWA Readiness:**
+   - public//SW-Struktur prüfen, Ordner für PWA/TWA vorbereiten (z. B. 	wa/android/).
+   - Noch keine SW/TWA-Dateien schreiben (eigene Roadmap folgt).
 ## Phase 5 – Cleanup & Final Switch (schwer)
 
 1. 🔧 **Assets-Ordner aufräumen:** Entferne alte `assets/`-Reste, sobald alle Pfade angepasst sind.  
