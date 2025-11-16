@@ -20,7 +20,7 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, KÃ¶rpergewicht/Ba
 
 | Datei | Zweck |
 |-------|-------|
-| `assets/js/charts/index.js` | Hauptmodul: Daten laden (`getFiltered`), Skalen berechnen, SVG rendern (Linien, Punkte, Bars, Trendpilot-BÃ¤nder), Tooltip-/Legend-Logik, Pulse-Link. |
+| `app/modules/charts/index.js` | Hauptmodul: Daten laden (`getFiltered`), Skalen berechnen, SVG rendern (Linien, Punkte, Bars, Trendpilot-BÃ¤nder), Tooltip-/Legend-Logik, Pulse-Link. |
 | `app/modules/charts/chart.css` | Styling fÃ¼r Chart-Panel, KPI-Leiste, Tooltip, Punkte/Bars und Trendpilot-BÃ¤nder/Legende (wird Ã¼ber `app/app.css` importiert). |
 | `assets/js/main.js` | Triggert Chart-Refresh via `requestUiRefresh({ chart: true })`, setzt Panel/Hooks (z.B. `setTab('doctor')`). |
 | `app/modules/capture/index.js` | Stellt KPI-Werte (Wasser/Salz/Protein) bereit, so dass Chart-Daten/Panel mit Capture-Status synchronisiert sind. |

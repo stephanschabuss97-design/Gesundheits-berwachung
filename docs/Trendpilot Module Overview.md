@@ -20,7 +20,7 @@ Der Trendpilot Ã¼berwacht mittel- bis langfristige VerÃ¤nderungen im Blutdru
 | `assets/js/main.js` | Bindet den Capture-Hook: Nach Abend-Save â†’ `runTrendpilotAnalysis(day)`; Handles log + Fehlermeldung. |
 | `app/modules/capture/index.js` | Zeigt im Capture-Header eine Trendpilot-Pill (Severity, Datum, Kurztext); reagiert auf `trendpilot:latest` Events. |
 | `app/modules/doctor/index.js` | Rendert den Trendpilot-Hinweisblock, ruft `fetchSystemCommentsRange`, erlaubt Statusbuttons (â€žgeplantâ€œ, â€žerledigtâ€œ, â€žzurÃ¼cksetzenâ€œ), loggt Fehler. |
-| `assets/js/charts/index.js` & `app/modules/charts/chart.css` | Zeichnen Trendpilot-HintergrundbÃ¤nder auf dem BP-Chart, ergÃ¤nzen Legende. |
+| `app/modules/charts/index.js` & `app/modules/charts/chart.css` | Zeichnen Trendpilot-HintergrundbÃ¤nder auf dem BP-Chart, ergÃ¤nzen Legende. |
 | `docs/QA_CHECKS.md` & `docs/Trendpilot Roadmap (Manual).md` | Dokumentation und QA-Guidelines. |
 
 ---
@@ -68,7 +68,7 @@ Der Trendpilot Ã¼berwacht mittel- bis langfristige VerÃ¤nderungen im Blutdru
    - Trendpilot-Sektion zeigt EintrÃ¤ge (Datum, Severity-Badge, Ack-Status, Arztstatus, Text). Buttons setzen `doctorStatus` via Supabase.
    - Fehler (z.B. fehlende Daten) werden einmalig geloggt (`logDoctorError` + Touch-Log).
 
-3. **Chart (`assets/js/charts/index.js`):**
+3. **Chart (`app/modules/charts/index.js`):**
    - Beim BP-Draw: `loadTrendpilotBands({ from, to })`.
    - FÃ¼r jedes Warning/Critical wird ein transluzenter Tag-Streifen gerendert (`<rect class="trendpilot-band ...">`), Legende ergÃ¤nzt Swatches.
 

@@ -44,7 +44,7 @@ Phase 0 / Schritt 3 der Repo-Roadmap. Dieses Dokument fasst zusammen, wie der Ge
 - `assets/js/ui-tabs.js`
 - `assets/js/trendpilot/index.js`
 - `app/modules/doctor/index.js`
-- `assets/js/charts/index.js`
+- `app/modules/charts/index.js`
 - `assets/js/main.js`
 
 Diese Liste zeigt den aktuellen Mischbetrieb (Phaseâ€¯2). Verbleibende `assets/js/*`-Module werden in spÃ¤teren Phasen in `app/modules/**` Ã¼berfÃ¼hrt; bis dahin stellt GitHub Pages beide Pfadtypen unverÃ¤ndert bereit.
