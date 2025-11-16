@@ -112,6 +112,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Chart-spezifische CSS importieren.  
    - Regressionstest: Tooltip, Trendpilot-Bänder, Keyboard.
 
+   - Refactor-Follow-up (TODO): `chartPanel.draw` (~640 Zeilen) in kleinere Helpers (Skalen/KPIs/Trendpilot-Bänder/Serien/Bars/Legenden/Animationen) aufteilen, try/catch-Blöcke mit Logging versehen, KPI-Farbwahl (`sys`/`dia`) in Helper auslagern und Schwellen/Padding über zentrale `DEFAULTS`-Konstanten steuern (siehe Coderabbit – späterer Arbeitsschritt).
 4. 🔧 **Trendpilot Modul:**  
    - `assets/js/trendpilot/index.js` + helper nach `app/modules/trendpilot/`.  
    - Event-Namen dokumentieren (`trendpilot:latest`).  

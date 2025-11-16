@@ -89,6 +89,24 @@ const classifyPulsePressure = (pp) => {
   return { color: "rgba(220,38,38,0.95)", label: "Pulsdruck ≥ 71 mmHg (kritisch)" };
 };
 
+const CHART_DEFAULTS = Object.freeze({
+  HEIGHT_CM: 182,
+  WEIGHT_MIN: 75,
+  BP_THRESHOLD_SYS: 130,
+  BP_THRESHOLD_DIA: 90,
+  CHART_PADDING: Object.freeze({
+    LEFT: 48,
+    RIGHT: 16,
+    TOP: 12,
+    BOTTOM: 28
+  })
+});
+const logChartError = (scope, err) => {
+  const detail = err?.message || err;
+  console.error(`[chart] ${scope}`, detail);
+  diag.add?.(`[chart] ${scope}: ${detail}`);
+};
+
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
 const chartPanel = {
   el: null,
