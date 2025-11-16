@@ -306,12 +306,12 @@
 <script src="app/core/capture-globals.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
-<!-- @refactor: moved to assets/js/capture/index.js -->
-<script src="assets/js/capture/index.js"></script>
-<!-- @refactor: moved to assets/js/bp.js -->
-<script src="assets/js/bp.js"></script>
-<!-- @refactor: moved to assets/js/body.js -->
-<script src="assets/js/body.js"></script>
+<!-- @refactor: Phase 3 - app/modules/capture/index.js -->
+<script src="app/modules/capture/index.js"></script>
+<!-- @refactor: Phase 3 - app/modules/capture/bp.js -->
+<script src="app/modules/capture/bp.js"></script>
+<!-- @refactor: Phase 3 - app/modules/capture/body.js -->
+<script src="app/modules/capture/body.js"></script>
 <!-- @refactor: moved to assets/js/trendpilot/data.js -->
 <script src="assets/js/trendpilot/data.js"></script>
 <!-- @refactor: Phase 2 – app/supabase/index.js -->
@@ -396,19 +396,19 @@
     - UI / ROUTING / VIEWS - Core (Refresh/Help) -> #SUBMODULES: 7, #@extract: 0, Exports:[requestUiRefresh, runUiRefresh, maybeRefreshForTodayChange, setUnderlayInert]
     - AUTH - Guards -> #SUBMODULES: 3, #@extract: 0, Exports:[isLoggedIn, isLoggedInFast, setAuthGuard, setDoctorAccess]
     - UTILITIES -> #SUBMODULES: 0, #@extract: 0, Exports:[$,$$,fmtNum,todayStr,timeStr,esc,nl2br]
-    - CAPTURE (Intake) - State & Timer -> #SUBMODULES: 0, #@extract: 5, Exports:[refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus] (moved to assets/js/capture/index.js)
+    - CAPTURE (Intake) - State & Timer -> #SUBMODULES: 0, #@extract: 5, Exports:[refreshCaptureIntake, scheduleMidnightRefresh, maybeResetIntakeForToday, bindIntakeCapture, updateCaptureIntakeStatus] (moved to app/modules/capture/index.js)
     - DATA ACCESS (IndexedDB) -> #SUBMODULES: 2, #@extract: 0, Exports:[initDB, putConf, getConf, addEntry, updateEntry, getAllEntries, getEntryByRemoteId, deleteEntryLocal, dayIsoToMidnightIso]
     - AUTH - Header Cache -> #SUBMODULES: 1, #@extract: 0, Exports:[getHeaders]
     - DATA ACCESS (REST/RPC) -> #SUBMODULES: 30, #@extract: 1, Exports:[deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay]
     - APPOINTMENTS -> #SUBMODULES: 0, #@extract: 12, Exports:[refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge] (moved to assets/js/appointments.js)
-    - CAPTURE (Intake) - Status & RPC Hooks -> #SUBMODULES: 0, #@extract: 7, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake] (moved to assets/js/capture/index.js)
+    - CAPTURE (Intake) - Status & RPC Hooks -> #SUBMODULES: 0, #@extract: 7, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake] (moved to app/modules/capture/index.js)
     - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, renderDoctorDay, exportDoctorJson]
     - CHARTS (SVG/Canvas) -> #SUBMODULES: 15, #@extract: 3, Exports:[chartPanel]
     - UI / ROUTING / VIEWS - Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
-    - BP (Blood Pressure) - Validierung -> #SUBMODULES: 0, #@extract: 5, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel] (moved to assets/js/bp.js)
-    - CAPTURE (Intake) - Panel Resets & Shortcuts -> #SUBMODULES: 0, #@extract: 2, Exports:[resetBodyPanel, resetCapturePanels, addCapturePanelKeys] (moved to assets/js/capture/index.js)
-    - BP (Blood Pressure) - Persistenz -> #SUBMODULES: 0, #@extract: 6, Exports:[saveBlock, appendNote, allocateNoteTimestamp] (moved to assets/js/bp.js)
-    - BODY (Koerperwerte) -> #SUBMODULES: 0, #@extract: 1, Exports:[resetBodyPanel, saveDaySummary, prefillBodyInputs] (moved to assets/js/body.js)
+    - BP (Blood Pressure) - Validierung -> #SUBMODULES: 0, #@extract: 5, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel] (moved to app/modules/capture/bp.js)
+    - CAPTURE (Intake) - Panel Resets & Shortcuts -> #SUBMODULES: 0, #@extract: 2, Exports:[resetBodyPanel, resetCapturePanels, addCapturePanelKeys] (moved to app/modules/capture/index.js)
+    - BP (Blood Pressure) - Persistenz -> #SUBMODULES: 0, #@extract: 6, Exports:[saveBlock, appendNote, allocateNoteTimestamp] (moved to app/modules/capture/bp.js)
+    - BODY (Koerperwerte) -> #SUBMODULES: 0, #@extract: 1, Exports:[resetBodyPanel, saveDaySummary, prefillBodyInputs] (moved to app/modules/capture/body.js)
     - DATA ACCESS (Auth Helpers) -> #SUBMODULES: 3, #@extract: 2, Exports:[withRetry, fetchWithAuth, syncWebhook]
     - REALTIME -> #SUBMODULES: 17, #@extract: 8, Exports:[ensureSupabaseClient, setupRealtime, requireDoctorUnlock, resumeFromBackground]
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]

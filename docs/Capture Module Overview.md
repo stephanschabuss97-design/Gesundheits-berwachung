@@ -19,10 +19,10 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 
 | Datei | Zweck |
 |-------|-------|
-| `assets/js/capture/index.js` | Kernlogik: Handlers für Intake/Blutdruck/Body, Timer, Status-Pills, UI-Reset. |
-| `assets/js/capture/globals.js` | Shared State (`captureIntakeState`, Timer, Flags), Utility `setBusy`, `softWarnRange`. |
-| `assets/js/bp.js` | Blutdruck-spezifische Funktionen (`saveBlock`, Kommentar-Pflicht, Panel-Reset). |
-| `assets/js/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen. |
+| `app/modules/capture/index.js` | Kernlogik: Handlers für Intake/Blutdruck/Body, Timer, Status-Pills, UI-Reset. |
+| `app/core/capture-globals.js` | Shared State (`captureIntakeState`, Timer, Flags), Utility `setBusy`, `softWarnRange`. |
+| `app/modules/capture/bp.js` | Blutdruck-spezifische Funktionen (`saveBlock`, Kommentar-Pflicht, Panel-Reset). |
+| `app/modules/capture/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen. |
 | `assets/js/main.js` | Bindet Buttons, Datum, Unlock-Logik, orchestriert `requestUiRefresh`. |
 | `app/styles/capture.css` | Styles für Accordion, Buttons, Pill-Reihe, Responsive Layout (eingebunden via `app/app.css`). |
 | `app/core/config.js` | Flags (z.B. `TREND_PILOT_ENABLED` indirekt, `DEV_ALLOW_DEFAULTS`). |
