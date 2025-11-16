@@ -151,6 +151,8 @@
   Object.entries(bodyApi).forEach(([name, fn]) => {
     if (typeof global[name] === 'undefined') {
       global[name] = fn;
+        } else {
+    console.warn(`[body] Global "${name}" bereits definiert, überspringe Exposition.`);
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

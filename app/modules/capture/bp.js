@@ -22,6 +22,7 @@
   const BP_CONTEXTS = Object.freeze(['M','A']);
   const BP_SYS_THRESHOLD = 130;
   const BP_DIA_THRESHOLD = 90;
+  const BP_WARN_ON_COLLISION = Boolean(global?.BP_DEBUG_COLLISIONS);
 
   const normalizeContext = (ctx) => {
     if (ctx === 'A' || ctx === 'M') return ctx;
@@ -237,8 +238,17 @@ const getCommentElementUnsafe = (normalizedCtx) => {
   appModules.bp = Object.assign(appModules.bp || {}, bpApi);
   global.AppModules.bp = appModules.bp;
   Object.entries(bpApi).forEach(([name, fn]) => {
-    if (typeof global[name] === 'undefined') {
-      global[name] = fn;
+    if (typeof global[name] !== 'undefined') {
+      if (BP_WARN_ON_COLLISION) {
+        const existing = global[name];
+        console.warn('[bp] global collision', {
+          name,
+          existingType: typeof existing,
+          incomingType: typeof fn
+        });
+      }
+      return;
     }
+    global[name] = fn;
   });
 })(typeof window !== 'undefined' ? window : globalThis);
