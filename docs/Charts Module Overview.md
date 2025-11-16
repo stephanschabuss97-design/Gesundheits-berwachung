@@ -25,7 +25,7 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, KÃ¶rpergewicht/Ba
 | `assets/js/main.js` | Triggert Chart-Refresh via `requestUiRefresh({ chart: true })`, setzt Panel/Hooks (z.B. `setTab('doctor')`). |
 | `app/modules/capture/index.js` | Stellt KPI-Werte (Wasser/Salz/Protein) bereit, so dass Chart-Daten/Panel mit Capture-Status synchronisiert sind. |
 | `assets/js/trendpilot/index.js` | Liefert Trendpilot-BÃ¤nder (Warnung/Kritik) fÃ¼r das Chart (`chartPanel.loadTrendpilotBands`). |
-| `assets/js/doctor/index.js` | Chart-Button im Arzt-Bereich (`#doctorChartBtn` Ã¶ffnet das Chart-Panel mit gewÃ¤hltem Zeitraum). |
+| `app/modules/doctor/index.js` | Chart-Button im Arzt-Bereich (`#doctorChartBtn` Ã¶ffnet das Chart-Panel mit gewÃ¤hltem Zeitraum). |
 | `app/core/config.js` | EnthÃ¤lt Flags (z.B. `SHOW_CHART_ANIMATIONS`, `TREND_PILOT_ENABLED`), die das Chart respektiert. |
 
 ---

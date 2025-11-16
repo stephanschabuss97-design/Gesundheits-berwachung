@@ -19,7 +19,7 @@ Der Trendpilot Ã¼berwacht mittel- bis langfristige VerÃ¤nderungen im Blutdru
 | `app/supabase/api/system-comments.js` | REST-Client fÃ¼r `health_events`: erstellt/patcht `system_comment`-EintrÃ¤ge, verwaltet Ack/Doctor-Status im JSON-Payload. Exportiert `fetchSystemCommentsRange`, `upsertSystemCommentRemote`, `setSystemCommentAck`, `setSystemCommentDoctorStatus`. |
 | `assets/js/main.js` | Bindet den Capture-Hook: Nach Abend-Save â†’ `runTrendpilotAnalysis(day)`; Handles log + Fehlermeldung. |
 | `app/modules/capture/index.js` | Zeigt im Capture-Header eine Trendpilot-Pill (Severity, Datum, Kurztext); reagiert auf `trendpilot:latest` Events. |
-| `assets/js/doctor/index.js` | Rendert den Trendpilot-Hinweisblock, ruft `fetchSystemCommentsRange`, erlaubt Statusbuttons (â€žgeplantâ€œ, â€žerledigtâ€œ, â€žzurÃ¼cksetzenâ€œ), loggt Fehler. |
+| `app/modules/doctor/index.js` | Rendert den Trendpilot-Hinweisblock, ruft `fetchSystemCommentsRange`, erlaubt Statusbuttons (â€žgeplantâ€œ, â€žerledigtâ€œ, â€žzurÃ¼cksetzenâ€œ), loggt Fehler. |
 | `assets/js/charts/index.js` & `app/modules/charts/chart.css` | Zeichnen Trendpilot-HintergrundbÃ¤nder auf dem BP-Chart, ergÃ¤nzen Legende. |
 | `docs/QA_CHECKS.md` & `docs/Trendpilot Roadmap (Manual).md` | Dokumentation und QA-Guidelines. |
 
@@ -63,7 +63,7 @@ Der Trendpilot Ã¼berwacht mittel- bis langfristige VerÃ¤nderungen im Blutdru
    - Zeigt severitybasierte Pill (`warn`/`bad`), Datum, Kurztext; versteckt sich bei fehlendem Eintrag.
    - ARIA/Tooltip enthalten Textvorschau.
 
-2. **Arzt-Ansicht (`assets/js/doctor/index.js`):**
+2. **Arzt-Ansicht (`app/modules/doctor/index.js`):**
    - Beim Rendern: `loadTrendpilotEntries(from, to)` â†’ `fetchSystemCommentsRange`.
    - Trendpilot-Sektion zeigt EintrÃ¤ge (Datum, Severity-Badge, Ack-Status, Arztstatus, Text). Buttons setzen `doctorStatus` via Supabase.
    - Fehler (z.B. fehlende Daten) werden einmalig geloggt (`logDoctorError` + Touch-Log).

@@ -321,8 +321,8 @@
 <script src="assets/js/ui-tabs.js"></script>
 <!-- @refactor: moved to assets/js/trendpilot/index.js -->
 <script src="assets/js/trendpilot/index.js"></script>
-<!-- @refactor: moved to assets/js/doctor/index.js -->
-<script src="assets/js/doctor/index.js"></script>
+<!-- @refactor: Phase 3 - app/modules/doctor/index.js -->
+<script src="app/modules/doctor/index.js"></script>
 <!-- @refactor: moved to assets/js/charts/index.js -->
 <script src="assets/js/charts/index.js"></script>
 <script src="assets/js/main.js"></script>
@@ -402,7 +402,7 @@
     - DATA ACCESS (REST/RPC) -> #SUBMODULES: 30, #@extract: 1, Exports:[deleteRemote, loadIntakeToday, saveIntakeTotals, saveIntakeTotalsRpc, fetchDailyOverview, deleteRemoteDay]
     - APPOINTMENTS -> #SUBMODULES: 0, #@extract: 12, Exports:[refreshAppointments, handleAppointmentSave, handleAppointmentDone, bindAppointmentsPanel, setAppointmentBadge] (moved to assets/js/appointments.js)
     - CAPTURE (Intake) - Status & RPC Hooks -> #SUBMODULES: 0, #@extract: 7, Exports:[clearCaptureIntakeInputs, setCaptureIntakeDisabled, prepareIntakeStatusHeader, updateCaptureIntakeStatus, handleCaptureIntake] (moved to app/modules/capture/index.js)
-    - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, renderDoctorDay, exportDoctorJson]
+    - DOCTOR VIEW - Logic -> #SUBMODULES: 3, #@extract: 1, Exports:[renderDoctor, renderDoctorDay, exportDoctorJson] (moved to app/modules/doctor/index.js)
     - CHARTS (SVG/Canvas) -> #SUBMODULES: 15, #@extract: 3, Exports:[chartPanel]
     - UI / ROUTING / VIEWS - Navigation (Tabs/Resume/Focus) -> #SUBMODULES: 1, #@extract: 1, Exports:[setTab, bindTabs]
     - BP (Blood Pressure) - Validierung -> #SUBMODULES: 0, #@extract: 5, Exports:[requiresBpComment, updateBpCommentWarnings, resetBpPanel] (moved to app/modules/capture/bp.js)

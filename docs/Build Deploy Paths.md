@@ -43,7 +43,7 @@ Phase 0 / Schritt 3 der Repo-Roadmap. Dieses Dokument fasst zusammen, wie der Ge
 - `app/supabase/index.js`
 - `assets/js/ui-tabs.js`
 - `assets/js/trendpilot/index.js`
-- `assets/js/doctor/index.js`
+- `app/modules/doctor/index.js`
 - `assets/js/charts/index.js`
 - `assets/js/main.js`
 

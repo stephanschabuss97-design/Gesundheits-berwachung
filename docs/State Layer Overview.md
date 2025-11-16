@@ -38,7 +38,7 @@ Dieser State sorgt dafÃ¼r, dass mehrere Refresh-Requests zusammengefÃ¼hrt we
 
 | Variable | Beschreibung |
 |----------|--------------|
-| `__doctorScrollSnapshot` (`assets/js/doctor/index.js`) | `{ top, ratio }`, um nach Refresh zum vorherigen Scrollpunkt zu springen. |
+| `__doctorScrollSnapshot` (`app/modules/doctor/index.js`) | `{ top, ratio }`, um nach Refresh zum vorherigen Scrollpunkt zu springen. |
 | `trendpilotWrap.dataset.tpBound` | Flag, ob Trendpilot-Events bereits gebunden wurden. |
 
 ---
