@@ -8,13 +8,18 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let trendpilotInitialized = false;
+  let initializingTrendpilot = false;
   let dependencyWarned = false;
+  let initRetryCount = 0;
+  const MAX_INIT_RETRIES = 20;
+  const RETRY_DELAY_BASE = 250;
+  const MAX_RETRY_DELAY = 4000;
 
   const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
 
   const initTrendpilot = () => {
-    if (trendpilotInitialized) return;
-    trendpilotInitialized = true;
+    if (trendpilotInitialized || initializingTrendpilot) return;
+    initializingTrendpilot = true;
 
   const config = appModules.config || {};
   const configFlag =
@@ -57,7 +62,9 @@
 
   if (!TREND_PILOT_FLAG) {
     trendpilotInitialized = true;
+    initializingTrendpilot = false;
     dependencyWarned = false;
+    initRetryCount = 0;
     return;
   }
 
@@ -86,10 +93,18 @@
       );
       dependencyWarned = true;
     }
+    initializingTrendpilot = false;
+    if (initRetryCount >= MAX_INIT_RETRIES) {
+      diag.add?.(
+        `[trendpilot] init aborted after ${MAX_INIT_RETRIES} retries (still missing: ${missingDeps.join(', ')})`
+      );
+      return;
+    }
+    const delay = Math.min(RETRY_DELAY_BASE * Math.pow(2, initRetryCount), MAX_RETRY_DELAY);
+    initRetryCount += 1;
     setTimeout(() => {
-      trendpilotInitialized = false;
       initTrendpilot();
-    }, 250);
+    }, delay);
     return;
   }
   dependencyWarned = false;
@@ -232,6 +247,24 @@
       const previousOverflow = doc.body.style.overflow;
       doc.body.classList.add('trendpilot-lock');
       let resolved = false;
+      const canRestoreFocus = () => {
+        if (!previousActive) return false;
+        if (typeof previousActive.focus !== 'function') return false;
+        if (!doc.contains(previousActive)) return false;
+        if (previousActive.disabled) return false;
+        const tabIndex =
+          typeof previousActive.tabIndex === 'number'
+            ? previousActive.tabIndex
+            : Number(previousActive.getAttribute?.('tabindex') ?? 0);
+        if (Number.isFinite(tabIndex) && tabIndex < 0) return false;
+        if (typeof previousActive.getBoundingClientRect === 'function') {
+          const rect = previousActive.getBoundingClientRect();
+          if ((rect?.width || 0) <= 0 && (rect?.height || 0) <= 0) return false;
+        } else if ('offsetParent' in previousActive && previousActive.offsetParent === null) {
+          return false;
+        }
+        return true;
+      };
       const closeDialog = (acknowledged) => {
         if (resolved) return;
         resolved = true;
@@ -239,7 +272,7 @@
         doc.body.classList.remove('trendpilot-lock');
         doc.body.style.overflow = previousOverflow;
         overlay.remove();
-        if (previousActive && typeof previousActive.focus === 'function' && doc.contains(previousActive)) {
+        if (canRestoreFocus()) {
           try {
             previousActive.focus();
           } catch (_) {
@@ -342,6 +375,9 @@
   appModules.trendpilot = Object.assign(appModules.trendpilot || {}, trendpilotApi);
   global.runTrendpilotAnalysis = runTrendpilotAnalysis;
   refreshLatestSystemComment({ silent: true }).catch(() => {});
+  trendpilotInitialized = true;
+  initializingTrendpilot = false;
+  initRetryCount = 0;
   };
 
   if (global.SupabaseAPI || appModules.supabase) {
