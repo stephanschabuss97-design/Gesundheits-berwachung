@@ -220,10 +220,13 @@
         top.style.alignItems = 'center';
       }
 
-      if (wrap && nab && top) {
-        wrap.insertBefore(top, nab);
-      } else if (wrap && top && !top.parentElement) {
-        wrap.appendChild(top);
+      const refNode = top?.nextSibling;
+      if (wrap && top) {
+        if (refNode) {
+          wrap.insertBefore(top, refNode);
+        } else if (!top.parentElement) {
+          wrap.appendChild(top);
+        }
       }
     } catch(_) {}
   }
@@ -587,72 +590,74 @@
     const addSaltBtn = document.getElementById('ls-salt-add-btn');
     const addProtBtn = document.getElementById('ls-protein-add-btn');
 
-    const addWater = async ()=>{
-      const el = document.getElementById('ls-water-add');
-      const v = Number(el?.value || 0);
-      if (!(v>0)) { uiError('Bitte gueltige Wassermenge eingeben.'); return; }
-
-      const dayIso = todayStr();
-      let total = Math.max(0, Math.min(MAX_WATER_ML, (__lsTotals.water_ml||0) + v));
-      try{
-        await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: total, salt_g: __lsTotals.salt_g||0, protein_g: __lsTotals.protein_g||0 } });
-        __lsTotals.water_ml = total;
-        updateLifestyleBars();
-        el.value = '';
-        uiInfo('Wasser aktualisiert.');
-    }catch(e){
-      uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      try {
-        diag.add?.('Lifestyle update error (water): ' + (e?.message||e));
-      } catch (logErr) {
-        console.error('diag.add failed', logErr);
+    const updateIntake = async ({
+      key,
+      elId,
+      parser,
+      max,
+      successMsg,
+      diagLabel
+    }) => {
+      const el = document.getElementById(elId);
+      const value = parser(el?.value);
+      if (!(value > 0)) {
+        uiError('Bitte gültige Menge eingeben.');
+        return;
       }
-    }
+      const dayIso = todayStr();
+      const totals = {
+        water_ml: __lsTotals.water_ml || 0,
+        salt_g: __lsTotals.salt_g || 0,
+        protein_g: __lsTotals.protein_g || 0
+      };
+      const current = totals[key] || 0;
+      const nextTotal = Math.max(0, Math.min(max, current + value));
+      totals[key] = nextTotal;
+      try {
+        await saveIntakeTotalsRpc({ dayIso, totals });
+        __lsTotals[key] = nextTotal;
+        updateLifestyleBars();
+        if (el) el.value = '';
+        uiInfo(successMsg);
+      } catch (e) {
+        uiError('Update fehlgeschlagen: ' + (e?.message || e));
+        try {
+          diag.add?.(`Lifestyle update error (${diagLabel}): ${e?.message || e}`);
+        } catch (logErr) {
+          console.error('diag.add failed', logErr);
+        }
+      }
     };
 
-    const addSalt = async ()=>{
-      const el = document.getElementById('ls-salt-add');
-      const v = toNumDE(el?.value);
-      if (!(v>0)) { uiError('Bitte gueltige Salzmenge eingeben.'); return; }
-      const dayIso = todayStr();
-      let total = Math.max(0, Math.min(MAX_SALT_G, (__lsTotals.salt_g||0) + v));
-      try{
-        await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: total, protein_g: __lsTotals.protein_g||0 } });
-        __lsTotals.salt_g = total;
-        updateLifestyleBars();
-        el.value = '';
-        uiInfo('Salz aktualisiert.');
-    }catch(e){
-      uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      try {
-        diag.add?.('Lifestyle update error (salt): ' + (e?.message||e));
-      } catch (logErr) {
-        console.error('diag.add failed', logErr);
-      }
-    }
-    };
+    const addWater = () =>
+      updateIntake({
+        key: 'water_ml',
+        elId: 'ls-water-add',
+        parser: (raw) => Number(raw || 0),
+        max: MAX_WATER_ML,
+        successMsg: 'Wasser aktualisiert.',
+        diagLabel: 'water'
+      });
 
-    const addProtein = async ()=>{
-      const el = document.getElementById('ls-protein-add');
-      const v = toNumDE(el?.value);
-      if (!(v>0)) { uiError('Bitte gueltige Proteinmenge eingeben.'); return; }
-      const dayIso = todayStr();
-      let total = Math.max(0, Math.min(MAX_PROTEIN_G, (__lsTotals.protein_g||0) + v));
-      try{
-        await saveIntakeTotalsRpc({ dayIso, totals: { water_ml: __lsTotals.water_ml||0, salt_g: __lsTotals.salt_g||0, protein_g: total } });
-        __lsTotals.protein_g = total;
-        updateLifestyleBars();
-        el.value = '';
-        uiInfo('Protein aktualisiert.');
-    }catch(e){
-      uiError('Update fehlgeschlagen: ' + (e?.message||e));
-      try {
-        diag.add?.('Lifestyle update error (protein): ' + (e?.message||e));
-      } catch (logErr) {
-        console.error('diag.add failed', logErr);
-      }
-    }
-    };
+    const addSalt = () =>
+      updateIntake({
+        key: 'salt_g',
+        elId: 'ls-salt-add',
+        parser: (raw) => toNumDE(raw),
+        max: MAX_SALT_G,
+        successMsg: 'Salz aktualisiert.',
+        diagLabel: 'salt'
+      });
+
+    const addProtein = () =>
+      updateIntake({
+        key: 'protein_g',
+        elId: 'ls-protein-add',
+        parser: (raw) => toNumDE(raw),
+        max: MAX_PROTEIN_G,
+        successMsg: 'Protein aktualisiert.',
+        diagLabel: 'protein'
+      });
 
     if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
     if (addSaltBtn) addSaltBtn.addEventListener('click', addSalt);

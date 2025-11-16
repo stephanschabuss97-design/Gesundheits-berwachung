@@ -124,7 +124,16 @@ const getCommentElementUnsafe = (normalizedCtx) => {
 
   // SUBMODULE: saveBlock @internal - persists BP measurements and optional comments
   async function saveBlock(contextLabel, which, includeWeight=false, force=false){
-  const ctx = normalizeContext(which);
+  let ctx;
+  try {
+    ctx = normalizeContext(which);
+  } catch (err) {
+    try {
+      diag.add?.(`[bp] invalid context "${which}": ${err?.message || err}`);
+    } catch (_) { /* noop */ }
+    uiError?.('Ungültiger Messkontext – bitte morgens oder abends auswählen.');
+    return false;
+  }
   const date = $("#date").value || todayStr();
   const time = ctx === 'M' ? '07:00' : '22:00';
 
@@ -219,21 +228,15 @@ const getCommentElementUnsafe = (normalizedCtx) => {
 
 // SUBMODULE: API export & global attach @internal - registriert öffentliche Methoden unter AppModules.bp
   const bpApi = {
-    requiresBpComment: requiresBpComment,
-    updateBpCommentWarnings: updateBpCommentWarnings,
-    bpFieldId: bpFieldId,
-    bpSelector: bpSelector,
-    resetBpPanel: resetBpPanel,
-    blockHasData: blockHasData,
-    saveBlock: saveBlock,
-    baseEntry: baseEntry,
-    appendNote: appendNote,
-    allocateNoteTimestamp: allocateNoteTimestamp
+    requiresBpComment,
+    updateBpCommentWarnings,
+    resetBpPanel,
+    blockHasData,
+    saveBlock
   };
   appModules.bp = Object.assign(appModules.bp || {}, bpApi);
-  Object.entries(bpApi).forEach(([name, fn]) => {
-    if (typeof global[name] === 'undefined') {
-      global[name] = fn;
-    }
-  });
+  if (!global.AppModules) {
+    global.AppModules = {};
+  }
+  global.AppModules.bp = appModules.bp;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -84,7 +84,13 @@
 
   let saved = false;
 
-  const hasBodyContent = includeBody && ((entry.weight != null) || (entry.waist_cm != null) || !!entry.notes);
+  const hasBodyContent =
+    includeBody &&
+    ((entry.weight != null) ||
+      (entry.waist_cm != null) ||
+      (entry.fat_pct != null) ||
+      (entry.muscle_pct != null) ||
+      !!entry.notes);
 
   if (hasBodyContent){
     const localId = await addEntry(entry);
@@ -141,9 +147,8 @@
     prefillBodyInputs: prefillBodyInputs
   };
   appModules.body = Object.assign(appModules.body || {}, bodyApi);
-  Object.entries(bodyApi).forEach(([name, fn]) => {
-    if (typeof global[name] === 'undefined') {
-      global[name] = fn;
-    }
-  });
+  if (!global.AppModules) {
+    global.AppModules = {};
+  }
+  global.AppModules.body = appModules.body;
 })(typeof window !== 'undefined' ? window : globalThis);
