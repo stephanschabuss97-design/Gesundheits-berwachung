@@ -93,16 +93,17 @@
       );
       dependencyWarned = true;
     }
-    initializingTrendpilot = false;
     if (initRetryCount >= MAX_INIT_RETRIES) {
       diag.add?.(
         `[trendpilot] init aborted after ${MAX_INIT_RETRIES} retries (still missing: ${missingDeps.join(', ')})`
       );
+      initializingTrendpilot = false;
       return;
     }
     const delay = Math.min(RETRY_DELAY_BASE * Math.pow(2, initRetryCount), MAX_RETRY_DELAY);
     initRetryCount += 1;
     setTimeout(() => {
+      initializingTrendpilot = false;
       initTrendpilot();
     }, delay);
     return;
