@@ -224,7 +224,7 @@
       if (wrap && top) {
         if (refNode) {
           wrap.insertBefore(top, refNode);
-        } else if (!top.parentElement) {
+        } else {
           wrap.appendChild(top);
         }
       }
@@ -590,6 +590,13 @@
     const addSaltBtn = document.getElementById('ls-salt-add-btn');
     const addProtBtn = document.getElementById('ls-protein-add-btn');
 
+    const roundValue = (key, value) => {
+      if (key === 'water_ml') {
+        return Math.round(value);
+      }
+      return Math.round(value * 100) / 100;
+    };
+
     const updateIntake = async ({
       key,
       elId,
@@ -611,7 +618,8 @@
         protein_g: __lsTotals.protein_g || 0
       };
       const current = totals[key] || 0;
-      const nextTotal = Math.max(0, Math.min(max, current + value));
+      const rawTotal = Math.max(0, Math.min(max, current + value));
+      const nextTotal = roundValue(key, rawTotal);
       totals[key] = nextTotal;
       try {
         await saveIntakeTotalsRpc({ dayIso, totals });

@@ -147,8 +147,4 @@
     prefillBodyInputs: prefillBodyInputs
   };
   appModules.body = Object.assign(appModules.body || {}, bodyApi);
-  if (!global.AppModules) {
-    global.AppModules = {};
-  }
-  global.AppModules.body = appModules.body;
 })(typeof window !== 'undefined' ? window : globalThis);

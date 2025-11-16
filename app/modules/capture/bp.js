@@ -235,8 +235,5 @@ const getCommentElementUnsafe = (normalizedCtx) => {
     saveBlock
   };
   appModules.bp = Object.assign(appModules.bp || {}, bpApi);
-  if (!global.AppModules) {
-    global.AppModules = {};
-  }
   global.AppModules.bp = appModules.bp;
 })(typeof window !== 'undefined' ? window : globalThis);
