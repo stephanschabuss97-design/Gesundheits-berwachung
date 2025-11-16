@@ -1,0 +1,201 @@
+/**
+ * MODULE: assets/css/core/buttons-and-layout.css
+ * Description: Definiert globale Button-, Tab- und Layout-Stile inkl. Farbzustände, Animationen und Accessibility-Anpassungen.
+ * Submodules:
+ *  - Base Buttons (btn, states, variants)
+ *  - Tabs Navigation (nav.tabs)
+ *  - Flash Animation (gradient flash effect)
+ *  - Layout Helpers (spacer, view, hidden)
+ *  - Accessibility & Safety Rules (:focus-visible, [hidden])
+ */
+
+
+textarea{min-height:64px;resize:vertical}
+
+.small{font-size:12px;color:var(--color-text-muted)}
+
+/* SUBMODULE: Base Buttons @public - Grundstil für interaktive Buttons (Neutral, Primary, Ghost, Warn, Toggle) */
+.btn{
+  appearance:none;
+  border:none;
+  border-radius:8px;
+  padding:0 18px;
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  font-size:1rem;
+  letter-spacing:0.2px;
+  color:var(--color-text-primary);
+  background:rgba(43,47,58,0.92);
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:background .2s ease, color .2s ease, transform .1s ease, box-shadow .2s ease;
+}
+.btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+.btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 2px rgba(58,61,255,0.3);
+}
+.btn:not(:disabled):hover{
+  filter:brightness(1.08);
+}
+.btn:not(:disabled):active{
+  transform:scale(0.98);
+}
+.btn.primary{
+  background:rgba(58,61,255,0.85);
+  color:#fff;
+  box-shadow:0 8px 20px rgba(58,61,255,0.18);
+}
+.btn.primary:focus-visible{
+  box-shadow:0 0 0 3px rgba(58,61,255,0.3), 0 8px 20px rgba(58,61,255,0.18);
+}
+.btn.primary:not(:disabled):hover{
+  filter:brightness(1.06);
+}
+.btn.ghost{
+  background:rgba(43,47,58,0.35);
+  border:1px solid var(--color-border-subtle);
+  color:var(--color-text-primary);
+}
+.btn.ghost:not(:disabled):hover{
+  background:rgba(255,255,255,0.05);
+}
+.btn.warn{
+  background:var(--color-warn);
+  color:#121417;
+}
+.btn.warn:not(:disabled):hover{
+  filter:brightness(1.05);
+}
+.btn.toggle{
+  border:1px solid var(--color-border-subtle);
+  background:var(--color-surface-elevated);
+  color:var(--color-text-primary);
+}
+.btn.toggle.active{
+  background:var(--color-success);
+  border-color:rgba(46,204,113,0.4);
+  color:#062615;
+}
+
+/* SUBMODULE: Tabs Navigation @public - Optische Hervorhebung aktiver Tab-Buttons */
+nav.tabs .btn{
+  height:40px;
+  padding:0 16px;
+  border-radius:8px;
+  background:transparent;
+  border:1px solid transparent;
+  color:var(--color-text-muted);
+  position:relative;
+  transition:color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+nav.tabs .btn:not(.primary):hover{
+  color:var(--color-text-primary);
+  border-color:var(--color-border-subtle);
+  background:var(--color-surface-elevated);
+}
+nav.tabs .btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 2px rgba(58,61,255,0.25);
+}
+nav.tabs .btn.primary {
+  color:#fff;
+  background:rgba(58,61,255,0.2);
+  border-color:rgba(58,61,255,0.35);
+  box-shadow:0 10px 25px rgba(58,61,255,0.18);
+}
+nav.tabs .btn.primary::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:-6px;
+  height:2px;
+  border-radius:999px;
+  background:var(--color-accent);
+  box-shadow:0 4px 12px rgba(58,61,255,0.35);
+}
+
+/* SUBMODULE: Flash Animation @internal - temporäre visuelle Hervorhebung mit Farbverlauf */
+.btn.flash{
+  background:linear-gradient(90deg,var(--color-accent) 0%,#7c3aed 50%,var(--color-accent) 100%)!important;
+  background-size:200% 100%;
+  color:#fff!important;
+  animation:flashGradient 1s ease forwards,flashPop .2s ease;
+  box-shadow:0 6px 24px rgba(79,70,229,.35);
+  border-radius:8px;
+  height:40px;
+}
+@keyframes flashGradient{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes flashPop {
+0% { transform: scale(1) }
+50% { transform: scale(1.03) }
+100% { transform: scale(1) }
+}
+
+/* SUBMODULE: Layout Helpers @internal - Basis-Layout-Utilities (Flex, Sections, Spacer) */
+.spacer{flex:1}
+section.view{display:none}
+section.view.active{display:block}
+
+/* SUBMODULE: Error & Utility Styles @internal - Fehlermeldungen und visuelle States */
+#err{position:fixed;left:8px;right:8px;bottom:8px;background:#3d0d0d;color:#fecaca;padding:8px 10px;border-radius:10px;display:none;z-index:10001}
+.hidden{display:none!important}
+
+/* SUBMODULE: Accessibility & Safety @internal - Fokusrahmen und versteckte Elemente */
+:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* SUBMODULE: Trendpilot Dialog @internal - Overlay/Modal Styles */
+.trendpilot-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(2,6,23,.65);
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.trendpilot-dialog{
+  background:#0f172a;
+  padding:20px 24px;
+  border-radius:14px;
+  max-width:360px;
+  color:#f1f5f9;
+  box-shadow:0 24px 60px rgba(0,0,0,.65);
+  font-size:15px;
+  line-height:1.4;
+}
+.trendpilot-dialog-message{
+  margin-bottom:10px;
+}
+.trendpilot-dialog-deltas{
+  margin-bottom:18px;
+  opacity:.85;
+}
+.trendpilot-dialog-btn{
+  box-shadow:0 8px 18px rgba(58,61,255,.35);
+}
+.trendpilot-dialog-btn:focus-visible{
+  box-shadow:0 0 0 3px rgba(58,61,255,0.3),0 8px 18px rgba(58,61,255,.35);
+}
+.trendpilot-dialog-btn:disabled{
+  box-shadow:none;
+}
+.trendpilot-overlay-close{
+  cursor:pointer;
+}
+body.trendpilot-lock{
+  overflow:hidden;
+}
+
