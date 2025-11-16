@@ -30,10 +30,10 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 
 ## Phase 1 – Dokumentation & Namespace-Alignment (leicht → mittel)
 
-1. 🔲 **Docs nachziehen:** `docs/modules/*` zeigen nun die künftigen `app/...`-Pfade statt der alten `assets/...`-Referenzen.
-2. 🔲 **Namespace vorbereiten:** Übersicht der `AppModules.*`-Belegungen dokumentiert (siehe `docs/AppModules Namespace.md`); Soft-Aliase bleiben beim Move erhalten.
-3. 🔲 **Lint/Format:** BOM-Check für neue Docs durchgeführt; `docs/QA_Notes.md` neu geschrieben (UTF-8 ohne BOM), alle übrigen Dateien bereits konform.
-4. 🔲 **Touch-Log & diag:** aktuelles Verhalten dokumentiert (`docs/Core Diagnostics.md`); Move nach `app/core/diag.js` vorbereitet.
+1. ✅ **Docs nachziehen:** `docs/modules/*` zeigen nun die künftigen `app/...`-Pfade statt der alten `assets/...`-Referenzen.
+2. ✅ **Namespace vorbereiten:** Übersicht der `AppModules.*`-Belegungen dokumentiert (siehe `docs/AppModules Namespace.md`); Soft-Aliase bleiben beim Move erhalten.
+3. ✅ **Lint/Format:** BOM-Check für neue Docs durchgeführt; `docs/QA_Notes.md` neu geschrieben (UTF-8 ohne BOM), alle übrigen Dateien bereits konform.
+4. ✅ **Touch-Log & diag:** aktuelles Verhalten dokumentiert (`docs/Core Diagnostics.md`); Move nach `app/core/diag.js` vorbereitet.
 
 ### Go/No-Go
 - Sobald alle Overviews die neuen Modulnamen kennen und `AppModules.*` konsistent ist, Phase 2 starten.
