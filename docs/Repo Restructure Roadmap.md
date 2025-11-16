@@ -97,7 +97,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 ## Phase 3 – Feature-Module migrieren (mittel → schwer)
 
 1. 🔧 **Capture Modul:**  
-   - `assets/js/capture/*.js`, `bp.js`, `body.js`, `intake.js` nach `app/modules/capture/`.  
+   - `app/modules/capture/*.js`, `bp.js`, `body.js`, `intake.js` nach `app/modules/capture/`.  
    - Update der Imports.  
    - Tests: Wasser/Salt/Protein, BP-Save, Body-Save.  
    - Hinweis: Solange `ui-tabs.js`, `main.js` & Co. noch globale Symbole (`resetBpPanel`, `resetBodyPanel`, `saveBlock` …) erwarten, behalten wir temporäre Fallback-Exports in `app/modules/capture/{bp,body}.js`. Später müssen die Aufrufer auf `AppModules.bp.*`/`AppModules.body.*` umgestellt werden, damit die Globals endgültig entfallen können.
