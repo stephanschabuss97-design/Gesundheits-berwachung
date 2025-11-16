@@ -39,10 +39,10 @@ Phase 0 / Schritt 3 der Repo-Roadmap. Dieses Dokument fasst zusammen, wie der Ge
 - `app/modules/capture/index.js`
 - `app/modules/capture/bp.js`
 - `app/modules/capture/body.js`
-- `assets/js/trendpilot/data.js`
+- `app/modules/trendpilot/data.js`
 - `app/supabase/index.js`
 - `assets/js/ui-tabs.js`
-- `assets/js/trendpilot/index.js`
+- `app/modules/trendpilot/index.js`
 - `app/modules/doctor/index.js`
 - `app/modules/charts/index.js`
 - `assets/js/main.js`

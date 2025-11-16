@@ -12,7 +12,7 @@
 ### 2.1 Daten & Helpers
 Status: ✔ erledigt.
 1. `fetchBpSeries()` liefert Tagesmittel (Morgen+Abend) für 180 Tage.
-2. Helper-Module (`trendpilot/data.js`) implementiert: `computeDailyBpStats`, `groupDailyStatsByWeek`, `calcMovingBaseline`, `calcLatestDelta`, `classifyTrendDelta`, `applyHysteresis`, `buildTrendWindow`.
+2. Helper-Module (`app/modules/trendpilot/data.js`) implementiert: `computeDailyBpStats`, `groupDailyStatsByWeek`, `calcMovingBaseline`, `calcLatestDelta`, `classifyTrendDelta`, `applyHysteresis`, `buildTrendWindow`.
 
 ### 2.2 Capture-Hook
 Status: ✅ erledigt.
@@ -61,3 +61,4 @@ Status: ✅ erledigt.
 2. Capture-Hook + System-Comments + Dialoge.
 3. Arztansicht/Chart/UI-Layer.
 4. Flags, Diagnostics, Docs.
+

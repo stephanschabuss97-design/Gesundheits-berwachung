@@ -1,6 +1,7 @@
 ## Unreleased
 
 Removed:
+- ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
 - Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.
 - `assets/js/appointments.js` (inkl. globaler State) entfällt; `assets/js/config.js` exportiert nur noch `DEV_ALLOW_DEFAULTS` ohne zusätzliche `window.*`-Zuordnungen.
 - Neues Skript `sql/08_Remove_Appointments.sql` entfernt `public.appointments` inkl. Trigger, Policies und Realtime-Publikation.
@@ -9,6 +10,7 @@ Docs:
 - `docs/QA_CHECKS.md` aktualisiert (UI-Refresh Steps nur noch doctor/lifestyle/chart).
 
 Changed:
+- Trendpilot-Modul läuft nun unter pp/modules/trendpilot/{data,index}; index.html, Build/Module-Doku und QA-Notizen verweisen auf die neuen Pfade (Edge-Headless-Smoketest für AppModules-Trendpilot dokumentiert).
 - Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
 - Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
 - Körper-Metrik-Tooltips fassen Gewicht, Bauchumfang sowie verfügbares Muskel-/Fettprofil zusammen und highlighten alle Body-Serien gleichzeitig.

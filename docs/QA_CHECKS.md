@@ -1026,6 +1026,7 @@ Regression
 - Neue Supabase-Exporte (`fetchSystemCommentsRange`, `setSystemCommentDoctorStatus`) sind via `SupabaseAPI` verfügbar; fehlende Berechtigungen führen zu stillen Trendpilot-Placeholders, nicht zu JS-Abbrüchen.
 
 ### Trendpilot QA Pack
+- Edge headless smoke: "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless --disable-gpu --dump-dom file:///.../index.html (Trendpilot-Move) rendert AppModules-Trendpilot komplett; einziger Output ist die bekannte fallback_task_provider-Warnung (Edge Bug crbug.com/739782).
 - Feature-Flag: `TREND_PILOT_ENABLED=false` (LocalStorage/Config) entfernt Trendpilot-Pill, Arztblock und Chart-Overlays vollständig; diag-Logs melden `severity=disabled`.
 - Capture-Hook: Abend-Save mit WARN/CRIT erzeugt `[trendpilot] severity=…` Log, zwingt Dialog und schreibt `system_comment` (ack=false) – danach Pill zeigt Datum/Vorschau.
 - Doctor-Block: Buttons feuern nur bei Statuswechsel; Supabase-PATCH aktualisiert `doctorStatus` und UI markiert aktiven Button + Label (geplant/erledigt/kein Status).
