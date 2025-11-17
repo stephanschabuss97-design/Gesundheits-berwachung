@@ -61,6 +61,28 @@
   padding-top: 8px;
 }
 
+.hub-date-pill {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fefefe;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(32, 104, 255, 0.25);
+}
+
+.hub-date-pill span[aria-hidden='true'] {
+  font-size: 1.1rem;
+}
+
+#hubDateText {
+  letter-spacing: 0.08em;
+}
+
 .hub-icons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));

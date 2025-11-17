@@ -23,6 +23,7 @@
       return;
     }
     setupIconBar(hub);
+    setupDatePill(hub);
     setupChat(hub);
     setupSpriteState(hub);
     doc.body.classList.add('hub-mode');
@@ -38,19 +39,6 @@
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => syncPressed(btn));
     });
-    const dateBtn = hub.querySelector('.hub-date-btn');
-    const dateInput = hub.querySelector('#hubDatePicker');
-    const captureDate = document.getElementById('date');
-    if (dateBtn && dateInput && captureDate) {
-      dateInput.value = captureDate.value || '';
-      dateBtn.addEventListener('click', () => dateInput.showPicker?.());
-      dateInput.addEventListener('input', () => {
-        if (captureDate.value !== dateInput.value) {
-          captureDate.value = dateInput.value;
-          captureDate.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      });
-    }
   };
 
   const setupChat = (hub) => {
@@ -89,3 +77,19 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
+  const setupDatePill = (hub) => {
+    const pill = hub.querySelector('#hubDatePill');
+    const text = hub.querySelector('#hubDateText');
+    const captureDate = document.getElementById('date');
+    if (!pill || !text || !captureDate) return;
+    const update = () => {
+      if (captureDate.value) {
+        text.textContent = new Date(captureDate.value).toLocaleDateString();
+      } else {
+        text.textContent = 'Datum wählen';
+      }
+    };
+    update();
+    captureDate.addEventListener('change', update);
+    pill.addEventListener('click', () => captureDate.showPicker?.());
+  };
