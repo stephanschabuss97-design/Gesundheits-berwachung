@@ -24,6 +24,7 @@
     }
     setupIconBar(hub);
     setupDatePill(hub);
+    moveIntakePillsToHub();
     setupChat(hub);
     setupSpriteState(hub);
     doc.body.classList.add('hub-mode');
@@ -94,4 +95,13 @@
     update();
     captureDate.addEventListener('change', update);
     pill.addEventListener('click', () => captureDate.showPicker?.());
+  };
+
+  const moveIntakePillsToHub = () => {
+    const hub = document.querySelector('[data-role="hub-intake-pills"]');
+    const pills = document.getElementById('cap-intake-status-top');
+    if (!hub || !pills) return;
+    hub.innerHTML = '';
+    pills.classList.add('hub-intake-pills');
+    hub.appendChild(pills);
   };
