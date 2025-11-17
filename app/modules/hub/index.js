@@ -40,6 +40,10 @@
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => syncPressed(btn));
     });
+    const intakeBtn = hub.querySelector('[data-hub-module="intake"]');
+    if (intakeBtn) {
+      intakeBtn.addEventListener('click', () => openIntakeOverlay(intakeBtn));
+    }
   };
 
   const setupChat = (hub) => {
@@ -97,10 +101,71 @@
     pill.addEventListener('click', () => captureDate.showPicker?.());
   };
 
+  const openIntakeOverlay = (trigger) => {
+    const overlay = document.getElementById('hubIntakeOverlay');
+    const overlayBody = overlay?.querySelector('#hubOverlayContent');
+    const captureIntake = document.getElementById('captureIntake');
+    const mount = document.getElementById('captureIntakeMount') || captureIntake?.parentElement;
+    if (!overlay || !overlayBody || !captureIntake || !mount) return;
+    const rect = trigger?.getBoundingClientRect();
+    if (rect) {
+      overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
+      overlay.style.setProperty('--hub-modal-origin-y', `${rect.top + rect.height / 2}px`);
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.classList.add('active');
+    overlayBody.appendChild(captureIntake);
+    captureIntake.open = true;
+    const escHandler = (event) => {
+      if (event.key === 'Escape') {
+        closeIntakeOverlay();
+      }
+    };
+    overlay._escHandler = escHandler;
+    document.addEventListener('keydown', escHandler);
+
+    overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
+      el.addEventListener('click', closeIntakeOverlay);
+    });
+
+    overlay._mount = mount;
+  };
+
+  const closeIntakeOverlay = () => {
+    const overlay = document.getElementById('hubIntakeOverlay');
+    const captureIntake = document.getElementById('captureIntake');
+    const mount = overlay?._mount;
+    if (!overlay || !captureIntake || !mount) return;
+
+    overlay.classList.add('closing');
+    const finishClose = () => {
+      overlay.classList.remove('closing');
+      overlay.classList.remove('active');
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      mount.appendChild(captureIntake);
+      overlay.removeEventListener('animationend', finishClose);
+      overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
+        el.removeEventListener('click', closeIntakeOverlay);
+      });
+      if (overlay._escHandler) {
+        document.removeEventListener('keydown', overlay._escHandler);
+        overlay._escHandler = null;
+      }
+      overlay._mount = null;
+    };
+    overlay.addEventListener('animationend', finishClose);
+  };
+
   const moveIntakePillsToHub = () => {
     const hub = document.querySelector('[data-role="hub-intake-pills"]');
     const pills = document.getElementById('cap-intake-status-top');
-    if (!hub || !pills) return;
+    if (!hub) return;
+    if (!pills) {
+      setTimeout(moveIntakePillsToHub, 500);
+      return;
+    }
     hub.innerHTML = '';
     pills.classList.add('hub-intake-pills');
     hub.appendChild(pills);
