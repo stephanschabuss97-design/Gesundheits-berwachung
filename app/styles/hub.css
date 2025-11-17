@@ -36,6 +36,16 @@
   border: 2px solid rgba(69, 145, 255, 0.35);
 }
 
+.hub-orb::before {
+  content: '';
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(89, 180, 255, 0.25);
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hub-orb img {
   width: 96px;
   height: 96px;
@@ -156,6 +166,61 @@
   }
 }
 
+@keyframes hubThinking {
+  0%,
+  100% {
+    box-shadow: 0 0 45px rgba(86, 169, 255, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 65px rgba(108, 192, 255, 0.95);
+  }
+}
+
+@keyframes hubVoice {
+  0% {
+    box-shadow: 0 0 40px rgba(255, 208, 120, 0.45);
+  }
+  40% {
+    box-shadow: 0 0 70px rgba(255, 208, 120, 0.95);
+  }
+  100% {
+    box-shadow: 0 0 40px rgba(255, 208, 120, 0.45);
+  }
+}
+
+@keyframes hubRing {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes hubRingPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes hubVoiceWave {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .hub {
     padding: 32px 16px 40px;
@@ -171,4 +236,29 @@
     font-size: 1.2rem;
     letter-spacing: 0.25rem;
   }
+}
+.hub-orb[data-state='thinking'] {
+  animation: hubThinking 4s ease-in-out infinite;
+  box-shadow: 0 0 55px rgba(90, 154, 255, 0.8);
+}
+
+.hub-orb[data-state='thinking']::before {
+  animation: hubRing 2.5s ease-out infinite;
+  opacity: 1;
+}
+
+.hub-orb[data-state='voice'] {
+  animation: hubVoice 2.5s linear infinite;
+  box-shadow: 0 0 65px rgba(255, 208, 120, 0.9);
+}
+
+.hub-orb[data-state='voice']::after {
+  animation: hubRingPulse 1.6s ease-out infinite;
+  border-color: rgba(255, 208, 120, 0.4);
+}
+
+.hub-orb[data-state='voice']::before {
+  animation: hubVoiceWave 1.6s ease-out infinite;
+  border-color: rgba(80, 188, 255, 0.35);
+  opacity: 1;
 }

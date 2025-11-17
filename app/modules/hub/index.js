@@ -30,6 +30,7 @@
     hub.classList.add('hub-active');
     setupIconBar(hub);
     setupChat(hub);
+    setupSpriteState(hub);
   };
 
   const setupIconBar = (hub) => {
@@ -56,6 +57,19 @@
         input.value = '';
       }
     });
+  };
+
+  const setupSpriteState = (hub) => {
+    const orb = hub.querySelector('.hub-orb');
+    if (!orb) return;
+    const allowed = new Set(['idle', 'thinking', 'voice']);
+    const setState = (state) => {
+      const next = allowed.has(state) ? state : 'idle';
+      orb.dataset.state = next;
+      global.console?.debug?.('[hub] sprite state ->', next);
+    };
+    setState(orb.dataset.state || 'idle');
+    appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
   };
 
   const doc = global.document;
