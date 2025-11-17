@@ -66,21 +66,26 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 16px;
+  padding: 6px 20px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.02);
   color: #fefefe;
-  font-size: 0.95rem;
+  font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(32, 104, 255, 0.25);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .hub-date-pill span[aria-hidden='true'] {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: normal;
 }
 
 #hubDateText {
-  letter-spacing: 0.08em;
+  letter-spacing: 0.2em;
 }
 
 .hub-icons {
