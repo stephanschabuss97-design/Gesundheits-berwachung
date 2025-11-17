@@ -25,6 +25,7 @@
     setupIconBar(hub);
     setupChat(hub);
     setupSpriteState(hub);
+    doc.body.classList.add('hub-mode');
   };
 
   const setupIconBar = (hub) => {

@@ -156,6 +156,10 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.hub-mode #capture .capture-header {
+  display: none;
+}
+
 @keyframes hubIdle {
   0%,
   100% {
