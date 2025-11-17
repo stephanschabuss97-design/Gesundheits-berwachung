@@ -43,6 +43,19 @@
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => syncPressed(btn));
     });
+    const dateBtn = hub.querySelector('.hub-date-btn');
+    const dateInput = hub.querySelector('#hubDatePicker');
+    const captureDate = document.getElementById('date');
+    if (dateBtn && dateInput && captureDate) {
+      dateInput.value = captureDate.value || '';
+      dateBtn.addEventListener('click', () => dateInput.showPicker?.());
+      dateInput.addEventListener('input', () => {
+        if (captureDate.value !== dateInput.value) {
+          captureDate.value = dateInput.value;
+          captureDate.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
   };
 
   const setupChat = (hub) => {
