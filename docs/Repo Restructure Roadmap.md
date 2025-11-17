@@ -143,6 +143,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Nur Struktur + Readiness-Check; Implementierung folgt separat.
    - Step 1/3 erledigt: Verzeichnis `app/diagnostics/{logger,perf,monitor}.js` angelegt, `DIAGNOSTICS_ENABLED`-Flag in `app/core/config.js` eingeführt und `index.html` lädt die neuen Platzhalter parallel zum bestehenden `app/core/diag.js`.
    - Step 2/3 erledigt: `app/core/diag.js` forwardet diag-Logs, Perf-Samples und Panel-Toggles an `appModules.diagnosticsLayer.{logger,perf,monitor}` (inkl. Heartbeat), QA-/Changelog-Notizen ergänzt.
+   - Step 3/3 erledigt: Legacy-perfStats-Sampler aus `app/core/diag.js` entfernt; `window.perfStats.{add,snap}` proxyt jetzt direkt auf `app/diagnostics/perf.js` (kein doppelter Speicher mehr).
 
 2. ?? **Assistant (KI) Readiness:**
    - Ordner pp/modules/assistant/ anlegen (ohne Dateien), pr�fen ob Supabase-Hooks + Tree bereit f�r KI-Modul (OpenAI API via Functions).

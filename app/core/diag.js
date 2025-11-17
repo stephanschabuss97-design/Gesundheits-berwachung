@@ -2,14 +2,13 @@
 /**
  * MODULE: diagnostics.js
  * Description: Sammelt und verwaltet UI- und Laufzeitdiagnosen, Fehleranzeigen und Performance-Metriken für App-Module.
- * Submodules:
- *  - namespace init (AppModules.diagnostics)
- *  - unhandled rejection sink (globaler Fehler-Listener)
- *  - perfStats sampler (Messwertsammlung)
- *  - recordPerfStat (Performance-Logger)
- *  - diag logger (UI-Diagnosemodul)
- *  - uiError / uiInfo (visuelle Feedback-Komponenten)
- *  - diagnosticsApi export (AppModules.diagnostics + readonly perfStats)
+* Submodules:
+*  - namespace init (AppModules.diagnostics)
+*  - unhandled rejection sink (globaler Fehler-Listener)
+*  - recordPerfStat (Performance-Logger Forwarder)
+*  - diag logger (UI-Diagnosemodul)
+*  - uiError / uiInfo (visuelle Feedback-Komponenten)
+*  - diagnosticsApi export (AppModules.diagnostics + perfStats proxy)
  */
 
 // SUBMODULE: namespace init @internal - Initialisiert globales Diagnostics-Modul
@@ -85,8 +84,6 @@
   };
   let diagnosticsListenerAdded = false;
 
-  const MAX_ALLOWED_DIFF_MS = 60_000; // 1 minute sanity limit for perf samples
-
   // SUBMODULE: unhandled rejection sink @internal
   try {
     if (!diagnosticsListenerAdded) {
@@ -114,95 +111,9 @@
     console.error('[diagnostics] failed to register unhandledrejection listener', err);
   }
 
-  // SUBMODULE: perfStats sampler @internal
-  const perfStats = (() => {
-    const buckets = Object.create(null);
-    const MAX_SAMPLES = 500;
-    const MAX_BUCKETS = 50;
-    const MAX_KEY_LEN = 255;
-    let bucketCount = 0;
-
-    const add = (k, ms) => {
-      if (typeof ms !== 'number' || !Number.isFinite(ms)) return;
-
-      // key validation with explicit reason
-      let reason = null;
-      if (typeof k !== 'string') reason = 'non-string';
-      else if (k.length === 0) reason = 'empty';
-      else if (k.length > MAX_KEY_LEN) reason = `too-long(${k.length}>${MAX_KEY_LEN})`;
-      else if (!/^[a-zA-Z0-9_-]+$/.test(k)) reason = 'invalid-format';
-
-      if (reason) {
-        console.warn('[perfStats] invalid key skipped:', k, `(reason: ${reason})`);
-        return;
-      }
-
-      if (!buckets[k] && bucketCount >= MAX_BUCKETS) {
-        console.warn('[perfStats] bucket limit reached, discarding key:', k);
-        return;
-      }
-
-      if (!buckets[k]) {
-        buckets[k] = [];
-        bucketCount++;
-      }
-
-      const arr = buckets[k];
-      arr.push(ms);
-      if (arr.length >= MAX_SAMPLES) arr.shift();
-    };
-
-    const pct = (arr, p) => {
-      if (!arr.length) return 0;
-      const sorted = [...arr].sort((x, y) => x - y);
-      const i = Math.ceil((p / 100) * sorted.length) - 1;
-      return sorted[Math.max(0, Math.min(i, sorted.length - 1))];
-    };
-
-    const snap = (k) => {
-      const arr = buckets[k] || [];
-      return {
-        count: arr.length,
-        p50: pct(arr, 50),
-        p90: pct(arr, 90),
-        p95: pct(arr, 95),
-        p99: pct(arr, 99)
-      };
-    };
-
-    return { add, snap };
-  })();
-
   // SUBMODULE: recordPerfStat @public
   function recordPerfStat(key, startedAt) {
-    if (startedAt == null) return;
     perfForward(key, startedAt);
-    const hasPerf =
-      typeof performance !== 'undefined' && typeof performance.now === 'function';
-    if (!hasPerf) return;
-    try {
-      const delta = performance.now() - startedAt;
-      if (!Number.isFinite(delta) || delta < 0) {
-        console.warn('[perfStats] invalid delta for', key, '→', delta);
-        return;
-      }
-      if (delta > MAX_ALLOWED_DIFF_MS) {
-        console.warn('[perfStats] excessive delta for', key, '→', delta, 'ms (skipped)');
-        return;
-      }
-
-      // no redundant clamping; we already validated non-negative
-      perfStats.add(key, delta);
-      const snap = perfStats.snap(key);
-      if (snap && snap.count % 25 === 0) {
-        diag.add?.(
-          `[perf] ${key} p50=${Math.floor(snap.p50 || 0)}ms ` +
-            `p90=${Math.floor(snap.p90 || 0)}ms p95=${Math.floor(snap.p95 || 0)}ms`
-        );
-      }
-    } catch (err) {
-      console.error('[diagnostics:recordPerfStat] failed', err);
-    }
   }
 
   // SUBMODULE: diag logger @public
@@ -297,7 +208,7 @@
     }
   }
 
-// SUBMODULE: diagnosticsApi export @internal - registriert API unter AppModules.diagnostics und legt globale Referenzen an
+  // SUBMODULE: diagnosticsApi export @internal - registriert API unter AppModules.diagnostics und legt globale Referenzen an
   const diagnosticsApi = { diag, recordPerfStat, uiError, uiInfo };
   appModules.diagnostics = diagnosticsApi;
 
@@ -320,11 +231,28 @@
     });
   });
 
-  // SUBMODULE: perfStats readonly wrapper @internal - stellt lesenden Zugriff für Charts sicher
+  // SUBMODULE: perfStats proxy @internal - reicht Calls an diagnosticsLayer.perf durch
+  const perfStatsProxy = Object.freeze({
+    add(key, delta) {
+      try {
+        getDiagnosticsLayer().perf?.addDelta?.(key, delta);
+      } catch (err) {
+        console.warn('[diagnostics] perfStatsProxy.add failed', err);
+      }
+    },
+    snap(key) {
+      try {
+        return getDiagnosticsLayer().perf?.snapshot?.(key) || { count: 0 };
+      } catch (err) {
+        console.warn('[diagnostics] perfStatsProxy.snap failed', err);
+        return { count: 0 };
+      }
+    }
+  });
+
   if (!hasOwn(global, 'perfStats')) {
-    const ro = Object.freeze({ snap: (key) => perfStats.snap(key) });
     Object.defineProperty(global, 'perfStats', {
-      value: ro,
+      value: perfStatsProxy,
       writable: false,
       configurable: false,
       enumerable: false

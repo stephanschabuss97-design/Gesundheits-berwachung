@@ -35,6 +35,13 @@
     if (bucket.length > MAX_SAMPLES) bucket.shift();
   };
 
+  const addDelta = (key, deltaMs) => {
+    if (!enabled) return;
+    if (validateKey(key)) return;
+    if (typeof deltaMs !== 'number' || !Number.isFinite(deltaMs) || deltaMs < 0) return;
+    recordSample(key, deltaMs);
+  };
+
   const perfApi = {
     enabled,
     buckets: store,
@@ -44,9 +51,9 @@
       const hasPerf = typeof global.performance?.now === 'function';
       if (!hasPerf) return;
       const delta = global.performance.now() - startedAt;
-      if (!Number.isFinite(delta) || delta < 0) return;
-      recordSample(key, delta);
+      addDelta(key, delta);
     },
+    addDelta,
     snapshot(key) {
       const bucket = store.get(key) || [];
       if (!bucket.length) return { count: 0 };
