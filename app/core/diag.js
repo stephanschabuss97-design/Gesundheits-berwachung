@@ -40,6 +40,24 @@
       }
     };
     appModules.diagnostics = diagnosticsApi;
+    const hasOwn =
+      Object.hasOwn || ((obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop));
+    Object.entries({
+      diag: stubDiag,
+      recordPerfStat: diagnosticsApi.recordPerfStat,
+      uiError: diagnosticsApi.uiError,
+      uiInfo: diagnosticsApi.uiInfo
+    }).forEach(([key, value]) => {
+      if (hasOwn(global, key)) {
+        return;
+      }
+      Object.defineProperty(global, key, {
+        value,
+        writable: false,
+        configurable: false,
+        enumerable: false
+      });
+    });
     return;
   }
   const ensureDiagnosticsLayer = () => {

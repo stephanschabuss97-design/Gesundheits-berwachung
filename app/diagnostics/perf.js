@@ -35,10 +35,29 @@
     if (bucket.length > MAX_SAMPLES) bucket.shift();
   };
 
+  const isProd =
+    typeof process !== 'undefined' &&
+    typeof process.env === 'object' &&
+    process.env?.NODE_ENV === 'production';
+  const warn = (...args) => {
+    if (!isProd) {
+      console.warn('[diagnostics/perf]', ...args);
+    }
+  };
+
   const addDelta = (key, deltaMs) => {
-    if (!enabled) return;
-    if (validateKey(key)) return;
-    if (typeof deltaMs !== 'number' || !Number.isFinite(deltaMs) || deltaMs < 0) return;
+    if (!enabled) {
+      warn('collector disabled, ignoring delta for', key);
+      return;
+    }
+    if (validateKey(key)) {
+      warn('invalid perf key', key);
+      return;
+    }
+    if (typeof deltaMs !== 'number' || !Number.isFinite(deltaMs) || deltaMs < 0) {
+      warn('invalid perf delta', key, deltaMs);
+      return;
+    }
     recordSample(key, deltaMs);
   };
 
@@ -46,8 +65,14 @@
     enabled,
     buckets: store,
     record(key, startedAt) {
-      if (!enabled || startedAt == null) return;
-      if (validateKey(key)) return;
+      if (!enabled || startedAt == null) {
+        if (!enabled) warn('collector disabled, record skipped for', key);
+        return;
+      }
+      if (validateKey(key)) {
+        warn('invalid perf key', key);
+        return;
+      }
       const hasPerf = typeof global.performance?.now === 'function';
       if (!hasPerf) return;
       const delta = global.performance.now() - startedAt;

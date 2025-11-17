@@ -13,7 +13,11 @@
   const appModules = global.AppModules;
   const config = appModules.config || {};
   const diagnosticsLayer = (appModules.diagnosticsLayer = appModules.diagnosticsLayer || {});
-  const enabled = config.DIAGNOSTICS_ENABLED !== false;
+  const diagnosticsFlag =
+    typeof config.DIAGNOSTICS_ENABLED === 'boolean'
+      ? config.DIAGNOSTICS_ENABLED
+      : undefined;
+  const enabled = diagnosticsFlag ?? true;
 
   let isActive = false;
   let lastHeartbeat = 0;

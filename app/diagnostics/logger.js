@@ -30,11 +30,19 @@
 
   const loggerApi = {
     enabled: loggerEnabled,
-    history: buffer,
+    get history() {
+      return buffer.slice();
+    },
     add(event, context) {
       const entry = logEvent(event, context);
       if (loggerEnabled) {
-        console.debug('[diagnostics/logger]', entry.message || entry, entry.context || '');
+        const debug =
+          typeof global.console?.debug === 'function'
+            ? global.console.debug.bind(global.console)
+            : typeof global.console?.log === 'function'
+            ? global.console.log.bind(global.console)
+            : null;
+        debug?.('[diagnostics/logger]', entry.message || entry, entry.context || '');
       }
       return entry;
     },
@@ -52,7 +60,13 @@
   const bootstrap = () =>
     loggerApi.add('diagnostics/logger ready', { reason: 'bootstrap', level: 'info' });
 
-  if (global.document?.readyState === 'complete') {
+  const readyState = global.document?.readyState;
+  if (!global.document || readyState === undefined) {
+    bootstrap();
+    return;
+  }
+
+  if (readyState !== 'loading') {
     bootstrap();
   } else {
     global.document?.addEventListener('DOMContentLoaded', bootstrap, { once: true });
