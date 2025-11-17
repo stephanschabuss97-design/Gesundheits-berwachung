@@ -44,12 +44,24 @@
     if (intakeBtn) {
       const open = () => openIntakeOverlay(intakeBtn);
       intakeBtn.addEventListener('click', open);
-      intakeBtn.addEventListener('pointerdown', (event) => {
-        if (event.pointerType === 'touch') {
+      intakeBtn.addEventListener(
+        'pointerdown',
+        (event) => {
+          if (event.pointerType === 'touch') {
+            event.preventDefault();
+            open();
+          }
+        },
+        { passive: false }
+      );
+      intakeBtn.addEventListener(
+        'touchstart',
+        (event) => {
           event.preventDefault();
           open();
-        }
-      });
+        },
+        { passive: false }
+      );
     }
   };
 
