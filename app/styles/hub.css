@@ -78,12 +78,6 @@
   font-weight: 500;
 }
 
-.hub-date-pill span[aria-hidden='true'] {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: normal;
-}
-
 #hubDateText {
   letter-spacing: 0.2em;
 }
