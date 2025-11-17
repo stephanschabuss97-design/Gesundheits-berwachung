@@ -90,6 +90,60 @@
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
 <main id="appMain">
+  <section class="hub" id="captureHub" hidden aria-labelledby="hubTitle">
+    <div class="hub-hero">
+      <div class="hub-orb">
+        <img src="assets/img/midas_symbol.webp" alt="MIDAS Logo">
+      </div>
+      <h1 class="hub-title" id="hubTitle">MIDAS</h1>
+    </div>
+
+    <div class="hub-icons" role="toolbar" aria-label="Module navigation">
+      <button type="button" class="hub-icon" aria-pressed="true">
+        <span aria-hidden="true">💧</span>
+        <span class="sr-only">Intake</span>
+      </button>
+      <button type="button" class="hub-icon" aria-pressed="false">
+        <span aria-hidden="true">❤️</span>
+        <span class="sr-only">Blutdruck</span>
+      </button>
+      <button type="button" class="hub-icon" aria-pressed="false">
+        <span aria-hidden="true">🧍‍♂️</span>
+        <span class="sr-only">Körperwerte</span>
+      </button>
+      <button type="button" class="hub-icon" aria-pressed="false">
+        <span aria-hidden="true">👤</span>
+        <span class="sr-only">Arzt-Ansicht</span>
+      </button>
+      <button type="button" class="hub-icon" aria-pressed="false">
+        <span aria-hidden="true">📈</span>
+        <span class="sr-only">Charts</span>
+      </button>
+      <button type="button" class="hub-icon" disabled aria-pressed="false">
+        <span aria-hidden="true">📅</span>
+        <span class="sr-only">Termine (bald)</span>
+      </button>
+      <button type="button" class="hub-icon" disabled aria-pressed="false">
+        <span aria-hidden="true">🏋️</span>
+        <span class="sr-only">Training (bald)</span>
+      </button>
+    </div>
+
+    <div class="hub-chat">
+      <form id="hubChatForm" aria-describedby="hubChatHint">
+        <input type="text" name="hubMessage" id="hubMessage" placeholder="Wie kann ich helfen?">
+        <button type="button" class="secondary" aria-label="Spracheingabe deaktiviert">
+          🎙️
+        </button>
+        <button type="submit" aria-label="Senden">
+          ➤
+        </button>
+      </form>
+      <p class="hub-chat-hint" id="hubChatHint">
+        Chat- und Voice-Funktionen folgen, sobald der MIDAS Assistant live ist.
+      </p>
+    </div>
+  </section>
 <!-- END MODULE -->
 <!-- MODULE: CAPTURE (Intake)
   intent: Tageserfassung (UI) inkl. Intake/BP/Body/Termine, verbindet Benutzeraktionen mit Save-Flows
@@ -294,6 +348,7 @@
 <script src="app/diagnostics/logger.js"></script>
 <script src="app/diagnostics/perf.js"></script>
 <script src="app/diagnostics/monitor.js"></script>
+<script src="app/modules/hub/index.js"></script>
 <!-- @refactor: moved to assets/js/ui.js -->
 <script src="assets/js/ui.js"></script>
 <!-- @refactor: moved to assets/js/ui-layout.js -->

@@ -37,6 +37,7 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
 - **Readiness (Phase 4)**
   - Assistant-Modul vorbereitet (`app/modules/assistant/` + Doc).
   - PWA/TWA-Struktur unter `public/` vorhanden (SW/TWA folgen separat).
+  - Capture-Hub V2 Layout (MIDAS UI) per Flag `CAPTURE_HUB_V2` testbar.
 
 - **Export**
   - JSON-Export (gesundheitslog.json) fuer Aerztinnen und Aerzte.

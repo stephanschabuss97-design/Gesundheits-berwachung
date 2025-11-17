@@ -50,11 +50,26 @@
 
   const TREND_PILOT_ENABLED = readTrendPilotFlag();
   const DIAGNOSTICS_ENABLED = readDiagnosticsFlag();
+  const readCaptureHubFlag = () => {
+    if (typeof global?.CAPTURE_HUB_V2 === 'boolean') return global.CAPTURE_HUB_V2;
+    try {
+      const lsValue = global?.localStorage?.getItem('CAPTURE_HUB_V2');
+      const parsed = parseBoolean(lsValue);
+      if (parsed != null) return parsed;
+    } catch (_) {
+      /* ignore */
+    }
+    const attr = parseBoolean(global?.document?.body?.dataset?.captureHubV2);
+    if (attr != null) return attr;
+    return false;
+  };
+  const CAPTURE_HUB_V2 = readCaptureHubFlag();
 
   const configApi = Object.freeze({
     DEV_ALLOW_DEFAULTS,
     TREND_PILOT_ENABLED,
-    DIAGNOSTICS_ENABLED
+    DIAGNOSTICS_ENABLED,
+    CAPTURE_HUB_V2
   });
 
   global.AppModules = global.AppModules || {};
