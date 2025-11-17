@@ -82,6 +82,23 @@
   letter-spacing: 0.2em;
 }
 
+.hub-intake-pills {
+  margin: 24px auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hub-intake-pills .cap-pill {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
 .hub-icons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
