@@ -12,10 +12,6 @@
 
   const activateHubLayout = () => {
     const config = appModules.config || {};
-    if (!config.CAPTURE_HUB_V2) {
-      global.console?.debug?.('[hub] CAPTURE_HUB_V2 disabled');
-      return;
-    }
     const doc = global.document;
     if (!doc) {
       global.console?.debug?.('[hub] document object missing');
@@ -26,8 +22,6 @@
       global.console?.debug?.('[hub] #captureHub element not found', { config });
       return;
     }
-    hub.hidden = false;
-    hub.classList.add('hub-active');
     setupIconBar(hub);
     setupChat(hub);
     setupSpriteState(hub);
