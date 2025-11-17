@@ -6,25 +6,25 @@ Ziel: Das bestehende Capture-/Hub-Layout in die neue „MIDAS“-Optik überfüh
 
 ## Phase 1 – Konzept & Struktur
 
-1. **Design-Spezifikation**
-   - Sprite-Logik definieren (Idle, Thinking, Voice).
-   - Modul-Icons festlegen (Intake, BP, Körper, Arzt, Chart, Termin, Training).
-   - Chat/Voice-Panel Layout skizzieren (Textfeld + Mic-Button).
+1. **Design-Spezifikation (UI-only)**
+   - Layout für Sprite/Logo, MIDAS-Schriftzug und Modul-Icon-Leiste (Intake, BP, Körper, Arzt, Chart, Termin, Training).
+   - Chat-Panel optisch planen (Textfeld + Buttons), aber ohne KI-Backend.
+   - Farbpalette/Glow/Typografie festlegen.
 
 2. **Template & Routing**
-   - Neues Hub-Template erstellen (HTML/CSS).
-   - Bestehende Views (Capture, Doctor, Charts) per Router/Slots einbetten.
-   - Responsives Grid und Theme-Tokens vorbereiten (Dark Mode).
+   - Hub-Template in HTML/CSS aufsetzen (Dark Mode, responsive Grid).
+   - Capture/Doctor/Charts in Slots/Routing integrieren (Funktionalität unverändert).
+   - Feature-Flag für das neue Hub aktivieren (z. B. `CAPTURE_HUB_V2`).
 
-Deliverables: Mockups/Skizzen, CSS/HTML Skeleton, Sprite-Konzept.
+Deliverables: Mockups/Skizzen, CSS/HTML Skeleton, Navigation/Flag-Konzept.
 
 ---
 
 ## Phase 2 – Umsetzung (UI only)
 
-1. **Sprite-Icon**
-   - Idle-Animation als Sprite/Canvas.
-   - Hooks für Thinking/Voice (noch ohne echte KI-Logik).
+1. **Sprite/Logo & Animation (nur Platzhalter)**
+   - Idle-Visual als Sprite oder CSS-Animation.
+   - Thinking/Voice-Stati vorerst als statische Varianten dokumentieren (Animation folgt später mit KI).
 
 2. **Navigation/Icons**
    - Buttons für Intake, BP, Körper, Arzt, Charts, Termin, Training (letztere vorerst deaktiviert).
@@ -32,7 +32,7 @@ Deliverables: Mockups/Skizzen, CSS/HTML Skeleton, Sprite-Konzept.
 
 3. **Chat-Panel**
    - Textfeld & Mic-Button im GPT-Stil.
-   - Dummy-Hinweise („How can I assist you?“), noch ohne Backend.
+   - Dummy-Hinweise („How can I assist you?“), **kein** Backend/KI.
 
 Deliverables: Fertiges Hub-Layout, modulare CSS/JS, QA-Checks (Layout/Scroll/Responsive).
 
@@ -52,7 +52,7 @@ Deliverables: Fertiges Hub-Layout, modulare CSS/JS, QA-Checks (Layout/Scroll/Res
    - QA: Desktop/Mobile, Accessibility, Smoke-Tests.
    - README/Docs aktualisieren (neues Layout).
 
-Deliverables: Hub v2 in Produktion (ohne KI/OpenAI), Feature-Flag Toggle.
+Deliverables: Hub v2 in Produktion (UI-only, ohne KI/OpenAI), Feature-Flag Toggle.
 
 ---
 
