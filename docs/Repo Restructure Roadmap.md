@@ -148,7 +148,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 2. ?? **Assistant (KI) Readiness:**
    - Ordner `app/modules/assistant/` anlegen, Readiness dokumentieren (Hooks, Roadmap).
    - Keine Logik implementieren (eigene Roadmap sp�ter).
-   - Step erledigt: Platzhalter `app/modules/assistant/index.js` + `docs/Assistant Module Overview.md` beschreiben Struktur/Next Steps.
+   - Step erledigt: Platzhalter `app/modules/assistant/index.js` + `docs/modules/Assistant Module Overview.md` beschreiben Struktur/Next Steps.
 
 3. ?? **PWA/TWA Readiness:**
    - public//SW-Struktur pr�fen, Ordner f�r PWA/TWA vorbereiten (z. B. 	wa/android/).
@@ -185,16 +185,18 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 Durch das schrittweise Vorgehen k�nnen wir jederzeit stoppen, ohne eine halbfertige Codebasis zu hinterlassen. Sobald Phase 3 abgeschlossen ist, entspricht die Struktur bereits grob dem gew�nschten Baum; Phase 4+5 sorgen f�r zuk�nftige Features und finale Aufr�umarbeiten.
 
 - **Neu angelegte/aktualisierte Docs:**  
-  `docs/Trendpilot Module Overview.md`,  
-  `docs/Charts Module Overview.md`,  
-  `docs/Doctor View Module Overview.md`,  
-  `docs/Intake Module Overview.md`,  
-  `docs/Capture Module Overview.md`,  
-  `docs/Supabase Core Overview.md`,  
-  `docs/Auth Module Overview.md`,  
-  `docs/Main Router Flow Overview.md`,  
-  `docs/Unlock Flow Overview.md`,  
-  `docs/State Layer Overview.md`,  
+  `docs/modules/Trendpilot Module Overview.md`,  
+  `docs/modules/Charts Module Overview.md`,  
+  `docs/modules/Doctor View Module Overview.md`,  
+  `docs/modules/Intake Module Overview.md`,  
+  `docs/modules/Capture Module Overview.md`,  
+  `docs/modules/Supabase Core Overview.md`,  
+  `docs/modules/Auth Module Overview.md`,  
+  `docs/modules/Main Router Flow Overview.md`,  
+  `docs/modules/Unlock Flow Overview.md`,  
+  `docs/modules/State Layer Overview.md`,  
+  `docs/modules/Assistant Module Overview.md`,  
+  `docs/modules/Diagnostics Module Overview.md`,  
   `docs/AppModules Namespace.md`,  
   `docs/Core Diagnostics.md`.
 

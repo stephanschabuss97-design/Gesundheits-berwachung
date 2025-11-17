@@ -21,7 +21,7 @@ Aktueller Stand (Phase 4): Nur Ordner & Minimal-API (`appModules.assistant`) e
 |-------|-------|
 | `app/modules/assistant/index.js` | Platzhalter mit MODULE-Header, exportiert `AppModules.assistant` + `init()` stub. |
 | `app/core/config.js` | Wird später ein Flag `ASSISTANT_ENABLED` o. Ä. aufnehmen (noch nicht gesetzt). |
-| `docs/Assistant Module Overview.md` | Dieses Dokument: beschreibt Ziel, Struktur, nächste Schritte. |
+| `docs/modules/Assistant Module Overview.md` | Dieses Dokument: beschreibt Ziel, Struktur, nächste Schritte. |
 | `docs/Repo Restructure Roadmap.md` | Phase 4 Abschnitt: Assistant (KI) Readiness. |
 
 ---
@@ -31,7 +31,7 @@ Aktueller Stand (Phase 4): Nur Ordner & Minimal-API (`appModules.assistant`) e
 1. **Ordner:** `app/modules/assistant/` reserviert. Spätere Unterordner: `services/`, `ui/`, `prompts/`.
 2. **Einbindung:** `index.html` wird erst angepasst, sobald echte Logic existiert (derzeit kein `<script>`-Tag).
 3. **API:** `AppModules.assistant` steht bereit für zukünftige Hooks (`init`, `ask`, `abort`, `setContext`).
-4. **Supabase Hooks:** Modul wird Supabase Functions/Edge/Realtime nutzen; Readiness-Vermerk in `docs/Supabase Core Overview.md` nötig, sobald konkrete Pfade definiert sind.
+4. **Supabase Hooks:** Modul wird Supabase Functions/Edge/Realtime nutzen; Readiness-Vermerk in `docs/modules/Supabase Core Overview.md` nötig, sobald konkrete Pfade definiert sind.
 
 ---
 

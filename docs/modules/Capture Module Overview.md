@@ -63,7 +63,7 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 
 ### 3.5 Intake Flow
 
-Siehe `docs/Intake Module Overview.md`. Capture-Modul stellt Buttons, Timer und Pill-Status bereit.
+Siehe `docs/modules/Intake Module Overview.md`. Capture-Modul stellt Buttons, Timer und Pill-Status bereit.
 
 ### 3.6 Verbindung zu anderen Modulen
 

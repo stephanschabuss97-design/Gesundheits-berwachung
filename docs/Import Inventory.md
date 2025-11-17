@@ -17,7 +17,7 @@ Phase 0 / Schritt 2 der Repo-Roadmap: Übersicht aller Dateien, die aktuell dire
 | Kategorie | Datei |
 |-----------|-------|
 | HTML      | `index.html`, `index.html.bak` |
-| Dokumentation / Planung | `docs/Capture Module Overview.md`, `docs/Charts Module Overview.md`, `docs/Doctor View Module Overview.md`, `docs/Intake Module Overview.md`, `docs/Main Router Flow Overview.md`, `docs/Auth Module Overview.md`, `docs/Trendpilot Module Overview.md`, `docs/Unlock Flow Overview.md`, `docs/State Layer Overview.md`, `docs/Repo Tree v2.md`, `docs/Repo Restructure Roadmap.md`, `docs/Appointment-Removal Roadmap.md`, `docs/QA_CHECKS.md` |
+| Dokumentation / Planung | `docs/modules/Capture Module Overview.md`, `docs/modules/Charts Module Overview.md`, `docs/modules/Doctor View Module Overview.md`, `docs/modules/Intake Module Overview.md`, `docs/modules/Main Router Flow Overview.md`, `docs/modules/Auth Module Overview.md`, `docs/modules/Trendpilot Module Overview.md`, `docs/modules/Unlock Flow Overview.md`, `docs/modules/State Layer Overview.md`, `docs/Repo Tree v2.md`, `docs/Repo Restructure Roadmap.md`, `docs/Appointment-Removal Roadmap.md`, `docs/QA_CHECKS.md` |
 | Change/History | `CHANGELOG.md` |
 | JS-Quellen | `assets/js/main.js`, `assets/js/main.js.bak`, `app/supabase/index.js`, `assets/js/ui.js`, `assets/js/ui-layout.js`, `assets/js/ui-errors.js`, `assets/js/ui-tabs.js`, `app/core/utils.js`, `assets/js/utils/debounce-fallback.js` |
 
