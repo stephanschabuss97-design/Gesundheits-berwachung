@@ -42,7 +42,14 @@
     });
     const intakeBtn = hub.querySelector('[data-hub-module="intake"]');
     if (intakeBtn) {
-      intakeBtn.addEventListener('click', () => openIntakeOverlay(intakeBtn));
+      const open = () => openIntakeOverlay(intakeBtn);
+      intakeBtn.addEventListener('click', open);
+      intakeBtn.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'touch') {
+          event.preventDefault();
+          open();
+        }
+      });
     }
   };
 
