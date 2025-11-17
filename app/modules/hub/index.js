@@ -83,12 +83,14 @@
     const captureDate = document.getElementById('date');
     if (!pill || !text || !captureDate) return;
     const update = () => {
-      if (captureDate.value) {
-        text.textContent = new Date(captureDate.value).toLocaleDateString();
-      } else {
-        text.textContent = 'Datum wählen';
-      }
+      const dateValue = captureDate.value || new Date().toISOString().slice(0, 10);
+      const formatted = new Date(dateValue).toLocaleDateString();
+      text.textContent = formatted;
     };
+    if (!captureDate.value) {
+      captureDate.value = new Date().toISOString().slice(0, 10);
+      captureDate.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     update();
     captureDate.addEventListener('change', update);
     pill.addEventListener('click', () => captureDate.showPicker?.());
