@@ -1034,3 +1034,8 @@ Regression
 - Offline/Fallback: Wenn `fetchSystemCommentsRange` scheitert, erscheint Placeholder ‚ÄûTrendpilot-Hinweise momentan nicht verf√ºgbar‚Äú, capture Pill bleibt verborgen und diag loggt `[chart] trendpilot bands failed`.
 - Diagnostics-Flag: `DIAGNOSTICS_ENABLED=false` (Config/`data-diagnostics-enabled`) l√§sst `app/core/diag.js` im Stub-Modus laufen; neue Layer `app/diagnostics/{logger,perf,monitor}.js` loggen dann keine Heartbeats (nur Ready-Event im Logger bei aktivem Flag).
 
+## Diagnostics Layer Forwarding (Phase 4)
+
+**Checks**
+- Diagnostics-Flag: `DIAGNOSTICS_ENABLED=false` (Config oder `data-diagnostics-enabled`) zwingt `app/core/diag.js` in den Stub-Modus; die neuen `app/diagnostics/{logger,perf,monitor}.js` melden dann nur den Logger-Boot (keine Heartbeats).
+- Diagnostics-Layer Forwarding: Bei aktivem Flag landen `diag.add`-Events zus‰tzlich in `appModules.diagnosticsLayer.logger.history`, `recordPerfStat` aktualisiert `diagnosticsLayer.perf.snapshot(...)` und das ÷ffnen/Schlieﬂen des Diagnose-Panels toggelt `diagnosticsLayer.monitor` inklusive Heartbeat.

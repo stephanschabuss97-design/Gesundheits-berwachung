@@ -13,6 +13,7 @@ Docs:
 - `docs/QA_CHECKS.md` aktualisiert (UI-Refresh Steps nur noch doctor/lifestyle/chart).
 
 Changed:
+- Diagnostics-Layer integriert: `app/core/diag.js` forwardet diag-Logs, `recordPerfStat` und Panel-Toggles an `appModules.diagnosticsLayer.{logger,perf,monitor}`; damit sammeln die neuen `app/diagnostics/*`-Module bereits Signale.
 - Trendpilot-Modul läuft nun unter pp/modules/trendpilot/{data,index}; index.html, Build/Module-Doku und QA-Notizen verweisen auf die neuen Pfade (Edge-Headless-Smoketest für AppModules-Trendpilot dokumentiert).
 - Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
 - Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.

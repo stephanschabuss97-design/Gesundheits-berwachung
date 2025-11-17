@@ -43,6 +43,46 @@
     appModules.diagnostics = diagnosticsApi;
     return;
   }
+  const ensureDiagnosticsLayer = () => {
+    appModules.diagnosticsLayer = appModules.diagnosticsLayer || {};
+    return appModules.diagnosticsLayer;
+  };
+  const getDiagnosticsLayer = () => appModules.diagnosticsLayer || ensureDiagnosticsLayer();
+  ensureDiagnosticsLayer();
+
+  const logToDiagnosticsLayer = (message, context) => {
+    const logger = getDiagnosticsLayer().logger;
+    try {
+      logger?.add?.(message, context);
+    } catch (err) {
+      console.warn('[diagnostics] logger forward failed', err);
+    }
+  };
+
+  const perfForward = (key, startedAt) => {
+    const perf = getDiagnosticsLayer().perf;
+    try {
+      perf?.record?.(key, startedAt);
+    } catch (err) {
+      console.warn('[diagnostics] perf forward failed', err);
+    }
+  };
+
+  const monitor = () => getDiagnosticsLayer().monitor;
+  const monitorHeartbeat = (reason) => {
+    try {
+      monitor()?.heartbeat?.(reason);
+    } catch (err) {
+      console.warn('[diagnostics] monitor heartbeat failed', err);
+    }
+  };
+  const monitorToggle = (state) => {
+    try {
+      monitor()?.toggle?.(state);
+    } catch (err) {
+      console.warn('[diagnostics] monitor toggle failed', err);
+    }
+  };
   let diagnosticsListenerAdded = false;
 
   const MAX_ALLOWED_DIFF_MS = 60_000; // 1 minute sanity limit for perf samples
@@ -136,6 +176,7 @@
   // SUBMODULE: recordPerfStat @public
   function recordPerfStat(key, startedAt) {
     if (startedAt == null) return;
+    perfForward(key, startedAt);
     const hasPerf =
       typeof performance !== 'undefined' && typeof performance.now === 'function';
     if (!hasPerf) return;
@@ -171,6 +212,8 @@
     open: false,
     lines: [],
     add(msg) {
+      logToDiagnosticsLayer(msg, { source: 'diag.add' });
+      monitorHeartbeat('diag-add');
       const t = new Date().toLocaleTimeString();
       this.lines.unshift(`[${t}] ${msg}`);
       this.lines = this.lines.slice(0, 80);
@@ -180,6 +223,7 @@
     },
     init() {
       try {
+        monitorHeartbeat('diag-init');
         this.el = document.getElementById('diag');
         this.logEl = document.getElementById('diagLog');
         if (this.logEl && this.lines.length) {
@@ -201,6 +245,8 @@
     },
     show() {
       if (!this.el) return;
+      monitorToggle(true);
+      monitorHeartbeat('diag-open');
       this.el.style.display = 'block';
       const trap = global.AppModules?.uiCore?.focusTrap;
       trap?.activate?.(this.el);
@@ -208,6 +254,7 @@
     },
     hide() {
       if (!this.el) return;
+      monitorToggle(false);
       this.el.style.display = 'none';
       const trap = global.AppModules?.uiCore?.focusTrap;
       trap?.deactivate?.();
