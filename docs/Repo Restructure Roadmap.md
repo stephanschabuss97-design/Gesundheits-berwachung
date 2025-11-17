@@ -146,12 +146,14 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
    - Step 3/3 erledigt: Legacy-perfStats-Sampler aus `app/core/diag.js` entfernt; `window.perfStats.{add,snap}` proxyt jetzt direkt auf `app/diagnostics/perf.js` (kein doppelter Speicher mehr).
 
 2. ?? **Assistant (KI) Readiness:**
-   - Ordner pp/modules/assistant/ anlegen (ohne Dateien), pr�fen ob Supabase-Hooks + Tree bereit f�r KI-Modul (OpenAI API via Functions).
+   - Ordner `app/modules/assistant/` anlegen, Readiness dokumentieren (Hooks, Roadmap).
    - Keine Logik implementieren (eigene Roadmap sp�ter).
+   - Step erledigt: Platzhalter `app/modules/assistant/index.js` + `docs/Assistant Module Overview.md` beschreiben Struktur/Next Steps.
 
 3. ?? **PWA/TWA Readiness:**
    - public//SW-Struktur pr�fen, Ordner f�r PWA/TWA vorbereiten (z. B. 	wa/android/).
    - Noch keine SW/TWA-Dateien schreiben (eigene Roadmap folgt).
+   - Step erledigt: `public/sw/`, `public/manifest-placeholder.json`, `public/twa/Android/` + Readme (`docs/PWA-TWA Readiness.md`).
 ## Phase 5 � Cleanup & Final Switch (schwer)
 
 1. ?? **Assets-Ordner aufr�umen:** Entferne alte `assets/`-Reste, sobald alle Pfade angepasst sind.  
