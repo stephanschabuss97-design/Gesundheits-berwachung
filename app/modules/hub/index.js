@@ -103,10 +103,7 @@
 
   const openIntakeOverlay = (trigger) => {
     const overlay = document.getElementById('hubIntakeOverlay');
-    const overlayBody = overlay?.querySelector('#hubOverlayContent');
-    const captureIntake = document.getElementById('captureIntake');
-    const mount = document.getElementById('captureIntakeMount') || captureIntake?.parentElement;
-    if (!overlay || !overlayBody || !captureIntake || !mount) return;
+    if (!overlay) return;
     const rect = trigger?.getBoundingClientRect();
     if (rect) {
       overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
@@ -115,8 +112,7 @@
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     overlay.classList.add('active');
-    overlayBody.appendChild(captureIntake);
-    captureIntake.open = true;
+    document.body.style.setProperty('overflow', 'hidden');
     const escHandler = (event) => {
       if (event.key === 'Escape') {
         closeIntakeOverlay();
@@ -129,14 +125,12 @@
       el.addEventListener('click', closeIntakeOverlay);
     });
 
-    overlay._mount = mount;
+    overlay._open = true;
   };
 
   const closeIntakeOverlay = () => {
     const overlay = document.getElementById('hubIntakeOverlay');
-    const captureIntake = document.getElementById('captureIntake');
-    const mount = overlay?._mount;
-    if (!overlay || !captureIntake || !mount) return;
+    if (!overlay || !overlay._open) return;
 
     overlay.classList.add('closing');
     const finishClose = () => {
@@ -144,7 +138,6 @@
       overlay.classList.remove('active');
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
-      mount.appendChild(captureIntake);
       overlay.removeEventListener('animationend', finishClose);
       overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
         el.removeEventListener('click', closeIntakeOverlay);
@@ -153,7 +146,8 @@
         document.removeEventListener('keydown', overlay._escHandler);
         overlay._escHandler = null;
       }
-      overlay._mount = null;
+      overlay._open = false;
+      document.body.style.removeProperty('overflow');
     };
     overlay.addEventListener('animationend', finishClose);
   };

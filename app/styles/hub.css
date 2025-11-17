@@ -441,3 +441,52 @@
     letter-spacing: 0.25rem;
   }
 }
+.hub-intake-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hub-intake-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.hub-input-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(15, 17, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fefefe;
+}
+
+.hub-input-card span {
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.hub-input-card input {
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+  padding: 4px 0;
+}
+
+.hub-input-card .btn {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 6px 12px;
+}
+
+.hub-intake-note {
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.06em;
+}
