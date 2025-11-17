@@ -12,10 +12,20 @@
 
   const activateHubLayout = () => {
     const config = appModules.config || {};
-    if (!config.CAPTURE_HUB_V2) return;
+    if (!config.CAPTURE_HUB_V2) {
+      global.console?.debug?.('[hub] CAPTURE_HUB_V2 disabled');
+      return;
+    }
     const doc = global.document;
+    if (!doc) {
+      global.console?.debug?.('[hub] document object missing');
+      return;
+    }
     const hub = doc.getElementById('captureHub');
-    if (!hub) return;
+    if (!hub) {
+      global.console?.debug?.('[hub] #captureHub element not found', { config });
+      return;
+    }
     hub.hidden = false;
     hub.classList.add('hub-active');
     setupIconBar(hub);

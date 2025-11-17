@@ -1,5 +1,10 @@
-## Unreleased\r\n\r\nAdded:\r\n- Diagnostics-Scaffolding fuer Phase 4: `app/diagnostics/{logger,perf,monitor}.js` + neues Feature-Flag `DIAGNOSTICS_ENABLED` (Config + Script-Stack) legen das Fundament fuer das kommende Monitoring-Modul, ohne das bestehende `app/core/diag.js` zu beeinflussen.\r\n- Capture Hub V2 (MIDAS Layout) als Preview: `CAPTURE_HUB_V2`-Flag, neues HTML/CSS (`app/styles/hub.css`, #captureHub) und Initialisierung über `app/modules/hub/index.js`.\r\n\r\nRemoved:
-- ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
+## Unreleased
+
+Added:
+- Diagnostics-Scaffolding fuer Phase 4: `app/diagnostics/{logger,perf,monitor}.js` + neues Feature-Flag `DIAGNOSTICS_ENABLED` (Config + Script-Stack) legen das Fundament fuer das kommende Monitoring-Modul, ohne das bestehende `app/core/diag.js` zu beeinflussen.
+- Capture Hub V2 (MIDAS Layout) als Preview: `CAPTURE_HUB_V2`-Flag, neues HTML/CSS (`app/styles/hub.css`, #captureHub) und Initialisierung über `app/modules/hub/index.js`.
+
+Removed:- ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
 - Legacy-Reste `assets/js/{capture,charts,doctor,utils}` sowie `*.bak`-Dateien entfernt – App nutzt nur noch die `app/`-Module.
 - Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.
 - `assets/js/appointments.js` (inkl. globaler State) entfällt; `assets/js/config.js` exportiert nur noch `DEV_ALLOW_DEFAULTS` ohne zusätzliche `window.*`-Zuordnungen.
