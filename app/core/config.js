@@ -34,11 +34,27 @@
     return true;
   };
 
+  const readDiagnosticsFlag = () => {
+    if (typeof global?.DIAGNOSTICS_ENABLED === 'boolean') return global.DIAGNOSTICS_ENABLED;
+    try {
+      const lsValue = global?.localStorage?.getItem('DIAGNOSTICS_ENABLED');
+      const parsedLs = parseBoolean(lsValue);
+      if (parsedLs != null) return parsedLs;
+    } catch (_) {
+      /* ignore */
+    }
+    const attr = parseBoolean(global?.document?.body?.dataset?.diagnosticsEnabled);
+    if (attr != null) return attr;
+    return true;
+  };
+
   const TREND_PILOT_ENABLED = readTrendPilotFlag();
+  const DIAGNOSTICS_ENABLED = readDiagnosticsFlag();
 
   const configApi = Object.freeze({
     DEV_ALLOW_DEFAULTS,
-    TREND_PILOT_ENABLED
+    TREND_PILOT_ENABLED,
+    DIAGNOSTICS_ENABLED
   });
 
   global.AppModules = global.AppModules || {};

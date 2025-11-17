@@ -141,6 +141,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 1. ?? **Diagnostics:**
    - pp/diagnostics/ vorbereiten (Feature-Flag in pp/core/config.js).
    - Nur Struktur + Readiness-Check; Implementierung folgt separat.
+   - ✅ Step 1/3 erledigt: Verzeichnis `app/diagnostics/{logger,perf,monitor}.js` angelegt, `DIAGNOSTICS_ENABLED`-Flag in `app/core/config.js` eingef��hrt und `index.html` l��dt die neuen Platzhalter parallel zum bestehenden `app/core/diag.js`.
 
 2. ?? **Assistant (KI) Readiness:**
    - Ordner pp/modules/assistant/ anlegen (ohne Dateien), pr�fen ob Supabase-Hooks + Tree bereit f�r KI-Modul (OpenAI API via Functions).

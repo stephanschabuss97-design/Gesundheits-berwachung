@@ -1,5 +1,8 @@
 ## Unreleased
 
+Added:
+- Diagnostics-Scaffolding f�r Phase 4: `app/diagnostics/{logger,perf,monitor}.js` + neues Feature-Flag `DIAGNOSTICS_ENABLED` (Config + Script-Stack) legen das Fundament f�r das kommende Monitoring-Modul, ohne das bestehende `app/core/diag.js` zu beeintr�chtigen.
+
 Removed:
 - ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
 - Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.

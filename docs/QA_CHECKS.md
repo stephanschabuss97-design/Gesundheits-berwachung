@@ -1032,4 +1032,5 @@ Regression
 - Doctor-Block: Buttons feuern nur bei Statuswechsel; Supabase-PATCH aktualisiert `doctorStatus` und UI markiert aktiven Button + Label (geplant/erledigt/kein Status).
 - Chart-Bänder: Tage mit Warn/Kritisch zeigen genau einen transluzenten Streifen (Gelb/Rot). Range-Filter ohne Einträge entfernt Legenden-Swatch + Bänder.
 - Offline/Fallback: Wenn `fetchSystemCommentsRange` scheitert, erscheint Placeholder „Trendpilot-Hinweise momentan nicht verfügbar“, capture Pill bleibt verborgen und diag loggt `[chart] trendpilot bands failed`.
+- Diagnostics-Flag: `DIAGNOSTICS_ENABLED=false` (Config/`data-diagnostics-enabled`) lässt `app/core/diag.js` im Stub-Modus laufen; neue Layer `app/diagnostics/{logger,perf,monitor}.js` loggen dann keine Heartbeats (nur Ready-Event im Logger bei aktivem Flag).
 

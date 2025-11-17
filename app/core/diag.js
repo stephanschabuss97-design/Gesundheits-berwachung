@@ -15,6 +15,34 @@
 // SUBMODULE: namespace init @internal - Initialisiert globales Diagnostics-Modul
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
+  const isDiagnosticsEnabled =
+    typeof appModules?.config?.DIAGNOSTICS_ENABLED === 'boolean'
+      ? appModules.config.DIAGNOSTICS_ENABLED
+      : true;
+  if (!isDiagnosticsEnabled) {
+    const stubDiag = {
+      el: null,
+      logEl: null,
+      open: false,
+      lines: [],
+      add() {},
+      init() {},
+      show() {},
+      hide() {}
+    };
+    const diagnosticsApi = {
+      diag: stubDiag,
+      recordPerfStat() {},
+      uiError(msg) {
+        console.warn('[diagnostics disabled] uiError:', msg);
+      },
+      uiInfo(msg) {
+        console.info('[diagnostics disabled] uiInfo:', msg);
+      }
+    };
+    appModules.diagnostics = diagnosticsApi;
+    return;
+  }
   let diagnosticsListenerAdded = false;
 
   const MAX_ALLOWED_DIFF_MS = 60_000; // 1 minute sanity limit for perf samples
