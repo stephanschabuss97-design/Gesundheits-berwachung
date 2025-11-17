@@ -162,6 +162,7 @@ Diese Roadmap beschreibt, wie das bestehende Repository schrittweise in den modu
 4. ?? **Release Checklist:**  
    - `CHANGELOG.md` zusammenfassen.  
    - QA-Run (Unlock, Capture, Doctor, Trendpilot, Chart, Offline).  
+   - Edge-Headless-Smoketest (`msedge --headless --disable-gpu --dump-dom file:///.../index.html`) + Static-Server-Probe (`python -m http.server` + `Invoke-WebRequest 127.0.0.1:8765/app/app.css`).  
    - Tag/Release (z. B. `vNext-restructure`).
 
 ### Erg�nzung: Neu ? Test ? Umschalten ? Entfernen

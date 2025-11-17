@@ -5,6 +5,7 @@ Added:
 
 Removed:
 - ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
+- Legacy-Reste `assets/js/{capture,charts,doctor,utils}` sowie `*.bak`-Dateien entfernt – App nutzt nur noch die `app/`-Module.
 - Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.
 - `assets/js/appointments.js` (inkl. globaler State) entfällt; `assets/js/config.js` exportiert nur noch `DEV_ALLOW_DEFAULTS` ohne zusätzliche `window.*`-Zuordnungen.
 - Neues Skript `sql/08_Remove_Appointments.sql` entfernt `public.appointments` inkl. Trigger, Policies und Realtime-Publikation.

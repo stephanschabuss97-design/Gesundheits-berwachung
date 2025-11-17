@@ -9,10 +9,10 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
 
 - **Capture (Tageserfassung)**
   - Blutdruck Morgens/Abends inkl. Kommentarpflicht bei Grenzwerten.
-  - Koerperwerte: Gewicht, Taille sowie optional Prozent Fett und Prozent Muskel (ab v1.6.7).
+  - Koerperwerte: Gewicht, Taille sowie optional Prozent Fett und Prozent Muskel.
   - Freitext-Kommentar fuer Tagesereignisse direkt im Body-Panel.
   - Intake-Accordion fuer Wasser, Salz und Protein mit Tages-Pills und Fortschrittsbalken.
-  - Panel "Arzttermine" (v1.6.0) fuer sechs Rollen mit PATCH-first Workflow, Realtime-Updates und Done-Abschluss.
+  - Trendpilot-Pill im Header verlinkt auf aktuelle Warnungen/Kritik (inkl. Chart-/Doctor-Verknuepfung).
 
 - **Header-Status (v1.6.4 bis v1.7.0)**
   - Intake-Pills und Termin-Badge direkt unter dem Datumsfeld.
@@ -27,10 +27,16 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
 - **Diagramm (Daily)**
   - SVG-Chart fuer Blutdruck und Koerperdaten, inklusive Tastatur- und Tooltip-Unterstuetzung.
   - Muskel- und Fettbalken (kg) hinter dem Gewicht-Chart (v1.6.8), per Feature-Flag deaktivierbar.
+  - Trendpilot-Baender plus Legenden-Swatches (Warnung/Kritisch).
 
-- **Synchronisation und Logging**
+- **Synchronisation, Diagnostics und Logging**
   - Google OAuth (anon Key) + Supabase REST/Realtime.
   - Diagnosepanel (Touch-Log) zeigt Keys, Fehler und Performance-Metriken.
+  - Diagnostics-Layer (`app/diagnostics/{logger,perf,monitor}.js`) mit Feature-Flag `DIAGNOSTICS_ENABLED`.
+
+- **Readiness (Phase 4)**
+  - Assistant-Modul vorbereitet (`app/modules/assistant/` + Doc).
+  - PWA/TWA-Struktur unter `public/` vorhanden (SW/TWA folgen separat).
 
 - **Export**
   - JSON-Export (gesundheitslog.json) fuer Aerztinnen und Aerzte.
@@ -40,7 +46,7 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
 ## Schnellstart
 
 1. Repository klonen oder ZIP entpacken.
-2. `index v1.7.0.html` im Browser oeffnen (kein Build notwendig).
+2. `index.html` im Browser oeffnen (kein Build notwendig; Bundle liegt unter `app/`).
 3. Daten werden automatisch in IndexedDB gespeichert.
 4. Optional Supabase konfigurieren (Konsole → `putConf`):
    - `webhookUrl = https://<project-ref>.supabase.co/rest/v1/health_events`
@@ -80,6 +86,13 @@ Der Gesundheits-Logger ist eine offlinefaehige Web-App zur Erfassung, Auswertung
   - Badge zeigt "Kein Termin geplant": Done-Button bleibt ausgeblendet (erwartet).
   - Capture-Save bricht ab: Fehlermeldung in `#err` und Diagnosepanel pruefen.
   - Netzwerkprobleme: Telemetrieeintraege und REST-Logs im Diagnosepanel betrachten.
+
+## QA & Smoke-Tests
+
+- **Headless DOM Check:** `msedge --headless --disable-gpu --dump-dom file:///.../index.html`.
+- **Static-Server Probe:** `python -m http.server 8765` und `Invoke-WebRequest http://127.0.0.1:8765/app/app.css`.
+- **Flag-Checks:** `localStorage.setItem('DIAGNOSTICS_ENABLED','false')` testet den Stub-Modus.
+- Weitere Szenarien (Capture, Doctor, Chart, Trendpilot, Offline) siehe `docs/QA_CHECKS.md`.
 
 ---
 
