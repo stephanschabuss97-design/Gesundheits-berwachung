@@ -1133,13 +1133,22 @@ async function main(){
   getChartPanel()?.init?.();
   bindTabs();
 const todayIso = todayStr();
-$("#date").value = todayIso;
+const setInputValue = (selector, value) => {
+  const el = document.querySelector(selector);
+  if (!el) {
+    diag.add?.(`[boot] input ${selector} missing (possibly moved to overlay)`);
+    return null;
+  }
+  el.value = value;
+  return el;
+};
+setInputValue('#date', todayIso);
 AppModules.captureGlobals.setLastKnownToday(todayIso);
 AppModules.captureGlobals.setDateUserSelected(false);
 AppModules.captureGlobals.setBpUserOverride(false);
 prepareIntakeStatusHeader();
-$("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
-$("#to").value = todayIso;
+setInputValue('#from', new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10));
+setInputValue('#to', todayIso);
 setTab("capture");
 try{ window.AppModules.capture.resetCapturePanels?.(); window.AppModules.bp.updateBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
@@ -1325,7 +1334,9 @@ if (applyBtn) {
   });
 }
 
-$("#doctorChartBtn").addEventListener("click", async ()=>{
+const doctorChartBtn = document.getElementById('doctorChartBtn');
+if (doctorChartBtn) {
+doctorChartBtn.addEventListener("click", async ()=>{
   try {
     const logged = await isLoggedInFast();
     if (!logged) {
@@ -1345,6 +1356,9 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
   chartPanel?.show?.();
   await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
 });
+} else {
+  diag.add?.('[doctor] chart button missing - hub overlay active?');
+}
 
 document.addEventListener('keydown', (e)=>{
   if (e.key !== 'Escape') return;
