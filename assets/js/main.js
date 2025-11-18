@@ -1435,9 +1435,14 @@ window.addEventListener('focus', () => {
 /** END MODULE */
 
 // --- Arzt-Export ---
-$("#doctorExportJson").addEventListener("click", async () => {
-  await getDoctorModule()?.exportDoctorJson?.();
-});
+const doctorExportBtn = document.getElementById('doctorExportJson');
+if (doctorExportBtn) {
+  doctorExportBtn.addEventListener("click", async () => {
+    await getDoctorModule()?.exportDoctorJson?.();
+  });
+} else {
+  diag.add?.('[doctor] export button missing - overlay layout active?');
+}
 
 // --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
 window.AppModules.capture.bindIntakeCapture();
