@@ -9,7 +9,6 @@
  *  - resetBpPanel (public, Panel-Reset)
  *  - blockHasData (internal, Eingabe-Erkennung)
  *  - saveBlock (public, Messwert-Speicherung)
- *  - baseEntry (internal, Standard-Eintrag)
  *  - appendNote (internal, Zusatz-Notizen)
  *  - allocateNoteTimestamp (internal, Zeitstempel-Generator)
  *  - API export & global attach (internal)
@@ -23,6 +22,28 @@
   const BP_SYS_THRESHOLD = 130;
   const BP_DIA_THRESHOLD = 90;
   const BP_WARN_ON_COLLISION = Boolean(global?.BP_DEBUG_COLLISIONS);
+
+  const createBaseEntry =
+    appModules.captureEntry?.createBaseEntry ||
+    ((date, time, contextLabel) => {
+      const safeDate = typeof date === 'string' && date ? date : todayStr();
+      const safeTime = typeof time === 'string' && time ? time : '12:00';
+      const iso = new Date(`${safeDate}T${safeTime}`).toISOString();
+      const ts = new Date(`${safeDate}T${safeTime}`).getTime();
+      return {
+        date: safeDate,
+        time: safeTime,
+        dateTime: iso,
+        ts,
+        context: contextLabel || 'Tag',
+        sys: null,
+        dia: null,
+        pulse: null,
+        weight: null,
+        map: null,
+        notes: (document.getElementById('notesDay')?.value || '').trim()
+      };
+    });
 
   const normalizeContext = (ctx) => {
     if (ctx === 'A' || ctx === 'M') return ctx;
@@ -160,7 +181,8 @@ const getCommentElementUnsafe = (normalizedCtx) => {
       return false;
     }
 
-    const entry = baseEntry(date, time, contextLabel);    entry.sys = sys;
+    const entry = createBaseEntry(date, time, contextLabel);
+    entry.sys = sys;
     entry.dia = dia;
     entry.pulse = pulse;
     entry.map = (sys!=null && dia!=null) ? calcMAP(sys, dia) : null;
@@ -183,31 +205,12 @@ const getCommentElementUnsafe = (normalizedCtx) => {
   return hasAny || hasComment;
   }
 
-  // SUBMODULE: baseEntry @internal - composes canonical intake/bp entry skeleton
-  function baseEntry(date, time, contextLabel){
-    const iso = new Date(date + "T" + time).toISOString();
-    const ts = new Date(date + "T" + time).getTime();
-    return {
-      date,
-      time,
-      dateTime: iso,
-      ts,
-      context: contextLabel,
-      sys: null,
-      dia: null,
-      pulse: null,
-      weight: null,
-      map: null,
-      notes: ($("#notesDay")?.value || "").trim()
-    };
-  }
-
   // SUBMODULE: appendNote @internal - stores supplemental note entries for BP comments
   async function appendNote(date, prefix, text){
     const trimmed = (text || '').trim();
     if (!trimmed) return;
     const stamp = allocateNoteTimestamp(date);
-    const entry = baseEntry(date, stamp.time, 'Tag');
+    const entry = createBaseEntry(date, stamp.time, 'Tag');
     entry.dateTime = stamp.iso;
     entry.ts = stamp.ts;
     entry.notes = prefix + trimmed;

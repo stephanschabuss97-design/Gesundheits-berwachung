@@ -13,6 +13,27 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const createBaseEntry =
+    appModules.captureEntry?.createBaseEntry ||
+    ((date, time, contextLabel) => {
+      const safeDate = typeof date === 'string' && date ? date : todayStr();
+      const safeTime = typeof time === 'string' && time ? time : '12:00';
+      const iso = new Date(`${safeDate}T${safeTime}`).toISOString();
+      const ts = new Date(`${safeDate}T${safeTime}`).getTime();
+      return {
+        date: safeDate,
+        time: safeTime,
+        dateTime: iso,
+        ts,
+        context: contextLabel || 'Tag',
+        sys: null,
+        dia: null,
+        pulse: null,
+        weight: null,
+        map: null,
+        notes: (document.getElementById('notesDay')?.value || '').trim()
+      };
+    });
   const BODY_WARN_ON_COLLISION = Boolean(global?.BP_DEBUG_COLLISIONS);
 
   // SUBMODULE: resetBodyPanel @internal - leert Body-Eingaben und stellt optional den Fokus wieder her
@@ -35,7 +56,7 @@
     const date = $("#date")?.value || todayStr();
     const time = "12:00";
 
-    const entry = baseEntry(date, time, "Tag");
+    const entry = createBaseEntry(date, time, "Tag");
     let validationFailed = false;
 
     const notesRaw = ($("#notesDay")?.value || "").trim();
