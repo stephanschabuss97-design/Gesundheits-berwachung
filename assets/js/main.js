@@ -381,14 +381,7 @@ function setAuthGuard(logged){
 
 // SUBMODULE: setDoctorAccess - toggles doctor tab when auth state changes
 function setDoctorAccess(enabled){
-  // Tab-Button
-  const tabBtn = document.getElementById('tab-doctor');
-  if (tabBtn){
-    tabBtn.disabled = !enabled;
-    tabBtn.classList.toggle('ghost', !enabled);
-    tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
-  }
-  // "Werte anzeigen"-Button
+  // "Werte anzeigen"-Button bleibt erhalten
   const chartBtn = document.getElementById('doctorChartBtn');
   if (chartBtn){
     chartBtn.disabled = !enabled;

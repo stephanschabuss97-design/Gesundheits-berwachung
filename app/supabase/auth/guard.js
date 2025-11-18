@@ -535,12 +535,6 @@ const derivePinHash = async (pin, saltBytes, iterations) => {
 
 // SUBMODULE: setDoctorAccess @public - aktiviert/deaktiviert Arzt-UI-Elemente
 export function setDoctorAccess(enabled) {
-  const tabBtn = document.getElementById('tab-doctor');
-  if (tabBtn) {
-    tabBtn.disabled = !enabled;
-    tabBtn.classList.toggle('ghost', !enabled);
-    tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
-  }
   const chartBtn = document.getElementById('doctorChartBtn');
   if (chartBtn) {
     chartBtn.disabled = !enabled;

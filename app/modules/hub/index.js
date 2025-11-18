@@ -40,11 +40,12 @@
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => syncPressed(btn));
     });
-    const intakeBtn = hub.querySelector('[data-hub-module="intake"]');
-    if (intakeBtn) {
-      const open = () => openIntakeOverlay(intakeBtn);
-      intakeBtn.addEventListener('click', open);
-      intakeBtn.addEventListener(
+    const bindButton = (selector, handler) => {
+      const btn = hub.querySelector(selector);
+      if (!btn) return;
+      const open = () => handler(btn);
+      btn.addEventListener('click', open);
+      btn.addEventListener(
         'pointerdown',
         (event) => {
           if (event.pointerType === 'touch') {
@@ -54,22 +55,9 @@
         },
         { passive: false }
       );
-    }
-    const doctorBtn = hub.querySelector('[data-hub-module="doctor"]');
-    if (doctorBtn) {
-      const openDoctor = () => openDoctorOverlay(doctorBtn);
-      doctorBtn.addEventListener('click', openDoctor);
-      doctorBtn.addEventListener(
-        'pointerdown',
-        (event) => {
-          if (event.pointerType === 'touch') {
-            event.preventDefault();
-            openDoctor();
-          }
-        },
-        { passive: false }
-      );
-    }
+    };
+    bindButton('[data-hub-module="intake"]', openIntakeOverlay);
+    bindButton('[data-hub-module="doctor"]', openDoctorOverlay);
   };
 
   const setupChat = (hub) => {
