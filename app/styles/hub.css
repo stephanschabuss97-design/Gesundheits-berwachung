@@ -144,6 +144,23 @@
 .hub-mode #capture .capture-header {
   display: none;
 }
+
+.hub-overlay-card.doctor {
+  width: min(96vw, 1100px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hub-overlay-card.doctor .hub-overlay-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.hub-overlay-card.doctor #doctor {
+  background: transparent;
+  margin: 0;
+}
 .hub-overlay {
   position: fixed;
   inset: 0;

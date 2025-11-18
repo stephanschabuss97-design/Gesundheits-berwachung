@@ -9,10 +9,10 @@
 (function (global) {
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const doc = global.document;
 
   const activateHubLayout = () => {
     const config = appModules.config || {};
-    const doc = global.document;
     if (!doc) {
       global.console?.debug?.('[hub] document object missing');
       return;
@@ -50,6 +50,21 @@
           if (event.pointerType === 'touch') {
             event.preventDefault();
             open();
+          }
+        },
+        { passive: false }
+      );
+    }
+    const doctorBtn = hub.querySelector('[data-hub-module="doctor"]');
+    if (doctorBtn) {
+      const openDoctor = () => openDoctorOverlay(doctorBtn);
+      doctorBtn.addEventListener('click', openDoctor);
+      doctorBtn.addEventListener(
+        'pointerdown',
+        (event) => {
+          if (event.pointerType === 'touch') {
+            event.preventDefault();
+            openDoctor();
           }
         },
         { passive: false }
@@ -155,8 +170,8 @@
   };
 
   const moveIntakePillsToHub = () => {
-    const hub = document.querySelector('[data-role="hub-intake-pills"]');
-    const pills = document.getElementById('cap-intake-status-top');
+    const hub = doc?.querySelector('[data-role="hub-intake-pills"]');
+    const pills = doc?.getElementById('cap-intake-status-top');
     if (!hub) return;
     if (!pills) {
       setTimeout(moveIntakePillsToHub, 500);
@@ -167,7 +182,69 @@
     hub.appendChild(pills);
   };
 
-  const doc = global.document;
+  const openDoctorOverlay = async (trigger) => {
+    const supa = appModules.supabase || global.SupabaseAPI;
+    if (typeof supa?.requireDoctorUnlock === 'function') {
+      const ok = await supa.requireDoctorUnlock();
+      if (!ok) return;
+    }
+    const overlay = doc?.getElementById('hubDoctorOverlay');
+    const doctor = doc?.getElementById('doctor');
+    const mount = doc?.getElementById('doctorMount');
+    const content = overlay?.querySelector('#hubDoctorContent');
+    if (!overlay || !doctor || !mount || !content || overlay._open) return;
+
+    const rect = trigger?.getBoundingClientRect();
+    if (rect) {
+      overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
+      overlay.style.setProperty('--hub-modal-origin-y', `${rect.top + rect.height / 2}px`);
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.classList.add('active');
+    document.body.style.setProperty('overflow', 'hidden');
+    content.appendChild(doctor);
+    overlay._mount = mount;
+    overlay._open = true;
+
+    const escHandler = (event) => {
+      if (event.key === 'Escape') {
+        closeDoctorOverlay();
+      }
+    };
+    overlay._escHandler = escHandler;
+    document.addEventListener('keydown', escHandler);
+    overlay.querySelectorAll('[data-close-overlay]').forEach((el) =>
+      el.addEventListener('click', closeDoctorOverlay)
+    );
+  };
+
+  const closeDoctorOverlay = () => {
+    const overlay = doc?.getElementById('hubDoctorOverlay');
+    const doctor = doc?.getElementById('doctor');
+    const mount = overlay?._mount;
+    if (!overlay || !overlay._open || !doctor || !mount) return;
+    overlay.classList.add('closing');
+    const finishClose = () => {
+      overlay.classList.remove('closing');
+      overlay.classList.remove('active');
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.removeEventListener('animationend', finishClose);
+      overlay.querySelectorAll('[data-close-overlay]').forEach((el) =>
+        el.removeEventListener('click', closeDoctorOverlay)
+      );
+      if (overlay._escHandler) {
+        document.removeEventListener('keydown', overlay._escHandler);
+        overlay._escHandler = null;
+      }
+      mount.appendChild(doctor);
+      overlay._open = false;
+      document.body.style.removeProperty('overflow');
+    };
+    overlay.addEventListener('animationend', finishClose);
+  };
+
   if (doc?.readyState === 'loading') {
     doc.addEventListener('DOMContentLoaded', activateHubLayout, { once: true });
   } else {

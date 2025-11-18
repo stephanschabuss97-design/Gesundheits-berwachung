@@ -106,7 +106,7 @@
         <span aria-hidden="true">💧</span>
         <span class="sr-only">Intake</span>
       </button>
-      <button type="button" class="hub-icon" aria-pressed="false">
+      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
         <span aria-hidden="true">❤️</span>
         <span class="sr-only">Blutdruck</span>
       </button>
@@ -164,6 +164,16 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="hub-overlay" id="hubDoctorOverlay" aria-hidden="true" hidden>
+    <div class="hub-overlay-backdrop" data-close-overlay></div>
+    <div class="hub-overlay-card doctor" role="dialog" aria-modal="true" aria-labelledby="hubDoctorTitle">
+      <header class="hub-overlay-header">
+        <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
+        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
+      </header>
+      <div class="hub-overlay-body" id="hubDoctorContent"></div>
     </div>
   </div>
 <!-- END MODULE -->
@@ -282,6 +292,7 @@
   todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
 -->
 <!-- Doctor -->
+<div id="doctorMount">
 <section class="view" id="doctor" aria-labelledby="doctorHeading">
   <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
   <div class="card" id="doctorCard">
@@ -309,6 +320,7 @@
     </div>
   </div>
 </section>
+</div>
 
 <!-- END MODULE -->
 
