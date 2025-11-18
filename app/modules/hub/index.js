@@ -54,14 +54,6 @@
         },
         { passive: false }
       );
-      intakeBtn.addEventListener(
-        'touchstart',
-        (event) => {
-          event.preventDefault();
-          open();
-        },
-        { passive: false }
-      );
     }
   };
 
@@ -92,15 +84,6 @@
     appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
   };
 
-  const doc = global.document;
-  if (doc?.readyState === 'loading') {
-    doc.addEventListener('DOMContentLoaded', activateHubLayout, { once: true });
-  } else {
-    activateHubLayout();
-  }
-
-  appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
-})(typeof window !== 'undefined' ? window : globalThis);
   const setupDatePill = (hub) => {
     const pill = hub.querySelector('#hubDatePill');
     const text = hub.querySelector('#hubDateText');
@@ -122,7 +105,7 @@
 
   const openIntakeOverlay = (trigger) => {
     const overlay = document.getElementById('hubIntakeOverlay');
-    if (!overlay) return;
+    if (!overlay || overlay._open) return;
     const rect = trigger?.getBoundingClientRect();
     if (rect) {
       overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
@@ -183,3 +166,13 @@
     pills.classList.add('hub-intake-pills');
     hub.appendChild(pills);
   };
+
+  const doc = global.document;
+  if (doc?.readyState === 'loading') {
+    doc.addEventListener('DOMContentLoaded', activateHubLayout, { once: true });
+  } else {
+    activateHubLayout();
+  }
+
+  appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
+})(typeof window !== 'undefined' ? window : globalThis);
