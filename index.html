@@ -92,8 +92,11 @@
       <h1 class="hub-title" id="hubTitle">MIDAS</h1>
       <div class="hub-date-pill" id="hubDatePill">
         <span id="hubDateText">--.--.----</span>
+        <input class="hub-date-input" type="date" id="date" aria-label="Datum waehlen">
       </div>
-      <div data-role="hub-intake-pills"></div>
+      <div data-role="hub-intake-pills">
+        <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
+      </div>
     </div>
 
     <div class="hub-icons" role="toolbar" aria-label="Module navigation">
@@ -276,23 +279,6 @@
 <section class="view active" id="capture" aria-labelledby="captureHeading">
  
   <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
-  <!-- Daily-Capture -->
-  <!-- SUBMODULE: capture-entry shell @internal - wraps accordions and intake status pills -->
-  <section class="card" id="entry">
-    <div class="capture-header">
-      <div class="capture-date">
-        <div class="u-flex-fixed-220">
-          <label>Datum</label>
-          <input class="compact" type="date" id="date">
-        </div>
-      </div>
-      <div class="capture-pills" id="capturePillsRow">
-        <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
-      </div>
-    </div>
-
-    <!-- SUBMODULE: intake-capture accordion @internal - updates water/salt/protein totals -->
-  </section>
 </section>
 <!-- END MODULE -->
 
