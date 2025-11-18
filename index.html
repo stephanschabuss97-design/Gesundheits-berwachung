@@ -199,31 +199,6 @@
     <!-- SUBMODULE: intake-capture accordion @internal - updates water/salt/protein totals -->
 
     <!-- SUBMODULE: bp-capture accordion @internal - logs morning/abends Werte & Kommentare -->
-    <details class="accordion" id="bodyAccordion">
-      <summary><span>&#x1F4C8; Blutdruck</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
-      <div class="accordion-body">
-        <div class="card-nested">
-          <div class="row u-row-flex-end-gap12">
-            <div class="u-minw-180">
-              <label for="bpContextSel">Messzeitpunkt</label>
-              <select id="bpContextSel">
-                <option value="M">Morgens</option>
-                <option value="A">Abends</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="card-nested bp-pane active" data-context="M">
-          <h3 class="blockTitle">Morgens</h3>
-          <div class="grid">
-            <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
-            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-            <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-          </div>
-          <div class="row u-mt-6">
-            <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
-          </div>
-        </div>
         <div class="card-nested bp-pane" data-context="A">
           <h3 class="blockTitle">Abends</h3>
           <div class="grid">
@@ -287,35 +262,6 @@
   todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
 -->
 <!-- Doctor -->
-<div id="doctorMount">
-<section class="view" id="doctor" aria-labelledby="doctorHeading">
-  <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
-  <div class="card" id="doctorCard">
-    <div class="toolbar">
-      <strong id="doctorTitle">Arzt-Ansicht</strong>
-
-      <div class="center-group">
-        <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
-        <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
-        <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-        <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-        <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
-      </div>
-
-    </div> <!--  Toolbar sauber schliessen -->
-
-    <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
-
-    <div class="u-overflow-auto" id="doctorDailyWrap">
-      <div class="doctor-view" id="doctorView"></div>
-    </div>
-
-        <div class="small u-mt-6">
-      Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
-    </div>
-  </div>
-</section>
-</div>
 
 <!-- END MODULE -->
 

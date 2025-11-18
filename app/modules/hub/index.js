@@ -178,9 +178,8 @@
     }
     const overlay = doc?.getElementById('hubDoctorOverlay');
     const doctor = doc?.getElementById('doctor');
-    const mount = doc?.getElementById('doctorMount');
     const content = overlay?.querySelector('#hubDoctorContent');
-    if (!overlay || !doctor || !mount || !content || overlay._open) return;
+    if (!overlay || !doctor || !content || overlay._open) return;
 
     const rect = trigger?.getBoundingClientRect();
     if (rect) {
@@ -192,7 +191,6 @@
     overlay.classList.add('active');
     document.body.style.setProperty('overflow', 'hidden');
     content.appendChild(doctor);
-    overlay._mount = mount;
     overlay._open = true;
 
     const escHandler = (event) => {
@@ -210,8 +208,7 @@
   const closeDoctorOverlay = () => {
     const overlay = doc?.getElementById('hubDoctorOverlay');
     const doctor = doc?.getElementById('doctor');
-    const mount = overlay?._mount;
-    if (!overlay || !overlay._open || !doctor || !mount) return;
+    if (!overlay || !overlay._open || !doctor) return;
     overlay.classList.add('closing');
     const finishClose = () => {
       overlay.classList.remove('closing');
@@ -226,7 +223,7 @@
         document.removeEventListener('keydown', overlay._escHandler);
         overlay._escHandler = null;
       }
-      mount.appendChild(doctor);
+      overlay.querySelector('#hubDoctorContent')?.appendChild(doctor);
       overlay._open = false;
       document.body.style.removeProperty('overflow');
     };
