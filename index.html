@@ -101,15 +101,15 @@
         <span aria-hidden="true">💧</span>
         <span class="sr-only">Intake</span>
       </button>
-      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
+      <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
         <span aria-hidden="true">❤️</span>
-        <span class="sr-only">Blutdruck</span>
+        <span class="sr-only">Vitalwerte</span>
       </button>
       <button type="button" class="hub-icon" aria-pressed="false">
         <span aria-hidden="true">🧍‍♂️</span>
-        <span class="sr-only">Körperwerte</span>
+        <span class="sr-only">Koerperwerte (bald)</span>
       </button>
-      <button type="button" class="hub-icon" aria-pressed="false">
+      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
         <span aria-hidden="true">👤</span>
         <span class="sr-only">Arzt-Ansicht</span>
       </button>
@@ -168,7 +168,102 @@
         <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
         <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
       </header>
-      <div class="hub-overlay-body" id="hubDoctorContent"></div>
+      <div class="hub-overlay-body" id="hubDoctorContent">
+        <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
+          <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
+          <div class="toolbar">
+            <strong id="doctorTitle">Arzt-Ansicht</strong>
+            <div class="center-group">
+              <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
+              <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
+              <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+              <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+              <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
+            </div>
+          </div>
+          <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
+          <div class="u-overflow-auto" id="doctorDailyWrap">
+            <div class="doctor-view" id="doctorView"></div>
+          </div>
+          <div class="small u-mt-6">
+            Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="hub-overlay" id="hubVitalsOverlay" aria-hidden="true" hidden>
+    <div class="hub-overlay-backdrop" data-close-overlay></div>
+    <div class="hub-overlay-card vitals" role="dialog" aria-modal="true" aria-labelledby="hubVitalsTitle">
+      <header class="hub-overlay-header">
+        <h2 id="hubVitalsTitle">Vitaldaten</h2>
+        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
+      </header>
+      <div class="hub-overlay-body">
+        <div class="hub-vitals">
+          <div class="hub-vitals-bp">
+            <div class="card-nested">
+              <div class="row u-row-flex-end-gap12">
+                <div class="u-minw-180">
+                  <label for="bpContextSel">Messzeitpunkt</label>
+                  <select id="bpContextSel">
+                    <option value="M">Morgens</option>
+                    <option value="A">Abends</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="card-nested bp-pane active" data-context="M">
+              <h3 class="blockTitle">Morgens</h3>
+              <div class="grid">
+                <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
+                <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+                <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+              </div>
+              <div class="row u-mt-6">
+                <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
+              </div>
+            </div>
+            <div class="card-nested bp-pane" data-context="A">
+              <h3 class="blockTitle">Abends</h3>
+              <div class="grid">
+                <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+                <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+                <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+              </div>
+              <div class="row u-mt-6">
+                <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
+            </div>
+          </div>
+          <div class="hub-vitals-body card-nested">
+            <div class="body-grid">
+              <div>
+                <label>Gewicht (kg)</label>
+                <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+              </div>
+              <div>
+                <label>Bauchumfang (cm)</label>
+                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
+              </div>
+              <div>
+                <label>Fett (%)</label>
+                <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
+              </div>
+              <div>
+                <label>Muskel (%)</label>
+                <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 <!-- END MODULE -->
@@ -197,58 +292,6 @@
     </div>
 
     <!-- SUBMODULE: intake-capture accordion @internal - updates water/salt/protein totals -->
-
-    <!-- SUBMODULE: bp-capture accordion @internal - logs morning/abends Werte & Kommentare -->
-        <div class="card-nested bp-pane" data-context="A">
-          <h3 class="blockTitle">Abends</h3>
-          <div class="grid">
-            <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-            <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-            <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-          </div>
-          <div class="row u-mt-6">
-            <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
-          </div>
-        </div>
-        <div class="panel-actions">
-          <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
-        </div>
-      </div>
-    </details>
-
-    <!-- SUBMODULE: body-capture accordion @internal - captures weight + Umfang Werte -->
-    <details class="accordion">
-      <summary><span>&#x2696;&#xFE0F; Koerper</span><span class="chevron" aria-hidden="true">&#9654;</span></summary>
-      <div class="accordion-body">
-          <div class="card-nested">
-            <div class="body-grid">
-              <div>
-                <label>Gewicht (kg)</label>
-                <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-              </div>
-              <div>
-                <label>Bauchumfang (cm)</label>
-                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
-              </div>
-              <div>
-                <label>Fett (%)</label>
-                <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
-              </div>
-              <div>
-                <label>Muskel (%)</label>
-                <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
-              </div>
-            </div>
-          </div>
-        
-        <div class="panel-actions">
-          <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
-        </div>
-      </div>
-    </details>
-
-
-
   </section>
 </section>
 <!-- END MODULE -->

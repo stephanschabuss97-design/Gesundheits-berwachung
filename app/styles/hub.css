@@ -161,6 +161,9 @@
   background: transparent;
   margin: 0;
 }
+.hub-overlay-card.vitals {
+  width: min(92vw, 860px);
+}
 .hub-overlay {
   position: fixed;
   inset: 0;
@@ -409,6 +412,23 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+.hub-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.hub-vitals-bp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hub-vitals-body {
+  margin-top: 8px;
+}
+.hub-overlay-card.vitals .panel-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .hub-intake-grid {

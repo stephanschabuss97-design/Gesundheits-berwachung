@@ -57,6 +57,7 @@
       );
     };
     bindButton('[data-hub-module="intake"]', openIntakeOverlay);
+    bindButton('[data-hub-module="vitals"]', openVitalsOverlay);
     bindButton('[data-hub-module="doctor"]', openDoctorOverlay);
   };
 
@@ -106,9 +107,10 @@
     pill.addEventListener('click', () => captureDate.showPicker?.());
   };
 
-  const openIntakeOverlay = (trigger) => {
-    const overlay = document.getElementById('hubIntakeOverlay');
-    if (!overlay || overlay._open) return;
+  const openSimpleOverlay = (overlayId, trigger) => {
+    if (!doc) return null;
+    const overlay = doc.getElementById(overlayId);
+    if (!overlay || overlay._open) return null;
     const rect = trigger?.getBoundingClientRect();
     if (rect) {
       overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
@@ -117,44 +119,74 @@
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     overlay.classList.add('active');
-    document.body.style.setProperty('overflow', 'hidden');
+    doc.body?.style.setProperty('overflow', 'hidden');
     const escHandler = (event) => {
       if (event.key === 'Escape') {
-        closeIntakeOverlay();
+        closeSimpleOverlay(overlayId);
       }
     };
     overlay._escHandler = escHandler;
-    document.addEventListener('keydown', escHandler);
+    doc.addEventListener('keydown', escHandler);
 
+    const clickHandler = () => closeSimpleOverlay(overlayId);
+    overlay._closeHandler = clickHandler;
     overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
-      el.addEventListener('click', closeIntakeOverlay);
+      el.addEventListener('click', clickHandler);
     });
 
     overlay._open = true;
+    return overlay;
   };
 
-  const closeIntakeOverlay = () => {
-    const overlay = document.getElementById('hubIntakeOverlay');
+  const closeSimpleOverlay = (overlayId) => {
+    if (!doc) return;
+    const overlay = doc.getElementById(overlayId);
     if (!overlay || !overlay._open) return;
 
     overlay.classList.add('closing');
     const finishClose = () => {
+      overlay.removeEventListener('animationend', finishClose);
+      overlay.removeEventListener('animationcancel', finishClose);
+      if (overlay._closeTimer) {
+        clearTimeout(overlay._closeTimer);
+        overlay._closeTimer = null;
+      }
       overlay.classList.remove('closing');
       overlay.classList.remove('active');
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.removeEventListener('animationend', finishClose);
-      overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
-        el.removeEventListener('click', closeIntakeOverlay);
-      });
+      if (overlay._closeHandler) {
+        overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
+          el.removeEventListener('click', overlay._closeHandler);
+        });
+        overlay._closeHandler = null;
+      }
       if (overlay._escHandler) {
-        document.removeEventListener('keydown', overlay._escHandler);
+        doc.removeEventListener('keydown', overlay._escHandler);
         overlay._escHandler = null;
       }
       overlay._open = false;
-      document.body.style.removeProperty('overflow');
+      doc.body?.style.removeProperty('overflow');
     };
     overlay.addEventListener('animationend', finishClose);
+    overlay.addEventListener('animationcancel', finishClose);
+    overlay._closeTimer = setTimeout(finishClose, 350);
+  };
+
+  const openIntakeOverlay = (trigger) => {
+    openSimpleOverlay('hubIntakeOverlay', trigger);
+  };
+
+  const closeIntakeOverlay = () => {
+    closeSimpleOverlay('hubIntakeOverlay');
+  };
+
+  const openVitalsOverlay = (trigger) => {
+    openSimpleOverlay('hubVitalsOverlay', trigger);
+  };
+
+  const closeVitalsOverlay = () => {
+    closeSimpleOverlay('hubVitalsOverlay');
   };
 
   const moveIntakePillsToHub = () => {
