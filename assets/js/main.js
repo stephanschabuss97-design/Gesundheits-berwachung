@@ -327,11 +327,27 @@ function toNumDE(s) {
   v = v.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[\u00A0\u2009\u202F]/g, ' ').replace(/\s+/g, '');
   // decide decimal separator
   const lastComma = v.lastIndexOf(',');
-  const lastDot   = v.lastIndexOf('.');
+  const lastDot = v.lastIndexOf('.');
   let dec = null;
-  if (lastComma !== -1 && lastDot !== -1) dec = (lastComma > lastDot) ? ',' : '.';
-  else if (lastComma !== -1) dec = (v.length - lastComma - 1) <= 2 ? ',' : null;
-  else if (lastDot   !== -1) dec = (v.length - lastDot   - 1) <= 2 ? '.' : null;
+  if (lastComma !== -1 && lastDot !== -1) {
+    dec = lastComma > lastDot ? ',' : '.';
+    const groupSep = dec === ',' ? '.' : ',';
+    const decPos = dec === ',' ? lastComma : lastDot;
+    const decDigits = v.length - decPos - 1;
+    // reject ambiguous inputs wie 1.234.567 (unklar ob Dezimal- oder Tausendertrennzeichen)
+    if (decDigits === 0 || decDigits > 2) return null;
+    const groupSection = v.slice(0, decPos);
+    if (groupSection.includes(groupSep)) {
+      const invalidGroup = groupSection
+        .split(groupSep)
+        .some((part) => part.length > 3 || !/^\d+$/.test(part));
+      if (invalidGroup) return null;
+    }
+  } else if (lastComma !== -1) {
+    dec = v.length - lastComma - 1 <= 2 ? ',' : null;
+  } else if (lastDot !== -1) {
+    dec = v.length - lastDot - 1 <= 2 ? '.' : null;
+  }
   if (dec) {
     // protect the chosen decimal (replace its last occurrence with placeholder)
     v = v.replace(new RegExp('\\' + dec + '(?=[^' + (dec === '.' ? '\\.' : ',') + ']*$)'), '#');
