@@ -51,6 +51,11 @@
     panel.classList.add('hub-panel-open');
     activePanel = panel;
     doc.addEventListener('keydown', handlePanelEsc);
+    if (typeof panel.scrollIntoView === 'function') {
+      requestAnimationFrame(() => {
+        panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
+    }
     return panel;
   };
 

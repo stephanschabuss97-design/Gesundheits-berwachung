@@ -1,7 +1,7 @@
-﻿.hub {
+.hub {
   width: min(1200px, 100%);
   margin: 0 auto;
-  padding: 32px 32px 80px;
+  padding: 32px 32px clamp(28px, 6vw, 56px);
   color: #f5f7ff;
   text-align: center;
   position: relative;
@@ -174,7 +174,7 @@
 .hub-panel {
   width: min(100%, 1200px);
   max-width: calc(100% - 32px);
-  margin: clamp(16px, 4vw, 48px) auto;
+  margin: clamp(12px, 3vw, 36px) auto;
   padding: clamp(20px, 3vw, 48px);
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -506,4 +506,6 @@
     height: 36px;
   }
 }
+
+
 
