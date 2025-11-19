@@ -404,8 +404,6 @@
   .hub-orbit {
     width: min(500px, 100%);
     margin-bottom: 20px;
-    --orbit-offset: calc(var(--hub-orb-size) / 2 - 40px);
-    --orbit-diag: calc(var(--orbit-offset) * 0.58);
   }
 
   .hub-orb {
@@ -418,8 +416,28 @@
     inset: 0;
   }
 
-  .hub-orbit-icons .hub-icon {
-    transform: translate(-50%, -50%);
+  .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
+    top: 12%;
+  }
+
+  .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
+    top: 30%;
+    left: 78%;
+  }
+
+  .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
+    top: 30%;
+    left: 22%;
+  }
+
+  .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
+    top: 84%;
+    left: 78%;
+  }
+
+  .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
+    top: 84%;
+    left: 22%;
   }
 }
 .hub-intake-form {
