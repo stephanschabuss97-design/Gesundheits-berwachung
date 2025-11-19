@@ -54,13 +54,15 @@
     const buttons = orbit?.querySelectorAll('[data-orbit-pos]');
     if (!orbit || !buttons.length) return;
 
-    const baseFactor = 0.5;
+    const getBaseFactor = () =>
+      global.matchMedia('(max-width: 640px)').matches ? 0.5 : 0.4;
+
     const setPositions = () => {
       const rect = orbit.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const baseRadius = (Math.min(rect.width, rect.height) / 2) * baseFactor;
+      const baseRadius = (Math.min(rect.width, rect.height) / 2) * getBaseFactor();
 
       buttons.forEach((btn) => {
         const key = btn.dataset.orbitPos;
@@ -260,7 +262,6 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
-
 
 
 
