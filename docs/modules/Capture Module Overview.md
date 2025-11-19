@@ -21,8 +21,9 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 |-------|-------|
 | `app/modules/capture/index.js` | Kernlogik: Handlers für Intake/Blutdruck/Body, Timer, Status-Pills, UI-Reset. |
 | `app/core/capture-globals.js` | Shared State (`captureIntakeState`, Timer, Flags), Utility `setBusy`, `softWarnRange`. |
-| `app/modules/capture/bp.js` | Blutdruck-spezifische Funktionen (`saveBlock`, Kommentar-Pflicht, Panel-Reset). |
-| `app/modules/capture/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen. |
+| `app/modules/capture/bp.js` | Blutdruck-spezifische Funktionen (`saveBlock`, Kommentar-Pflicht, Panel-Reset). Nutzt `capture/entry.js` für gemeinsame Basisdatensätze. |
+| `app/modules/capture/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen; greift auf denselben Entry-Helper zurück. |
+| `app/modules/capture/entry.js` | Shared Helper `createBaseEntry` – stellt das Skelett für alle Capture-Einträge bereit. |
 | `assets/js/main.js` | Bindet Buttons, Datum, Unlock-Logik, orchestriert `requestUiRefresh`. |
 | `app/styles/capture.css` | Styles für Accordion, Buttons, Pill-Reihe, Responsive Layout (eingebunden via `app/app.css`). |
 | `app/core/config.js` | Flags (z.B. `TREND_PILOT_ENABLED` indirekt, `DEV_ALLOW_DEFAULTS`). |
@@ -35,8 +36,8 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 
 - Capture-View (`#capture`) enthält Cards:
   1. **Intake (`#captureIntake`)** – Buttons für Wasser/Salz/Protein.
-  2. **Blutdruck (`#bodyAccordion`)** – Tabs Morgens/Abends, Felder Sys/Dia/Puls, Kommentartextareas, Speichern-Button.
-  3. **Körper** – Gewicht/Bauchumfang/Fett%/Muskel%.
+2. **Blutdruck (`#bodyAccordion`)** – Tabs Morgens/Abends, Felder Sys/Dia/Puls, Kommentartextareas, Speichern-Button.
+3. **Körper** – Gewicht/Bauchumfang/Fett%/Muskel%.
   4. (formerly appts, nun entfernt).
 
 ### 3.2 Datum & Auto-Reset
@@ -60,6 +61,8 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 1. `saveBodyPanelBtn` speichert Tagessummary (`saveDaySummary`), ruft `syncWebhook`.
 2. `prefillBodyInputs` nutzt letzte Werte (z.B. Copy vom letzten Tag).
 3. Buttons disabled, wenn nicht eingeloggt.
+
+> **Shared Entry Helper:** Sowohl `saveBlock` als auch `saveDaySummary` nutzen `app/modules/capture/entry.js` (`createBaseEntry`) um ein konsistentes Datensatz-Skelett (Date, Context, Notes) zu erzeugen. Damit bleibt die Struktur across BP/Körper identisch, egal welches Panel speichert.
 
 ### 3.5 Intake Flow
 

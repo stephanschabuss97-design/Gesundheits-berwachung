@@ -1,12 +1,21 @@
 .hub {
-  background: radial-gradient(circle at top, rgba(22, 34, 68, 0.6), #05060a 55%);
-  border-radius: 32px;
-  padding: 48px 24px 56px;
-  margin: 32px auto;
-  max-width: 960px;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 72px 32px 96px;
   color: #f5f7ff;
   text-align: center;
-  box-shadow: 0 0 48px rgba(12, 18, 36, 0.55);
+  position: relative;
+}
+
+.hub::before {
+  content: '';
+  position: absolute;
+  inset: 40px 0 auto 0;
+  height: 420px;
+  background: radial-gradient(circle at top, rgba(22, 34, 68, 0.55), rgba(5, 6, 10, 0));
+  filter: blur(20px);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .hub-hero {
@@ -411,8 +420,7 @@
 
 @media (max-width: 640px) {
   .hub {
-    padding: 32px 16px 40px;
-    border-radius: 24px;
+    padding: 48px 16px 64px;
   }
 
   .hub-orb {
