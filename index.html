@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- MODULE: BOOTSTRAP & CONSTANTS
   intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
   contracts: definiert Head-Struktur, laedt globale Styles, bereitet Container fuer nachgelagerte Module vor
@@ -80,35 +80,38 @@
 <main id="appMain">
   <section class="hub" id="captureHub" aria-labelledby="hubTitle">
     <div class="hub-hero">
-      <div class="hub-orb" data-state="idle">
-        <img src="assets/img/midas_symbol.webp" alt="MIDAS Logo">
+      <div class="hub-orbit">
+        <div class="hub-orbit-ring"></div>
+        <div class="hub-orbit-glow"></div>
+        <div class="hub-orb" data-state="idle">
+          <img src="assets/img/midas_symbol.webp" alt="MIDAS Logo">
+        </div>
+        <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
+          <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false" data-orbit-pos="sw">
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Intake</span>
+          </button>
+          <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false" data-orbit-pos="s">
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Vitalwerte</span>
+          </button>
+          <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false" data-orbit-pos="ne">
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Arzt-Ansicht</span>
+          </button>
+          <button type="button" class="hub-icon" id="helpToggle" data-orbit-pos="nw">
+            <span aria-hidden="true">?</span>
+            <span class="sr-only">Hilfe</span>
+          </button>
+          <button type="button" class="hub-icon" id="diagToggle" data-orbit-pos="e">
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Log</span>
+          </button>
+        </div>
       </div>
       <div data-role="hub-intake-pills">
         <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
       </div>
-    </div>
-
-        <div class="hub-icons" role="toolbar" aria-label="Module navigation">
-      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false">
-        <span aria-hidden="true">💧</span>
-        <span class="sr-only">Intake</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
-        <span aria-hidden="true">❤️</span>
-        <span class="sr-only">Vitalwerte</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
-        <span aria-hidden="true">🟣</span>
-        <span class="sr-only">Arzt-Ansicht</span>
-      </button>
-      <button type="button" class="hub-icon" id="helpToggle">
-        <span aria-hidden="true">❔</span>
-        <span class="sr-only">Hilfe</span>
-      </button>
-      <button type="button" class="hub-icon" id="diagToggle">
-        <span aria-hidden="true">📓</span>
-        <span class="sr-only">Log</span>
-      </button>
     </div>
 
   
@@ -123,7 +126,7 @@
   >
     <header class="hub-panel-header">
       <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
     </header>
     <div class="hub-panel-body" id="hubOverlayContent">
       <div class="hub-intake-form" id="cap-intake-wrap">
@@ -161,7 +164,7 @@
   >
     <header class="hub-panel-header">
       <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
     </header>
     <div class="hub-panel-body" id="hubDoctorContent">
       <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
@@ -197,7 +200,7 @@
   >
     <header class="hub-panel-header">
       <h2 id="hubVitalsTitle">Vitaldaten</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
     </header>
     <div class="hub-panel-body">
       <div class="hub-vitals">
@@ -319,7 +322,7 @@
 <script src="app/core/utils.js"></script>
 <!-- @refactor: moved to assets/js/format.js -->
 <script src="assets/js/format.js"></script>
-<!-- @refactor: Phase 2 – app/core/capture-globals.js -->
+<!-- @refactor: Phase 2 � app/core/capture-globals.js -->
 <script src="app/core/capture-globals.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
@@ -333,7 +336,7 @@
 <script src="app/modules/capture/body.js"></script>
 <!-- @refactor: moved to app/modules/trendpilot/data.js -->
 <script src="app/modules/trendpilot/data.js"></script>
-<!-- @refactor: Phase 2 – app/supabase/index.js -->
+<!-- @refactor: Phase 2 � app/supabase/index.js -->
 <script type="module" src="app/supabase/index.js"></script>
 <script type="module" src="assets/js/boot-auth.js"></script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->
@@ -433,6 +436,7 @@
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
+
 
 
 

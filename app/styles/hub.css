@@ -25,13 +25,40 @@
   gap: 16px;
 }
 
+.hub-orbit {
+  --hub-orb-size: clamp(220px, 40vw, 360px);
+  position: relative;
+  width: calc(var(--hub-orb-size) * 1.35);
+  aspect-ratio: 1;
+  margin: 0 auto clamp(24px, 4vw, 36px);
+}
+
+.hub-orbit-ring,
+.hub-orbit-glow {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.hub-orbit-glow {
+  inset: 12%;
+  border: none;
+  background: radial-gradient(circle, rgba(36, 67, 128, 0.4), rgba(8, 10, 18, 0));
+  filter: blur(8px);
+}
+
 .hub-orb {
-  width: 200px;
-  height: 200px;
+  width: var(--hub-orb-size);
+  height: var(--hub-orb-size);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: radial-gradient(circle, rgba(12, 34, 92, 0.35), rgba(5, 6, 10, 0.1));
   box-shadow: 0 0 35px rgba(32, 104, 255, 0.5);
   animation: hubIdle 6s ease-in-out infinite;
@@ -78,11 +105,9 @@
   letter-spacing: 0.05em;
 }
 
-.hub-icons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
-  gap: 12px;
-  margin: 36px 0 16px;
+.hub-orbit-icons {
+  position: absolute;
+  inset: 0;
 }
 
 .hub-icon {
@@ -109,6 +134,41 @@
 .hub-icon:hover {
   box-shadow: 0 0 12px rgba(89, 180, 255, 0.6);
   transform: translateY(-2px);
+}
+
+.hub-orbit-icons .hub-icon {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
+  top: 8%;
+  left: 50%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
+  top: 24%;
+  left: 86%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
+  top: 52%;
+  left: 96%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
+  top: 94%;
+  left: 50%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
+  top: 78%;
+  left: 8%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
+  top: 22%;
+  left: 6%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -348,16 +408,28 @@
     padding: 24px 16px 56px;
   }
 
+  .hub-orbit {
+    width: min(320px, 100%);
+    margin-bottom: 20px;
+  }
+
   .hub-orb {
-    width: 150px;
-    height: 150px;
+    width: clamp(180px, 60vw, 240px);
+    height: clamp(180px, 60vw, 240px);
   }
 
-  .hub-title {
-    font-size: 1.2rem;
-    letter-spacing: 0.25rem;
+  .hub-orbit-icons {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
   }
 
+  .hub-orbit-icons .hub-icon {
+    position: static;
+    transform: none;
+  }
 }
 .hub-intake-form {
   display: flex;
