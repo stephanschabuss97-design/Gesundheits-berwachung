@@ -28,6 +28,8 @@
 
 .hub-orbit {
   --hub-orb-size: clamp(440px, 78vw, 820px);
+  --orbit-offset: calc(var(--hub-orb-size) / 2 + 28px);
+  --orbit-diag: calc(var(--orbit-offset) * 0.72);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
@@ -125,37 +127,33 @@
 
 .hub-orbit-icons .hub-icon {
   position: absolute;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  top: -4%;
-  left: 50%;
+  transform: translate(-50%, -50%) translateY(calc(var(--orbit-offset) * -1));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
-  top: 12%;
-  left: 88%;
+  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag)), calc(var(--orbit-diag) * -1));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
-  top: 52%;
-  left: 100%;
+  transform: translate(-50%, -50%) translateX(var(--orbit-offset));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
-  top: 102%;
-  left: 50%;
+  transform: translate(-50%, -50%) translateY(var(--orbit-offset));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-  top: 84%;
-  left: -2%;
+  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag) * -1), var(--orbit-diag));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-  top: 10%;
-  left: 3%;
+  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag) * -1), calc(var(--orbit-diag) * -1));
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -398,6 +396,8 @@
   .hub-orbit {
     width: min(500px, 100%);
     margin-bottom: 20px;
+    --orbit-offset: calc(var(--hub-orb-size) / 2 + 12px);
+    --orbit-diag: calc(var(--orbit-offset) * 0.72);
   }
 
   .hub-orb {
@@ -569,3 +569,4 @@
 .hub-vitals-controls .control-group select {
   min-width: 160px;
 }
+
