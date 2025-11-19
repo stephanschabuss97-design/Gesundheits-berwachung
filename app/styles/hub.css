@@ -436,6 +436,12 @@
   .hub-stage {
     padding: 24px;
     border-radius: 20px;
+    min-height: auto;
+  }
+
+  .hub-stage-close {
+    width: 36px;
+    height: 36px;
   }
 
   .hub-stage-label {
@@ -447,19 +453,27 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  width: 100%;
 }
 .hub-vitals {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
 }
 .hub-vitals-bp {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  width: 100%;
 }
 .hub-vitals-body {
   margin-top: 8px;
+}
+.hub-stage-slot .hub-vitals-bp .card-nested,
+.hub-stage-slot .hub-vitals-body.card-nested,
+.hub-stage-slot .hub-intake-form .card-nested {
+  width: 100%;
 }
 .hub-overlay-card.vitals .panel-actions {
   display: flex;
@@ -468,8 +482,9 @@
 
 .hub-intake-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+  width: 100%;
 }
 
 .hub-input-card {
@@ -510,16 +525,17 @@
   letter-spacing: 0.06em;
 }
 .hub-stage {
-  width: min(960px, 100%);
-  min-height: 220px;
-  margin: 0 auto;
-  padding: 32px;
+  width: min(100%, 1200px);
+  max-width: calc(100% - 32px);
+  min-height: clamp(260px, 40vh, 720px);
+  margin: clamp(16px, 4vw, 48px) auto;
+  padding: clamp(20px, 3vw, 48px);
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 10, 18, 0.75);
+  background: rgba(8, 10, 18, 0.82);
   box-shadow: 0 40px 70px rgba(0, 0, 0, 0.4);
   display: none;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   position: relative;
 }
@@ -527,7 +543,7 @@
 .hub-stage::before {
   content: '';
   position: absolute;
-  inset: 12px;
+  inset: clamp(8px, 1.5vw, 18px);
   border-radius: 28px;
   background: radial-gradient(circle at top, rgba(33, 54, 102, 0.35), rgba(10, 12, 20, 0));
   z-index: 0;
@@ -540,10 +556,11 @@
 .hub-stage-content {
   position: relative;
   z-index: 1;
-  text-align: center;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: clamp(12px, 1.5vw, 20px);
+  height: 100%;
 }
 
 .hub-stage-header {
@@ -581,10 +598,28 @@
 
 .hub-stage-slot {
   width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
 }
 
 .hub-stage-slot > * {
   width: 100%;
+  max-width: 100%;
+}
+
+.hub-stage-slot .hub-overlay-body {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+}
+
+.hub-stage-slot .card,
+.hub-stage-slot .doctor-panel,
+.hub-stage-slot .hub-intake-form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 @media (max-width: 640px) {

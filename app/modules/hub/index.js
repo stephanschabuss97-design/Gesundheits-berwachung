@@ -40,6 +40,19 @@
     if (slot) slot.innerHTML = '';
   };
 
+  const ensureDoctorUnlocked = async () => {
+    const supa = appModules.supabase || global.SupabaseAPI || appModules.supabase;
+    const unlockFn = supa?.requireDoctorUnlock || global.requireDoctorUnlock;
+    if (typeof unlockFn !== 'function') return true;
+    try {
+      const ok = await unlockFn();
+      return !!ok;
+    } catch (err) {
+      console.warn('[hub] doctor unlock failed', err);
+      return false;
+    }
+  };
+
   const activateHubLayout = () => {
     const config = appModules.config || {};
     if (!doc) {
@@ -72,31 +85,44 @@
     const bindButton = (selector, handler, { sync = true } = {}) => {
       const btn = hub.querySelector(selector);
       if (!btn) return;
-      const run = () => handler(btn);
-      btn.addEventListener('click', () => {
+      const invoke = async () => {
         if (sync) syncPressed(btn);
-        run();
+        try {
+          await handler(btn);
+        } catch (err) {
+          console.error('[hub] button handler failed', err);
+          if (sync) syncPressed(null);
+        }
+      };
+      btn.addEventListener('click', () => {
+        invoke();
       });
       btn.addEventListener(
         'pointerdown',
         (event) => {
           if (event.pointerType === 'touch') {
             event.preventDefault();
-            if (sync) syncPressed(btn);
-            run();
+            invoke();
           }
         },
         { passive: false }
       );
     };
 
-    const openStageOverlay = (overlayId) => (btn) => {
-      openSimpleOverlay(overlayId, btn);
-    };
+    const openStageOverlay = (overlayId) => (btn) => openSimpleOverlay(overlayId, btn);
 
     bindButton('[data-hub-module="intake"]', openStageOverlay('hubIntakeOverlay'));
     bindButton('[data-hub-module="vitals"]', openStageOverlay('hubVitalsOverlay'));
-    bindButton('[data-hub-module="doctor"]', openStageOverlay('hubDoctorOverlay'));
+    bindButton('[data-hub-module="doctor"]', async (btn) => {
+      if (!(await ensureDoctorUnlocked())) {
+        syncPressed(null);
+        hideStageBox();
+        return;
+      }
+      openStageOverlay('hubDoctorOverlay')(btn);
+    });
+    bindButton('#helpToggle', () => {}, { sync: false });
+    bindButton('#diagToggle', () => {}, { sync: false });
   };
   const setupStageClose = () => {
     const btn = getStageCloseBtn();
@@ -265,66 +291,6 @@
     hub.appendChild(pills);
   };
 
-  const openDoctorOverlay = async (trigger) => {
-    const supa = appModules.supabase || global.SupabaseAPI;
-    if (typeof supa?.requireDoctorUnlock === 'function') {
-      const ok = await supa.requireDoctorUnlock();
-      if (!ok) return;
-    }
-    const overlay = doc?.getElementById('hubDoctorOverlay');
-    const doctor = doc?.getElementById('doctor');
-    const content = overlay?.querySelector('#hubDoctorContent');
-    if (!overlay || !doctor || !content || overlay._open) return;
-
-    const rect = trigger?.getBoundingClientRect();
-    if (rect) {
-      overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
-      overlay.style.setProperty('--hub-modal-origin-y', `${rect.top + rect.height / 2}px`);
-    }
-    overlay.hidden = false;
-    overlay.setAttribute('aria-hidden', 'false');
-    overlay.classList.add('active');
-    document.body.style.setProperty('overflow', 'hidden');
-    content.appendChild(doctor);
-    overlay._open = true;
-
-    const escHandler = (event) => {
-      if (event.key === 'Escape') {
-        closeDoctorOverlay();
-      }
-    };
-    overlay._escHandler = escHandler;
-    document.addEventListener('keydown', escHandler);
-    overlay.querySelectorAll('[data-close-overlay]').forEach((el) =>
-      el.addEventListener('click', closeDoctorOverlay)
-    );
-  };
-
-  const closeDoctorOverlay = () => {
-    const overlay = doc?.getElementById('hubDoctorOverlay');
-    const doctor = doc?.getElementById('doctor');
-    if (!overlay || !overlay._open || !doctor) return;
-    overlay.classList.add('closing');
-    const finishClose = () => {
-      overlay.classList.remove('closing');
-      overlay.classList.remove('active');
-      overlay.hidden = true;
-      overlay.setAttribute('aria-hidden', 'true');
-      overlay.removeEventListener('animationend', finishClose);
-      overlay.querySelectorAll('[data-close-overlay]').forEach((el) =>
-        el.removeEventListener('click', closeDoctorOverlay)
-      );
-      if (overlay._escHandler) {
-        document.removeEventListener('keydown', overlay._escHandler);
-        overlay._escHandler = null;
-      }
-      overlay.querySelector('#hubDoctorContent')?.appendChild(doctor);
-      overlay._open = false;
-      document.body.style.removeProperty('overflow');
-    };
-    overlay.addEventListener('animationend', finishClose);
-  };
-
   if (doc?.readyState === 'loading') {
     doc.addEventListener('DOMContentLoaded', activateHubLayout, { once: true });
   } else {
@@ -333,6 +299,7 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
+
 
 
 
