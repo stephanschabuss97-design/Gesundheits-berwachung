@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * MODULE: hub/index.js
  * Description: Aktiviert das neue MIDAS Hub Layout, sobald `CAPTURE_HUB_V2` gesetzt ist.
@@ -13,11 +13,12 @@
 
   const getStageEl = () => doc?.getElementById('hubStage');
   const getStageSlot = () => doc?.querySelector('#hubStage [data-stage-slot]');
+  const getStageCloseBtn = () => doc?.querySelector('#hubStage [data-stage-close]');
   const updateStageLabel = (stage, label) => {
     if (!stage) return;
     const title = stage.querySelector('[data-stage-title]');
     if (title) {
-      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswählen.';
+      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswÃ¤hlen.';
       title.textContent = label || fallback;
     }
   };
@@ -34,6 +35,7 @@
     stage.hidden = true;
     stage.setAttribute('aria-hidden', 'true');
     updateStageLabel(stage);
+    delete stage.dataset.activeOverlay;
   };
 
   const activateHubLayout = () => {
@@ -51,6 +53,7 @@
     setupDatePill(hub);
     moveIntakePillsToHub();
     setupChat(hub);
+    setupStageClose();
     setupSpriteState(hub);
     doc.body.classList.add('hub-mode');
   };
@@ -64,43 +67,38 @@
       });
     };
 
-    const bindButton = (selector, handler, { showStage = true } = {}) => {
+    const bindButton = (selector, handler, { sync = true } = {}) => {
       const btn = hub.querySelector(selector);
       if (!btn) return;
-      const open = () => handler(btn);
+      const run = () => handler(btn);
       btn.addEventListener('click', () => {
-        if (showStage) {
-          const label = btn.querySelector('.sr-only')?.textContent?.trim();
-          showStageBox(label);
-        }
-        syncPressed(btn);
-        open();
+        if (sync) syncPressed(btn);
+        run();
       });
       btn.addEventListener(
         'pointerdown',
         (event) => {
           if (event.pointerType === 'touch') {
             event.preventDefault();
-            if (showStage) {
-              const label = btn.querySelector('.sr-only')?.textContent?.trim();
-              showStageBox(label);
-            }
-            syncPressed(btn);
-            open();
+            if (sync) syncPressed(btn);
+            run();
           }
         },
         { passive: false }
       );
     };
 
-    bindButton('[data-hub-module="intake"]', openIntakeOverlay);
-    bindButton('[data-hub-module="vitals"]', openVitalsOverlay);
-    bindButton('[data-hub-module="doctor"]', openDoctorOverlay);
-    bindButton('#helpToggle', () => {}, { showStage: false });
-    bindButton('#diagToggle', () => {}, { showStage: false });
-  };
+    const openStageOverlay = (overlayId) => (btn) => {
+      openSimpleOverlay(overlayId, btn);
+    };
 
-  const setupChat = (hub) => {
+    bindButton('[data-hub-module="intake"]', openStageOverlay('hubIntakeOverlay'));
+    bindButton('[data-hub-module="vitals"]', openStageOverlay('hubVitalsOverlay'));
+    bindButton('[data-hub-module="doctor"]', openStageOverlay('hubDoctorOverlay'));
+    bindButton('#helpToggle', () => {}, { sync: false });
+    bindButton('#diagToggle', () => {}, { sync: false });
+  };
+  const setupStageClose = () => {\r\n    const btn = getStageCloseBtn();\r\n    if (!btn) return;\r\n    btn.addEventListener('click', () => {\r\n      const stage = getStageEl();\r\n      const active = stage?.dataset.activeOverlay;\r\n      if (active) {\r\n        closeSimpleOverlay(active);\r\n      } else {\r\n        hideStageBox();\r\n      }\r\n    });\r\n  };\r\n\r\n  const setupChat = (hub) => {
     const form = hub.querySelector('#hubChatForm');
     if (!form) return;
     form.addEventListener('submit', (event) => {
@@ -146,28 +144,39 @@
     pill.addEventListener('click', () => captureDate.showPicker?.());
   };
 
-  const openSimpleOverlay = (overlayId) => {
+  const openSimpleOverlay = (overlayId, trigger) => {
     if (!doc) return null;
     const overlay = doc.getElementById(overlayId);
     const slot = getStageSlot();
     const stage = getStageEl();
-    if (!overlay || overlay._open || !slot || !stage) return null;
+    const body = overlay?.querySelector('.hub-overlay-body');
+    if (!overlay || !slot || !stage || !body) return null;
+
     const active = stage.dataset.activeOverlay;
     if (active && active !== overlayId) {
       closeSimpleOverlay(active);
+    } else if (active === overlayId) {
+      return overlay;
     }
-    const card = overlay.querySelector('.hub-overlay-card');
-    if (!card) return null;
 
-    overlay._open = true;
-    overlay._originParent = card.parentElement || overlay;
-    overlay._originNext = card.nextSibling;
+    overlay._bodyParent = body.parentElement;
+    overlay._bodyNext = body.nextSibling;
     slot.innerHTML = '';
-    slot.appendChild(card);
-    stage.dataset.activeOverlay = overlayId;
+    slot.appendChild(body);
 
-    const headerLabel = card.querySelector('h2, [aria-labelledby]')?.textContent?.trim();
-    showStageBox(headerLabel);
+    const header = overlay.querySelector('.hub-overlay-header');
+    const headerTitle = header?.querySelector('h2')?.textContent?.trim();
+    overlay._headerHidden = header ? header.hidden : false;
+    if (header) header.hidden = true;
+
+    const label =
+      headerTitle ||
+      trigger?.querySelector('.sr-only')?.textContent?.trim() ||
+      body.getAttribute('aria-label') ||
+      overlay.getAttribute('aria-label') ||
+      '';
+    stage.dataset.activeOverlay = overlayId;
+    showStageBox(label);
 
     const escHandler = (event) => {
       if (event.key === 'Escape') {
@@ -177,12 +186,7 @@
     overlay._escHandler = escHandler;
     doc.addEventListener('keydown', escHandler);
 
-    const clickHandler = () => closeSimpleOverlay(overlayId);
-    overlay._closeHandler = clickHandler;
-    overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
-      el.addEventListener('click', clickHandler);
-    });
-
+    overlay._open = true;
     return overlay;
   };
 
@@ -191,33 +195,32 @@
     const overlay = doc.getElementById(overlayId);
     const stage = getStageEl();
     if (!overlay || !overlay._open) return;
-    const slot = getStageSlot();
-    const card = slot?.querySelector('.hub-overlay-card');
 
-    if (card) {
-      if (overlay._originNext && overlay._originNext.parentNode === overlay._originParent) {
-        overlay._originParent.insertBefore(card, overlay._originNext);
-      } else if (overlay._originParent) {
-        overlay._originParent.appendChild(card);
+    const slot = getStageSlot();
+    const body = slot?.querySelector('.hub-overlay-body');
+    if (body) {
+      if (overlay._bodyNext && overlay._bodyNext.parentNode === overlay._bodyParent) {
+        overlay._bodyParent.insertBefore(body, overlay._bodyNext);
+      } else if (overlay._bodyParent) {
+        overlay._bodyParent.appendChild(body);
       }
     }
     if (slot) slot.innerHTML = '';
-    if (stage?.dataset.activeOverlay === overlayId) {
-      delete stage.dataset.activeOverlay;
+
+    const header = overlay.querySelector('.hub-overlay-header');
+    if (header) {
+      header.hidden = overlay._headerHidden || false;
     }
 
-    if (overlay._closeHandler) {
-      overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
-        el.removeEventListener('click', overlay._closeHandler);
-      });
-      overlay._closeHandler = null;
-    }
     if (overlay._escHandler) {
       doc.removeEventListener('keydown', overlay._escHandler);
       overlay._escHandler = null;
     }
+
     overlay._open = false;
-    hideStageBox();
+    if (stage?.dataset.activeOverlay === overlayId) {
+      hideStageBox();
+    }
   };
 
   const openIntakeOverlay = (trigger) => {
@@ -235,7 +238,6 @@
   const closeVitalsOverlay = () => {
     closeSimpleOverlay('hubVitalsOverlay');
   };
-
   const moveIntakePillsToHub = () => {
     const hub = doc?.querySelector('[data-role="hub-intake-pills"]');
     const pills = doc?.getElementById('cap-intake-status-top');
@@ -317,3 +319,7 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
+
+
+
+

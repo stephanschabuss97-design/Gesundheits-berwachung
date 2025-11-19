@@ -1,4 +1,4 @@
-.hub {
+﻿.hub {
   width: min(1200px, 100%);
   margin: 0 auto;
   padding: 32px 32px 80px;
@@ -546,12 +546,37 @@
   gap: 12px;
 }
 
+.hub-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .hub-stage-label {
   margin: 0;
   font-size: 1.4rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.9);
+}
+
+.hub-stage-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.hub-stage-close:hover,
+.hub-stage-close:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.05);
 }
 
 .hub-stage-slot {
@@ -561,3 +586,16 @@
 .hub-stage-slot > * {
   width: 100%;
 }
+
+@media (max-width: 640px) {
+  .hub-stage-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hub-stage-label {
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+  }
+}
+
