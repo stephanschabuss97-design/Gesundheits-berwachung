@@ -616,7 +616,8 @@
   margin: 0;
 }
 
-.hub-stage-slot #doctorDailyWrap {
+.hub-stage-slot #doctorDailyWrap,
+.hub-stage-slot .u-overflow-auto {
   max-height: none;
   overflow: visible;
 }
