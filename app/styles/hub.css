@@ -28,8 +28,8 @@
 
 .hub-orbit {
   --hub-orb-size: clamp(440px, 78vw, 820px);
-  --orbit-offset: calc(var(--hub-orb-size) / 2 + 28px);
-  --orbit-diag: calc(var(--orbit-offset) * 0.72);
+  --orbit-offset: calc(var(--hub-orb-size) / 2 + 12px);
+  --orbit-diag: calc(var(--orbit-offset) * 0.70);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
