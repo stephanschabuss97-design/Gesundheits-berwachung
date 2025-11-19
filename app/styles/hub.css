@@ -132,23 +132,23 @@
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  top: 7%;
+  top: 9%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
-  top: 24%;
-  left: 79%;
+  top: 27%;
+  left: 77%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
   top: 50%;
-  left: 92%;
+  left: 90%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
-  top: 76%;
-  left: 73%;
+  top: 77%;
+  left: 69%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
@@ -157,18 +157,18 @@
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-  top: 76%;
-  left: 27%;
+  top: 77%;
+  left: 31%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='w'] {
   top: 50%;
-  left: 8%;
+  left: 10%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-  top: 24%;
-  left: 21%;
+  top: 27%;
+  left: 23%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -434,27 +434,27 @@
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-    top: 10%;
+    top: 11%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
-    top: 32%;
-    left: 78%;
+    top: 34%;
+    left: 76%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
-    top: 82%;
-    left: 74%;
+    top: 84%;
+    left: 72%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-    top: 32%;
-    left: 22%;
+    top: 34%;
+    left: 24%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-    top: 82%;
-    left: 27%;
+    top: 84%;
+    left: 28%;
   }
 }
 .hub-intake-form {
