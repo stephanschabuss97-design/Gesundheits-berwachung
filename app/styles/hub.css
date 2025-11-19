@@ -28,8 +28,8 @@
 
 .hub-orbit {
   --hub-orb-size: clamp(440px, 78vw, 820px);
-  --orbit-offset: calc(var(--hub-orb-size) / 2 - 32px);
-  --orbit-diag: calc(var(--orbit-offset) * 0.64);
+  --orbit-offset: calc(var(--hub-orb-size) / 2 - 72px);
+  --orbit-diag: calc(var(--orbit-offset) * 0.56);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
@@ -404,8 +404,8 @@
   .hub-orbit {
     width: min(500px, 100%);
     margin-bottom: 20px;
-    --orbit-offset: calc(var(--hub-orb-size) / 2 - 16px);
-    --orbit-diag: calc(var(--orbit-offset) * 0.64);
+    --orbit-offset: calc(var(--hub-orb-size) / 2 - 40px);
+    --orbit-diag: calc(var(--orbit-offset) * 0.58);
   }
 
   .hub-orb {
