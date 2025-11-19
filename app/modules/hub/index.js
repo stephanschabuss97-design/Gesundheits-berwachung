@@ -18,7 +18,7 @@
     if (!stage) return;
     const title = stage.querySelector('[data-stage-title]');
     if (title) {
-      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswÃ¤hlen.';
+      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswaehlen.';
       title.textContent = label || fallback;
     }
   };
@@ -36,6 +36,8 @@
     stage.setAttribute('aria-hidden', 'true');
     updateStageLabel(stage);
     delete stage.dataset.activeOverlay;
+    const slot = getStageSlot();
+    if (slot) slot.innerHTML = '';
   };
 
   const activateHubLayout = () => {
@@ -95,10 +97,22 @@
     bindButton('[data-hub-module="intake"]', openStageOverlay('hubIntakeOverlay'));
     bindButton('[data-hub-module="vitals"]', openStageOverlay('hubVitalsOverlay'));
     bindButton('[data-hub-module="doctor"]', openStageOverlay('hubDoctorOverlay'));
-    bindButton('#helpToggle', () => {}, { sync: false });
-    bindButton('#diagToggle', () => {}, { sync: false });
   };
-  const setupStageClose = () => {\r\n    const btn = getStageCloseBtn();\r\n    if (!btn) return;\r\n    btn.addEventListener('click', () => {\r\n      const stage = getStageEl();\r\n      const active = stage?.dataset.activeOverlay;\r\n      if (active) {\r\n        closeSimpleOverlay(active);\r\n      } else {\r\n        hideStageBox();\r\n      }\r\n    });\r\n  };\r\n\r\n  const setupChat = (hub) => {
+  const setupStageClose = () => {
+    const btn = getStageCloseBtn();
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const stage = getStageEl();
+      const active = stage?.dataset.activeOverlay;
+      if (active) {
+        closeSimpleOverlay(active);
+      } else {
+        hideStageBox();
+      }
+    });
+  };
+
+  const setupChat = (hub) => {
     const form = hub.querySelector('#hubChatForm');
     if (!form) return;
     form.addEventListener('submit', (event) => {
