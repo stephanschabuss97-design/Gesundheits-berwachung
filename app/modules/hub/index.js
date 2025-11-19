@@ -191,11 +191,11 @@
     const inlinePill = doc?.querySelector('[data-hub-date-inline]');
     const inlineText = doc?.querySelector('[data-hub-date-inline-text]');
     const captureDate = document.getElementById('date');
-    if (!pill || !text || !captureDate) return;
+    if (!captureDate) return;
     const update = () => {
       const dateValue = captureDate.value || new Date().toISOString().slice(0, 10);
       const formatted = new Date(dateValue).toLocaleDateString();
-      text.textContent = formatted;
+      if (text) text.textContent = formatted;
       if (inlineText) inlineText.textContent = formatted;
     };
     if (!captureDate.value) {
@@ -204,8 +204,9 @@
     }
     update();
     captureDate.addEventListener('change', update);
-    pill.addEventListener('click', () => captureDate.showPicker?.());
-    inlinePill?.addEventListener('click', () => captureDate.showPicker?.());
+    const openPicker = () => captureDate.showPicker?.();
+    pill?.addEventListener('click', openPicker);
+    inlinePill?.addEventListener('click', openPicker);
   };
 
   const moveIntakePillsToHub = () => {

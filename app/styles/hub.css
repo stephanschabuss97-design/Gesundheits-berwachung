@@ -61,51 +61,13 @@
   object-fit: contain;
 }
 
-.hub-title {
-  font-family: var(--font-heading, 'Montserrat', sans-serif);
-  font-size: 1.6rem;
-  letter-spacing: 0.5rem;
-  text-transform: uppercase;
-  margin: 0;
-  padding-top: 8px;
-}
-
-.hub-date-pill {
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 20px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.02);
-  color: #fefefe;
-  font-size: 1rem;
-  cursor: pointer;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  font-weight: 500;
-  position: relative;
-  overflow: hidden;
-}
-
-#hubDateText {
-  letter-spacing: 0.2em;
-}
-
-.hub-date-input {
+.hub-date-input-hidden {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  border: none;
-  cursor: pointer;
-}
-
-.hub-date-pill:focus-within {
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
 }
 
 .hub-intake-pills {
