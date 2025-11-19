@@ -132,43 +132,43 @@
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  top: 9%;
+  top: 7%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
   top: 24%;
-  left: 80%;
+  left: 79%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
-  top: 53%;
-  left: 93%;
+  top: 50%;
+  left: 92%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
-  top: 81%;
-  left: 72%;
+  top: 76%;
+  left: 73%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
-  top: 94%;
+  top: 92%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-  top: 81%;
-  left: 28%;
+  top: 76%;
+  left: 27%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='w'] {
-  top: 53%;
-  left: 7%;
+  top: 50%;
+  left: 8%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
   top: 24%;
-  left: 20%;
+  left: 21%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -428,27 +428,32 @@
     height: 66px;
   }
 
+  .hub-icon {
+    width: 68px;
+    height: 68px;
+  }
+
   .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-    top: 11%;
+    top: 10%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
     top: 32%;
-    left: 77%;
+    left: 78%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
-    top: 85%;
-    left: 73%;
+    top: 82%;
+    left: 74%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
     top: 32%;
-    left: 23%;
+    left: 22%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-    top: 85%;
+    top: 82%;
     left: 27%;
   }
 }
