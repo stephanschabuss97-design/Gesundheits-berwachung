@@ -206,22 +206,20 @@
     </header>
     <div class="hub-panel-body">
       <div class="hub-vitals">
-        <div class="hub-date-inline">
-          <p class="hub-date-inline-label">Datum</p>
-          <button type="button" class="hub-date-inline-pill" data-hub-date-inline>
-            <span data-hub-date-inline-text>--.--.----</span>
-          </button>
-        </div>
         <div class="hub-vitals-bp">
-          <div class="card-nested">
-            <div class="row u-row-flex-end-gap12">
-              <div class="u-minw-180">
-                <label for="bpContextSel">Messzeitpunkt</label>
-                <select id="bpContextSel">
-                  <option value="M">Morgens</option>
-                  <option value="A">Abends</option>
-                </select>
-              </div>
+          <div class="card-nested hub-vitals-controls">
+            <div class="control-group">
+              <label for="bpDateInline">Datum</label>
+              <button type="button" class="hub-date-inline-pill" data-hub-date-inline id="bpDateInline">
+                <span data-hub-date-inline-text>--.--.----</span>
+              </button>
+            </div>
+            <div class="control-group">
+              <label for="bpContextSel">Messzeitpunkt</label>
+              <select id="bpContextSel">
+                <option value="M">Morgens</option>
+                <option value="A">Abends</option>
+              </select>
             </div>
           </div>
           <div class="card-nested bp-pane active" data-context="M">

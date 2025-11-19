@@ -473,15 +473,13 @@
 }
 .hub-date-inline-pill {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: #0f1321;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
   color: #fff;
-  letter-spacing: 0.1em;
-  padding: 10px 12px;
-  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  padding: 4px 18px;
+  font-size: 0.95rem;
   cursor: pointer;
-  min-width: 160px;
-  text-align: left;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -489,6 +487,25 @@
 .hub-date-inline-pill:focus-visible {
   border-color: rgba(255, 255, 255, 0.45);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+.hub-vitals-controls {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.hub-vitals-controls .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hub-vitals-controls .control-group label {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 .hub-vitals-controls {
   display: flex;
