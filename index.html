@@ -85,25 +85,37 @@
           <img src="assets/img/midas_symbol.webp" alt="MIDAS Logo">
         </div>
         <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
-          <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false" data-orbit-pos="sw">
+          <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false" data-orbit-pos="north">
             <span aria-hidden="true">??</span>
-            <span class="sr-only">Intake</span>
+            <span class="sr-only">Arzt-Ansicht</span>
+          </button>
+          <button type="button" class="hub-icon" data-orbit-pos="ne" disabled>
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Termine (bald)</span>
+          </button>
+          <button type="button" class="hub-icon" id="diagToggle" data-orbit-pos="e">
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">Log</span>
+          </button>
+          <button type="button" class="hub-icon" data-orbit-pos="se" disabled>
+            <span aria-hidden="true">??</span>
+            <span class="sr-only">GPT Voice (bald)</span>
           </button>
           <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false" data-orbit-pos="s">
             <span aria-hidden="true">??</span>
             <span class="sr-only">Vitalwerte</span>
           </button>
-          <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false" data-orbit-pos="ne">
+          <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false" data-orbit-pos="sw">
             <span aria-hidden="true">??</span>
-            <span class="sr-only">Arzt-Ansicht</span>
+            <span class="sr-only">Intake</span>
+          </button>
+          <button type="button" class="hub-icon" data-orbit-pos="w" disabled>
+            <span aria-hidden="true">???</span>
+            <span class="sr-only">Dictate (bald)</span>
           </button>
           <button type="button" class="hub-icon" id="helpToggle" data-orbit-pos="nw">
             <span aria-hidden="true">?</span>
             <span class="sr-only">Hilfe</span>
-          </button>
-          <button type="button" class="hub-icon" id="diagToggle" data-orbit-pos="e">
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Log</span>
           </button>
         </div>
       </div>
@@ -434,6 +446,7 @@
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
+
 
 
 

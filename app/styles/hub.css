@@ -144,12 +144,20 @@
   transform: translate(-50%, -50%) translateX(var(--orbit-offset));
 }
 
+.hub-orbit-icons .hub-icon[data-orbit-pos='w'] {
+  transform: translate(-50%, -50%) translateX(calc(var(--orbit-offset) * -1));
+}
+
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
   transform: translate(-50%, -50%) translateY(var(--orbit-offset));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
   transform: translate(-50%, -50%) translate(calc(var(--orbit-diag) * -1), var(--orbit-diag));
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
+  transform: translate(-50%, -50%) translate(var(--orbit-diag), var(--orbit-diag));
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
