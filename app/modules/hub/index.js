@@ -32,33 +32,53 @@
 
   const setupIconBar = (hub) => {
     const buttons = hub.querySelectorAll('.hub-icon:not([disabled])');
+    const stage = hub.querySelector('#hubStage');
+    const stageTitle = stage?.querySelector('[data-stage-title]');
+
+    const showStage = (btn) => {
+      if (!stage) return;
+      stage.hidden = false;
+      stage.setAttribute('aria-hidden', 'false');
+      const label = btn?.querySelector('.sr-only')?.textContent?.trim();
+      if (stageTitle && label) {
+        stageTitle.textContent = label;
+      }
+    };
+
     const syncPressed = (target) => {
       buttons.forEach((btn) => {
         btn.setAttribute('aria-pressed', String(btn === target));
       });
     };
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', () => syncPressed(btn));
-    });
+
     const bindButton = (selector, handler) => {
       const btn = hub.querySelector(selector);
       if (!btn) return;
       const open = () => handler(btn);
-      btn.addEventListener('click', open);
+      btn.addEventListener('click', () => {
+        showStage(btn);
+        syncPressed(btn);
+        open();
+      });
       btn.addEventListener(
         'pointerdown',
         (event) => {
           if (event.pointerType === 'touch') {
             event.preventDefault();
+            showStage(btn);
+            syncPressed(btn);
             open();
           }
         },
         { passive: false }
       );
     };
+
     bindButton('[data-hub-module="intake"]', openIntakeOverlay);
     bindButton('[data-hub-module="vitals"]', openVitalsOverlay);
     bindButton('[data-hub-module="doctor"]', openDoctorOverlay);
+    bindButton('#helpToggle', () => {});
+    bindButton('#diagToggle', () => {});
   };
 
   const setupChat = (hub) => {
