@@ -61,15 +61,6 @@
   object-fit: contain;
 }
 
-.hub-date-input-hidden {
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
 .hub-intake-pills {
   margin: 24px auto;
   display: flex;
@@ -433,7 +424,7 @@
   color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.06em;
 }
-.hub-date-inline-pill {
+.hub-date-control {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   background: #0f1321;
@@ -447,8 +438,8 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.hub-date-inline-pill:hover,
-.hub-date-inline-pill:focus-visible {
+.hub-date-control:hover,
+.hub-date-control:focus-visible {
   border-color: rgba(255, 255, 255, 0.45);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }

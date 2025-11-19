@@ -87,7 +87,6 @@
         <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
       </div>
     </div>
-    <input type="date" id="date" aria-label="Datum waehlen" class="hub-date-input-hidden">
 
         <div class="hub-icons" role="toolbar" aria-label="Module navigation">
       <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false">
@@ -205,10 +204,8 @@
         <div class="hub-vitals-bp">
           <div class="card-nested hub-vitals-controls">
             <div class="control-group">
-              <label for="bpDateInline">Datum</label>
-              <button type="button" class="hub-date-inline-pill" data-hub-date-inline id="bpDateInline">
-                <span data-hub-date-inline-text>--.--.----</span>
-              </button>
+              <label for="date">Datum</label>
+              <input type="date" id="date" class="hub-date-control" aria-label="Datum waehlen">
             </div>
             <div class="control-group">
               <label for="bpContextSel">Messzeitpunkt</label>

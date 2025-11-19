@@ -185,28 +185,13 @@
     appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
   };
 
-  const setupDatePill = (hub) => {
-    const pill = hub.querySelector('#hubDatePill');
-    const text = hub.querySelector('#hubDateText');
-    const inlinePill = doc?.querySelector('[data-hub-date-inline]');
-    const inlineText = doc?.querySelector('[data-hub-date-inline-text]');
-    const captureDate = document.getElementById('date');
+  const setupDatePill = () => {
+    const captureDate = doc?.getElementById('date');
     if (!captureDate) return;
-    const update = () => {
-      const dateValue = captureDate.value || new Date().toISOString().slice(0, 10);
-      const formatted = new Date(dateValue).toLocaleDateString();
-      if (text) text.textContent = formatted;
-      if (inlineText) inlineText.textContent = formatted;
-    };
     if (!captureDate.value) {
       captureDate.value = new Date().toISOString().slice(0, 10);
       captureDate.dispatchEvent(new Event('change', { bubbles: true }));
     }
-    update();
-    captureDate.addEventListener('change', update);
-    const openPicker = () => captureDate.showPicker?.();
-    pill?.addEventListener('click', openPicker);
-    inlinePill?.addEventListener('click', openPicker);
   };
 
   const moveIntakePillsToHub = () => {
