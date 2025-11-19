@@ -26,7 +26,7 @@
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(360px, 70vw, 640px);
+  --hub-orb-size: clamp(300px, 65vw, 540px);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.4);
   aspect-ratio: 1;
@@ -83,9 +83,9 @@
 }
 
 .hub-orb img {
-  width: clamp(140px, 36vw, 240px);
+  width: clamp(220px, 60vw, 420px);
   height: auto;
-  max-height: clamp(140px, 36vw, 240px);
+  max-height: clamp(220px, 60vw, 420px);
   object-fit: contain;
   filter: drop-shadow(0 0 25px rgba(255, 200, 120, 0.45));
 }
