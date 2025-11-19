@@ -1,7 +1,7 @@
 .hub {
   width: min(1200px, 100%);
   margin: 0 auto;
-  padding: 32px 32px clamp(28px, 6vw, 56px);
+  padding: clamp(12px, 2vw, 24px) clamp(24px, 4vw, 48px) clamp(28px, 6vw, 56px);
   color: #f5f7ff;
   text-align: center;
   position: relative;
@@ -23,11 +23,7 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-}
-
-.hub-hero {
-  min-height: min(100vh, 860px);
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .hub-orbit {
