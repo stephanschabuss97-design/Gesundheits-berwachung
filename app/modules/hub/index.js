@@ -11,6 +11,17 @@
   const appModules = global.AppModules;
   const doc = global.document;
 
+  const ORBIT_BUTTONS = {
+    north: { angle: -90 },
+    ne: { angle: -45, radiusScale: 0.88 },
+    e: { angle: 0 },
+    se: { angle: 45, radiusScale: 0.88 },
+    s: { angle: 90 },
+    sw: { angle: 135, radiusScale: 0.88 },
+    w: { angle: 180 },
+    nw: { angle: -135, radiusScale: 0.88 },
+  };
+
   let hubButtons = [];
   let activePanel = null;
 
@@ -36,6 +47,39 @@
     if (!skipButtonSync) {
       syncButtonState(null);
     }
+  };
+
+  const setupOrbitHotspots = (hub) => {
+    const orbit = hub.querySelector('.hub-orbit');
+    const buttons = orbit?.querySelectorAll('[data-orbit-pos]');
+    if (!orbit || !buttons.length) return;
+
+    const baseFactor = 0.9;
+    const setPositions = () => {
+      const rect = orbit.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const baseRadius = (Math.min(rect.width, rect.height) / 2) * baseFactor;
+
+      buttons.forEach((btn) => {
+        const key = btn.dataset.orbitPos;
+        const config = ORBIT_BUTTONS[key];
+        if (!config) return;
+        const angle = ((config.angle ?? 0) * Math.PI) / 180;
+        const radius = baseRadius * (config.radiusScale ?? 1);
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        btn.style.left = `${x}px`;
+        btn.style.top = `${y}px`;
+      });
+    };
+
+    const debouncedUpdate = () => global.requestAnimationFrame(setPositions);
+    const resizeObserver = new ResizeObserver(debouncedUpdate);
+    resizeObserver.observe(orbit);
+    global.addEventListener('resize', debouncedUpdate);
+    setPositions();
   };
 
   const openPanel = (panelName) => {
@@ -96,6 +140,7 @@
       return;
     }
     setupIconBar(hub);
+    setupOrbitHotspots(hub);
     setupPanels();
     setupDatePill(hub);
     moveIntakePillsToHub();
