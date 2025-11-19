@@ -93,7 +93,7 @@
       </div>
     </div>
 
-    <div class="hub-icons" role="toolbar" aria-label="Module navigation">
+        <div class="hub-icons" role="toolbar" aria-label="Module navigation">
       <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
         <span aria-hidden="true">💧</span>
         <span class="sr-only">Intake</span>
@@ -115,7 +115,8 @@
         <span class="sr-only">Log</span>
       </button>
     </div>
-</div>
+
+  </section>
 
 <!-- Diagnose-Panel -->
 <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
@@ -159,53 +160,7 @@
 <div id="busy"><div class="box"> Bitte warten...</div></div>
 
 <main id="appMain">
-  <section class="hub" id="captureHub" aria-labelledby="hubTitle">
-    <div class="hub-hero">
-      <div class="hub-orb" data-state="idle">
-        <img src="assets/img/midas_symbol.webp" alt="MIDAS Logo">
-      </div>
-      <h1 class="hub-title" id="hubTitle">MIDAS</h1>
-      <div class="hub-date-pill" id="hubDatePill">
-        <span id="hubDateText">--.--.----</span>
-        <input class="hub-date-input" type="date" id="date" aria-label="Datum waehlen">
-      </div>
-      <div data-role="hub-intake-pills">
-        <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
-      </div>
-    </div>
-
-    <div class="hub-icons" role="toolbar" aria-label="Module navigation">
-      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
-        <span aria-hidden="true">💧</span>
-        <span class="sr-only">Intake</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
-        <span aria-hidden="true">❤️</span>
-        <span class="sr-only">Vitalwerte</span>
-      </button>
-      <button type="button" class="hub-icon" aria-pressed="false">
-        <span aria-hidden="true">🧍‍♂️</span>
-        <span class="sr-only">Koerperwerte (bald)</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
-        <span aria-hidden="true">👤</span>
-        <span class="sr-only">Arzt-Ansicht</span>
-      </button>
-      <button type="button" class="hub-icon" aria-pressed="false">
-        <span aria-hidden="true">📈</span>
-        <span class="sr-only">Charts</span>
-      </button>
-      <button type="button" class="hub-icon" disabled aria-pressed="false">
-        <span aria-hidden="true">📅</span>
-        <span class="sr-only">Termine (bald)</span>
-      </button>
-      <button type="button" class="hub-icon" disabled aria-pressed="false">
-        <span aria-hidden="true">🏋️</span>
-        <span class="sr-only">Training (bald)</span>
-      </button>
-    </div>
-
-  </section>
+  
   <div class="hub-overlay" id="hubIntakeOverlay" aria-hidden="true" hidden>
     <div class="hub-overlay-backdrop" data-close-overlay></div>
     <div class="hub-overlay-card" role="dialog" aria-modal="true" aria-labelledby="hubIntakeTitle">
