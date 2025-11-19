@@ -1,25 +1,45 @@
-﻿    <div class="hub-icons" role="toolbar" aria-label="Module navigation">
-      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
-        <span aria-hidden="true">💧</span>
-        <span class="sr-only">Intake</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
-        <span aria-hidden="true">❤️</span>
-        <span class="sr-only">Vitalwerte</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
-        <span aria-hidden="true">🟣</span>
-        <span class="sr-only">Arzt-Ansicht</span>
-      </button>
-      <button type="button" class="hub-icon" id="helpToggle">
-        <span aria-hidden="true">❔</span>
-        <span class="sr-only">Hilfe</span>
-      </button>
-      <button type="button" class="hub-icon" id="diagToggle">
-        <span aria-hidden="true">📓</span>
-        <span class="sr-only">Log</span>
-      </button>
-    </div>
+<!DOCTYPE html>
+<!-- MODULE: BOOTSTRAP & CONSTANTS
+  intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
+  contracts: definiert Head-Struktur, laedt globale Styles, bereitet Container fuer nachgelagerte Module vor
+  notes: Kommentarpflege; Markup fuer W3C-Compliance unveraendert lassen
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
+<title>Gesundheits-Logger (V1.7.6)</title>
+<link rel="stylesheet" href="app/app.css">
+<!-- END MODULE -->
+</head>
+<body>
+<!-- ANKER: touch-log-fallback -->
+<pre id="touchLog" class="u-diag-log"></pre>
+
+<header>
+<div class="u-flex-center-gap10">
+<div class="spacer"></div>
+<button class="btn ghost" id="helpToggle" type="button">Hilfe</button>
+<button class="btn ghost" id="diagToggle" type="button">Log</button>
+</div>
+</header>
+
+<!-- Hilfe-Panel -->
+<div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
+<header>
+<h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
+<button class="btn ghost" id="helpClose" type="button">x</button>
+</header>
+<div class="content">
+<strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
+<ul>
+<li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
+<li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
+<li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+</ul>
+</div>
 </div>
 
 <!-- Diagnose-Panel -->
@@ -81,31 +101,31 @@
 
     <div class="hub-icons" role="toolbar" aria-label="Module navigation">
       <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
-        <span aria-hidden="true">💧</span>
+        <span aria-hidden="true">??</span>
         <span class="sr-only">Intake</span>
       </button>
       <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
-        <span aria-hidden="true">❤️</span>
+        <span aria-hidden="true">??</span>
         <span class="sr-only">Vitalwerte</span>
       </button>
       <button type="button" class="hub-icon" aria-pressed="false">
-        <span aria-hidden="true">🧍‍♂️</span>
+        <span aria-hidden="true">?????</span>
         <span class="sr-only">Koerperwerte (bald)</span>
       </button>
       <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
-        <span aria-hidden="true">👤</span>
+        <span aria-hidden="true">??</span>
         <span class="sr-only">Arzt-Ansicht</span>
       </button>
       <button type="button" class="hub-icon" aria-pressed="false">
-        <span aria-hidden="true">📈</span>
+        <span aria-hidden="true">??</span>
         <span class="sr-only">Charts</span>
       </button>
       <button type="button" class="hub-icon" disabled aria-pressed="false">
-        <span aria-hidden="true">📅</span>
+        <span aria-hidden="true">??</span>
         <span class="sr-only">Termine (bald)</span>
       </button>
       <button type="button" class="hub-icon" disabled aria-pressed="false">
-        <span aria-hidden="true">🏋️</span>
+        <span aria-hidden="true">???</span>
         <span class="sr-only">Training (bald)</span>
       </button>
     </div>
@@ -116,7 +136,7 @@
     <div class="hub-overlay-card" role="dialog" aria-modal="true" aria-labelledby="hubIntakeTitle">
       <header class="hub-overlay-header">
         <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
+        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">�</button>
       </header>
       <div class="hub-overlay-body" id="hubOverlayContent">
         <div class="hub-intake-form" id="cap-intake-wrap">
@@ -149,7 +169,7 @@
     <div class="hub-overlay-card doctor" role="dialog" aria-modal="true" aria-labelledby="hubDoctorTitle">
       <header class="hub-overlay-header">
         <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
+        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">�</button>
       </header>
       <div class="hub-overlay-body" id="hubDoctorContent">
         <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
@@ -180,7 +200,7 @@
     <div class="hub-overlay-card vitals" role="dialog" aria-modal="true" aria-labelledby="hubVitalsTitle">
       <header class="hub-overlay-header">
         <h2 id="hubVitalsTitle">Vitaldaten</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
+        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">�</button>
       </header>
       <div class="hub-overlay-body">
         <div class="hub-vitals">
@@ -300,7 +320,7 @@
 <script src="app/core/utils.js"></script>
 <!-- @refactor: moved to assets/js/format.js -->
 <script src="assets/js/format.js"></script>
-<!-- @refactor: Phase 2 – app/core/capture-globals.js -->
+<!-- @refactor: Phase 2 � app/core/capture-globals.js -->
 <script src="app/core/capture-globals.js"></script>
 <!-- @refactor: moved to assets/js/data-local.js -->
 <script src="assets/js/data-local.js"></script>
@@ -314,7 +334,7 @@
 <script src="app/modules/capture/body.js"></script>
 <!-- @refactor: moved to app/modules/trendpilot/data.js -->
 <script src="app/modules/trendpilot/data.js"></script>
-<!-- @refactor: Phase 2 – app/supabase/index.js -->
+<!-- @refactor: Phase 2 � app/supabase/index.js -->
 <script type="module" src="app/supabase/index.js"></script>
 <script type="module" src="assets/js/boot-auth.js"></script>
 <!-- @refactor: moved to assets/js/ui-tabs.js -->

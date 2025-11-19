@@ -1,25 +1,39 @@
-﻿    <div class="hub-icons" role="toolbar" aria-label="Module navigation">
-      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
-        <span aria-hidden="true">💧</span>
-        <span class="sr-only">Intake</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false">
-        <span aria-hidden="true">❤️</span>
-        <span class="sr-only">Vitalwerte</span>
-      </button>
-      <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false">
-        <span aria-hidden="true">🟣</span>
-        <span class="sr-only">Arzt-Ansicht</span>
-      </button>
-      <button type="button" class="hub-icon" id="helpToggle">
-        <span aria-hidden="true">❔</span>
-        <span class="sr-only">Hilfe</span>
-      </button>
-      <button type="button" class="hub-icon" id="diagToggle">
-        <span aria-hidden="true">📓</span>
-        <span class="sr-only">Log</span>
-      </button>
-    </div>
+﻿<!DOCTYPE html>
+<!-- MODULE: BOOTSTRAP & CONSTANTS
+  intent: HTML-Grundgeruest, Meta-Bootstrap, Basis-Themetokens fuer den Monolithen
+  contracts: definiert Head-Struktur, laedt globale Styles, bereitet Container fuer nachgelagerte Module vor
+  notes: Kommentarpflege; Markup fuer W3C-Compliance unveraendert lassen
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
+<title>Gesundheits-Logger (V1.7.6)</title>
+<link rel="stylesheet" href="app/app.css">
+<!-- END MODULE -->
+</head>
+<body>
+<!-- ANKER: touch-log-fallback -->
+<pre id="touchLog" class="u-diag-log"></pre>
+
+<header></header>
+
+<!-- Hilfe-Panel -->
+<div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
+<header>
+<h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
+<button class="btn ghost" id="helpClose" type="button">x</button>
+</header>
+<div class="content">
+<strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
+<ul>
+<li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
+<li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
+<li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+</ul>
+</div>
 </div>
 
 <!-- Diagnose-Panel -->
