@@ -12,6 +12,7 @@
   const doc = global.document;
 
   const getStageEl = () => doc?.getElementById('hubStage');
+  const getStageSlot = () => doc?.querySelector('#hubStage [data-stage-slot]');
   const updateStageLabel = (stage, label) => {
     if (!stage) return;
     const title = stage.querySelector('[data-stage-title]');
@@ -145,19 +146,29 @@
     pill.addEventListener('click', () => captureDate.showPicker?.());
   };
 
-  const openSimpleOverlay = (overlayId, trigger) => {
+  const openSimpleOverlay = (overlayId) => {
     if (!doc) return null;
     const overlay = doc.getElementById(overlayId);
-    if (!overlay || overlay._open) return null;
-    const rect = trigger?.getBoundingClientRect();
-    if (rect) {
-      overlay.style.setProperty('--hub-modal-origin-x', `${rect.left + rect.width / 2}px`);
-      overlay.style.setProperty('--hub-modal-origin-y', `${rect.top + rect.height / 2}px`);
+    const slot = getStageSlot();
+    const stage = getStageEl();
+    if (!overlay || overlay._open || !slot || !stage) return null;
+    const active = stage.dataset.activeOverlay;
+    if (active && active !== overlayId) {
+      closeSimpleOverlay(active);
     }
-    overlay.hidden = false;
-    overlay.setAttribute('aria-hidden', 'false');
-    overlay.classList.add('active');
-    doc.body?.style.setProperty('overflow', 'hidden');
+    const card = overlay.querySelector('.hub-overlay-card');
+    if (!card) return null;
+
+    overlay._open = true;
+    overlay._originParent = card.parentElement || overlay;
+    overlay._originNext = card.nextSibling;
+    slot.innerHTML = '';
+    slot.appendChild(card);
+    stage.dataset.activeOverlay = overlayId;
+
+    const headerLabel = card.querySelector('h2, [aria-labelledby]')?.textContent?.trim();
+    showStageBox(headerLabel);
+
     const escHandler = (event) => {
       if (event.key === 'Escape') {
         closeSimpleOverlay(overlayId);
@@ -172,44 +183,41 @@
       el.addEventListener('click', clickHandler);
     });
 
-    overlay._open = true;
     return overlay;
   };
 
   const closeSimpleOverlay = (overlayId) => {
     if (!doc) return;
     const overlay = doc.getElementById(overlayId);
+    const stage = getStageEl();
     if (!overlay || !overlay._open) return;
+    const slot = getStageSlot();
+    const card = slot?.querySelector('.hub-overlay-card');
 
-    overlay.classList.add('closing');
-    const finishClose = () => {
-      overlay.removeEventListener('animationend', finishClose);
-      overlay.removeEventListener('animationcancel', finishClose);
-      if (overlay._closeTimer) {
-        clearTimeout(overlay._closeTimer);
-        overlay._closeTimer = null;
+    if (card) {
+      if (overlay._originNext && overlay._originNext.parentNode === overlay._originParent) {
+        overlay._originParent.insertBefore(card, overlay._originNext);
+      } else if (overlay._originParent) {
+        overlay._originParent.appendChild(card);
       }
-      overlay.classList.remove('closing');
-      overlay.classList.remove('active');
-      overlay.hidden = true;
-      overlay.setAttribute('aria-hidden', 'true');
-      if (overlay._closeHandler) {
-        overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
-          el.removeEventListener('click', overlay._closeHandler);
-        });
-        overlay._closeHandler = null;
-      }
-      if (overlay._escHandler) {
-        doc.removeEventListener('keydown', overlay._escHandler);
-        overlay._escHandler = null;
-      }
-      overlay._open = false;
-      doc.body?.style.removeProperty('overflow');
-      hideStageBox();
-    };
-    overlay.addEventListener('animationend', finishClose);
-    overlay.addEventListener('animationcancel', finishClose);
-    overlay._closeTimer = setTimeout(finishClose, 350);
+    }
+    if (slot) slot.innerHTML = '';
+    if (stage?.dataset.activeOverlay === overlayId) {
+      delete stage.dataset.activeOverlay;
+    }
+
+    if (overlay._closeHandler) {
+      overlay.querySelectorAll('[data-close-overlay]').forEach((el) => {
+        el.removeEventListener('click', overlay._closeHandler);
+      });
+      overlay._closeHandler = null;
+    }
+    if (overlay._escHandler) {
+      doc.removeEventListener('keydown', overlay._escHandler);
+      overlay._escHandler = null;
+    }
+    overlay._open = false;
+    hideStageBox();
   };
 
   const openIntakeOverlay = (trigger) => {
