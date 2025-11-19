@@ -54,7 +54,7 @@
     const buttons = orbit?.querySelectorAll('[data-orbit-pos]');
     if (!orbit || !buttons.length) return;
 
-    const baseFactor = 0.9;
+    const baseFactor = 0.75;
     const setPositions = () => {
       const rect = orbit.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
