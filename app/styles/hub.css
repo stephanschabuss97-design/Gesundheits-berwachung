@@ -547,7 +547,7 @@
 }
 
 .hub-stage[aria-hidden='false'] {
-  display: flex;
+  display: block;
 }
 
 .hub-stage-content {
