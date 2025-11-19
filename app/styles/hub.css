@@ -127,41 +127,47 @@
 
 .hub-orbit-icons .hub-icon {
   position: absolute;
-  top: 50%;
-  left: 50%;
   transform: translate(-50%, -50%);
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  transform: translate(-50%, -50%) translateY(calc(var(--orbit-offset) * -1));
+  top: 12%;
+  left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
-  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag)), calc(var(--orbit-diag) * -1));
+  top: 30%;
+  left: 78%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
-  transform: translate(-50%, -50%) translateX(var(--orbit-offset));
-}
-
-.hub-orbit-icons .hub-icon[data-orbit-pos='w'] {
-  transform: translate(-50%, -50%) translateX(calc(var(--orbit-offset) * -1));
-}
-
-.hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
-  transform: translate(-50%, -50%) translateY(var(--orbit-offset));
-}
-
-.hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag) * -1), var(--orbit-diag));
+  top: 56%;
+  left: 92%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
-  transform: translate(-50%, -50%) translate(var(--orbit-diag), var(--orbit-diag));
+  top: 84%;
+  left: 70%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
+  top: 96%;
+  left: 50%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
+  top: 84%;
+  left: 30%;
+}
+
+.hub-orbit-icons .hub-icon[data-orbit-pos='w'] {
+  top: 56%;
+  left: 8%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-  transform: translate(-50%, -50%) translate(calc(var(--orbit-diag) * -1), calc(var(--orbit-diag) * -1));
+  top: 30%;
+  left: 22%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -425,14 +431,14 @@
     left: 78%;
   }
 
-  .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-    top: 30%;
-    left: 22%;
-  }
-
   .hub-orbit-icons .hub-icon[data-orbit-pos='se'] {
     top: 84%;
     left: 78%;
+  }
+
+  .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
+    top: 30%;
+    left: 22%;
   }
 
   .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
