@@ -129,7 +129,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
   gap: 12px;
-  margin: 48px 0 32px;
+  margin: 36px 0 16px;
 }
 
 .hub-icon {
@@ -174,7 +174,7 @@
 .hub-panel {
   width: min(100%, 1200px);
   max-width: calc(100% - 32px);
-  margin: clamp(12px, 3vw, 36px) auto;
+  margin: clamp(8px, 2vw, 20px) auto;
   padding: clamp(20px, 3vw, 48px);
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.12);
