@@ -471,6 +471,39 @@
   color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.06em;
 }
+.hub-date-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.hub-date-inline-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hub-date-inline-pill {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+  letter-spacing: 0.2em;
+  padding: 4px 18px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hub-date-inline-pill:hover,
+.hub-date-inline-pill:focus-visible {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
 .hub-panel .hub-intake-form,
 .hub-panel .doctor-panel,
 .hub-panel .hub-vitals-bp .card-nested,
