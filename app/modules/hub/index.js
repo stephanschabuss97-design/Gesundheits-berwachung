@@ -55,7 +55,7 @@
     if (!orbit || !buttons.length) return;
 
     const getBaseFactor = () =>
-      global.matchMedia('(max-width: 640px)').matches ? 0.5 : 0.4;
+      global.matchMedia('(max-width: 640px)').matches ? 0.5 : 0.45;
 
     const setPositions = () => {
       const rect = orbit.getBoundingClientRect();
@@ -262,7 +262,6 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
-
 
 
 
