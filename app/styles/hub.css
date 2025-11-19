@@ -26,27 +26,27 @@
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(220px, 40vw, 360px);
+  --hub-orb-size: clamp(280px, 60vw, 520px);
   position: relative;
-  width: calc(var(--hub-orb-size) * 1.35);
+  width: calc(var(--hub-orb-size) * 1.4);
   aspect-ratio: 1;
-  margin: 0 auto clamp(24px, 4vw, 36px);
+  margin: clamp(12px, 2vw, 24px) auto clamp(24px, 4vw, 36px);
 }
 
 .hub-orbit-ring,
 .hub-orbit-glow {
   position: absolute;
-  inset: 6%;
+  inset: 3%;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
 
 .hub-orbit-glow {
-  inset: 12%;
+  inset: 10%;
   border: none;
-  background: radial-gradient(circle, rgba(36, 67, 128, 0.4), rgba(8, 10, 18, 0));
-  filter: blur(8px);
+  background: radial-gradient(circle, rgba(36, 67, 128, 0.5), rgba(8, 10, 18, 0));
+  filter: blur(14px);
 }
 
 .hub-orb {
@@ -144,33 +144,33 @@
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  top: 8%;
+  top: 6%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
   top: 24%;
-  left: 86%;
+  left: 88%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
-  top: 52%;
-  left: 96%;
+  top: 53%;
+  left: 97%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
-  top: 94%;
+  top: 95%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
   top: 78%;
-  left: 8%;
+  left: 6%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-  top: 22%;
-  left: 6%;
+  top: 21%;
+  left: 5%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -411,13 +411,13 @@
   }
 
   .hub-orbit {
-    width: min(320px, 100%);
+    width: min(420px, 100%);
     margin-bottom: 20px;
   }
 
   .hub-orb {
-    width: clamp(180px, 60vw, 240px);
-    height: clamp(180px, 60vw, 240px);
+    width: clamp(220px, 70vw, 320px);
+    height: clamp(220px, 70vw, 320px);
   }
 
   .hub-orbit-icons {
