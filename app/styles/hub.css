@@ -616,6 +616,11 @@
   margin: 0;
 }
 
+.hub-stage-slot #doctorDailyWrap {
+  max-height: none;
+  overflow: visible;
+}
+
 @media (max-width: 640px) {
   .hub-stage-close {
     width: 36px;
