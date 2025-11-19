@@ -11,6 +11,30 @@
   const appModules = global.AppModules;
   const doc = global.document;
 
+  const getStageEl = () => doc?.getElementById('hubStage');
+  const updateStageLabel = (stage, label) => {
+    if (!stage) return;
+    const title = stage.querySelector('[data-stage-title]');
+    if (title) {
+      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswählen.';
+      title.textContent = label || fallback;
+    }
+  };
+  const showStageBox = (label) => {
+    const stage = getStageEl();
+    if (!stage) return;
+    stage.hidden = false;
+    stage.setAttribute('aria-hidden', 'false');
+    updateStageLabel(stage, label);
+  };
+  const hideStageBox = () => {
+    const stage = getStageEl();
+    if (!stage) return;
+    stage.hidden = true;
+    stage.setAttribute('aria-hidden', 'true');
+    updateStageLabel(stage);
+  };
+
   const activateHubLayout = () => {
     const config = appModules.config || {};
     if (!doc) {
@@ -32,18 +56,6 @@
 
   const setupIconBar = (hub) => {
     const buttons = hub.querySelectorAll('.hub-icon:not([disabled])');
-    const stage = hub.querySelector('#hubStage');
-    const stageTitle = stage?.querySelector('[data-stage-title]');
-
-    const showStage = (btn) => {
-      if (!stage) return;
-      stage.hidden = false;
-      stage.setAttribute('aria-hidden', 'false');
-      const label = btn?.querySelector('.sr-only')?.textContent?.trim();
-      if (stageTitle && label) {
-        stageTitle.textContent = label;
-      }
-    };
 
     const syncPressed = (target) => {
       buttons.forEach((btn) => {
@@ -51,12 +63,15 @@
       });
     };
 
-    const bindButton = (selector, handler) => {
+    const bindButton = (selector, handler, { showStage = true } = {}) => {
       const btn = hub.querySelector(selector);
       if (!btn) return;
       const open = () => handler(btn);
       btn.addEventListener('click', () => {
-        showStage(btn);
+        if (showStage) {
+          const label = btn.querySelector('.sr-only')?.textContent?.trim();
+          showStageBox(label);
+        }
         syncPressed(btn);
         open();
       });
@@ -65,7 +80,10 @@
         (event) => {
           if (event.pointerType === 'touch') {
             event.preventDefault();
-            showStage(btn);
+            if (showStage) {
+              const label = btn.querySelector('.sr-only')?.textContent?.trim();
+              showStageBox(label);
+            }
             syncPressed(btn);
             open();
           }
@@ -77,8 +95,8 @@
     bindButton('[data-hub-module="intake"]', openIntakeOverlay);
     bindButton('[data-hub-module="vitals"]', openVitalsOverlay);
     bindButton('[data-hub-module="doctor"]', openDoctorOverlay);
-    bindButton('#helpToggle', () => {});
-    bindButton('#diagToggle', () => {});
+    bindButton('#helpToggle', () => {}, { showStage: false });
+    bindButton('#diagToggle', () => {}, { showStage: false });
   };
 
   const setupChat = (hub) => {
@@ -187,6 +205,7 @@
       }
       overlay._open = false;
       doc.body?.style.removeProperty('overflow');
+      hideStageBox();
     };
     overlay.addEventListener('animationend', finishClose);
     overlay.addEventListener('animationcancel', finishClose);
