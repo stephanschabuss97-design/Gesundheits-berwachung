@@ -25,12 +25,17 @@
   gap: 16px;
 }
 
+.hub-hero {
+  min-height: min(100vh, 860px);
+  justify-content: center;
+}
+
 .hub-orbit {
-  --hub-orb-size: clamp(420px, 75vw, 780px);
+  --hub-orb-size: clamp(440px, 78vw, 820px);
   position: relative;
-  width: calc(var(--hub-orb-size) * 1.15);
+  width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
-  margin: clamp(8px, 1.5vw, 20px) auto clamp(20px, 3vw, 32px);
+  margin: 0 auto clamp(20px, 4vw, 36px);
 }
 
 .hub-orb {
@@ -67,11 +72,11 @@
 }
 
 .hub-orb img {
-  width: calc(var(--hub-orb-size) * 0.8);
+  width: calc(var(--hub-orb-size) * 0.95);
   height: auto;
-  max-width: 92%;
+  max-width: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 30px rgba(255, 200, 120, 0.45));
+  filter: drop-shadow(0 0 40px rgba(255, 200, 120, 0.6));
 }
 
 .hub-intake-pills {
@@ -128,33 +133,33 @@
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='north'] {
-  top: 4%;
+  top: -4%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='ne'] {
-  top: 18%;
-  left: 86%;
+  top: 12%;
+  left: 88%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='e'] {
-  top: 54%;
-  left: 96%;
+  top: 52%;
+  left: 100%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='s'] {
-  top: 97%;
+  top: 102%;
   left: 50%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='sw'] {
-  top: 82%;
-  left: 12%;
+  top: 84%;
+  left: -2%;
 }
 
 .hub-orbit-icons .hub-icon[data-orbit-pos='nw'] {
-  top: 20%;
-  left: 14%;
+  top: 10%;
+  left: 3%;
 }
 
 .hub-icon[aria-pressed='true'] {
@@ -395,26 +400,22 @@
   }
 
   .hub-orbit {
-    width: min(420px, 100%);
+    width: min(500px, 100%);
     margin-bottom: 20px;
   }
 
   .hub-orb {
-    width: clamp(220px, 70vw, 320px);
-    height: clamp(220px, 70vw, 320px);
+    width: clamp(280px, 80vw, 360px);
+    height: clamp(280px, 80vw, 360px);
   }
 
   .hub-orbit-icons {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 16px;
+    position: absolute;
+    inset: 0;
   }
 
   .hub-orbit-icons .hub-icon {
-    position: static;
-    transform: none;
+    transform: translate(-50%, -50%);
   }
 }
 .hub-intake-form {
