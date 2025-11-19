@@ -116,50 +116,6 @@
       </button>
     </div>
 
-  </section>
-
-<!-- Diagnose-Panel -->
-<div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
-<header>
-<h4 id="diagTitle">Touch-Log</h4>
-<button class="btn ghost" id="diagClose" type="button">x</button>
-</header>
-<pre id="diagLog" class="content u-m-0"></pre>
-</div>
-
-<!-- Diagramm-Panel (Daily) -->
-<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
-<header>
-<h4 id="chartTitle">Diagramm (Daily)</h4>
-<button class="btn ghost" id="chartClose" type="button">x</button>
-</header>
-<div class="content">
-<div class="controls">
-<select id="metricSel" class="half compact" aria-label="Messgroesse auswaehlen">
-    <option value="bp">Blutdruck (Sys/Dia)</option>
-    <option value="weight">Koerper</option>
-</select>
-
-  <!-- ANKER: chart-averages (Daily) -->
-  <div id="chartAverages" class="kpis" aria-live="polite">
-    <span data-k="sys">Durchschnitt Sys: -</span>
-    <span class="sep" aria-hidden="true">*</span>
-    <span data-k="dia">Durchschnitt Dia: -</span>
-    <span class="sep" aria-hidden="true">*</span>
-    <span data-k="map">Durchschnitt MAP: -</span>
-  </div>
-</div>
-
-<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
-<div class="legend" id="chartLegend"></div>
-<div class="small u-opacity70-mt6">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
-</div>
-</div>
-
-<div id="err" role="status" aria-live="polite"></div>
-<div id="busy"><div class="box"> Bitte warten...</div></div>
-
-<main id="appMain">
   
   <section
     class="hub-panel"
@@ -313,6 +269,7 @@
         </div>
       </div>
     </div>
+  </section>
   </section>
 <!-- END MODULE -->
 <!-- MODULE: CAPTURE (Intake)
