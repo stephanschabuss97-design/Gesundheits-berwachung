@@ -94,7 +94,7 @@
     </div>
 
         <div class="hub-icons" role="toolbar" aria-label="Module navigation">
-      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="true">
+      <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false">
         <span aria-hidden="true">💧</span>
         <span class="sr-only">Intake</span>
       </button>
@@ -115,16 +115,6 @@
         <span class="sr-only">Log</span>
       </button>
     </div>
-
-    <section class="hub-stage" id="hubStage" data-stage-default="Bitte Modul auswählen." aria-hidden="true" hidden>
-      <div class="hub-stage-content">
-        <header class="hub-stage-header">
-          <p class="hub-stage-label" data-stage-title>Bitte Modul auswählen.</p>
-          <button type="button" class="hub-stage-close" data-stage-close aria-label="Fenster schließen">×</button>
-        </header>
-        <div class="hub-stage-slot" data-stage-slot></div>
-      </div>
-    </section>
 
   </section>
 
@@ -171,144 +161,159 @@
 
 <main id="appMain">
   
-  <div class="hub-overlay" id="hubIntakeOverlay" aria-hidden="true" hidden>
-    <div class="hub-overlay-backdrop" data-close-overlay></div>
-    <div class="hub-overlay-card" role="dialog" aria-modal="true" aria-labelledby="hubIntakeTitle">
-      <header class="hub-overlay-header">
-        <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
-      </header>
-      <div class="hub-overlay-body" id="hubOverlayContent">
-        <div class="hub-intake-form" id="cap-intake-wrap">
-          <div class="hub-intake-grid">
-            <label class="hub-input-card">
-              <span>Wasser (ml)</span>
-                <input type="number" id="cap-water-add" min="0" step="50" placeholder="z. B. 250">
-              <button class="btn ghost" id="cap-water-add-btn" type="button">+ Menge</button>
-            </label>
-            <label class="hub-input-card">
-              <span>Salz (g)</span>
-              <input type="text" id="cap-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
-              <button class="btn ghost" id="cap-salt-add-btn" type="button">+ Menge</button>
-            </label>
-            <label class="hub-input-card">
-              <span>Protein (g)</span>
-              <input type="text" id="cap-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
-              <button class="btn ghost" id="cap-protein-add-btn" type="button">+ Menge</button>
-            </label>
+  <section
+    class="hub-panel"
+    id="hubIntakePanel"
+    data-hub-panel="intake"
+    role="region"
+    aria-labelledby="hubIntakeTitle"
+    aria-hidden="true"
+    hidden
+  >
+    <header class="hub-panel-header">
+      <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+    </header>
+    <div class="hub-panel-body" id="hubOverlayContent">
+      <div class="hub-intake-form" id="cap-intake-wrap">
+        <div class="hub-intake-grid">
+          <label class="hub-input-card">
+            <span>Wasser (ml)</span>
+            <input type="number" id="cap-water-add" min="0" step="50" placeholder="z. B. 250">
+            <button class="btn ghost" id="cap-water-add-btn" type="button">+ Menge</button>
+          </label>
+          <label class="hub-input-card">
+            <span>Salz (g)</span>
+            <input type="text" id="cap-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
+            <button class="btn ghost" id="cap-salt-add-btn" type="button">+ Menge</button>
+          </label>
+          <label class="hub-input-card">
+            <span>Protein (g)</span>
+            <input type="text" id="cap-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
+            <button class="btn ghost" id="cap-protein-add-btn" type="button">+ Menge</button>
+          </label>
+        </div>
+        <div class="hub-intake-note small u-mt10-opacity75">
+          Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
+        </div>
+      </div>
+    </div>
+  </section>
+  <section
+    class="hub-panel"
+    id="hubDoctorPanel"
+    data-hub-panel="doctor"
+    role="region"
+    aria-labelledby="hubDoctorTitle"
+    aria-hidden="true"
+    hidden
+  >
+    <header class="hub-panel-header">
+      <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+    </header>
+    <div class="hub-panel-body" id="hubDoctorContent">
+      <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
+        <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
+        <div class="toolbar">
+          <strong id="doctorTitle">Arzt-Ansicht</strong>
+          <div class="center-group">
+            <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
+            <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
+            <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+            <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
+            <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
           </div>
-          <div class="hub-intake-note small u-mt10-opacity75">
-            Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
+        </div>
+        <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
+        <div id="doctorDailyWrap">
+          <div class="doctor-view" id="doctorView"></div>
+        </div>
+        <div class="small u-mt-6">
+          Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
+        </div>
+      </section>
+    </div>
+  </section>
+  <section
+    class="hub-panel"
+    id="hubVitalsPanel"
+    data-hub-panel="vitals"
+    role="region"
+    aria-labelledby="hubVitalsTitle"
+    aria-hidden="true"
+    hidden
+  >
+    <header class="hub-panel-header">
+      <h2 id="hubVitalsTitle">Vitaldaten</h2>
+      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">×</button>
+    </header>
+    <div class="hub-panel-body">
+      <div class="hub-vitals">
+        <div class="hub-vitals-bp">
+          <div class="card-nested">
+            <div class="row u-row-flex-end-gap12">
+              <div class="u-minw-180">
+                <label for="bpContextSel">Messzeitpunkt</label>
+                <select id="bpContextSel">
+                  <option value="M">Morgens</option>
+                  <option value="A">Abends</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card-nested bp-pane active" data-context="M">
+            <h3 class="blockTitle">Morgens</h3>
+            <div class="grid">
+              <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
+              <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
+              <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
+            </div>
+            <div class="row u-mt-6">
+              <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
+            </div>
+          </div>
+          <div class="card-nested bp-pane" data-context="A">
+            <h3 class="blockTitle">Abends</h3>
+            <div class="grid">
+              <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
+              <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
+              <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
+            </div>
+            <div class="row u-mt-6">
+              <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
+          </div>
+        </div>
+        <div class="hub-vitals-body card-nested">
+          <div class="body-grid">
+            <div>
+              <label>Gewicht (kg)</label>
+              <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
+            </div>
+            <div>
+              <label>Bauchumfang (cm)</label>
+              <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
+            </div>
+            <div>
+              <label>Fett (%)</label>
+              <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
+            </div>
+            <div>
+              <label>Muskel (%)</label>
+              <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-  <div class="hub-overlay" id="hubDoctorOverlay" aria-hidden="true" hidden>
-    <div class="hub-overlay-backdrop" data-close-overlay></div>
-    <div class="hub-overlay-card doctor" role="dialog" aria-modal="true" aria-labelledby="hubDoctorTitle">
-      <header class="hub-overlay-header">
-        <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
-      </header>
-      <div class="hub-overlay-body" id="hubDoctorContent">
-        <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
-          <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
-          <div class="toolbar">
-            <strong id="doctorTitle">Arzt-Ansicht</strong>
-            <div class="center-group">
-              <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
-              <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
-              <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-              <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-              <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
-            </div>
-          </div>
-          <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
-          <div id="doctorDailyWrap">
-            <div class="doctor-view" id="doctorView"></div>
-          </div>
-          <div class="small u-mt-6">
-            Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
-          </div>
-        </section>
-      </div>
-    </div>
-  </div>
-  <div class="hub-overlay" id="hubVitalsOverlay" aria-hidden="true" hidden>
-    <div class="hub-overlay-backdrop" data-close-overlay></div>
-    <div class="hub-overlay-card vitals" role="dialog" aria-modal="true" aria-labelledby="hubVitalsTitle">
-      <header class="hub-overlay-header">
-        <h2 id="hubVitalsTitle">Vitaldaten</h2>
-        <button type="button" class="hub-overlay-close" data-close-overlay aria-label="Fenster schliessen">×</button>
-      </header>
-      <div class="hub-overlay-body">
-        <div class="hub-vitals">
-          <div class="hub-vitals-bp">
-            <div class="card-nested">
-              <div class="row u-row-flex-end-gap12">
-                <div class="u-minw-180">
-                  <label for="bpContextSel">Messzeitpunkt</label>
-                  <select id="bpContextSel">
-                    <option value="M">Morgens</option>
-                    <option value="A">Abends</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="card-nested bp-pane active" data-context="M">
-              <h3 class="blockTitle">Morgens</h3>
-              <div class="grid">
-                <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
-                <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-                <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-              </div>
-              <div class="row u-mt-6">
-                <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
-              </div>
-            </div>
-            <div class="card-nested bp-pane" data-context="A">
-              <h3 class="blockTitle">Abends</h3>
-              <div class="grid">
-                <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-                <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-                <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-              </div>
-              <div class="row u-mt-6">
-                <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
-            </div>
-          </div>
-          <div class="hub-vitals-body card-nested">
-            <div class="body-grid">
-              <div>
-                <label>Gewicht (kg)</label>
-                <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-              </div>
-              <div>
-                <label>Bauchumfang (cm)</label>
-                <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
-              </div>
-              <div>
-                <label>Fett (%)</label>
-                <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
-              </div>
-              <div>
-                <label>Muskel (%)</label>
-                <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </section>
 <!-- END MODULE -->
 <!-- MODULE: CAPTURE (Intake)
   intent: Tageserfassung (UI) inkl. Intake/BP/Body/Termine, verbindet Benutzeraktionen mit Save-Flows

@@ -11,33 +11,59 @@
   const appModules = global.AppModules;
   const doc = global.document;
 
-  const getStageEl = () => doc?.getElementById('hubStage');
-  const getStageSlot = () => doc?.querySelector('#hubStage [data-stage-slot]');
-  const getStageCloseBtn = () => doc?.querySelector('#hubStage [data-stage-close]');
-  const updateStageLabel = (stage, label) => {
-    if (!stage) return;
-    const title = stage.querySelector('[data-stage-title]');
-    if (title) {
-      const fallback = stage.dataset.stageDefault || 'Bitte Modul auswaehlen.';
-      title.textContent = label || fallback;
+  let hubButtons = [];
+  let activePanel = null;
+
+  const syncButtonState = (target) => {
+    hubButtons.forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn === target));
+    });
+  };
+
+  const handlePanelEsc = (event) => {
+    if (event.key === 'Escape') {
+      closeActivePanel();
     }
   };
-  const showStageBox = (label) => {
-    const stage = getStageEl();
-    if (!stage) return;
-    stage.hidden = false;
-    stage.setAttribute('aria-hidden', 'false');
-    updateStageLabel(stage, label);
+
+  const closeActivePanel = ({ skipButtonSync = false } = {}) => {
+    if (!activePanel) return;
+    activePanel.hidden = true;
+    activePanel.setAttribute('aria-hidden', 'true');
+    activePanel.classList.remove('hub-panel-open');
+    activePanel = null;
+    doc.removeEventListener('keydown', handlePanelEsc);
+    if (!skipButtonSync) {
+      syncButtonState(null);
+    }
   };
-  const hideStageBox = () => {
-    const stage = getStageEl();
-    if (!stage) return;
-    stage.hidden = true;
-    stage.setAttribute('aria-hidden', 'true');
-    updateStageLabel(stage);
-    delete stage.dataset.activeOverlay;
-    const slot = getStageSlot();
-    if (slot) slot.innerHTML = '';
+
+  const openPanel = (panelName) => {
+    if (!doc) return null;
+    const panel = doc.querySelector(`[data-hub-panel="${panelName}"]`);
+    if (!panel) return null;
+    if (activePanel === panel) return panel;
+    if (activePanel) {
+      closeActivePanel({ skipButtonSync: true });
+    }
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
+    panel.classList.add('hub-panel-open');
+    activePanel = panel;
+    doc.addEventListener('keydown', handlePanelEsc);
+    return panel;
+  };
+
+  const setupPanels = () => {
+    const panels = doc?.querySelectorAll('[data-hub-panel]');
+    if (!panels) return;
+    panels.forEach((panel) => {
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+      panel.querySelectorAll('[data-panel-close]').forEach((btn) => {
+        btn.addEventListener('click', () => closeActivePanel());
+      });
+    });
   };
 
   const ensureDoctorUnlocked = async () => {
@@ -65,33 +91,27 @@
       return;
     }
     setupIconBar(hub);
+    setupPanels();
     setupDatePill(hub);
     moveIntakePillsToHub();
     setupChat(hub);
-    setupStageClose();
     setupSpriteState(hub);
     doc.body.classList.add('hub-mode');
   };
 
   const setupIconBar = (hub) => {
-    const buttons = hub.querySelectorAll('.hub-icon:not([disabled])');
-
-    const syncPressed = (target) => {
-      buttons.forEach((btn) => {
-        btn.setAttribute('aria-pressed', String(btn === target));
-      });
-    };
+    hubButtons = Array.from(hub.querySelectorAll('.hub-icon:not([disabled])'));
 
     const bindButton = (selector, handler, { sync = true } = {}) => {
       const btn = hub.querySelector(selector);
       if (!btn) return;
       const invoke = async () => {
-        if (sync) syncPressed(btn);
+        if (sync) syncButtonState(btn);
         try {
           await handler(btn);
         } catch (err) {
           console.error('[hub] button handler failed', err);
-          if (sync) syncPressed(null);
+          if (sync) syncButtonState(null);
         }
       };
       btn.addEventListener('click', () => {
@@ -109,35 +129,30 @@
       );
     };
 
-    const openStageOverlay = (overlayId) => (btn) => openSimpleOverlay(overlayId, btn);
-
-    bindButton('[data-hub-module="intake"]', openStageOverlay('hubIntakeOverlay'));
-    bindButton('[data-hub-module="vitals"]', openStageOverlay('hubVitalsOverlay'));
-    bindButton('[data-hub-module="doctor"]', async (btn) => {
-      if (!(await ensureDoctorUnlocked())) {
-        syncPressed(null);
-        hideStageBox();
+    const openPanelHandler = (panelName) => async (btn) => {
+      if (activePanel?.dataset?.hubPanel === panelName) {
+        closeActivePanel();
         return;
       }
-      openStageOverlay('hubDoctorOverlay')(btn);
-    });
+      const panel = openPanel(panelName);
+      if (!panel) {
+        syncButtonState(null);
+        return;
+      }
+      syncButtonState(btn);
+    };
+
+    bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
+    bindButton('[data-hub-module="vitals"]', openPanelHandler('vitals'), { sync: false });
+    bindButton('[data-hub-module="doctor"]', async (btn) => {
+      if (!(await ensureDoctorUnlocked())) {
+        return;
+      }
+      await openPanelHandler('doctor')(btn);
+    }, { sync: false });
     bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
   };
-  const setupStageClose = () => {
-    const btn = getStageCloseBtn();
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const stage = getStageEl();
-      const active = stage?.dataset.activeOverlay;
-      if (active) {
-        closeSimpleOverlay(active);
-      } else {
-        hideStageBox();
-      }
-    });
-  };
-
   const setupChat = (hub) => {
     const form = hub.querySelector('#hubChatForm');
     if (!form) return;
@@ -184,100 +199,6 @@
     pill.addEventListener('click', () => captureDate.showPicker?.());
   };
 
-  const openSimpleOverlay = (overlayId, trigger) => {
-    if (!doc) return null;
-    const overlay = doc.getElementById(overlayId);
-    const slot = getStageSlot();
-    const stage = getStageEl();
-    const body = overlay?.querySelector('.hub-overlay-body');
-    if (!overlay || !slot || !stage || !body) return null;
-
-    const active = stage.dataset.activeOverlay;
-    if (active && active !== overlayId) {
-      closeSimpleOverlay(active);
-    } else if (active === overlayId) {
-      return overlay;
-    }
-
-    overlay._bodyParent = body.parentElement;
-    overlay._bodyNext = body.nextSibling;
-    slot.innerHTML = '';
-    slot.appendChild(body);
-
-    const header = overlay.querySelector('.hub-overlay-header');
-    const headerTitle = header?.querySelector('h2')?.textContent?.trim();
-    overlay._headerHidden = header ? header.hidden : false;
-    if (header) header.hidden = true;
-
-    const label =
-      headerTitle ||
-      trigger?.querySelector('.sr-only')?.textContent?.trim() ||
-      body.getAttribute('aria-label') ||
-      overlay.getAttribute('aria-label') ||
-      '';
-    stage.dataset.activeOverlay = overlayId;
-    showStageBox(label);
-
-    const escHandler = (event) => {
-      if (event.key === 'Escape') {
-        closeSimpleOverlay(overlayId);
-      }
-    };
-    overlay._escHandler = escHandler;
-    doc.addEventListener('keydown', escHandler);
-
-    overlay._open = true;
-    return overlay;
-  };
-
-  const closeSimpleOverlay = (overlayId) => {
-    if (!doc) return;
-    const overlay = doc.getElementById(overlayId);
-    const stage = getStageEl();
-    if (!overlay || !overlay._open) return;
-
-    const slot = getStageSlot();
-    const body = slot?.querySelector('.hub-overlay-body');
-    if (body) {
-      if (overlay._bodyNext && overlay._bodyNext.parentNode === overlay._bodyParent) {
-        overlay._bodyParent.insertBefore(body, overlay._bodyNext);
-      } else if (overlay._bodyParent) {
-        overlay._bodyParent.appendChild(body);
-      }
-    }
-    if (slot) slot.innerHTML = '';
-
-    const header = overlay.querySelector('.hub-overlay-header');
-    if (header) {
-      header.hidden = overlay._headerHidden || false;
-    }
-
-    if (overlay._escHandler) {
-      doc.removeEventListener('keydown', overlay._escHandler);
-      overlay._escHandler = null;
-    }
-
-    overlay._open = false;
-    if (stage?.dataset.activeOverlay === overlayId) {
-      hideStageBox();
-    }
-  };
-
-  const openIntakeOverlay = (trigger) => {
-    openSimpleOverlay('hubIntakeOverlay', trigger);
-  };
-
-  const closeIntakeOverlay = () => {
-    closeSimpleOverlay('hubIntakeOverlay');
-  };
-
-  const openVitalsOverlay = (trigger) => {
-    openSimpleOverlay('hubVitalsOverlay', trigger);
-  };
-
-  const closeVitalsOverlay = () => {
-    closeSimpleOverlay('hubVitalsOverlay');
-  };
   const moveIntakePillsToHub = () => {
     const hub = doc?.querySelector('[data-role="hub-intake-pills"]');
     const pills = doc?.getElementById('cap-intake-status-top');
