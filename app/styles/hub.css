@@ -27,7 +27,7 @@
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(480px, 82vw, 880px);
+  --hub-orb-size: clamp(460px, 82vw, 820px);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
@@ -70,11 +70,10 @@
 .hub-orb::before {
   content: '';
   position: absolute;
-  inset: -2%;
+  inset: -6%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 125, 255, 0.22) 0%, rgba(59, 125, 255, 0.15) 35%, rgba(59, 125, 255, 0.06) 55%, rgba(15, 30, 60, 0) 78%);
-  filter: blur(24px);
-  animation: hubHalo 12s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(59, 125, 255, 0.18) 0%, rgba(59, 125, 255, 0.12) 40%, rgba(59, 125, 255, 0.05) 65%, rgba(15, 30, 60, 0) 85%);
+  filter: blur(30px);
   pointer-events: none;
   z-index: 0;
 }
