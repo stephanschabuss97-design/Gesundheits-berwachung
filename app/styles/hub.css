@@ -27,7 +27,7 @@
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(440px, 78vw, 820px);
+  --hub-orb-size: clamp(480px, 82vw, 880px);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
@@ -69,11 +69,12 @@
 
 .hub-orb-bg {
   z-index: 1;
-  width: 120%;
-  height: 120%;
+  width: 110%;
+  height: 110%;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(1);
+  animation: hubBgBreathe 8s ease-in-out infinite;
 }
 
 .hub-intake-pills {
@@ -322,6 +323,24 @@
     transform: none !important;
     box-shadow: none !important;
   }
+
+  .hub-orb-bg {
+    animation: none !important;
+    transform: translate(-50%, -50%) scale(1) !important;
+  }
+}
+
+@keyframes hubBgBreathe {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
 }
 
 @media (max-width: 640px) {
