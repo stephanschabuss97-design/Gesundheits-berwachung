@@ -65,6 +65,11 @@
   animation: coreFadeOut 0.6s ease forwards;
 }
 
+.hub-icon.glow {
+  animation: modPulse 0.55s ease-out forwards;
+  filter: brightness(1.1);
+}
+
 .hub-orb-bg {
   z-index: 1;
   width: 105%;
@@ -301,6 +306,17 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.97);
+  }
+}
+
+@keyframes modPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.92);
+    filter: brightness(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1.25);
   }
 }
 
