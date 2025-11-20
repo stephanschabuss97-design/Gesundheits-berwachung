@@ -13,14 +13,15 @@
   align-items: center;
   gap: 16px;
   justify-content: flex-start;
+  padding-top: clamp(0px, 2vh, 12px);
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(460px, 82vw, 820px);
+  --hub-orb-size: clamp(500px, 92vw, 900px);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
-  margin: 0 auto clamp(20px, 4vw, 36px);
+  margin: 0 auto clamp(10px, 3vw, 28px);
 }
 
 .hub-orb {
@@ -58,8 +59,8 @@
 
 .hub-orb-bg {
   z-index: 1;
-  width: 100%;
-  height: 100%;
+  width: 105%;
+  height: 105%;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -271,13 +272,13 @@
   }
 
   .hub-orbit {
-    width: min(500px, 100%);
-    margin-bottom: 20px;
+    width: min(520px, 94vw);
+    margin-bottom: 16px;
   }
 
   .hub-orb {
-    width: clamp(280px, 80vw, 360px);
-    height: clamp(280px, 80vw, 360px);
+    width: clamp(320px, 92vw, 440px);
+    height: clamp(320px, 92vw, 440px);
   }
 
   .hub-orbit-icons {
