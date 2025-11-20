@@ -1,99 +1,73 @@
 # MIDAS Orb Experience
 
 ## Leitidee
+MIDAS soll sich wie ein intelligentes Gerät anfühlen – kein klassisches Formular-UI. Im Zentrum steht das MIDAS-Logo als „Orb-Reaktor“. Acht Speichen (Kompassrose) repräsentieren Module und KI-Platzhalter:
+1) Intake (Wasser/Salz/Protein)  
+2) Vitals (Blutdruck + Körper)  
+3) Doctor View  
+4) Training (placeholder)  
+5) Termine/Calendar (placeholder)  
+6) GPT Voice Chat (Center Button, später KI)  
+7) Open Chat + Dictate / Camera (placeholder)  
+8) Optional: Log/Hilfe oder zukünftige Funktion  
+Zentrum: GPT Voice Chat Trigger
 
-MIDAS soll sich wie ein intelligentes Gerät anfühlen – kein klassisches Formular-UI. Im Zentrum steht das MIDAS-Logo als „Orb-Reaktor“. Acht Speichen (Kompassrose) repräsentieren die Module:
+Der Orb pulsiert im Idle-State. Ein Speichen-Button schrumpft den Orb leicht, die Spitze leuchtet, und das Panel wächst aus dieser Richtung heraus. Beim Schließen kollabiert das Panel zurück; keine Tabs oder Sidebars bewegen sich.
 
-1. Intake (Wasser/Salz/Protein)
-2. Vitals (Blutdruck + Körper)
-3. Doctor View
-4. Training (placeholder)
-5. Termine/Calendar (placeholder)
-6. GPT Voice Chat (Center Button, später KI)
-7. Open Chat + Dictate / Camera (placeholder)
-8. Placeholder (z. B. Log/Hilfe oder zukünftige Funktion)
-9. Zentrum = GPT Voice Chat Trigger
-
-Der Orb pulsiert im Idle-State. Sobald ein Speichen-Button berührt wird, schrumpft der Orb leicht, die ausgewählte Spitze leuchtet und genau aus dieser Richtung „wächst“ das entsprechende Panel organisch heraus. Beim Schließen kollabiert das Panel zurück in die Spitze und der Orb atmet wieder auf volle Größe, ohne dass sich Tabs oder Sidebars bewegen.
-
-## Warum?
-
-- **Ikonisches UI**: Einzigartige visuelle Identität, kein Tab-Chaos.
-- **Modular**: Jeder Hotspot vertritt genau ein Modul; KI kann später Panels automatisch öffnen.
-- **Mobile-first**: Kein Platzverlust für Leisten; alles beginnt im Orb.
-- **Zukunftssicher**: Animationen für Idle/Thinking/Voice können direkt am Orb stattfinden.
+## Aktueller Stand (Phase 0)
+- Intake/Vitals/Doctor sind als eigenständige Cards eingebunden (Stage entfernt).  
+- Dokumentation und Roadmaps aktualisiert.  
+- Desktop + Android getestet.  
+- Datum: Single Source of Truth `#date`, inline im Vitals-Panel.  
+- Intake-Pills: nur Werte, keine Ampelfarben; Pill-Header liegt im Hero.  
+- Orbit: Buttons werden per JS (sin/cos) positioniert, Radius automatisch (Desktop 0.45, Mobile 0.50), keine fixen CSS-Offsets.
 
 ## Zielzustand
-
 1. **Orb + Speichen**  
-   - SVG/Canvas oder CSS-Pseudo-Elemente für die acht Hotspots.  
-   - Fokus- und Screenreader-Beschriftung pro Speiche.  
-   - Adaptive Layouts (Portrait/ Landscape).
-
+   - Hotspots mit ARIA-Labels, adaptive Layouts (Portrait/Landscape).  
+   - Radiale Positionierung bleibt automatisch gekoppelt an die Orb-Größe.
 2. **Panel Morphing**  
-   - Intake, Vitals, Doctor View usw. als eigenständige „Panels“ (Cards).  
-   - Transform-Origin + Translate berechnen sich aus der Speichen-Position.  
-   - Animationen: `scale` 0.2 → 1.0, `opacity` 0 → 1, optional Mask/Clip für echten Morph.  
-   - Panel enthält Close-Button + ESC Support; beim Schließen revertet alles.
-
+   - Intake, Vitals, Doctor etc. als eigenständige Cards.  
+   - Transform-Origin aus Speichen-Position; Animationen (scale/opacity, optional Clip/Mask).  
+   - Close-Button + ESC, Panels revertieren ohne Tab-Wechsel.
 3. **State Management**  
-   - Kein Stage-Slot mehr. Stattdessen `currentModule`.  
-   - Doctor Speiche löst weiterhin `ensureDoctorUnlocked()` aus, bevor Panel entsteht.  
-   - Intake/Vitals behalten ihre Submits, nur UI bewegt sich.
-
+   - Kein Stage-Slot; `currentModule` steuert Sichtbarkeit.  
+   - Doctor bleibt hinter Biometrie (`ensureDoctorUnlocked`).  
+   - Intake/Vitals behalten bestehende Save-Flows.
 4. **Future Hooks**  
-   - Center button für Voice Chat (später: KI Idle/Thinking/Voice Animations).  
-   - Placeholder-Speichen (Training, Camera, Termine) haben schon Interaktionsfläche.
+   - Center-Button für Voice Chat/KI-States (Idle/Thinking/Voice).  
+   - Platzhalter für Training, Termine, Camera/Dictate gefüllt, sobald Features bereit sind.
 
 ## Umsetzungspfad
-
-### Vorarbeiten (laufende Aufgaben)
-
-1. **Stage-Altlasten entfernen**  
-   - Panels (Intake, Vitals, Doctor) wieder als eigenständige Cards betreiben; keine abgeschnittenen Hintergründe oder doppelten Scrollbereiche.  
-   - Mobile/Zoom-Bugs fixen (Android + Desktop 100 %).  
-   - Sicherstellen, dass Close/ESC/Fokus bereits jetzt sauber funktionieren.
-2. **Datum & Formular-Logik bereinigen**  
-   - Die globale Datumspille bleibt die „Single Source of Truth“, wird aber zusätzlich direkt in der Vitals-Card angezeigt, damit Blutdruck/Körper dort zugänglich ist.  
-   - Intake/Vitals/Doctor speichern unverändert, inklusive Biometrie-Gate.
-
-### Phase 0 – Status quo sichern
-- Intake/Vitals/Doctor Panels optisch konsistent (bereits erledigt).  
-- Dokumentation & Roadmaps aktualisiert.  
-- Tests auf Desktop + Android durchgeführt.
+### Phase 0 – Status quo sichern (erledigt)
+- Panels konsistent, Stage entfernt, Datum inline.  
+- Doku/Specs aktualisiert; Tests auf Desktop & Android.
 
 ### Phase 1 – Orb Layout ohne Morph
-- Stage entfernen, Panels wieder eigenständig unterhalb des Orbs anzeigen.  
-- Orb + Speichen in einem flexiblen Container layouten.  
-- Buttons triggern Panels inline (vorerst ohne Animations-Magie) – Funktionalität sicherstellen.  
-- Hilfe/Log bleiben außerhalb des Orbs (z. B. sekundäre Buttons).
+- orbit + Speichen in flexiblen Container; Panels inline triggern.  
+- Hilfe/Log bleiben außerhalb des Orbs (sekundäre Buttons).
 
 ### Phase 2 – Morph Engine
-- Speichen als absolute Hotspots definieren (Position + aria labels).  
-- JS: `openModule(id)` berechnet Startpunkt (BoundingClientRect) und setzt CSS-Variablen (`--origin-x/y`).  
-- CSS: Keyframes für expand/collapse; Panel pseudo-Container für Glow.  
-- Close-Button + ESC revertieren, Panel verschwindet wieder im Orb.
+- Hotspots definiert (Winkel, aria-labels).  
+- JS setzt Startpunkt (`--origin-x/y`), CSS animiert expand/collapse.  
+- ESC/Close revertiert das Panel.
 
-### Phase 3 – KI/Voice Vorbereitung
-- Center-Button und Orb-State-Machine (Idle, Thinking, Voice).  
-- Audio/Chat Buttons verlinken, falls Module existieren.  
-- Placeholder-Strahlen mit Dummy-Panels (z. B. „Training – Coming soon“).
+### Phase 3 – KI/Voice
+- Center-Button + Orb-State-Machine (Idle/Thinking/Voice).  
+- Audio/Chat-Buttons anbinden, KI später steuert Panels.
 
 ### Phase 4 – Fine Tuning
-- Responsives Verhalten testen (Desktop, Tablet, Android).  
-- Performance-Optimierung (reduced-motion respektieren, minimal Layout thrash).  
-- Supabase/Docs Updates passend zur UX.
+- Responsives Verhalten, reduced-motion, Performance.  
+- Supabase/Docs Updates nachziehen.
 
 ## Offene Fragen
-
-- Wird die Morph-Geometrie rein per CSS transformiert oder benötigen wir SVG-Path-Animation?  
-- Wie koppeln wir KI-States (Idle/Thinking/Voice) in Echtzeit an den Orb?  
-- Welche Strahlen werden im MVP aktiv? (aktuell: Intake, Vitals, Doctor, Hilfe, Log.)
+- Morph per CSS oder SVG-Path-Animation?  
+- Wie koppeln wir KI-States (Idle/Thinking/Voice) in Echtzeit?  
+- Welche Speichen sind MVP-aktiv (aktuell Intake, Vitals, Doctor, Hilfe, Log)?
 
 ## Nächste Schritte
+1. Orbit/Speichen Layout weiter verfeinern (Buttons/Icons finalisieren).  
+2. Panel-Morph vorbereiten (CSS/JS Hooks).  
+3. A11y/Fokus testen, reduced-motion berücksichtigen.  
+4. Docs synchron halten (Layout Spec, Module Overviews).
 
-1. Stage entfernen und Module wieder in eigenständige Panels überführen.  
-2. Orb/Speichen Layout definieren und in `hub.css` verankern.  
-3. Panel-Trigger + Close-Logik refactoren (`app/modules/hub/index.js`).  
-4. Animationen hinzufügen und mobile Tests durchführen.  
-5. Docs (Layout Spec, Module Overview) synchron halten.
