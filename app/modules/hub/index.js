@@ -25,8 +25,6 @@
   let hubButtons = [];
   let activePanel = null;
   let setSpriteStateFn = null;
-  let setCoreStateFn = null;
-  let clearButtonGlow = null;
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -48,8 +46,6 @@
     activePanel = null;
     doc.removeEventListener('keydown', handlePanelEsc);
     setSpriteStateFn?.('idle');
-    setCoreStateFn?.('idle');
-    hubButtons.forEach((btn) => btn.classList.remove('glow'));
     if (!skipButtonSync) {
       syncButtonState(null);
     }
@@ -154,16 +150,11 @@
     moveIntakePillsToHub();
     setupChat(hub);
     setupSpriteState(hub);
-    setupCoreState(hub);
     doc.body.classList.add('hub-mode');
   };
 
   const setupIconBar = (hub) => {
     hubButtons = Array.from(hub.querySelectorAll('.hub-icon:not([disabled])'));
-
-    clearButtonGlow = () => {
-      hubButtons.forEach((btn) => btn.classList.remove('glow'));
-    };
 
     const bindButton = (selector, handler, { sync = true } = {}) => {
       const btn = hub.querySelector(selector);
@@ -201,15 +192,10 @@
       if (!panel) {
         syncButtonState(null);
         setSpriteStateFn?.('idle');
-        setCoreStateFn?.('idle');
-        clearButtonGlow?.();
         return;
       }
       syncButtonState(btn);
       setSpriteStateFn?.(panelName);
-      setCoreStateFn?.('fadeout');
-      clearButtonGlow?.();
-      btn?.classList.add('glow');
     };
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
@@ -261,22 +247,6 @@
     setState(orb.dataset.state || 'idle');
     setSpriteStateFn = setState;
     appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
-  };
-
-  const setupCoreState = (hub) => {
-    const fg = hub.querySelector('.hub-orb-fg');
-    if (!fg) return;
-    const setCoreState = (state) => {
-      fg.classList.remove('core-idle', 'core-fadeout');
-      if (state === 'idle') {
-        fg.classList.add('core-idle');
-      }
-      if (state === 'fadeout') {
-        fg.classList.add('core-fadeout');
-      }
-    };
-    setCoreState('idle');
-    setCoreStateFn = setCoreState;
   };
 
   const setupDatePill = () => {

@@ -37,18 +37,6 @@
   overflow: hidden;
 }
 
-.hub-orb::after {
-  content: '';
-  position: absolute;
-  inset: 10%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 212, 120, 0.35) 0%, rgba(255, 212, 120, 0.08) 55%, rgba(255, 212, 120, 0) 95%);
-  filter: blur(10px);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
 .hub-orb-bg,
 .hub-orb-fg {
   position: absolute;
@@ -61,21 +49,11 @@
 
 .hub-orb-fg {
   z-index: 2;
-  filter: drop-shadow(0 0 40px rgba(255, 200, 120, 0.6));
   width: 75%;
   height: 75%;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-}
-
-.hub-orb.core-idle::after {
-  animation: coreGlow 4s ease-in-out infinite;
-  opacity: 1;
-}
-
-.hub-orb.core-fadeout::after {
-  animation: coreGlowFade 0.5s ease forwards;
 }
 
 .hub-orb-bg {
@@ -210,111 +188,6 @@
 
 .hub-panel-body {
   width: 100%;
-}
-
-
-@keyframes hubModalIn {
-  0% {
-    transform: scale(0.2);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes hubModalOut {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.2);
-    opacity: 0;
-  }
-}
-
-.hub-orb[data-state='thinking'] {
-  animation: hubThinking 4s ease-in-out infinite;
-}
-
-.hub-orb[data-state='voice'] {
-  animation: hubVoice 2.5s linear infinite;
-}
-
-@media (max-width: 600px) {
-  .hub-orb {
-    animation: hubIdle 10s ease-in-out infinite;
-  }
-
-  .hub-orb[data-state='thinking'],
-  .hub-orb[data-state='voice'] {
-    animation: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hub-orb,
-  .hub-orb[data-state='thinking'],
-  .hub-orb[data-state='voice'] {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  .hub-icon,
-  .hub-chat button {
-    transition: none !important;
-    transform: none !important;
-    box-shadow: none !important;
-  }
-
-  .hub-orb-bg {
-    animation: none !important;
-    transform: translate(-50%, -50%) !important;
-  }
-}
-
-@keyframes hubBgBreathe {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.03);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes coreGlow {
-  0% {
-    transform: scale(1);
-    opacity: 0.85;
-  }
-  33% {
-    transform: scale(1.02);
-    opacity: 1;
-  }
-  66% {
-    transform: scale(0.99);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.85;
-  }
-}
-
-@keyframes coreGlowFade {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.98);
-  }
 }
 
 @media (max-width: 640px) {
