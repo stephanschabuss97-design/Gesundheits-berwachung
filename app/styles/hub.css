@@ -13,15 +13,15 @@
   align-items: center;
   gap: 16px;
   justify-content: flex-start;
-  padding-top: clamp(0px, 2vh, 12px);
+  padding-top: clamp(0px, 1vh, 8px);
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(500px, 92vw, 900px);
+  --hub-orb-size: clamp(520px, 96vw, 920px);
   position: relative;
   width: calc(var(--hub-orb-size) * 1.1);
   aspect-ratio: 1;
-  margin: 0 auto clamp(10px, 3vw, 28px);
+  margin: 0 auto clamp(6px, 2vw, 20px);
 }
 
 .hub-orb {
@@ -272,13 +272,13 @@
   }
 
   .hub-orbit {
-    width: min(520px, 94vw);
-    margin-bottom: 16px;
+    width: min(560px, 98vw);
+    margin-bottom: 10px;
   }
 
   .hub-orb {
-    width: clamp(320px, 92vw, 440px);
-    height: clamp(320px, 92vw, 440px);
+    width: clamp(360px, 96vw, 520px);
+    height: clamp(360px, 96vw, 520px);
   }
 
   .hub-orbit-icons {
