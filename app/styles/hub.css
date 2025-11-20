@@ -70,11 +70,11 @@
 .hub-orb::before {
   content: '';
   position: absolute;
-  inset: -6%;
+  inset: -2%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 125, 255, 0.35) 0%, rgba(15, 30, 60, 0) 70%);
-  filter: blur(12px);
-  animation: hubHalo 10s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(59, 125, 255, 0.22) 0%, rgba(59, 125, 255, 0.15) 35%, rgba(59, 125, 255, 0.06) 55%, rgba(15, 30, 60, 0) 78%);
+  filter: blur(24px);
+  animation: hubHalo 12s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
@@ -339,6 +339,11 @@
     animation: none !important;
     transform: translate(-50%, -50%) !important;
   }
+
+  .hub-orb::before {
+    animation: none !important;
+    opacity: 0.7 !important;
+  }
 }
 
 @keyframes hubBgBreathe {
@@ -356,15 +361,15 @@
 @keyframes hubHalo {
   0% {
     transform: scale(1) translateZ(0);
-    opacity: 0.9;
+    opacity: 0.7;
   }
   50% {
-    transform: scale(1.05) translateZ(0);
-    opacity: 1;
+    transform: scale(1.04) translateZ(0);
+    opacity: 0.9;
   }
   100% {
     transform: scale(1) translateZ(0);
-    opacity: 0.9;
+    opacity: 0.7;
   }
 }
 
