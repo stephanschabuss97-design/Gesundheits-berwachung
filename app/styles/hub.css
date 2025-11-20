@@ -69,8 +69,8 @@
 
 .hub-orb-bg {
   z-index: 1;
-  width: 110%;
-  height: 110%;
+  width: 115%;
+  height: 115%;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
