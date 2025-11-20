@@ -60,8 +60,8 @@
 .hub-orb-fg {
   z-index: 2;
   filter: drop-shadow(0 0 40px rgba(255, 200, 120, 0.6));
-  width: 90%;
-  height: 90%;
+  width: 82%;
+  height: 82%;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);

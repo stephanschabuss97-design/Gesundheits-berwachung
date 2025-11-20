@@ -57,7 +57,7 @@
     if (!orbit || !buttons.length) return;
 
     const getBaseFactor = () =>
-      global.matchMedia('(max-width: 640px)').matches ? 0.5 : 0.45;
+      global.matchMedia('(max-width: 640px)').matches ? 0.55 : 0.5;
 
     const setPositions = () => {
       const rect = orbit.getBoundingClientRect();
