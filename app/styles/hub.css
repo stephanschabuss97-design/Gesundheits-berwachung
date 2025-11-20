@@ -1,4 +1,4 @@
-.hub {
+﻿.hub {
   width: min(1200px, 100%);
   margin: 0 auto;
   padding: clamp(12px, 2vw, 24px) clamp(24px, 4vw, 48px) clamp(28px, 6vw, 56px);
@@ -37,42 +37,31 @@
 .hub-orb {
   width: var(--hub-orb-size);
   height: var(--hub-orb-size);
-  border-radius: 50%;
   display: grid;
   place-items: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(12, 34, 92, 0.35), rgba(5, 6, 10, 0.1));
-  box-shadow: 0 0 35px rgba(32, 104, 255, 0.5);
-  animation: hubIdle 6s ease-in-out infinite;
 }
 
-.hub-orb::after {
-  content: '';
+.hub-orb-bg,
+.hub-orb-fg {
   position: absolute;
-  inset: 12px;
-  border-radius: 50%;
-  border: 2px solid rgba(69, 145, 255, 0.35);
-}
-
-.hub-orb::before {
-  content: '';
-  position: absolute;
-  inset: 24px;
-  border-radius: 50%;
-  border: 2px solid rgba(89, 180, 255, 0.25);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.hub-orb img {
-  width: calc(var(--hub-orb-size) * 0.95);
-  height: auto;
-  max-width: 100%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  transition: transform 280ms ease, opacity 280ms ease;
+}
+
+.hub-orb-fg {
+  z-index: 2;
   filter: drop-shadow(0 0 40px rgba(255, 200, 120, 0.6));
+}
+
+.hub-orb-bg {
+  z-index: 1;
 }
 
 .hub-intake-pills {
@@ -290,49 +279,20 @@
 
 .hub-orb[data-state='thinking'] {
   animation: hubThinking 4s ease-in-out infinite;
-  box-shadow: 0 0 55px rgba(90, 154, 255, 0.8);
-}
-
-.hub-orb[data-state='thinking']::before {
-  animation: hubRing 2.5s ease-out infinite;
-  opacity: 1;
 }
 
 .hub-orb[data-state='voice'] {
   animation: hubVoice 2.5s linear infinite;
-  box-shadow: 0 0 65px rgba(255, 208, 120, 0.9);
-}
-
-.hub-orb[data-state='voice']::after {
-  animation: hubRingPulse 1.6s ease-out infinite;
-  border-color: rgba(255, 208, 120, 0.4);
-}
-
-.hub-orb[data-state='voice']::before {
-  animation: hubVoiceWave 1.6s ease-out infinite;
-  border-color: rgba(80, 188, 255, 0.35);
-  opacity: 1;
 }
 
 @media (max-width: 600px) {
   .hub-orb {
     animation: hubIdle 10s ease-in-out infinite;
-    box-shadow: 0 0 25px rgba(32, 104, 255, 0.35);
   }
 
   .hub-orb[data-state='thinking'],
   .hub-orb[data-state='voice'] {
     animation: none;
-    box-shadow: 0 0 30px rgba(32, 104, 255, 0.45);
-  }
-
-  .hub-orb::before,
-  .hub-orb::after,
-  .hub-orb[data-state='thinking']::before,
-  .hub-orb[data-state='voice']::before,
-  .hub-orb[data-state='voice']::after {
-    animation: none;
-    opacity: 0.2;
   }
 }
 
@@ -342,17 +302,6 @@
   .hub-orb[data-state='voice'] {
     animation: none !important;
     transition: none !important;
-    box-shadow: 0 0 20px rgba(32, 104, 255, 0.4);
-  }
-
-  .hub-orb::before,
-  .hub-orb::after,
-  .hub-orb[data-state='thinking']::before,
-  .hub-orb[data-state='voice']::before,
-  .hub-orb[data-state='voice']::after {
-    animation: none !important;
-    transition: none !important;
-    opacity: 0.15 !important;
   }
 
   .hub-icon,

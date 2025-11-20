@@ -24,6 +24,7 @@
 
   let hubButtons = [];
   let activePanel = null;
+  let setSpriteStateFn = null;
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -44,6 +45,7 @@
     activePanel.classList.remove('hub-panel-open');
     activePanel = null;
     doc.removeEventListener('keydown', handlePanelEsc);
+    setSpriteStateFn?.('idle');
     if (!skipButtonSync) {
       syncButtonState(null);
     }
@@ -55,7 +57,7 @@
     if (!orbit || !buttons.length) return;
 
     const getBaseFactor = () =>
-      global.matchMedia('(max-width: 640px)').matches ? 0.7 : 0.7;
+      global.matchMedia('(max-width: 640px)').matches ? 0.5 : 0.45;
 
     const setPositions = () => {
       const rect = orbit.getBoundingClientRect();
@@ -189,9 +191,11 @@
       const panel = openPanel(panelName);
       if (!panel) {
         syncButtonState(null);
+        setSpriteStateFn?.('idle');
         return;
       }
       syncButtonState(btn);
+      setSpriteStateFn?.(panelName);
     };
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
@@ -221,14 +225,27 @@
 
   const setupSpriteState = (hub) => {
     const orb = hub.querySelector('.hub-orb');
+    const fg = hub.querySelector('.hub-orb-fg');
     if (!orb) return;
-    const allowed = new Set(['idle', 'thinking', 'voice']);
+    const stateImages = {
+      idle: 'assets/img/Idle_state.png',
+      intake: 'assets/img/Intakes_state.png',
+      vitals: 'assets/img/Vitals_state.png',
+      doctor: 'assets/img/doctor_view_state.png',
+      thinking: 'assets/img/Idle_state.png',
+      voice: 'assets/img/Idle_state.png',
+    };
     const setState = (state) => {
-      const next = allowed.has(state) ? state : 'idle';
+      const next = stateImages[state] ? state : 'idle';
+      if (fg && stateImages[next]) {
+        fg.src = stateImages[next];
+        fg.alt = `MIDAS Orb ${next}`;
+      }
       orb.dataset.state = next;
       global.console?.debug?.('[hub] sprite state ->', next);
     };
     setState(orb.dataset.state || 'idle');
+    setSpriteStateFn = setState;
     appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
   };
 
@@ -262,6 +279,3 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
-
-
-
