@@ -196,13 +196,14 @@
   }
 
   .hub-orbit {
-    width: min(560px, 98vw);
-    margin-bottom: 10px;
+    --hub-orb-size: clamp(360px, 88vw, 520px);
+    width: var(--hub-orb-size);
+    margin: 0 auto 12px;
   }
 
   .hub-orb {
-    width: clamp(360px, 96vw, 520px);
-    height: clamp(360px, 96vw, 520px);
+    width: var(--hub-orb-size);
+    height: var(--hub-orb-size);
   }
 
   .hub-orbit-icons {
