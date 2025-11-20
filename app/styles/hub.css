@@ -67,14 +67,25 @@
   transform: translate(-50%, -50%);
 }
 
+.hub-orb::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 125, 255, 0.35) 0%, rgba(15, 30, 60, 0) 70%);
+  filter: blur(12px);
+  animation: hubHalo 10s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .hub-orb-bg {
   z-index: 1;
-  width: 110%;
-  height: 110%;
+  width: 102%;
+  height: 102%;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  animation: hubBgBreathe 8s ease-in-out infinite;
+  transform: translate(-50%, -50%);
 }
 
 .hub-intake-pills {
@@ -326,7 +337,7 @@
 
   .hub-orb-bg {
     animation: none !important;
-    transform: translate(-50%, -50%) scale(1) !important;
+    transform: translate(-50%, -50%) !important;
   }
 }
 
@@ -341,6 +352,20 @@
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
+@keyframes hubHalo {
+  0% {
+    transform: scale(1) translateZ(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.05) translateZ(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    opacity: 0.9;
+  }
 }
 
 @media (max-width: 640px) {
