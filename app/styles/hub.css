@@ -67,9 +67,9 @@
 
 .midas-orb {
 opacity: 0.3;
-width: 350px;
-height: 350px;
-border-radius: 50%;
+width: 450px;
+height: 450px;
+border-radius: 100%;
 box-shadow:
 inset 0 0 50px #fff,
 inset 20px 0 60px #ee82ee,
