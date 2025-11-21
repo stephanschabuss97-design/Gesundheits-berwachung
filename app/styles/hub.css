@@ -192,13 +192,13 @@
 
 @media (max-width: 640px) {
   .hub {
-    padding: 16px 12px 40px;
+    padding: 8px 6px 32px;
   }
 
   .hub-orbit {
-    --hub-orb-size: clamp(360px, 88vw, 520px);
+    --hub-orb-size: clamp(340px, 84vw, 500px);
     width: var(--hub-orb-size);
-    margin: 0 auto 12px;
+    margin: 0 auto 10px;
   }
 
   .hub-orb {
@@ -207,13 +207,12 @@
   }
 
   .hub-orbit-icons {
-    position: absolute;
     inset: 0;
   }
 
   .hub-icon {
-    width: 74px;
-    height: 74px;
+    width: 64px;
+    height: 64px;
   }
 }
 .hub-intake-form {
