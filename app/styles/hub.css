@@ -19,7 +19,7 @@
 .hub-orbit {
   --hub-orb-size: clamp(520px, 96vw, 920px);
   position: relative;
-  width: calc(var(--hub-orb-size) * 1.1);
+  width: var(--hub-orb-size);
   aspect-ratio: 1;
   margin: 0 auto clamp(6px, 2vw, 20px);
 }
@@ -363,6 +363,25 @@
   .hub-panel-close {
     width: 36px;
     height: 36px;
+  }
+
+  .hub {
+    padding: 16px 12px 32px;
+  }
+
+  .hub-hero {
+    padding-top: 8px;
+  }
+
+  .hub-orbit {
+    --hub-orb-size: clamp(360px, 88vw, 520px);
+    width: var(--hub-orb-size);
+    margin: 0 auto 12px;
+  }
+
+  .hub-orb {
+    width: var(--hub-orb-size);
+    height: var(--hub-orb-size);
   }
 }
 
