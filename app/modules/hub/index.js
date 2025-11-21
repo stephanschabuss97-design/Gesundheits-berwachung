@@ -40,15 +40,36 @@
 
   const closeActivePanel = ({ skipButtonSync = false } = {}) => {
     if (!activePanel) return;
-    activePanel.hidden = true;
-    activePanel.setAttribute('aria-hidden', 'true');
-    activePanel.classList.remove('hub-panel-open');
-    activePanel = null;
-    doc.removeEventListener('keydown', handlePanelEsc);
-    setSpriteStateFn?.('idle');
-    if (!skipButtonSync) {
-      syncButtonState(null);
-    }
+    const panel = activePanel;
+
+    const finish = () => {
+      panel.removeEventListener('animationend', handleAnimationEnd);
+      if (panel._hubCloseTimer) {
+        global.clearTimeout(panel._hubCloseTimer);
+        panel._hubCloseTimer = null;
+      }
+      panel.classList.remove('hub-panel-closing', 'hub-panel-open', 'is-visible');
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+      activePanel = null;
+      doc.removeEventListener('keydown', handlePanelEsc);
+      setSpriteStateFn?.('idle');
+      if (!skipButtonSync) {
+        syncButtonState(null);
+      }
+    };
+
+    const handleAnimationEnd = (event) => {
+      if (event?.target !== panel) return;
+      finish();
+    };
+
+    panel.classList.remove('hub-panel-open');
+    panel.classList.add('hub-panel-closing');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.hidden = false;
+    panel.addEventListener('animationend', handleAnimationEnd);
+    panel._hubCloseTimer = global.setTimeout(finish, 400);
   };
 
   const setupOrbitHotspots = (hub) => {
@@ -94,8 +115,16 @@
     if (activePanel) {
       closeActivePanel({ skipButtonSync: true });
     }
+    panel.classList.remove('hub-panel-closing');
+    if (panel._hubCloseTimer) {
+      global.clearTimeout(panel._hubCloseTimer);
+      panel._hubCloseTimer = null;
+    }
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
+    panel.classList.add('is-visible');
+    // force reflow before animation to ensure restart
+    void panel.offsetWidth; // eslint-disable-line no-unused-expressions
     panel.classList.add('hub-panel-open');
     activePanel = panel;
     doc.addEventListener('keydown', handlePanelEsc);
@@ -227,26 +256,18 @@
     const orb = hub.querySelector('.hub-orb');
     const fg = hub.querySelector('.hub-orb-fg');
     if (!orb) return;
-    const stateImages = {
-      idle: 'assets/img/Idle_state.png',
-      intake: 'assets/img/Intakes_state.png',
-      vitals: 'assets/img/Vitals_state.png',
-      doctor: 'assets/img/doctor_view_state.png',
-      thinking: 'assets/img/Idle_state.png',
-      voice: 'assets/img/Idle_state.png',
-    };
-    const setState = (state) => {
-      const next = stateImages[state] ? state : 'idle';
-      if (fg && stateImages[next]) {
-        fg.src = stateImages[next];
-        fg.alt = `MIDAS Orb ${next}`;
+    const defaultImg = 'assets/img/Idle_state.png';
+    const persistIdle = () => {
+      if (fg) {
+        fg.src = defaultImg;
+        fg.alt = 'MIDAS Orb idle';
       }
-      orb.dataset.state = next;
-      global.console?.debug?.('[hub] sprite state ->', next);
+      orb.dataset.state = 'idle';
+      global.console?.debug?.('[hub] sprite state locked -> idle');
     };
-    setState(orb.dataset.state || 'idle');
-    setSpriteStateFn = setState;
-    appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: setState });
+    persistIdle();
+    setSpriteStateFn = persistIdle;
+    appModules.hub = Object.assign(appModules.hub || {}, { setSpriteState: persistIdle });
   };
 
   const setupDatePill = () => {

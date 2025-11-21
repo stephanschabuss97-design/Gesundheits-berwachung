@@ -65,10 +65,33 @@
   transform: translate(-50%, -50%);
 }
 
+.midas-orb {
+opacity: 0.3;
+width: 350px;
+height: 350px;
+border-radius: 50%;
+box-shadow:
+inset 0 0 50px #fff,
+inset 20px 0 60px #ee82ee,
+inset -20px 0 60px #0ff,
+inset 20px 0 300px #ee82ee,
+inset -20px 0 300px #0ff,
+0 0 50px #fff,
+-10px 0 60px #ee82ee,
+10px 0 60px #0ff;
+animation: load 4s infinite linear;
+}
+
+@keyframes load {
+0% {transform: rotate(0deg); filter: hue-rotate(0deg); }
+50% {filter: hue-rotate(100deg);}
+100% {transform: rotate(360deg);}
+}
+
 .hub-intake-pills {
-  margin: 24px auto;
+  margin: 16px 0 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -147,10 +170,25 @@
   box-shadow: 0 40px 70px rgba(0, 0, 0, 0.4);
   text-align: left;
   display: none;
+  opacity: 0;
+  transform-origin: top center;
+  transform: translateY(-14px) scaleY(0.96);
+  overflow: hidden;
+  max-height: 0;
+  --hub-panel-max: 2000px;
 }
 
-.hub-panel[aria-hidden='false'] {
+.hub-panel.is-visible {
   display: block;
+  max-height: var(--hub-panel-max);
+}
+
+.hub-panel.hub-panel-open {
+  animation: hub-panel-expand 2500ms var(--hub-panel-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) forwards;
+}
+
+.hub-panel.hub-panel-closing {
+  animation: hub-panel-collapse 450ms var(--hub-panel-ease, cubic-bezier(0.8, 0, 0.2, 1)) forwards;
 }
 
 .hub-panel-header {
@@ -370,7 +408,58 @@
 
 
 
+
 .hub-vitals-controls .control-group select {
   min-width: 160px;
+}
+
+@keyframes hub-panel-expand {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scaleY(0.85);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    max-height: var(--hub-panel-max);
+  }
+}
+
+@keyframes hub-panel-collapse {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    max-height: var(--hub-panel-max);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scaleY(0.82);
+    max-height: 0;
+  }
+}
+
+@keyframes midasWobble {
+  0% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+}
+
+@keyframes midasRotate {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(18deg);
+  }
 }
 
