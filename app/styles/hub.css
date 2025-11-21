@@ -1,4 +1,4 @@
-﻿.hub {
+.hub {
   width: min(1200px, 100%);
   margin: 0 auto;
   padding: clamp(12px, 2vw, 24px) clamp(24px, 4vw, 48px) clamp(28px, 6vw, 56px);
@@ -190,31 +190,6 @@
   width: 100%;
 }
 
-@media (max-width: 640px) {
-  .hub {
-    padding: 8px 6px 32px;
-  }
-
-  .hub-orbit {
-    --hub-orb-size: clamp(340px, 84vw, 500px);
-    width: var(--hub-orb-size);
-    margin: 0 auto 10px;
-  }
-
-  .hub-orb {
-    width: var(--hub-orb-size);
-    height: var(--hub-orb-size);
-  }
-
-  .hub-orbit-icons {
-    inset: 0;
-  }
-
-  .hub-icon {
-    width: 64px;
-    height: 64px;
-  }
-}
 .hub-intake-form {
   display: flex;
   flex-direction: column;
@@ -365,22 +340,31 @@
   }
 
   .hub {
-    padding: 16px 12px 32px;
+    padding: 8px 6px 32px;
   }
 
   .hub-hero {
-    padding-top: 8px;
+    padding-top: 4px;
   }
 
   .hub-orbit {
-    --hub-orb-size: clamp(360px, 88vw, 520px);
+    --hub-orb-size: clamp(340px, 84vw, 500px);
     width: var(--hub-orb-size);
-    margin: 0 auto 12px;
+    margin: 0 auto 10px;
   }
 
   .hub-orb {
     width: var(--hub-orb-size);
     height: var(--hub-orb-size);
+  }
+
+  .hub-orbit-icons {
+    inset: 0;
+  }
+
+  .hub-icon {
+    width: 64px;
+    height: 64px;
   }
 }
 
