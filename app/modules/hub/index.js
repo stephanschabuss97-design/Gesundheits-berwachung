@@ -200,16 +200,6 @@
       btn.addEventListener('click', () => {
         invoke();
       });
-      btn.addEventListener(
-        'pointerdown',
-        (event) => {
-          if (event.pointerType === 'touch') {
-            event.preventDefault();
-            invoke();
-          }
-        },
-        { passive: false }
-      );
     };
 
     const openPanelHandler = (panelName) => async (btn) => {
