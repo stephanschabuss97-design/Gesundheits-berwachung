@@ -407,27 +407,10 @@
     padding-top: 4px;
   }
 
-  .hub-orbit {
-    --hub-orb-size: clamp(340px, 84vw, 500px);
-    width: var(--hub-orb-size);
-    margin: 0 auto 10px;
-  }
-
-  .hub-orb {
-    width: var(--hub-orb-size);
-    height: var(--hub-orb-size);
-  }
-
-  .hub-orbit-icons {
-    inset: 0;
-  }
-
   .hub-icon {
     width: 64px;
     height: 64px;
   }
-
-  /* Mobile inherits desktop orb glow */
 }
 
 
