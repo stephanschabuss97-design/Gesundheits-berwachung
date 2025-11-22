@@ -6,435 +6,652 @@
 -->
 <html lang="de">
 <head>
-<meta charset="utf-8">
+  <meta charset="utf-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
-<title>Gesundheits-Logger (V1.7.6)</title>
-<link rel="stylesheet" href="app/app.css">
-<!-- END MODULE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self';">
+  <title>Gesundheits-Logger (V1.7.6)</title>
+  <link rel="stylesheet" href="app/app.css">
+  <!-- END MODULE -->
 </head>
 <body>
-<!-- ANKER: touch-log-fallback -->
-<pre id="touchLog" class="u-diag-log"></pre>
+  <!-- ANKER: touch-log-fallback -->
+  <pre id="touchLog" class="u-diag-log"></pre>
 
-<header></header>
+  <header></header>
 
-<!-- Hilfe-Panel -->
-<div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
-<header>
-<h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
-<button class="btn ghost" id="helpClose" type="button">x</button>
-</header>
-<div class="content">
-<strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
-<ul>
-<li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-<li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
-<li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
-</ul>
-</div>
-</div>
-
-<!-- Diagnose-Panel -->
-<div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
-<header>
-<h4 id="diagTitle">Touch-Log</h4>
-<button class="btn ghost" id="diagClose" type="button">x</button>
-</header>
-<pre id="diagLog" class="content u-m-0"></pre>
-</div>
-
-<!-- Diagramm-Panel (Daily) -->
-<div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
-<header>
-<h4 id="chartTitle">Diagramm (Daily)</h4>
-<button class="btn ghost" id="chartClose" type="button">x</button>
-</header>
-<div class="content">
-<div class="controls">
-<select id="metricSel" class="half compact" aria-label="Messgroesse auswaehlen">
-    <option value="bp">Blutdruck (Sys/Dia)</option>
-    <option value="weight">Koerper</option>
-</select>
-
-  <!-- ANKER: chart-averages (Daily) -->
-  <div id="chartAverages" class="kpis" aria-live="polite">
-    <span data-k="sys">Durchschnitt Sys: -</span>
-    <span class="sep" aria-hidden="true">*</span>
-    <span data-k="dia">Durchschnitt Dia: -</span>
-    <span class="sep" aria-hidden="true">*</span>
-    <span data-k="map">Durchschnitt MAP: -</span>
+  <!-- Hilfe-Panel -->
+  <div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
+    <header>
+      <h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
+      <button class="btn ghost" id="helpClose" type="button">x</button>
+    </header>
+    <div class="content">
+      <strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
+      <ul>
+        <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
+        <li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
+        <li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
+      </ul>
+    </div>
   </div>
-</div>
 
-<svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
-<div class="legend" id="chartLegend"></div>
-<div class="small u-opacity70-mt6">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
-</div>
-</div>
+  <!-- Diagnose-Panel -->
+  <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
+    <header>
+      <h4 id="diagTitle">Touch-Log</h4>
+      <button class="btn ghost" id="diagClose" type="button">x</button>
+    </header>
+    <pre id="diagLog" class="content u-m-0"></pre>
+  </div>
 
-<div id="err" role="status" aria-live="polite"></div>
-<div id="busy"><div class="box"> Bitte warten...</div></div>
+  <!-- Diagramm-Panel (Daily) -->
+  <div id="chart" class="panel chart" role="dialog" aria-modal="false" aria-labelledby="chartTitle">
+    <header>
+      <h4 id="chartTitle">Diagramm (Daily)</h4>
+      <button class="btn ghost" id="chartClose" type="button">x</button>
+    </header>
+    <div class="content">
+      <div class="controls">
+        <select id="metricSel" class="half compact" aria-label="Messgroesse auswaehlen">
+          <option value="bp">Blutdruck (Sys/Dia)</option>
+          <option value="weight">Koerper</option>
+        </select>
 
-<main id="appMain">
-  <section class="hub" id="captureHub" aria-labelledby="hubTitle">
-    <div class="hub-hero">
+        <!-- ANKER: chart-averages (Daily) -->
+        <div id="chartAverages" class="kpis" aria-live="polite">
+          <span data-k="sys">Durchschnitt Sys: -</span>
+          <span class="sep" aria-hidden="true">*</span>
+          <span data-k="dia">Durchschnitt Dia: -</span>
+          <span class="sep" aria-hidden="true">*</span>
+          <span data-k="map">Durchschnitt MAP: -</span>
+        </div>
+      </div>
 
-<div class="hub-orbit">
-  <div class="hub-orb" data-state="idle">
-    <!-- 1. Aura-Layer (Blau/Magenta, drehend) -->
-    <div class="midas-aura-flow" aria-hidden="true"></div>
+      <svg id="chartSvg" viewBox="0 0 640 280" preserveAspectRatio="none" role="img" aria-label="Werteverlauf"></svg>
+      <div class="legend" id="chartLegend"></div>
+      <div class="small u-opacity70-mt6">Zeitraum: nutzt die <em>Arzt-Ansicht</em> (von/bis).</div>
+    </div>
+  </div>
 
-    <!-- 2. Dein Stern-Background -->
-    <img
-      class="hub-orb-bg"
-      src="assets/img/midas_background_v1.PNG"
-      alt="MIDAS Orb Hintergrund"
+  <div id="err" role="status" aria-live="polite"></div>
+  <div id="busy"><div class="box"> Bitte warten...</div></div>
+
+  <main id="appMain">
+    <!-- HUB / MIDAS-Orbit -->
+    <section class="hub" id="captureHub" aria-labelledby="hubTitle">
+      <div class="hub-hero">
+        <div class="hub-orbit">
+          <div class="hub-orb" data-state="idle">
+            <!-- 1. Aura-Layer (Blau/Magenta, drehend) -->
+            <div class="midas-aura-flow" aria-hidden="true"></div>
+
+            <!-- 2. Stern-Background -->
+            <img
+              class="hub-orb-bg"
+              src="assets/img/midas_background_v1.PNG"
+              alt="MIDAS Orb Hintergrund"
+            >
+
+            <!-- 3. Goldener Innenring -->
+            <div class="midas-ring-gold" aria-hidden="true"></div>
+
+            <!-- 4. MIDAS-Logo im Vordergrund -->
+            <img
+              class="hub-orb-fg"
+              src="assets/img/Idle_state.png"
+              alt="MIDAS Orb Zustand"
+            >
+          </div>
+
+          <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
+            <button
+              type="button"
+              class="hub-icon"
+              data-hub-module="doctor"
+              aria-pressed="false"
+              data-orbit-pos="north"
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Arzt-Ansicht</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              data-orbit-pos="ne"
+              disabled
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Termine (bald)</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              id="diagToggle"
+              data-orbit-pos="e"
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Log</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              data-orbit-pos="se"
+              disabled
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">GPT Voice (bald)</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              data-hub-module="vitals"
+              aria-pressed="false"
+              data-orbit-pos="s"
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Vitalwerte</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              data-hub-module="intake"
+              aria-pressed="false"
+              data-orbit-pos="sw"
+            >
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Intake</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              data-orbit-pos="w"
+              disabled
+            >
+              <span aria-hidden="true">???</span>
+              <span class="sr-only">Dictate (bald)</span>
+            </button>
+
+            <button
+              type="button"
+              class="hub-icon"
+              id="helpToggle"
+              data-orbit-pos="nw"
+            >
+              <span aria-hidden="true">?</span>
+              <span class="sr-only">Hilfe</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Milchglas-/Lock-Overlay fuer aktive Panels -->
+    <div class="hub-backdrop" data-hub-backdrop aria-hidden="true"></div>
+
+    <!-- HUB-PANEL: Intake -->
+    <section
+      class="hub-panel"
+      id="hubIntakePanel"
+      data-hub-panel="intake"
+      role="region"
+      aria-labelledby="hubIntakeTitle"
+      aria-hidden="true"
+      hidden
     >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
+          <button
+            type="button"
+            class="hub-panel-close"
+            data-panel-close
+            aria-label="Fenster schliessen"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="hub-panel-body" id="hubOverlayContent">
+          <div class="hub-intake-form" id="cap-intake-wrap">
+            <div class="hub-intake-grid">
+              <label class="hub-input-card">
+                <span>Wasser (ml)</span>
+                <input
+                  type="number"
+                  id="cap-water-add"
+                  min="0"
+                  step="50"
+                  placeholder="z. B. 250"
+                >
+                <button class="btn ghost" id="cap-water-add-btn" type="button">+ Menge</button>
+              </label>
+              <label class="hub-input-card">
+                <span>Salz (g)</span>
+                <input
+                  type="text"
+                  id="cap-salt-add"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="z. B. 0,5"
+                >
+                <button class="btn ghost" id="cap-salt-add-btn" type="button">+ Menge</button>
+              </label>
+              <label class="hub-input-card">
+                <span>Protein (g)</span>
+                <input
+                  type="text"
+                  id="cap-protein-add"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="z. B. 20,0"
+                >
+                <button class="btn ghost" id="cap-protein-add-btn" type="button">+ Menge</button>
+              </label>
+            </div>
+            <div class="hub-intake-note small u-mt10-opacity75">
+              Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
+            </div>
+            <div class="hub-intake-pills" data-role="hub-intake-pills">
+              <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <!-- 3. Goldener Innenring -->
-    <div class="midas-ring-gold" aria-hidden="true"></div>
-
-    <!-- 4. MIDAS-Logo im Vordergrund -->
-    <img
-      class="hub-orb-fg"
-      src="assets/img/Idle_state.png"
-      alt="MIDAS Orb Zustand"
+    <!-- HUB-PANEL: Doctor -->
+    <section
+      class="hub-panel"
+      id="hubDoctorPanel"
+      data-hub-panel="doctor"
+      role="region"
+      aria-labelledby="hubDoctorTitle"
+      aria-hidden="true"
+      hidden
     >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
+          <button
+            type="button"
+            class="hub-panel-close"
+            data-panel-close
+            aria-label="Fenster schliessen"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="hub-panel-body" id="hubDoctorContent">
+          <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
+            <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
+            <div class="toolbar">
+              <strong id="doctorTitle">Arzt-Ansicht</strong>
+              <div class="center-group">
+                <label class="small">
+                  Von
+                  <input class="u-w-auto" type="date" id="from">
+                </label>
+                <label class="small">
+                  Bis
+                  <input class="u-w-auto" type="date" id="to">
+                </label>
+                <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
+                <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">
+                  Werte anzeigen
+                </button>
+                <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
+              </div>
+            </div>
+            <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
+            <div id="doctorDailyWrap">
+              <div class="doctor-view" id="doctorView"></div>
+            </div>
+            <div class="small u-mt-6">
+              Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- HUB-PANEL: Vitals -->
+    <section
+      class="hub-panel"
+      id="hubVitalsPanel"
+      data-hub-panel="vitals"
+      role="region"
+      aria-labelledby="hubVitalsTitle"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubVitalsTitle">Vitaldaten</h2>
+          <button
+            type="button"
+            class="hub-panel-close"
+            data-panel-close
+            aria-label="Fenster schliessen"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="hub-panel-body">
+          <div class="hub-vitals">
+            <div class="hub-vitals-bp">
+              <div class="card-nested hub-vitals-controls">
+                <div class="control-group">
+                  <label for="date">Datum</label>
+                  <input
+                    type="date"
+                    id="date"
+                    class="hub-date-control"
+                    aria-label="Datum waehlen"
+                  >
+                </div>
+                <div class="control-group">
+                  <label for="bpContextSel">Messzeitpunkt</label>
+                  <select id="bpContextSel">
+                    <option value="M">Morgens</option>
+                    <option value="A">Abends</option>
+                  </select>
+                </div>
+              </div>
+              <div class="card-nested bp-pane active" data-context="M">
+                <h3 class="blockTitle">Morgens</h3>
+                <div class="grid">
+                  <div>
+                    <label>Systolisch (mmHg)</label>
+                    <input
+                      type="number"
+                      id="captureAmount"
+                      inputmode="numeric"
+                      placeholder="z. B. 128"
+                    >
+                  </div>
+                  <div>
+                    <label>Diastolisch (mmHg)</label>
+                    <input
+                      type="number"
+                      id="diaM"
+                      inputmode="numeric"
+                      placeholder="z. B. 82"
+                    >
+                  </div>
+                  <div>
+                    <label>Puls (bpm)</label>
+                    <input
+                      type="number"
+                      id="pulseM"
+                      inputmode="numeric"
+                      placeholder="z. B. 66"
+                    >
+                  </div>
+                </div>
+                <div class="row u-mt-6">
+                  <textarea
+                    id="bpCommentM"
+                    class="small"
+                    placeholder="Kommentar Morgens (optional)"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="card-nested bp-pane" data-context="A">
+                <h3 class="blockTitle">Abends</h3>
+                <div class="grid">
+                  <div>
+                    <label>Systolisch (mmHg)</label>
+                    <input
+                      type="number"
+                      id="sysA"
+                      inputmode="numeric"
+                      placeholder="z. B. 128"
+                    >
+                  </div>
+                  <div>
+                    <label>Diastolisch (mmHg)</label>
+                    <input
+                      type="number"
+                      id="diaA"
+                      inputmode="numeric"
+                      placeholder="z. B. 82"
+                    >
+                  </div>
+                  <div>
+                    <label>Puls (bpm)</label>
+                    <input
+                      type="number"
+                      id="pulseA"
+                      inputmode="numeric"
+                      placeholder="z. B. 66"
+                    >
+                  </div>
+                </div>
+                <div class="row u-mt-6">
+                  <textarea
+                    id="bpCommentA"
+                    class="small"
+                    placeholder="Kommentar Abends (optional)"
+                  ></textarea>
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button class="btn primary" id="saveBpPanelBtn" type="button">
+                  &#x1F4BE; Blutdruck speichern
+                </button>
+              </div>
+            </div>
+            <div class="hub-vitals-body card-nested">
+              <div class="body-grid">
+                <div>
+                  <label>Gewicht (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    id="weightDay"
+                    inputmode="decimal"
+                    placeholder="z. B. 84.2"
+                  >
+                </div>
+                <div>
+                  <label>Bauchumfang (cm)</label>
+                  <input
+                    id="input-waist-cm"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="z. B. 104,5"
+                  >
+                </div>
+                <div>
+                  <label>Fett (%)</label>
+                  <input
+                    id="fatPctDay"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="z. B. 22,5"
+                  >
+                </div>
+                <div>
+                  <label>Muskel (%)</label>
+                  <input
+                    id="musclePctDay"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="z. B. 38,0"
+                  >
+                </div>
+              </div>
+              <div class="panel-actions">
+                <button class="btn primary" id="saveBodyPanelBtn" type="button">
+                  &#x1F4BE; Koerper speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- END MODULE: HUB -->
+
+    <!-- MODULE: CAPTURE (Intake)
+      intent: Tageserfassung (UI) inkl. Intake/BP/Body/Termine, verbindet Benutzeraktionen mit Save-Flows
+      contracts: nutzt DATA ACCESS.saveIntakeTotals*, AUTH.isLoggedIn, UI.requestUiRefresh
+      todo: @extract-candidate bindIntakeCapture, refreshCaptureIntake spaeter extrahieren
+    -->
+    <!-- Capture -->
+    <section class="view active" id="capture" aria-labelledby="captureHeading">
+      <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
+    </section>
+    <!-- END MODULE -->
+
+    <!-- Lifestyle (Heute) -->
+
+    <!-- MODULE: DOCTOR VIEW
+      intent: Aggregations-UI fuer Aerzt:innen, steuert Zeitraum-Filter, Export und Chart-Pivot
+      contracts: nutzt DATA ACCESS.fetchDailyOverview, CHARTS.renderDailyChart, AUTH.setDoctorAccess @public
+      todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
+    -->
+    <!-- Doctor -->
+    <!-- END MODULE -->
+  </main>
+
+  <!-- Supabase (UMD, v2) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+    integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+    crossorigin="anonymous"
+  ></script>
+
+  <script src="app/core/config.js"></script>
+  <script src="app/core/diag.js"></script>
+  <script src="app/diagnostics/logger.js"></script>
+  <script src="app/diagnostics/perf.js"></script>
+  <script src="app/diagnostics/monitor.js"></script>
+  <script src="app/modules/hub/index.js"></script>
+  <!-- @refactor: moved to assets/js/ui.js -->
+  <script src="assets/js/ui.js"></script>
+  <!-- @refactor: moved to assets/js/ui-layout.js -->
+  <script src="assets/js/ui-layout.js"></script>
+  <!-- @refactor: moved to assets/js/ui-errors.js -->
+  <script src="assets/js/ui-errors.js"></script>
+  <!-- @refactor: Phase 2 - app/core/utils.js -->
+  <script src="app/core/utils.js"></script>
+  <!-- @refactor: moved to assets/js/format.js -->
+  <script src="assets/js/format.js"></script>
+  <!-- @refactor: Phase 2 � app/core/capture-globals.js -->
+  <script src="app/core/capture-globals.js"></script>
+  <!-- @refactor: moved to assets/js/data-local.js -->
+  <script src="assets/js/data-local.js"></script>
+  <!-- @refactor: Phase 3 - app/modules/capture/index.js -->
+  <script src="app/modules/capture/index.js"></script>
+  <!-- Shared capture helpers -->
+  <script src="app/modules/capture/entry.js"></script>
+  <!-- @refactor: Phase 3 - app/modules/capture/bp.js -->
+  <script src="app/modules/capture/bp.js"></script>
+  <!-- @refactor: Phase 3 - app/modules/capture/body.js -->
+  <script src="app/modules/capture/body.js"></script>
+  <!-- @refactor: moved to app/modules/trendpilot/data.js -->
+  <script src="app/modules/trendpilot/data.js"></script>
+  <!-- @refactor: Phase 2 � app/supabase/index.js -->
+  <script type="module" src="app/supabase/index.js"></script>
+  <script type="module" src="assets/js/boot-auth.js"></script>
+  <!-- @refactor: moved to assets/js/ui-tabs.js -->
+  <script src="assets/js/ui-tabs.js"></script>
+  <!-- @refactor: moved to app/modules/trendpilot/index.js -->
+  <script src="app/modules/trendpilot/index.js"></script>
+  <!-- @refactor: Phase 3 - app/modules/doctor/index.js -->
+  <script src="app/modules/doctor/index.js"></script>
+  <!-- @refactor: Phase 3 - app/modules/charts/index.js -->
+  <script src="app/modules/charts/index.js"></script>
+  <script src="assets/js/main.js"></script>
+
+  <!-- Login-Overlay (zentriert) -->
+  <div id="loginOverlay" class="u-hidden">
+    <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <h3 id="loginTitle">Willkommen</h3>
+      <p class="small u-mb-8">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
+      <button class="btn primary u-w100-h48-mb12" id="googleLoginBtn" type="button">
+        Mit Google anmelden
+      </button>
+      <details id="configAdv" class="config-box u-mb-12">
+        <summary class="small u-config-summary">Erweiterte Einstellungen</summary>
+        <div class="u-flex-col-gap6-mt4">
+          <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
+          <input
+            id="configRestUrl"
+            class="u-input-field"
+            type="url"
+            inputmode="url"
+            placeholder="https://...supabase.co/rest/v1/health_events"
+          >
+          <label class="small u-mt-4" for="configAnonKey">Supabase ANON-Key</label>
+          <textarea
+            id="configAnonKey"
+            class="u-textarea-field"
+            rows="3"
+            placeholder="ANON-Key (kein service_role)"
+          ></textarea>
+          <button class="btn ghost u-w100-mt4" id="configSaveBtn" type="button">
+            Konfiguration speichern
+          </button>
+          <div id="configStatus" class="small u-status-muted"></div>
+        </div>
+      </details>
+      <div id="whoAmI" class="small u-text-center-mt6"></div>
+    </div>
   </div>
 
-  <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
+  <!-- App-Lock Overlay (zentriert) -->
+  <div id="appLock" class="u-hidden">
+    <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+      <h3 id="lockTitle">App gesperrt</h3>
+      <p class="small u-mb-8">
+        Bitte entsperren: bevorzugt per Passkey (Finger/Face). Alternativ PIN.
+      </p>
 
-          <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false" data-orbit-pos="north">
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Arzt-Ansicht</span>
-          </button>
-          <button type="button" class="hub-icon" data-orbit-pos="ne" disabled>
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Termine (bald)</span>
-          </button>
-          <button type="button" class="hub-icon" id="diagToggle" data-orbit-pos="e">
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Log</span>
-          </button>
-          <button type="button" class="hub-icon" data-orbit-pos="se" disabled>
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">GPT Voice (bald)</span>
-          </button>
-          <button type="button" class="hub-icon" data-hub-module="vitals" aria-pressed="false" data-orbit-pos="s">
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Vitalwerte</span>
-          </button>
-          <button type="button" class="hub-icon" data-hub-module="intake" aria-pressed="false" data-orbit-pos="sw">
-            <span aria-hidden="true">??</span>
-            <span class="sr-only">Intake</span>
-          </button>
-          <button type="button" class="hub-icon" data-orbit-pos="w" disabled>
-            <span aria-hidden="true">???</span>
-            <span class="sr-only">Dictate (bald)</span>
-          </button>
-          <button type="button" class="hub-icon" id="helpToggle" data-orbit-pos="nw">
-            <span aria-hidden="true">?</span>
-            <span class="sr-only">Hilfe</span>
-          </button>
-        </div>
+      <div class="row u-gap-8">
+        <button class="btn primary u-w100-h48" id="unlockPasskeyBtn" type="button">
+          Per Passkey entsperren
+        </button>
       </div>
-    </div>
 
-  
-  <section
-    class="hub-panel"
-    id="hubIntakePanel"
-    data-hub-panel="intake"
-    role="region"
-    aria-labelledby="hubIntakeTitle"
-    aria-hidden="true"
-    hidden
-  >
-    <header class="hub-panel-header">
-      <h2 id="hubIntakeTitle">Fluessigkeit & Intake</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
-    </header>
-    <div class="hub-panel-body" id="hubOverlayContent">
-      <div class="hub-intake-form" id="cap-intake-wrap">
-        <div class="hub-intake-grid">
-          <label class="hub-input-card">
-            <span>Wasser (ml)</span>
-            <input type="number" id="cap-water-add" min="0" step="50" placeholder="z. B. 250">
-            <button class="btn ghost" id="cap-water-add-btn" type="button">+ Menge</button>
-          </label>
-          <label class="hub-input-card">
-            <span>Salz (g)</span>
-            <input type="text" id="cap-salt-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 0,5">
-            <button class="btn ghost" id="cap-salt-add-btn" type="button">+ Menge</button>
-          </label>
-          <label class="hub-input-card">
-            <span>Protein (g)</span>
-            <input type="text" id="cap-protein-add" inputmode="decimal" autocomplete="off" placeholder="z. B. 20,0">
-            <button class="btn ghost" id="cap-protein-add-btn" type="button">+ Menge</button>
-          </label>
-        </div>
-        <div class="hub-intake-note small u-mt10-opacity75">
-          Werte werden fuer das gewaehlte Datum gespeichert und synchronisiert.
-        </div>
-        <div class="hub-intake-pills" data-role="hub-intake-pills">
-          <div id="cap-intake-status-top" class="small u-flex-wrap-gap8-opacity80"></div>
-        </div>
+      <div class="pin-wrap">
+        <input
+          id="pinInput"
+          type="password"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="PIN (optional)"
+        >
+        <button class="btn ghost" id="unlockPinBtn" type="button">PIN</button>
       </div>
-    </div>
-  </section>
-  <section
-    class="hub-panel"
-    id="hubDoctorPanel"
-    data-hub-panel="doctor"
-    role="region"
-    aria-labelledby="hubDoctorTitle"
-    aria-hidden="true"
-    hidden
-  >
-    <header class="hub-panel-header">
-      <h2 id="hubDoctorTitle">Arzt-Ansicht</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
-    </header>
-    <div class="hub-panel-body" id="hubDoctorContent">
-      <section class="card doctor-panel" id="doctor" aria-labelledby="doctorHeading">
-        <h2 class="sr-only" id="doctorHeading">Arzt-Ansicht</h2>
-        <div class="toolbar">
-          <strong id="doctorTitle">Arzt-Ansicht</strong>
-          <div class="center-group">
-            <label class="small">Von <input class="u-w-auto" type="date" id="from"></label>
-            <label class="small">Bis <input class="u-w-auto" type="date" id="to"></label>
-            <button class="btn ghost" id="applyRange" type="button">Anwenden</button>
-            <button class="btn ghost" id="doctorChartBtn" type="button" title="Werte als Grafik">Werte anzeigen</button>
-            <button class="btn ghost" id="doctorExportJson" type="button">Export JSON</button>
-          </div>
-        </div>
-        <div class="doctor-trendpilot" id="doctorTrendpilot" aria-live="polite"></div>
-        <div id="doctorDailyWrap">
-          <div class="doctor-view" id="doctorView"></div>
-        </div>
-        <div class="small u-mt-6">
-          Tipp: "Werte anzeigen" oeffnet die passende Grafik zum aktuellen Tab (Daily).
-        </div>
-      </section>
-    </div>
-  </section>
-  <section
-    class="hub-panel"
-    id="hubVitalsPanel"
-    data-hub-panel="vitals"
-    role="region"
-    aria-labelledby="hubVitalsTitle"
-    aria-hidden="true"
-    hidden
-  >
-    <header class="hub-panel-header">
-      <h2 id="hubVitalsTitle">Vitaldaten</h2>
-      <button type="button" class="hub-panel-close" data-panel-close aria-label="Fenster schliessen">�</button>
-    </header>
-    <div class="hub-panel-body">
-      <div class="hub-vitals">
-        <div class="hub-vitals-bp">
-          <div class="card-nested hub-vitals-controls">
-            <div class="control-group">
-              <label for="date">Datum</label>
-              <input type="date" id="date" class="hub-date-control" aria-label="Datum waehlen">
-            </div>
-            <div class="control-group">
-              <label for="bpContextSel">Messzeitpunkt</label>
-              <select id="bpContextSel">
-                <option value="M">Morgens</option>
-                <option value="A">Abends</option>
-              </select>
-            </div>
-          </div>
-          <div class="card-nested bp-pane active" data-context="M">
-            <h3 class="blockTitle">Morgens</h3>
-            <div class="grid">
-              <div><label>Systolisch (mmHg)</label><input type="number" id="captureAmount" inputmode="numeric" placeholder="z. B. 128"></div>
-              <div><label>Diastolisch (mmHg)</label><input type="number" id="diaM" inputmode="numeric" placeholder="z. B. 82"></div>
-              <div><label>Puls (bpm)</label><input type="number" id="pulseM" inputmode="numeric" placeholder="z. B. 66"></div>
-            </div>
-            <div class="row u-mt-6">
-              <textarea id="bpCommentM" class="small" placeholder="Kommentar Morgens (optional)"></textarea>
-            </div>
-          </div>
-          <div class="card-nested bp-pane" data-context="A">
-            <h3 class="blockTitle">Abends</h3>
-            <div class="grid">
-              <div><label>Systolisch (mmHg)</label><input type="number" id="sysA" inputmode="numeric" placeholder="z. B. 128"></div>
-              <div><label>Diastolisch (mmHg)</label><input type="number" id="diaA" inputmode="numeric" placeholder="z. B. 82"></div>
-              <div><label>Puls (bpm)</label><input type="number" id="pulseA" inputmode="numeric" placeholder="z. B. 66"></div>
-            </div>
-            <div class="row u-mt-6">
-              <textarea id="bpCommentA" class="small" placeholder="Kommentar Abends (optional)"></textarea>
-            </div>
-          </div>
-          <div class="panel-actions">
-            <button class="btn primary" id="saveBpPanelBtn" type="button">&#x1F4BE; Blutdruck speichern</button>
-          </div>
-        </div>
-        <div class="hub-vitals-body card-nested">
-          <div class="body-grid">
-            <div>
-              <label>Gewicht (kg)</label>
-              <input type="number" step="0.1" id="weightDay" inputmode="decimal" placeholder="z. B. 84.2">
-            </div>
-            <div>
-              <label>Bauchumfang (cm)</label>
-              <input id="input-waist-cm" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 104,5">
-            </div>
-            <div>
-              <label>Fett (%)</label>
-              <input id="fatPctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 22,5">
-            </div>
-            <div>
-              <label>Muskel (%)</label>
-              <input id="musclePctDay" type="text" inputmode="decimal" autocomplete="off" placeholder="z. B. 38,0">
-            </div>
-          </div>
-          <div class="panel-actions">
-            <button class="btn primary" id="saveBodyPanelBtn" type="button">&#x1F4BE; Koerper speichern</button>
-          </div>
-        </div>
+
+      <div class="small u-mt8-opacity80">
+        <button class="btn ghost u-w100-mt6" id="setupPasskeyBtn" type="button">
+          Passkey einrichten
+        </button>
+        <button class="btn ghost u-w100-mt6" id="setPinBtn" type="button">
+          PIN setzen/aendern
+        </button>
       </div>
+
+      <button class="btn ghost u-w100-mt8" id="lockCancelBtn" type="button">
+        Abbrechen
+      </button>
+
+      <div id="lockMsg" class="small u-mt6-muted"></div>
     </div>
-  </section>
-  </section>
-<!-- END MODULE -->
-<!-- MODULE: CAPTURE (Intake)
-  intent: Tageserfassung (UI) inkl. Intake/BP/Body/Termine, verbindet Benutzeraktionen mit Save-Flows
-  contracts: nutzt DATA ACCESS.saveIntakeTotals*, AUTH.isLoggedIn, UI.requestUiRefresh
-  todo: @extract-candidate bindIntakeCapture, refreshCaptureIntake spaeter extrahieren
--->
-<!-- Capture -->
-<section class="view active" id="capture" aria-labelledby="captureHeading">
- 
-  <h2 class="sr-only" id="captureHeading">Tageserfassung</h2>
-</section>
-<!-- END MODULE -->
-
-<!-- Lifestyle (Heute) -->
-
-
-<!-- MODULE: DOCTOR VIEW
-  intent: Aggregations-UI fuer Aerzt:innen, steuert Zeitraum-Filter, Export und Chart-Pivot
-  contracts: nutzt DATA ACCESS.fetchDailyOverview, CHARTS.renderDailyChart, AUTH.setDoctorAccess @public
-  todo: @extract-candidate buildDoctorSummaryJson @public spaeter bereitstellen
--->
-<!-- Doctor -->
-
-<!-- END MODULE -->
-
-</main>
-
-<!-- Supabase (UMD, v2) -->
-<script
-  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
-  integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
-  crossorigin="anonymous"
-></script>
-
-
-<script src="app/core/config.js"></script>
-<script src="app/core/diag.js"></script>
-<script src="app/diagnostics/logger.js"></script>
-<script src="app/diagnostics/perf.js"></script>
-<script src="app/diagnostics/monitor.js"></script>
-<script src="app/modules/hub/index.js"></script>
-<!-- @refactor: moved to assets/js/ui.js -->
-<script src="assets/js/ui.js"></script>
-<!-- @refactor: moved to assets/js/ui-layout.js -->
-<script src="assets/js/ui-layout.js"></script>
-<!-- @refactor: moved to assets/js/ui-errors.js -->
-<script src="assets/js/ui-errors.js"></script>
-<!-- @refactor: Phase 2 - app/core/utils.js -->
-<script src="app/core/utils.js"></script>
-<!-- @refactor: moved to assets/js/format.js -->
-<script src="assets/js/format.js"></script>
-<!-- @refactor: Phase 2 � app/core/capture-globals.js -->
-<script src="app/core/capture-globals.js"></script>
-<!-- @refactor: moved to assets/js/data-local.js -->
-<script src="assets/js/data-local.js"></script>
-<!-- @refactor: Phase 3 - app/modules/capture/index.js -->
-<script src="app/modules/capture/index.js"></script>
-<!-- Shared capture helpers -->
-<script src="app/modules/capture/entry.js"></script>
-<!-- @refactor: Phase 3 - app/modules/capture/bp.js -->
-<script src="app/modules/capture/bp.js"></script>
-<!-- @refactor: Phase 3 - app/modules/capture/body.js -->
-<script src="app/modules/capture/body.js"></script>
-<!-- @refactor: moved to app/modules/trendpilot/data.js -->
-<script src="app/modules/trendpilot/data.js"></script>
-<!-- @refactor: Phase 2 � app/supabase/index.js -->
-<script type="module" src="app/supabase/index.js"></script>
-<script type="module" src="assets/js/boot-auth.js"></script>
-<!-- @refactor: moved to assets/js/ui-tabs.js -->
-<script src="assets/js/ui-tabs.js"></script>
-<!-- @refactor: moved to app/modules/trendpilot/index.js -->
-<script src="app/modules/trendpilot/index.js"></script>
-<!-- @refactor: Phase 3 - app/modules/doctor/index.js -->
-<script src="app/modules/doctor/index.js"></script>
-<!-- @refactor: Phase 3 - app/modules/charts/index.js -->
-<script src="app/modules/charts/index.js"></script>
-<script src="assets/js/main.js"></script>
-<!-- Login-Overlay (zentriert) -->
-<div id="loginOverlay" class="u-hidden">
-  <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-    <h3 id="loginTitle">Willkommen</h3>
-    <p class="small u-mb-8">Melde dich an, um Arzt-Ansicht & Diagramme zu nutzen.</p>
-    <button class="btn primary u-w100-h48-mb12" id="googleLoginBtn" type="button">Mit Google anmelden</button>
-    <details id="configAdv" class="config-box u-mb-12">
-      <summary class="small u-config-summary">Erweiterte Einstellungen</summary>
-      <div class="u-flex-col-gap6-mt4">
-        <label class="small" for="configRestUrl">Supabase REST-Endpoint</label>
-        <input id="configRestUrl" class="u-input-field" type="url" inputmode="url" placeholder="https://...supabase.co/rest/v1/health_events">
-        <label class="small u-mt-4" for="configAnonKey">Supabase ANON-Key</label>
-        <textarea id="configAnonKey" class="u-textarea-field" rows="3" placeholder="ANON-Key (kein service_role)"></textarea>
-        <button class="btn ghost u-w100-mt4" id="configSaveBtn" type="button">Konfiguration speichern</button>
-        <div id="configStatus" class="small u-status-muted"></div>
-      </div>
-    </details>
-    <div id="whoAmI" class="small u-text-center-mt6"></div>
   </div>
-</div>
-
-<!-- App-Lock Overlay (zentriert) -->
-<div id="appLock" class="u-hidden">
-  <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
-    <h3 id="lockTitle">App gesperrt</h3>
-    <p class="small u-mb-8">
-      Bitte entsperren: bevorzugt per Passkey (Finger/Face). Alternativ PIN.
-    </p>
-
-    <div class="row u-gap-8">
-      <button class="btn primary u-w100-h48" id="unlockPasskeyBtn" type="button">
-        Per Passkey entsperren
-      </button>
-    </div>
-
-    <div class="pin-wrap">
-      <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN (optional)">
-      <button class="btn ghost" id="unlockPinBtn" type="button">PIN</button>
-    </div>
-
-    <div class="small u-mt8-opacity80">
-      <button class="btn ghost u-w100-mt6" id="setupPasskeyBtn" type="button">
-        Passkey einrichten
-      </button>
-      <button class="btn ghost u-w100-mt6" id="setPinBtn" type="button">
-        PIN setzen/aendern
-      </button>
-    </div>
-
-    <button class="btn ghost u-w100-mt8" id="lockCancelBtn" type="button">
-      Abbrechen
-    </button>
-
-    <div id="lockMsg" class="small u-mt6-muted"></div>
-  </div>
-</div>
 
 </body>
 </html>
@@ -467,30 +684,3 @@
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
