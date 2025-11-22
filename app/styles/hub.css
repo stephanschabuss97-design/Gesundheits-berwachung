@@ -1,3 +1,4 @@
+/* HUB — Layout Base */
 .hub {
   width: min(1200px, 100%);
   margin: 0 auto;
@@ -7,6 +8,7 @@
   position: relative;
 }
 
+/* HUB — Hero / Orbit */
 .hub-hero {
   display: flex;
   flex-direction: column;
@@ -70,8 +72,8 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(82%, 450px);
-  height: min(82%, 450px);
+  width: clamp(260px, calc(var(--hub-orb-size) * 0.78), 460px);
+  height: clamp(260px, calc(var(--hub-orb-size) * 0.78), 460px);
   border-radius: 50%;
   opacity: 0.3;
   box-shadow:
@@ -94,6 +96,7 @@
     filter: hue-rotate(0deg);
   }
   50% {
+    transform: translate(-50%, -50%) rotate(180deg);
     filter: hue-rotate(100deg);
   }
   100% {
@@ -102,6 +105,7 @@
   }
 }
 
+/* HUB — Intake pills */
 .hub-intake-pills {
   margin: 16px 0 0;
   display: flex;
@@ -124,6 +128,7 @@
   inset: 0;
 }
 
+/* HUB — Orbit buttons */
 .hub-icon {
   border: none;
   background: rgba(255, 255, 255, 0.05);
@@ -171,6 +176,7 @@
   display: none;
 }
 
+/* HUB — Panels */
 .hub-panel {
   width: min(100%, 1200px);
   max-width: calc(100% - 32px);
@@ -242,6 +248,7 @@
   width: 100%;
 }
 
+/* HUB — Panel internals */
 .hub-intake-form {
   display: flex;
   flex-direction: column;
@@ -376,6 +383,7 @@
   overflow: visible;
 }
 
+/* HUB — Responsive <=640px */
 @media (max-width: 640px) {
   .hub-panel {
     padding: clamp(16px, 6vw, 32px);
@@ -437,10 +445,12 @@
 
 
 
+/* HUB — Form helpers */
 .hub-vitals-controls .control-group select {
   min-width: 160px;
 }
 
+/* HUB — Animations */
 @keyframes hub-panel-expand {
   0% {
     opacity: 0;
