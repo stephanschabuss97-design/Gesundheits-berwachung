@@ -168,6 +168,10 @@ body:has(.hub-panel.is-visible) .hub-icon {
   opacity: 1;
   mix-blend-mode: screen;
   animation: midasAuraRotate 36s linear infinite;
+  transition:
+    filter 180ms ease-out,
+    opacity 180ms ease-out,
+    transform 180ms ease-out;
 }
 
 /* 📱 Mobile-Boost – mehr Glow, größer, intensiver */
@@ -222,6 +226,13 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   animation:
     midasAuraRotate 36s linear infinite,
     midasAuraPulse 2600ms ease-in-out infinite;
+}
+
+/* OPTION A — Aura Echo bei Modul-Interaction (Hover/Focus/Active) */
+.hub-orbit:has(.hub-icon:is(:hover, :focus-visible, [aria-pressed='true'])) .midas-aura-flow {
+  filter: blur(7px) brightness(1.35);
+  opacity: 1.08;
+  transform: scale(1.04);
 }
 
 /* 🟡 Goldener Ring-Glow innen */
@@ -284,6 +295,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   pointer-events: none;
 }
 
+
 /* ==========================================================================
    HUB — Orbit icons
    ========================================================================== */
@@ -300,9 +312,10 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   transform: translate(-50%, -50%);
 }
 
+/* Stealth-Touch-Targets: unsichtbare Buttons, Feedback über Aura + Vibration */
 .hub-icon {
   border: none;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
   border-radius: 50%;
   width: 92px;
   height: 92px;
@@ -312,10 +325,12 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   justify-content: center;
   color: #fefefe;
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s;
-  box-shadow:
-    inset 0 0 10px rgba(255, 255, 255, 0.06),
-    0 6px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
+  opacity: 1;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s,
+    opacity 0.2s;
 }
 
 .hub-icon[disabled] {
@@ -323,19 +338,51 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   cursor: not-allowed;
 }
 
+/* Kein eigener Hover-Glow, kein Hüpfer – visuelles Feedback kommt über Aura */
 .hub-icon:focus-visible,
 .hub-icon:hover {
-  box-shadow: 0 0 12px rgba(89, 180, 255, 0.6);
-  transform: translate(-50%, -52%);
+  box-shadow: none;
+  transform: translate(-50%, -50%);
 }
 
+/* Aktiver Zustand ohne eigenen Hintergrund – Orbit bleibt clean */
 .hub-icon[aria-pressed='true'] {
-  background: rgba(68, 120, 255, 0.35);
-  box-shadow: 0 0 15px rgba(68, 120, 255, 0.4);
+  background: transparent;
+  box-shadow: none;
 }
 
 .hub-icon span {
   font-size: 1.5rem;
+}
+
+/* Placeholder-Text "??" ausblenden, sr-only-Labels bleiben erhalten */
+.hub-icon span[aria-hidden="true"] {
+  display: none;
+}
+
+/* OPTION C — „Vibration“ auf Touch (Mobil, micro-jitter) */
+@keyframes hubIconTapJitter {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% {
+    transform: translate(calc(-50% + 1px), calc(-50% + 0.5px)) scale(0.97);
+  }
+  50% {
+    transform: translate(calc(-50% - 1px), calc(-50% - 0.5px)) scale(1.03);
+  }
+  75% {
+    transform: translate(calc(-50% + 0.5px), calc(-50% - 1px)) scale(0.99);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (pointer: coarse) {
+  .hub-orbit-icons .hub-icon:active {
+    animation: hubIconTapJitter 110ms ease-out;
+  }
 }
 
 /* Mobile Tweaks für Orbit */
@@ -352,7 +399,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   .hub-icon {
     width: 60px;
     height: 60px;
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     box-shadow: none;
     opacity: 0.9;
   }
@@ -366,6 +413,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
     opacity: 0.88;
   }
 }
+
 
 /* ==========================================================================
    HUB — Intake pills
@@ -391,6 +439,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 .hub-mode #capture .capture-header {
   display: none;
 }
+
 
 /* ==========================================================================
    HUB — PANELS (Variante B: Center Overlay + Zoom)
@@ -652,6 +701,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   min-width: 160px;
 }
 
+
 /* ==========================================================================
    Animations — Panels
    ========================================================================== */
@@ -703,8 +753,6 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
       0 40px 70px rgba(0, 0, 0, 0.8);
   }
 }
-
-
 
 /* Schließen: leicht zusammenziehen, dann wieder in den Kern „zurückschnappen“
    + kleines Lichtecho */
@@ -758,7 +806,6 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 }
 
 
-
 /* ==========================================================================
    HUB — Panel Scroll Container
    ========================================================================== */
@@ -793,6 +840,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   bottom: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.45), transparent);
 }
+
 
 /* ==========================================================================
    HUB — Legacy Utility Animations (Reserve)
