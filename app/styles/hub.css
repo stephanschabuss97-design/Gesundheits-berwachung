@@ -67,6 +67,7 @@
   transform: translate(-50%, -50%);
 }
 
+/* HUB — MIDAS Energy Orb (Desktop / Base) */
 .midas-orb {
   position: absolute;
   left: 50%;
@@ -142,7 +143,9 @@
   color: #fefefe;
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.2s;
-  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.08), 0 8px 18px rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 0 14px rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.55);
 }
 
 .hub-icon[disabled] {
@@ -255,21 +258,25 @@
   gap: 18px;
   width: 100%;
 }
+
 .hub-vitals {
   display: flex;
   flex-direction: column;
   gap: 24px;
   width: 100%;
 }
+
 .hub-vitals-bp {
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 100%;
 }
+
 .hub-vitals-body {
   margin-top: 8px;
 }
+
 .hub-intake-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -314,6 +321,7 @@
   color: rgba(255, 255, 255, 0.6);
   letter-spacing: 0.06em;
 }
+
 .hub-date-control {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
@@ -344,6 +352,7 @@
 .hub-date-control::-moz-focus-inner {
   border: 0;
 }
+
 .hub-vitals-controls {
   display: flex;
   gap: 16px;
@@ -363,6 +372,7 @@
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.7);
 }
+
 .hub-panel .hub-intake-form,
 .hub-panel .doctor-panel,
 .hub-panel .hub-vitals-bp .card-nested,
@@ -419,6 +429,7 @@
     height: var(--hub-orb-size);
   }
 
+  /* Mobile-optimierte Orbit-Icons */
   .hub-icon {
     width: 60px;
     height: 60px;
@@ -426,10 +437,24 @@
     box-shadow: none;
     opacity: 0.9;
   }
+
+  /* Mobile-optimierter MIDAS Orb (kompakter Glow, weniger Halo-Risiko) */
+  .midas-orb {
+    opacity: 0.8;
+    width: clamp(220px, calc(var(--hub-orb-size) * 0.70), 360px);
+    height: clamp(220px, calc(var(--hub-orb-size) * 0.70), 360px);
+    box-shadow:
+      inset 0 0 32px rgba(255, 255, 255, 0.85),
+      inset 12px 0 46px rgba(238, 130, 238, 0.55),
+      inset -12px 0 46px rgba(0, 255, 255, 0.5),
+      inset 0 0 80px rgba(238, 130, 238, 0.32),
+      inset 0 0 80px rgba(0, 255, 255, 0.28),
+      0 0 20px rgba(255, 255, 255, 0.5),
+      -6px 0 28px rgba(238, 130, 238, 0.4),
+      6px 0 28px rgba(0, 255, 255, 0.38);
+    animation: midas-orb-load 5s linear infinite;
+  }
 }
-
-
-
 
 /* HUB — Form helpers */
 .hub-vitals-controls .control-group select {
@@ -486,4 +511,3 @@
     filter: hue-rotate(18deg);
   }
 }
-
