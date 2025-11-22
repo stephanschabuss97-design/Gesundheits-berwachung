@@ -6,6 +6,30 @@
   color: #f5f7ff;
   text-align: center;
   position: relative;
+  --hub-panel-ease: cubic-bezier(0.19, 0.8, 0.2, 1);
+}
+
+/* Milchglas-Overlay, aktiv wenn Panel offen */
+.hub::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 40px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(8, 12, 24, 0.85), rgba(3, 4, 8, 0.96) 60%),
+    radial-gradient(circle at 10% 90%, rgba(60, 180, 255, 0.25), transparent 65%),
+    radial-gradient(circle at 90% 10%, rgba(210, 120, 255, 0.22), transparent 70%);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 360ms ease;
+  z-index: 5;
+}
+
+/* Wenn irgendein Panel geöffnet ist → Overlay aktiv, Orb dahinter gedimmt */
+.hub:has(.hub-panel-open)::after {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* HUB — Hero / Orbit */
@@ -16,6 +40,8 @@
   gap: 16px;
   justify-content: flex-start;
   padding-top: clamp(0px, 1vh, 8px);
+  position: relative;
+  z-index: 1;
 }
 
 .hub-orbit {
@@ -24,6 +50,7 @@
   width: var(--hub-orb-size);
   aspect-ratio: 1;
   margin: 0 auto clamp(6px, 2vw, 20px);
+  transition: transform 420ms var(--hub-panel-ease), filter 320ms ease, opacity 320ms ease;
 }
 
 .hub-orb {
@@ -37,7 +64,13 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   overflow: hidden;
-  position: relative;
+}
+
+/* Wenn Panel offen → Orb leicht verkleinern & abdunkeln */
+.hub:has(.hub-panel-open) .hub-orbit {
+  transform: translateY(-4px) scale(0.96);
+  filter: blur(1px);
+  opacity: 0.88;
 }
 
 /* Hintergrund + Logo */
@@ -72,19 +105,17 @@
 /* 🔵🟣 M.I.D.A.S. Aura — Blau/Magenta */
 .midas-aura-flow {
   position: absolute;
-  inset: 27%;
+  inset: 28%;
   border-radius: 50%;
   z-index: 0.5;
   pointer-events: none;
 
   background:
-    /* weiche Abdunklung in der Mitte, damit es nicht "weiß" wird */
     radial-gradient(circle at 50% 50%,
       rgba(0, 0, 0, 0.7) 0%,
       rgba(0, 0, 0, 0.92) 55%,
       rgba(0, 0, 0, 0) 75%
     ),
-    /* Farbbögen: oben links blau, unten rechts magenta */
     conic-gradient(
       from -40deg,
       rgba(88, 190, 255, 0.0) 0deg,
@@ -95,20 +126,43 @@
       rgba(220, 130, 255, 0.0) 300deg,
       rgba(88, 190, 255, 0.0) 360deg
     );
-  filter: blur(4px);
-  opacity: 1.9;
-  mix-blend-mode: screen;
 
+  filter: blur(4px);
+  opacity: 1;
+  mix-blend-mode: screen;
   animation: midasAuraRotate 36s linear infinite;
 }
 
+/* 📱 Mobile-Boost – mehr Glow, größer, intensiver */
+@media (max-width: 640px) {
+  .midas-aura-flow {
+    inset: 16%;
+    filter: blur(14px);
+    opacity: 1;
+    mix-blend-mode: lighter;
+
+    background:
+      radial-gradient(circle at 50% 50%,
+        rgba(0, 0, 0, 0.45) 0%,
+        rgba(0, 0, 0, 0.65) 45%,
+        rgba(0, 0, 0, 0) 72%
+      ),
+      conic-gradient(
+        from -40deg,
+        rgba(88, 190, 255, 0.0) 0deg,
+        rgba(88, 190, 255, 0.72) 60deg,
+        rgba(88, 190, 255, 0.0) 120deg,
+        rgba(220, 130, 255, 0.0) 180deg,
+        rgba(220, 130, 255, 0.72) 240deg,
+        rgba(220, 130, 255, 0.0) 300deg,
+        rgba(88, 190, 255, 0.0) 360deg
+      );
+  }
+}
+
 @keyframes midasAuraRotate {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  100% {
-    transform: rotate(360deg) scale(1);
-  }
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(360deg) scale(1); }
 }
 
 /* 🟡 Goldener Ring-Glow innen */
@@ -116,7 +170,7 @@
   position: absolute;
   inset: 17%;
   border-radius: 50%;
-  z-index: 0.8 ;
+  z-index: 0.8;
   pointer-events: none;
 
   border: 2px solid rgba(255, 210, 130, 0.9);
@@ -149,7 +203,7 @@
   }
 }
 
-/* Dezenter Glas-Highlight-Ring darüber */
+/* Glas-Highlight-Ring */
 .hub-orb::before {
   content: '';
   position: absolute;
@@ -165,10 +219,11 @@
   pointer-events: none;
 }
 
-/* HUB — Orbit icons bleiben wie gehabt */
+/* HUB — Orbit icons */
 .hub-orbit-icons {
   position: absolute;
   inset: 0;
+  z-index: 4;
 }
 
 .hub-icon {
@@ -183,10 +238,17 @@
   justify-content: center;
   color: #fefefe;
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s, opacity 0.2s;
   box-shadow:
     inset 0 0 10px rgba(255, 255, 255, 0.06),
     0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.hub-orbit-icons .hub-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .hub-icon[disabled] {
@@ -197,52 +259,22 @@
 .hub-icon:focus-visible,
 .hub-icon:hover {
   box-shadow: 0 0 12px rgba(89, 180, 255, 0.6);
-  transform: translateY(-2px);
+  transform: translate(-50%, -52%);
 }
 
-.hub-orbit-icons .hub-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.hub-icon[aria-pressed='true'] {
-  background: rgba(68, 120, 255, 0.35);
-  box-shadow: 0 0 15px rgba(68, 120, 255, 0.4);
+.hub-icon[aria-pressed='true'],
+.hub-icon.is-active {
+  background: radial-gradient(circle at 30% 20%,
+      rgba(120, 200, 255, 0.25),
+      rgba(40, 70, 140, 0.85)
+    );
+  box-shadow:
+    0 0 18px rgba(68, 120, 255, 0.65),
+    0 0 34px rgba(68, 120, 255, 0.45);
 }
 
 .hub-icon span {
   font-size: 1.5rem;
-}
-
-/* Mobile Tweaks: nur etwas softer machen */
-@media (max-width: 640px) {
-  .hub-hero {
-    padding-top: 4px;
-  }
-
-  .hub-orbit {
-    --hub-orb-size: clamp(320px, 94vw, 520px);
-    margin: 0 auto 10px;
-  }
-
-  .hub-icon {
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.03);
-    box-shadow: none;
-    opacity: 0.9;
-  }
-
-  .midas-aura-flow {
-    opacity: 0.55;
-    filter: blur(3px);
-  }
-
-  .midas-ring-gold {
-    opacity: 0.88;
-  }
 }
 
 /* HUB — Intake pills */
@@ -263,94 +295,51 @@
   letter-spacing: 0.05em;
 }
 
-.hub-orbit-icons {
-  position: absolute;
-  inset: 0;
-}
-
-/* HUB — Orbit buttons */
-.hub-icon {
-  border: none;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 50%;
-  width: 92px;
-  height: 92px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #fefefe;
-  cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.2s;
-  box-shadow:
-    inset 0 0 10px rgba(255, 255, 255, 0.06),
-    0 6px 12px rgba(0, 0, 0, 0.4);
-}
-
-.hub-icon[disabled] {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.hub-icon:focus-visible,
-.hub-icon:hover {
-  box-shadow: 0 0 12px rgba(89, 180, 255, 0.6);
-  transform: translateY(-2px);
-}
-
-.hub-orbit-icons .hub-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.hub-icon[aria-pressed='true'] {
-  background: rgba(68, 120, 255, 0.35);
-  box-shadow: 0 0 15px rgba(68, 120, 255, 0.4);
-}
-
-.hub-icon span {
-  font-size: 1.5rem;
-}
-
 .hub-mode #capture .capture-header {
   display: none;
 }
 
-/* HUB — Panels */
+/* HUB — Panels (Center-Grow Overlay) */
 .hub-panel {
-  width: min(100%, 1200px);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.86);
+  width: min(100%, 920px);
   max-width: calc(100% - 32px);
-  margin: clamp(8px, 2vw, 20px) auto;
+  max-height: min(80vh, 2000px);
+  margin: 0;
   padding: clamp(20px, 3vw, 48px);
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(circle at 50% 0%, rgba(33, 54, 102, 0.35), rgba(10, 12, 20, 0) 75%),
-    rgba(8, 10, 18, 0.92);
-  box-shadow: 0 40px 70px rgba(0, 0, 0, 0.4);
+    radial-gradient(circle at 50% 0%, rgba(33, 54, 102, 0.45), rgba(10, 12, 20, 0) 75%),
+    rgba(8, 10, 18, 0.96);
+  box-shadow: 0 40px 70px rgba(0, 0, 0, 0.55);
   text-align: left;
-  display: none;
   opacity: 0;
-  transform-origin: top center;
-  transform: translateY(-14px) scaleY(0.96);
+  display: none;
   overflow: hidden;
-  max-height: 0;
-  --hub-panel-max: 2000px;
+  z-index: 20;
+  transform-origin: center center;
+  pointer-events: none;
 }
 
+/* Sichtbar, aber noch nicht animiert (JS setzt .is-visible) */
 .hub-panel.is-visible {
   display: block;
-  max-height: var(--hub-panel-max);
 }
 
+/* Öffnen (JS nutzt .hub-panel-open) */
 .hub-panel.hub-panel-open {
-  animation: hub-panel-expand 2500ms var(--hub-panel-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) forwards;
+  animation: hub-panel-expand 420ms var(--hub-panel-ease) forwards;
+  pointer-events: auto;
 }
 
+/* Schließen */
 .hub-panel.hub-panel-closing {
-  animation: hub-panel-collapse 450ms var(--hub-panel-ease, cubic-bezier(0.8, 0, 0.2, 1)) forwards;
+  animation: hub-panel-collapse 320ms var(--hub-panel-ease) forwards;
+  pointer-events: none;
 }
 
 .hub-panel-header {
@@ -388,6 +377,8 @@
 
 .hub-panel-body {
   width: 100%;
+  max-height: calc(80vh - 80px);
+  overflow-y: auto;
 }
 
 /* HUB — Panel internals */
@@ -534,8 +525,32 @@
 
 /* HUB — Responsive <=640px */
 @media (max-width: 640px) {
+  .hub {
+    padding: 8px 6px 32px;
+  }
+
+  .hub-hero {
+    padding-top: 4px;
+  }
+
+  .hub-orbit {
+    --hub-orb-size: clamp(320px, 94vw, 520px);
+    margin: 0 auto 10px;
+  }
+
+  .hub-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: none;
+    opacity: 0.9;
+  }
+
   .hub-panel {
+    width: min(100%, 1000px);
+    max-width: calc(100% - 18px);
     padding: clamp(16px, 6vw, 32px);
+    border-radius: 26px;
   }
 
   .hub-panel-header h2 {
@@ -547,36 +562,6 @@
     width: 36px;
     height: 36px;
   }
-
-  .hub {
-    padding: 8px 6px 32px;
-  }
-
-  .hub-hero {
-    padding-top: 4px;
-  }
-
-  /* Mobile-optimierte Orbit-Icons */
-  .hub-icon {
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.03);
-    box-shadow: none;
-    opacity: 0.9;
-  }
-
-  /* Mobile fallback for shimmer/colorflow */
-  .midas-gold-shimmer {
-    mix-blend-mode: normal;
-    opacity: 0.12;
-    animation: shimmerRotate 28s linear infinite;
-  }
-
-  .midas-colorflow {
-    mix-blend-mode: normal;
-    opacity: 0.12;
-    animation: colorShift 30s ease-in-out infinite;
-  }
 }
 
 /* HUB — Form helpers */
@@ -584,33 +569,30 @@
   min-width: 160px;
 }
 
-/* HUB — Animations */
+/* HUB — Panel Animations (neu: Center-Grow) */
 @keyframes hub-panel-expand {
   0% {
     opacity: 0;
-    transform: translateY(-16px) scaleY(0.85);
-    max-height: 0;
+    transform: translate(-50%, -50%) scale(0.86);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scaleY(1);
-    max-height: var(--hub-panel-max);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
 @keyframes hub-panel-collapse {
   0% {
     opacity: 1;
-    transform: translateY(0) scaleY(1);
-    max-height: var(--hub-panel-max);
+    transform: translate(-50%, -50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-18px) scaleY(0.82);
-    max-height: 0;
+    transform: translate(-50%, -50%) scale(0.82);
   }
 }
 
+/* Legacy Keyframes, falls woanders noch genutzt */
 @keyframes midasWobble {
   0% {
     transform: scale(1);
