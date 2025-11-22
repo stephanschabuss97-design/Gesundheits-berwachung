@@ -59,6 +59,7 @@
 }
 
 .hub-orb-bg {
+  filter: brightness(0.4);
   z-index: 1;
   width: 105%;
   height: 105%;
@@ -429,7 +430,7 @@
 
   .midas-orb {
     opacity: 0.25;
-    width: clamp(260px, calc(var(--hub-orb-size) * 0.78), 420px);
+    width: clamp(240px, calc(var(--hub-orb-size) * 0.70), 380px);
     height: clamp(260px, calc(var(--hub-orb-size) * 0.78), 420px);
     border-radius: 50%;
     box-shadow:
