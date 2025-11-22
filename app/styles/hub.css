@@ -6,30 +6,100 @@
   color: #f5f7ff;
   text-align: center;
   position: relative;
-  --hub-panel-ease: cubic-bezier(0.19, 0.8, 0.2, 1);
 }
 
-/* Milchglas-Overlay, aktiv wenn Panel offen */
+/* ==========================================================================
+   HUB — Panel Active State (Milchglas + Lock via :has)
+   ========================================================================== */
+
+/* Vollflächiges Milchglas-Overlay über dem Hub, inkl. leichter 3D-Refraction */
 .hub::after {
   content: '';
-  position: absolute;
+  position: fixed;
   inset: 0;
-  border-radius: 40px;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(8, 12, 24, 0.85), rgba(3, 4, 8, 0.96) 60%),
-    radial-gradient(circle at 10% 90%, rgba(60, 180, 255, 0.25), transparent 65%),
-    radial-gradient(circle at 90% 10%, rgba(210, 120, 255, 0.22), transparent 70%);
-  backdrop-filter: blur(10px);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 360ms ease;
-  z-index: 5;
+  opacity: 0;
+  z-index: 30;
+
+  background:
+    radial-gradient(circle at 50% 0%,
+      rgba(120, 170, 255, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(circle at 0% 100%,
+      rgba(88, 190, 255, 0.18),
+      transparent 55%
+    ),
+    radial-gradient(circle at 100% 100%,
+      rgba(220, 130, 255, 0.16),
+      transparent 55%
+    ),
+    linear-gradient(135deg,
+      rgba(4, 6, 16, 0.80),
+      rgba(3, 4, 10, 0.96)
+    );
+
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  transition: opacity 260ms ease-out;
 }
 
-/* Wenn irgendein Panel geöffnet ist → Overlay aktiv, Orb dahinter gedimmt */
-.hub:has(.hub-panel-open)::after {
+/* Wenn irgendein Panel sichtbar ist → Milchglas aktiv + Lock */
+.hub:has(.hub-panel.is-visible)::after {
   opacity: 1;
-  pointer-events: auto;
+  pointer-events: auto; /* blockt Klicks auf Orbit & Capture */
+}
+
+/* Body-Scroll locken, solange Panel aktiv ist */
+body:has(.hub-panel.is-visible) {
+  overflow: hidden;
+}
+
+/* Orbit dimmen + leichtes Zusammenziehen, wenn Panel aktiv ist */
+.hub-orbit {
+  --hub-orb-size: clamp(320px, 92vw, 920px);
+  position: relative;
+  width: var(--hub-orb-size);
+  aspect-ratio: 1;
+  margin: 0 auto clamp(6px, 2vw, 20px);
+  transition: filter 260ms ease-out, transform 260ms ease-out;
+}
+
+.hub:has(.hub-panel.is-visible) .hub-orbit {
+  filter: brightness(0.55) saturate(0.88) blur(2px);
+  transform: scale(0.98);
+}
+
+/* Orbit-Buttons locken, solange Panel aktiv ist */
+.hub:has(.hub-panel.is-visible) .hub-icon {
+  pointer-events: none;
+  opacity: 0.35;
+  box-shadow:
+    inset 0 0 8px rgba(255, 255, 255, 0.04);
+  transform: translate(-50%, -50%) scale(1); /* Hover-Effekt neutralisieren */
+}
+
+/* Dezente „Refraction-Linie“ quer durch die Mitte, wenn Panel offen ist */
+.hub:has(.hub-panel.is-visible) .hub-orb::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  height: 18%;
+  transform: translate(-50%, -50%) skewY(-4deg);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(178, 210, 255, 0.22) 25%,
+    rgba(255, 255, 255, 0.38) 50%,
+    rgba(178, 210, 255, 0.22) 75%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 2.1;
 }
 
 /* HUB — Hero / Orbit */
@@ -40,17 +110,6 @@
   gap: 16px;
   justify-content: flex-start;
   padding-top: clamp(0px, 1vh, 8px);
-  position: relative;
-  z-index: 1;
-}
-
-.hub-orbit {
-  --hub-orb-size: clamp(320px, 92vw, 920px);
-  position: relative;
-  width: var(--hub-orb-size);
-  aspect-ratio: 1;
-  margin: 0 auto clamp(6px, 2vw, 20px);
-  transition: transform 420ms var(--hub-panel-ease), filter 320ms ease, opacity 320ms ease;
 }
 
 .hub-orb {
@@ -64,13 +123,7 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   overflow: hidden;
-}
-
-/* Wenn Panel offen → Orb leicht verkleinern & abdunkeln */
-.hub:has(.hub-panel-open) .hub-orbit {
-  transform: translateY(-4px) scale(0.96);
-  filter: blur(1px);
-  opacity: 0.88;
+  position: relative;
 }
 
 /* Hintergrund + Logo */
@@ -140,7 +193,6 @@
     filter: blur(14px);
     opacity: 1;
     mix-blend-mode: lighter;
-
     background:
       radial-gradient(circle at 50% 50%,
         rgba(0, 0, 0, 0.45) 0%,
@@ -163,6 +215,28 @@
 @keyframes midasAuraRotate {
   0% { transform: rotate(0deg) scale(1); }
   100% { transform: rotate(360deg) scale(1); }
+}
+
+/* Zusatz-Pulse für Aura, wenn Panel aktiv ist */
+@keyframes midasAuraPulse {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03) rotate(5deg);
+    opacity: 1.05;
+  }
+  100% {
+    transform: scale(1) rotate(10deg);
+    opacity: 1;
+  }
+}
+
+.hub:has(.hub-panel.is-visible) .midas-aura-flow {
+  animation:
+    midasAuraRotate 36s linear infinite,
+    midasAuraPulse 2600ms ease-in-out infinite;
 }
 
 /* 🟡 Goldener Ring-Glow innen */
@@ -203,6 +277,12 @@
   }
 }
 
+/* Wenn Panel aktiv → Ring etwas lebendiger */
+.hub:has(.hub-panel.is-visible) .midas-ring-gold {
+  opacity: 0.95;
+  animation: midasRingPulse 32s ease-in-out infinite;
+}
+
 /* Glas-Highlight-Ring */
 .hub-orb::before {
   content: '';
@@ -223,7 +303,6 @@
 .hub-orbit-icons {
   position: absolute;
   inset: 0;
-  z-index: 4;
 }
 
 .hub-icon {
@@ -238,17 +317,10 @@
   justify-content: center;
   color: #fefefe;
   cursor: pointer;
-  transition: box-shadow 0.2s, transform 0.2s, background 0.2s, opacity 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s, opacity 0.2s;
   box-shadow:
     inset 0 0 10px rgba(255, 255, 255, 0.06),
     0 6px 12px rgba(0, 0, 0, 0.4);
-}
-
-.hub-orbit-icons .hub-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .hub-icon[disabled] {
@@ -262,19 +334,49 @@
   transform: translate(-50%, -52%);
 }
 
-.hub-icon[aria-pressed='true'],
-.hub-icon.is-active {
-  background: radial-gradient(circle at 30% 20%,
-      rgba(120, 200, 255, 0.25),
-      rgba(40, 70, 140, 0.85)
-    );
-  box-shadow:
-    0 0 18px rgba(68, 120, 255, 0.65),
-    0 0 34px rgba(68, 120, 255, 0.45);
+.hub-orbit-icons .hub-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.hub-icon[aria-pressed='true'] {
+  background: rgba(68, 120, 255, 0.35);
+  box-shadow: 0 0 15px rgba(68, 120, 255, 0.4);
 }
 
 .hub-icon span {
   font-size: 1.5rem;
+}
+
+/* Mobile Tweaks für Orbit */
+@media (max-width: 640px) {
+  .hub-hero {
+    padding-top: 4px;
+  }
+
+  .hub-orbit {
+    --hub-orb-size: clamp(320px, 94vw, 520px);
+    margin: 0 auto 10px;
+  }
+
+  .hub-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: none;
+    opacity: 0.9;
+  }
+
+  .midas-aura-flow {
+    opacity: 0.55;
+    filter: blur(3px);
+  }
+
+  .midas-ring-gold {
+    opacity: 0.88;
+  }
 }
 
 /* HUB — Intake pills */
@@ -299,49 +401,55 @@
   display: none;
 }
 
-/* HUB — Panels (Center-Grow Overlay) */
+/* ==========================================================================
+   HUB — PANELS (Variante B: Center Overlay + Zoom)
+   ========================================================================== */
+
 .hub-panel {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.86);
-  width: min(100%, 920px);
+  width: min(100%, 1200px);
   max-width: calc(100% - 32px);
-  max-height: min(80vh, 2000px);
   margin: 0;
   padding: clamp(20px, 3vw, 48px);
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(circle at 50% 0%, rgba(33, 54, 102, 0.45), rgba(10, 12, 20, 0) 75%),
-    rgba(8, 10, 18, 0.96);
-  box-shadow: 0 40px 70px rgba(0, 0, 0, 0.55);
+    radial-gradient(circle at 50% 0%, rgba(33, 54, 102, 0.35), rgba(10, 12, 20, 0.85) 75%);
+  box-shadow: 0 40px 70px rgba(0, 0, 0, 0.6);
   text-align: left;
-  opacity: 0;
   display: none;
-  overflow: hidden;
-  z-index: 20;
+  opacity: 0;
   transform-origin: center center;
-  pointer-events: none;
+  transform: translate(-50%, -50%) scaleX(0.8) scaleY(0.4);
+  overflow: hidden;
+  z-index: 40;
+  --hub-panel-max: 2000px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
-/* Sichtbar, aber noch nicht animiert (JS setzt .is-visible) */
+/* Aktivierungszustand via JS: Panel sichtbar */
 .hub-panel.is-visible {
   display: block;
 }
 
-/* Öffnen (JS nutzt .hub-panel-open) */
+/* Etwas cineastischer: langsameres Aufbauen, schnelleres Einrollen
+   + Omni-Gel Glow beim Öffnen */
 .hub-panel.hub-panel-open {
-  animation: hub-panel-expand 420ms var(--hub-panel-ease) forwards;
-  pointer-events: auto;
+  animation: hub-panel-zoom-in 900ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+  box-shadow:
+    0 0 0 1px rgba(140, 190, 255, 0.35),
+    0 0 22px rgba(120, 170, 255, 0.55),
+    0 40px 80px rgba(0, 0, 0, 0.9);
 }
 
-/* Schließen */
 .hub-panel.hub-panel-closing {
-  animation: hub-panel-collapse 320ms var(--hub-panel-ease) forwards;
-  pointer-events: none;
+  animation: hub-panel-zoom-out 450ms cubic-bezier(0.7, 0, 0.4, 1) forwards;
 }
 
+/* Panel-Header & Body bleiben wie gehabt */
 .hub-panel-header {
   display: flex;
   align-items: center;
@@ -377,11 +485,9 @@
 
 .hub-panel-body {
   width: 100%;
-  max-height: calc(80vh - 80px);
-  overflow-y: auto;
 }
 
-/* HUB — Panel internals */
+/* Panel internals */
 .hub-intake-form {
   display: flex;
   flex-direction: column;
@@ -523,34 +629,12 @@
   overflow: visible;
 }
 
-/* HUB — Responsive <=640px */
+/* HUB — Responsive <=640px (Panels) */
 @media (max-width: 640px) {
-  .hub {
-    padding: 8px 6px 32px;
-  }
-
-  .hub-hero {
-    padding-top: 4px;
-  }
-
-  .hub-orbit {
-    --hub-orb-size: clamp(320px, 94vw, 520px);
-    margin: 0 auto 10px;
-  }
-
-  .hub-icon {
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.03);
-    box-shadow: none;
-    opacity: 0.9;
-  }
-
   .hub-panel {
-    width: min(100%, 1000px);
-    max-width: calc(100% - 18px);
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
     padding: clamp(16px, 6vw, 32px);
-    border-radius: 26px;
   }
 
   .hub-panel-header h2 {
@@ -562,6 +646,14 @@
     width: 36px;
     height: 36px;
   }
+
+  .hub {
+    padding: 8px 6px 32px;
+  }
+
+  .hub-hero {
+    padding-top: 4px;
+  }
 }
 
 /* HUB — Form helpers */
@@ -569,30 +661,91 @@
   min-width: 160px;
 }
 
-/* HUB — Panel Animations (neu: Center-Grow) */
-@keyframes hub-panel-expand {
+/* ==========================================================================
+   Animations — Panels
+   ========================================================================== */
+
+/* Öffnen: aus der Mitte, erst als dünner Balken, dann volle Höhe */
+@keyframes hub-panel-zoom-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.86);
+    transform: translate(-50%, -50%) scaleX(0.15) scaleY(0.05);
+    box-shadow:
+      0 0 0 0 rgba(140, 190, 255, 0),
+      0 0 0 rgba(120, 170, 255, 0),
+      0 0 0 rgba(0, 0, 0, 0);
   }
+  /* Initialer „Schlankheits“-Effekt */
+  10% {
+  transform: translate(-50%, -50%) scaleX(0.4) scaleY(0.05);
+}
+  /* Phase 1 – „Energie-Linie“ quer durch die Mitte */
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1) scaleY(0.08);
+    box-shadow:
+      0 0 0 1px rgba(140, 190, 255, 0.4),
+      0 0 28px rgba(120, 170, 255, 0.65),
+      0 30px 60px rgba(0, 0, 0, 0.85);
+  }
+  /* Phase 2 – Höhe wächst, Breite leicht überzogen */
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1) scaleY(0.95);
+    box-shadow:
+      0 0 0 1px rgba(140, 190, 255, 0.32),
+      0 0 22px rgba(120, 170, 255, 0.55),
+      0 40px 80px rgba(0, 0, 0, 0.9);
+  }
+  /* Phase 3 – settle */
   100% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scaleX(1) scaleY(1);
+    box-shadow:
+      0 0 0 1px rgba(140, 190, 255, 0.28),
+      0 0 18px rgba(120, 170, 255, 0.45),
+      0 40px 70px rgba(0, 0, 0, 0.8);
   }
 }
 
-@keyframes hub-panel-collapse {
+/* Schließen: leicht zusammenziehen, dann wieder in den Kern „zurückschnappen“
+   + kleines Lichtecho */
+@keyframes hub-panel-zoom-out {
   0% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scaleX(1) scaleY(1);
+    box-shadow:
+      0 0 0 1px rgba(140, 190, 255, 0.28),
+      0 0 18px rgba(120, 170, 255, 0.45),
+      0 40px 70px rgba(0, 0, 0, 0.8);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scaleX(1.02) scaleY(0.9);
+    box-shadow:
+      0 0 0 1px rgba(160, 210, 255, 0.5),
+      0 0 26px rgba(140, 190, 255, 0.75),
+      0 26px 60px rgba(0, 0, 0, 0.85);
+  }
+  70% {
+    opacity: 0.25;
+    transform: translate(-50%, -50%) scaleX(0.4) scaleY(0.12);
+    box-shadow:
+      0 0 0 1px rgba(160, 210, 255, 0.32),
+      0 0 14px rgba(140, 190, 255, 0.55),
+      0 12px 30px rgba(0, 0, 0, 0.6);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.82);
+    transform: translate(-50%, -50%) scaleX(0.15) scaleY(0.05);
+    box-shadow:
+      0 0 0 0 rgba(140, 190, 255, 0),
+      0 0 0 rgba(120, 170, 255, 0),
+      0 0 0 rgba(0, 0, 0, 0);
   }
 }
 
-/* Legacy Keyframes, falls woanders noch genutzt */
+/* (Optional) alte MIDAS-Utility-Animationen, falls du sie später brauchst */
 @keyframes midasWobble {
   0% {
     transform: scale(1);
