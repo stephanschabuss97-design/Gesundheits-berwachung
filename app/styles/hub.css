@@ -87,7 +87,7 @@
     8px 0 40px rgba(0, 255, 255, 0.38);
   animation: midas-orb-load 4s linear infinite;
   pointer-events: none;
-  z-index: 1.5;
+  z-index: 3;
 }
 
 @keyframes midas-orb-load {
