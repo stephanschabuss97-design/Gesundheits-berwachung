@@ -19,7 +19,7 @@
 }
 
 .hub-orbit {
-  --hub-orb-size: clamp(520px, 96vw, 920px);
+  --hub-orb-size: clamp(320px, 92vw, 920px);
   position: relative;
   width: var(--hub-orb-size);
   aspect-ratio: 1;
@@ -405,6 +405,18 @@
 
   .hub-hero {
     padding-top: 4px;
+  }
+
+  .hub-orbit {
+    --hub-orb-size: clamp(280px, 92vw, 420px);
+    width: var(--hub-orb-size);
+    aspect-ratio: 1;
+    margin: 0 auto 10px;
+  }
+
+  .hub-orb {
+    width: var(--hub-orb-size);
+    height: var(--hub-orb-size);
   }
 
   .hub-icon {
