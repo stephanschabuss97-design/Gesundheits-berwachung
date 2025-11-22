@@ -428,16 +428,19 @@
   }
 
   .midas-orb {
-    opacity: 0.2;
-    width: min(85%, 280px);
-    height: min(85%, 280px);
+    opacity: 0.25;
+    width: clamp(260px, calc(var(--hub-orb-size) * 0.78), 420px);
+    height: clamp(260px, calc(var(--hub-orb-size) * 0.78), 420px);
+    border-radius: 50%;
     box-shadow:
-      inset 0 0 30px rgba(255, 255, 255, 0.45),
-      inset 12px 0 40px rgba(238, 130, 238, 0.45),
-      inset -12px 0 40px rgba(0, 255, 255, 0.38),
-      inset 0 0 160px rgba(238, 130, 238, 0.25),
-      inset 0 0 160px rgba(0, 255, 255, 0.22),
-      0 0 20px rgba(255, 255, 255, 0.35);
+      inset 0 0 40px rgba(255, 255, 255, 0.45),
+      inset 12px 0 70px rgba(238, 130, 238, 0.35),
+      inset -12px 0 70px rgba(0, 255, 255, 0.35),
+      inset 0 0 120px rgba(238, 130, 238, 0.22),
+      inset 0 0 120px rgba(0, 255, 255, 0.2),
+      0 0 26px rgba(255, 255, 255, 0.4),
+      -8px 0 40px rgba(238, 130, 238, 0.35),
+      8px 0 40px rgba(0, 255, 255, 0.33);
     animation: midas-orb-load 6s linear infinite;
   }
 }
