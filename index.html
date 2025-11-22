@@ -80,13 +80,32 @@
 <main id="appMain">
   <section class="hub" id="captureHub" aria-labelledby="hubTitle">
     <div class="hub-hero">
-      <div class="hub-orbit">
-        <div class="hub-orb" data-state="idle">
-          <img class="hub-orb-bg" src="assets/img/midas_background_v1.PNG" alt="MIDAS Orb Hintergrund">
-          <span class="midas-orb" aria-hidden="true"></span>
-          <img class="hub-orb-fg" src="assets/img/Idle_state.png" alt="MIDAS Orb Zustand">
-        </div>
-        <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
+
+<div class="hub-orbit">
+  <div class="hub-orb" data-state="idle">
+    <!-- 1. Aura-Layer (Blau/Magenta, drehend) -->
+    <div class="midas-aura-flow" aria-hidden="true"></div>
+
+    <!-- 2. Dein Stern-Background -->
+    <img
+      class="hub-orb-bg"
+      src="assets/img/midas_background_v1.PNG"
+      alt="MIDAS Orb Hintergrund"
+    >
+
+    <!-- 3. Goldener Innenring -->
+    <div class="midas-ring-gold" aria-hidden="true"></div>
+
+    <!-- 4. MIDAS-Logo im Vordergrund -->
+    <img
+      class="hub-orb-fg"
+      src="assets/img/Idle_state.png"
+      alt="MIDAS Orb Zustand"
+    >
+  </div>
+
+  <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
+
           <button type="button" class="hub-icon" data-hub-module="doctor" aria-pressed="false" data-orbit-pos="north">
             <span aria-hidden="true">??</span>
             <span class="sr-only">Arzt-Ansicht</span>
@@ -448,6 +467,7 @@
     - FUTURE (placeholders) -> #SUBMODULES: 3, #@extract: 0, Exports:[assistHooks (planned), pwaBootstrap (planned), bleIntegration (planned)]
   total @extract-candidate markers: 18
 -->
+
 
 
 
