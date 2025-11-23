@@ -25,6 +25,10 @@
   let hubButtons = [];
   let activePanel = null;
   let setSpriteStateFn = null;
+  let doctorUnlockWaitCancel = null;
+
+  const getSupabaseApi = () =>
+    appModules.supabase || global.SupabaseAPI || appModules.supabase;
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -69,7 +73,7 @@
     panel.setAttribute('aria-hidden', 'true');
     panel.hidden = false;
     panel.addEventListener('animationend', handleAnimationEnd);
-    panel._hubCloseTimer = global.setTimeout(finish, 400);
+    panel._hubCloseTimer = global.setTimeout(finish, 1200);
   };
 
   const setupOrbitHotspots = (hub) => {
@@ -149,7 +153,7 @@
   };
 
   const ensureDoctorUnlocked = async () => {
-    const supa = appModules.supabase || global.SupabaseAPI || appModules.supabase;
+    const supa = getSupabaseApi();
     const unlockFn = supa?.requireDoctorUnlock || global.requireDoctorUnlock;
     if (typeof unlockFn !== 'function') return true;
     try {
@@ -160,6 +164,43 @@
       return false;
     }
   };
+
+  const waitForDoctorUnlock = ({ guardState, timeout = 60000 } = {}) =>
+    new Promise((resolve) => {
+      const state = guardState || getSupabaseApi()?.authGuardState;
+      if (!state) {
+        resolve(false);
+        return;
+      }
+      if (state.doctorUnlocked) {
+        resolve(true);
+        return;
+      }
+      const interval = 200;
+      let elapsed = 0;
+      doctorUnlockWaitCancel?.(false);
+      let finished = false;
+      const cleanup = (result) => {
+        if (finished) return;
+        finished = true;
+        global.clearInterval(timerId);
+        if (doctorUnlockWaitCancel === cleanup) {
+          doctorUnlockWaitCancel = null;
+        }
+        resolve(result);
+      };
+      const timerId = global.setInterval(() => {
+        if (state.doctorUnlocked) {
+          cleanup(true);
+          return;
+        }
+        elapsed += interval;
+        if (elapsed >= timeout) {
+          cleanup(false);
+        }
+      }, interval);
+      doctorUnlockWaitCancel = cleanup;
+    });
 
   const activateHubLayout = () => {
     const config = appModules.config || {};
@@ -219,11 +260,18 @@
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
     bindButton('[data-hub-module="vitals"]', openPanelHandler('vitals'), { sync: false });
+    const doctorPanelHandler = openPanelHandler('doctor');
     bindButton('[data-hub-module="doctor"]', async (btn) => {
-      if (!(await ensureDoctorUnlocked())) {
+      if (await ensureDoctorUnlocked()) {
+        await doctorPanelHandler(btn);
         return;
       }
-      await openPanelHandler('doctor')(btn);
+      const supa = getSupabaseApi();
+      const guardState = supa?.authGuardState;
+      const unlockedAfter = await waitForDoctorUnlock({ guardState });
+      if (unlockedAfter) {
+        await doctorPanelHandler(btn);
+      }
     }, { sync: false });
     bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
