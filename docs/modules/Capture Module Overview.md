@@ -25,20 +25,21 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 | `app/modules/capture/body.js` | Körperpanel (Gewicht, Bauchumfang) speichern/prefillen; greift auf denselben Entry-Helper zurück. |
 | `app/modules/capture/entry.js` | Shared Helper `createBaseEntry` – stellt das Skelett für alle Capture-Einträge bereit. |
 | `assets/js/main.js` | Bindet Buttons, Datum, Unlock-Logik, orchestriert `requestUiRefresh`. |
-| `app/styles/capture.css` | Styles für Accordion, Buttons, Pill-Reihe, Responsive Layout (eingebunden via `app/app.css`). |
+| `app/styles/capture.css` | (Legacy) Styles für Accordion-Ansicht; zentrale Hub-Styles liegen in `app/styles/hub.css`. |
 | `app/core/config.js` | Flags (z.B. `TREND_PILOT_ENABLED` indirekt, `DEV_ALLOW_DEFAULTS`). |
 
 ---
 
 ## 3. Ablauf / Datenfluss
 
-### 3.1 Panel-Struktur
+### 3.1 Panel-Struktur (Hub v2)
 
-- Capture-View (`#capture`) enthält Cards:
-  1. **Intake (`#captureIntake`)** – Buttons für Wasser/Salz/Protein.
-2. **Blutdruck (`#bodyAccordion`)** – Tabs Morgens/Abends, Felder Sys/Dia/Puls, Kommentartextareas, Speichern-Button.
-3. **Körper** – Gewicht/Bauchumfang/Fett%/Muskel%.
-  4. (formerly appts, nun entfernt).
+- Die klassischen Accordions wurden durch Hub-Panels ersetzt:
+  1. **Intake-Panel (`data-hub-panel="intake"`)** – Overlay mit Wasser/Salz/Protein Inputs.
+  2. **Vitals-Panel (`data-hub-panel="vitals"`)** – kombiniert Blutdruck (Morgens/Abends) und Körperdaten.
+  3. **Doctor-Panel** – zeigt Werte/Trendpilot (zugriffsgeschützt).
+  4. Weitere Panels (Help/Diag) sind placeholders, aber außerhalb dieses Moduls.
+- Orbit-Buttons (`data-hub-module="…"`) in `hub/index.js` steuern die sichtbaren Panels (inkl. Biometrics-Flow für Doctor).
 
 ### 3.2 Datum & Auto-Reset
 
@@ -47,20 +48,20 @@ Das Capture-Modul ist die primäre Oberfläche für tägliche Eingaben:
 - `scheduleMidnightRefresh` & `scheduleNoonSwitch` (globals) sorgen für Tagesreset und BP-Kontext-Umschaltung.
 - `capture/globals` speichern Timer-IDs, Busy-Status, `__bpUserOverride`.
 
-### 3.3 Blutdruck Flow (`bp.js`)
+### 3.3 Blutdruck Flow (`bp.js`) – unverändert, aber über Hub-Panel ausgelöst
 
 1. Speichern-Button (`saveBpPanelBtn` in `main.js`) ruft `window.AppModules.bp.saveBlock`.
    - Validiert Eingaben (Sys & Dia erforderlich, Puls optional nur mit BP).
    - Speichert Event via `addEntry` (lokal) + `syncWebhook` (Supabase).
    - Kommentare via `appendNote`, separate Einträge.
-2. Nach Save: Panel reset, `updateBpCommentWarnings` neu berechnet (Pflicht bei >130/>90).
+2. Nach Save: Panel reset, `updateBpCommentWarnings` neu berechnet (Pflicht bei >130/>90). Das Vitals-Panel bleibt im Hub geöffnet; ein erneutes Öffnen läuft über den Orbit-Button.
 3. Falls Abendmessung: `maybeRunTrendpilotAfterBpSave`.
 
 ### 3.4 Körper Flow (`body.js`)
 
 1. `saveBodyPanelBtn` speichert Tagessummary (`saveDaySummary`), ruft `syncWebhook`.
 2. `prefillBodyInputs` nutzt letzte Werte (z.B. Copy vom letzten Tag).
-3. Buttons disabled, wenn nicht eingeloggt.
+3. Buttons disabled, wenn nicht eingeloggt oder das Panel gerade gespeichert wird (`setBusy`).
 
 > **Shared Entry Helper:** Sowohl `saveBlock` als auch `saveDaySummary` nutzen `app/modules/capture/entry.js` (`createBaseEntry`) um ein konsistentes Datensatz-Skelett (Date, Context, Notes) zu erzeugen. Damit bleibt die Struktur across BP/Körper identisch, egal welches Panel speichert.
 

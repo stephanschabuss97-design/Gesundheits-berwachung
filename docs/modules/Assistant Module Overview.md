@@ -22,7 +22,7 @@ Aktueller Stand (Phase 4): Nur Ordner & Minimal-API (`appModules.assistant`) e
 | `app/modules/assistant/index.js` | Platzhalter mit MODULE-Header, exportiert `AppModules.assistant` + `init()` stub. |
 | `app/core/config.js` | Wird später ein Flag `ASSISTANT_ENABLED` o. Ä. aufnehmen (noch nicht gesetzt). |
 | `docs/modules/Assistant Module Overview.md` | Dieses Dokument: beschreibt Ziel, Struktur, nächste Schritte. |
-| `docs/Repo Restructure Roadmap.md` | Phase 4 Abschnitt: Assistant (KI) Readiness. |
+| `docs/Module Update Plan.md` | Enthält den aktuellen Pflegeplan für alle Modul-Dokumente inkl. Assistant. |
 
 ---
 

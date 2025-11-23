@@ -1,16 +1,19 @@
-# Main.js / Router Flow â€“ Functional Overview
+# Main Router Flow – Functional Overview
 
-Dieses Dokument beschreibt den Orchestrator `assets/js/main.js` inklusive Router-/Tab-Fluss, Event-Loops und den Zusammenhang zwischen `requestUiRefresh`, Touch-Log und den einzelnen UI-Modulen.
+Dieses Dokument beschreibt den aktuellen Stand des zentralen Orchestrators `assets/js/main.js`. Obwohl die UI inzwischen über den MIDAS Hub (Orbit + Panels) läuft, bleibt `main.js` der „Herzschlag“, der Capture-, Doctor- und Chart-Module refreshed, Logs schreibt und Supabase/Guard-States verwaltet.
 
 ---
 
 ## 1. Zielsetzung
 
-`main.js` fungiert als zentrale Steuereinheit:
-- Verwaltet Tabs (`capture`, `doctor`), Router-Zustand und Unlock-Anforderungen.
-- Kapselt `requestUiRefresh`/`runUiRefresh` â€“ der Herzschlag fÃ¼r UI-Updates.
-- Bindet Buttons/Events (Datum, Save, Chart, Delete).
-- Koordiniert diag-/Touch-Log-EintrÃ¤ge und Fehlerbehandlung.
+`main.js` kümmert sich um
+- `requestUiRefresh` / `runUiRefresh`: koordiniert sequentielle Updates der Module (Capture, Doctor, Charts, Trendpilot).
+- Event-Bindings für Datum, Save-Buttons, Range-Actions, Export usw.
+- Busy/Diag-Handling (`withBusy`, `diag.add`, Touch-Log).
+- Lock-/Unlock-Flows (Doctor biometrics, Guard Pending Actions).
+- Resume-/Visibility-Hooks (Browser Fokus, App Resume).
+
+Der alte Tab-Router bleibt vorhanden, wird jedoch nur noch für Fallbacks/Legacy genutzt; der Hub ruft die gleichen Refresh-Hooks auf.
 
 ---
 
@@ -18,93 +21,87 @@ Dieses Dokument beschreibt den Orchestrator `assets/js/main.js` inklusive Router
 
 | Bereich | Beschreibung |
 |---------|--------------|
-| `REQUIRED_GLOBALS` | Liste aller Funktionen/Variablen, die vor App-Start existieren mÃ¼ssen (diag, uiError, $ etc.). |
-| `ensureModulesReady()` | PrÃ¼ft Supabase + Globals, zeigt Fehlerbanner falls Module fehlen. |
-| `requestUiRefresh(opts)` | Startet einen UI-Refresh (Promise-basiert) â€“ hÃ¤lt eine Queue, damit mehrere Requests zusammenlaufen. |
-| `runUiRefresh()` | FÃ¼hrt die eigentlichen Steps (Capture/Doctor/Charts) sequentiell aus, loggt Start/Ende. |
-| Event-Bindings | Buttons (Save BP/Body, Chart, Export), Datum, Tabs, Unlock. |
-| Helper | `withBusy`, `flashButtonOk`, `uiError`, `getCaptureDayIso`, `maybeRunTrendpilotAfterBpSave`. |
+| `REQUIRED_GLOBALS` | Liste von Funktionen/Variablen, die vor App-Start vorhanden sein müssen (diag, uiError, captureModule, doctorModule …). |
+| `ensureModulesReady()` | Prüft Supabase + Globals; zeigt Fehlerbanner, falls Module fehlen. |
+| `requestUiRefresh(opts)` | Public Entry: setzt Flags (`docNeeded`, `chartNeeded`, …), bündelt Requests in einer Promise-Queue. |
+| `runUiRefresh()` | Fährt die Steps nacheinander (Capture ? Doctor ? Charts ? Trendpilot). Erzeugt Touch-Log-Einträge `[ui] step start ...`. |
+| Event-Bindings | Datum (`#date`), Range/Export Buttons, Save Buttons (BP, Körper, Intake-Shortcuts), Chart/Trendpilot-Actions. |
+| Helper | `withBusy`, `flashButtonOk`, `uiError`, `getCaptureDayIso`, `maybeRunTrendpilotAfterBpSave`, `setAuthPendingAfterUnlock`. |
 
 ---
 
-## 3. Router / Tabs
+## 3. Hub-Integration vs. Router
 
-- Tabs werden mit `setTab(tabId)` (`assets/js/ui-tabs.js`) gesteuert.  
-  - Beim Wechsel zu â€žArzt-Ansichtâ€œ â†’ `requireDoctorUnlock`.  
-  - Tab-Switch lÃ¶st `requestUiRefresh({ doctor: true, chart: true? })` aus.
-- Capture-View ist Standard (active).  
-  - `bpContextSel` (Morgen/Abend) initialisiert.  
-  - Datum `#date` reagiert auf Ã„nderungen â†’ `maybeRefreshForTodayChange`.
+- Der Hub-Orbit öffnet Panels, aber ruft intern weiterhin `requestUiRefresh` (z.?B. nach Intake Save oder Vital-Speicherungen).
+- `setTab(tabId)` (aus `assets/js/ui-tabs.js`) existiert noch für Legacy (Capture/Doctor). Doctor-Tab ruft zusätzlich `requireDoctorUnlock` auf. Nach Unlock ? `requestUiRefresh({ doctor: true })`.
+- Capture bleibt der Default-State; Hub-Panels nutzen dieselben Render-Funktionen (`refreshCaptureIntake`, `refreshDoctorDaily`, `renderChart`).
 
 ---
 
 ## 4. requestUiRefresh / runUiRefresh
 
 ### 4.1 requestUiRefresh(opts)
-
-1. Receives Options (`doctor`, `chart`, `lifestyle` etc.). Setzt Flags (`uiRefreshState.docNeeded`, ...).
-2. Erstellt Promise und speichert Resolver in `uiRefreshState.resolvers`.
-3. Falls noch kein Refresh lÃ¤uft, startet Timer â†’ `runUiRefresh`.
-4. Logging: `[ui] refresh start reason=...`.
+1. Optionen (z.?B. `{ reason: 'hub:intake-save', doctor: true }`) setzen Flags im `uiRefreshState`.
+2. Erstellt eine Promise, speichert Resolver (`uiRefreshState.resolvers`).
+3. Wenn kein Refresh läuft, startet Timer ? `runUiRefresh()`.
+4. Logging: `[ui] refresh start reason=...` plus Touch-Log.
 
 ### 4.2 runUiRefresh()
-
-1. Setzt `uiRefreshState.running = true`.
-2. FÃ¼hrt Steps nacheinander aus (`asyncMaybe` pattern):
-   - `renderCapture` (z.â€¯B. `refreshCaptureIntake`).
-   - `renderDoctor` (falls `docNeeded`).
-   - `renderChart`, `renderLifestyle`, etc., abhÃ¤ngig von Flags.
-3. Nach Abschluss: Resolvers auflÃ¶sen (`Promise.resolve()`), Flags zurÃ¼cksetzen, Logging `[ui] refresh end reason=...`.
-4. Touch-Log enthÃ¤lt Step-Markierungen (`[ui] step start doctor`, `[ui] step end doctor`).
+1. Markiert `running = true` und liest die gesetzten Flags.
+2. Führt Steps nacheinander aus (jeweils `await`):
+   - Capture (`renderCapture`, ruft `refreshCaptureIntake`, `refreshVitals`, …).
+   - Doctor (`renderDoctor`) falls Flag gesetzt.
+   - Charts / Trendpilot („chartNeeded“, „trendpilotNeeded“).
+3. Nach Abschluss werden Resolver resolved, Flags zurückgesetzt, `[ui] refresh end reason=...` geloggt.
+4. Fehler werden via `diag.add` + `uiError` gemeldet; Touch-Log enthält Step-start/-end-Einträge.
 
 ---
 
 ## 5. Event-Bindings (Auswahl)
 
-- **Blutdruck Panel** â€“ `saveBpPanelBtn` Click:  
-  - Check Login, `withBusy`, Save (`bp.saveBlock`), `requestUiRefresh({ reason: 'panel:bp' })`, Trendpilot-Hook.
-- **KÃ¶rper Panel** â€“ analog `saveBodyPanelBtn`.  
-- **Datum** â€“ `#date` change â†’ Refresh Reset + Prefills.  
-- **Chart Button** â€“ `#doctorChartBtn` â†’ `requestUiRefresh({ chart: true })` (Doctor-Fokus).  
-- **Range Apply** â€“ `#applyRange` â†’ einfach Refresh mit `reason: 'doctor:range'`.
-- **Delete Day** â€“ in `doctor/index.js`, aber `main.js` loggt diag falls Buttons fehlen.  
-- **Login Overlay, Unlock Buttons** â€“ via `createSupabaseFn('showLoginOverlay')`, `requireDoctorUnlock`.
+- **Blutdruck speichern** (`#saveBpPanelBtn`):
+  - Prüft Login, nutzt `withBusy`, ruft `bp.saveBlock` ? `requestUiRefresh({ reason: 'panel:bp', doctor: true })` ? Trendpilot-Check.
+- **Körper speichern** (`#saveBodyPanelBtn`): analog; Refresh-Reason `panel:body`.
+- **Datum (`#date`)**: `change` ? `maybeRefreshForTodayChange` ? Refresh.
+- **Range Apply / Export** (`#applyRange`, `#doctorExportJson`): triggern Doctor/Chart-Refresh, Logging `[doctor] range apply`.
+- **Trendpilot Chart Buttons** (`#doctorChartBtn`, `#doctorShowBands`) ? `requestUiRefresh({ chart: true })`.
+- **Login/Unlock Buttons**: `createSupabaseFn('showLoginOverlay')`, `requireDoctorUnlock()`; nach erfolgreichem Unlock wird `resumeAfterUnlock` aufgerufen.
 
 ---
 
 ## 6. Touch-Log / Diagnostics
 
-- `touchLog` (`<pre id="touchLog">`) sammelt diag-EintrÃ¤ge:
-  - `[ui] refresh start/end reason=...`.
-  - `[resume] ...`, `[capture] ...`, `[panel] ...`.
-- `diag.add` in `main.js` und Submodulen, um Fehlerpfade nachzuvollziehen.
-- `logDoctorError` (Doctor), `[chart] trendpilot bands failed` (Chart), etc., landen ebenfalls im Log.
+- Touch-Log (DOM `<pre id="touchLog">`) sammelt Events:
+  - `[ui] refresh start/end reason=...`
+  - `[resume] ...`, `[capture] ...`, `[panel] ...`
+- `diag.add` für Fehlerpfade (`capture intake save error`, `chart trendpilot fail`, …).
+- `logDoctorError`, `logChartError` etc. leiten ihre Meldungen an `diag` weiter.
 
 ---
 
 ## 7. Resume / Background Flow
 
-- Supabase `setupRealtime` plus `resumeFromBackground` rufen `requestUiRefresh({ reason: 'resume' })`.
-- `document.addEventListener('visibilitychange')`, `focus`, `pageshow` triggern diag + optional Refresh.  
-- Touch-Log: `[resume] start`, `[resume] ui refresh requested`, `[resume] loggedFast=true`.
+- Hooks (`visibilitychange`, `focus`, `pageshow`) schreiben `[resume]` Logs und rufen `requestUiRefresh({ reason: 'resume' })`.
+- Supabase `setupRealtime` + `resumeFromBackground` (Intake-Live-Updates) hängen ebenfalls an `requestUiRefresh`.
+- Guard/Unlock: `resumeAfterUnlock` verwendet `setAuthPendingAfterUnlock`, damit die ursprünglich gewünschte Aktion (z.?B. Doctor Overlay öffnen) sofort ausgeführt wird.
 
 ---
 
 ## 8. Sicherheitsmechanismen
 
-- `getSupabaseApi` + `createSupabaseFn`: Verhindern API-Aufrufe, wenn Supabase nicht ready ist.
-- Busy-Buttons: `withBusy(btn, true)` blockiert Mehrfachklicks.
-- Unlock: `isDoctorUnlocked()` prÃ¼ft Guard-State, `setAuthPendingAfterUnlock` hÃ¤lt Pending-Actions.
-- Fehlerbanner: If `ensureModulesReady()` fails, UI zeigt Banner (â€žModule fehlen ...â€œ).
+- `getSupabaseApi` + `createSupabaseFn` verhindern Aufrufe, solange Supabase nicht bereit ist.
+- Buttons benutzen `withBusy(btn, true)` gegen Mehrfachklicks.
+- Guard Flow: `requireDoctorUnlock` setzt Pending-Action; nach erfolgreichem Unlock ruft `main.js` erneut `requestUiRefresh({ doctor: true, reason: 'unlock:doctor' })`.
+- Fehlerbanner (`ensureModulesReady`) weist auf fehlende Globals hin.
 
 ---
 
 ## 9. Erweiterungsideen
 
-- Router-Historie (z.â€¯B. Hash oder URL Param, um Tab/Datum zu behalten).
-- Bessere Toast/Notification bei Refresh-Resultaten (z.â€¯B. Chart aktualisiert).
-- Modularisierung: einzelne Steps (Capture, Doctor, Chart) in separate Files extrahieren.
+- Echten Router-State (History/Hash) einführen, damit Panel/Orbit-Status geteilt werden kann.
+- Bessere Notifications für Refresh-Ergebnisse (z.?B. Toast „Doctor-Daten aktualisiert“).
+- `runUiRefresh` in einzelne Module splitten (Capture/Doctor/Chart), um Supabase/KI-Features isoliert hinzuzufügen.
 
 ---
 
-Dieses Overview bitte aktualisieren, wenn `main.js` neue Tabs, Flags oder Diagnose-Hooks erhÃ¤lt.
+Dieses Dokument sollte aktualisiert werden, sobald `main.js` neue Panels, Flags oder Diagnose-Hooks erhält. Besonders wichtig wird eine weitere Überarbeitung, wenn der Supabase-Proxy neu strukturiert oder KI-/PWA-Flows integriert werden.
