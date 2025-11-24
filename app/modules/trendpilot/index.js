@@ -53,10 +53,10 @@
     const supabaseApi = getSupabaseApi();
     return {
       supabaseApi,
-      fetchDailyOverview: supabaseApi.fetchDailyOverview || global.fetchDailyOverview,
+      fetchDailyOverview: supabaseApi.fetchDailyOverview,
       upsertSystemCommentRemote: supabaseApi.upsertSystemCommentRemote,
       setSystemCommentAck: supabaseApi.setSystemCommentAck,
-      fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange
+      fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange
     };
   };
 

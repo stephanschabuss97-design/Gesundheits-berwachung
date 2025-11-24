@@ -10,6 +10,7 @@
 
 // SUBMODULE: imports @internal - bindet zentrale Supabase-Schnittstelle ein
 import { SupabaseAPI } from "../../app/supabase/index.js";
+const setConfigStatus = SupabaseAPI.setConfigStatus?.bind(SupabaseAPI) ?? (() => {});
 
 // SUBMODULE: bootAuth @public - initialisiert Auth-Callbacks und synchronisiert UI mit Login-Status
 const bootAuth = () => {
@@ -17,9 +18,9 @@ const bootAuth = () => {
     onStatus: (status) => console.info("Auth status:", status),
     onLoginOverlay: (visible) => {
       if (visible) {
-        SupabaseAPI.showLoginOverlay?.(true);
+      SupabaseAPI.showLoginOverlay?.(true);
       } else {
-        SupabaseAPI.hideLoginOverlay?.();
+    SupabaseAPI.hideLoginOverlay?.();
       }
     },
     onUserUi: (email) => {

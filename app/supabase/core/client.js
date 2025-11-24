@@ -40,12 +40,13 @@ const getConfSafe = (...args) => {
 };
 
 const setConfigStatusSafe = (msg, tone = 'info') => {
-  const fn = globalWindow?.setConfigStatus;
+  const supa = globalWindow?.AppModules?.supabase || null;
+  const fn = supa?.setConfigStatus;
   if (typeof fn === 'function') {
     fn(msg, tone);
-  } else {
-    diag.add?.(`[config] ${tone}: ${msg}`);
+    return;
   }
+  diag.add?.(`[config] ${tone}: ${msg}`);
 };
 
 // SUBMODULE: maskUid @public - schützt User-IDs vor vollständigem Logging

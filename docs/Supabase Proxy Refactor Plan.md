@@ -233,19 +233,21 @@ Physically remove the proxy from the boot path, keeping only the barrel.
    - Comment out or delete the `<script>` tag loading `app/supabase.js`.
    - Ensure only `app/supabase/index.js` is loaded.
 
-   **Status (2025-11-24):** `index.html` now only loads `app/supabase/index.js` (proxy script removed). From here on, the barrel is the sole source of Supabase globals.
+   **Status (2025-11-24):** Initial removal landed, but we had to temporarily re-add `app/supabase.js` after runtime reported “SupabaseAPI missing”. Current state: both scripts load again while we investigate; rerun this step once the root cause is fixed.
 
 2. **Build & bundle check**
    - Ensure the build output contains:
      - the barrel
      - no references to `app/supabase.js`.
 
-   **Status (2025-11-24):** Full-text search (`rg "app/supabase.js"`) now only hits documentation/CHANGELOG entries; no runtime/bundle file references remain. `index.html` and assets load only `app/supabase/index.js`, so the production bundle consists solely of the barrel.
+   **Status (2025-11-24):** Rolling back Step 1 brought the proxy script back into the bundle, so a new build check is required after the final removal attempt.
 
 3. **Delete proxy source**
    - Once runtime tests pass:
      - Remove `app/supabase.js`.
      - Clean up any leftover imports or references.
+
+   **Status (2025-11-24):** Proxy file now replaced with a thin shim that simply imports/exports the barrel. Hub/Doctor/Trendpilot/UI modules (plus system-comments + core client) were updated to consume Supabase via `AppModules.supabase`, so warnLegacy only fires for truly external callers. Next removal attempt can proceed once scripted flows remain clean.
 
 4. **Update `CHANGELOG.md`**
    - Add an entry like:

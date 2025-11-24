@@ -52,7 +52,7 @@
     return !!getAuthGuardState()?.doctorUnlocked;
   };
   const requestDoctorUnlock = async () => {
-    const unlockFn = global.requireDoctorUnlock;
+    const unlockFn = global.AppModules?.supabase?.requireDoctorUnlock;
     if (typeof unlockFn === 'function') {
       return unlockFn();
     }

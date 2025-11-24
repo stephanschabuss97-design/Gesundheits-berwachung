@@ -17,6 +17,7 @@
   const appModules = (global.AppModules = global.AppModules || {});
   const $ = (sel) => global.document.querySelector(sel);
   const $$ = (sel) => Array.from(global.document.querySelectorAll(sel));
+  const getSupabaseApi = () => global.AppModules?.supabase || {};
 
   // SUBMODULE: authState @internal - kapselt Doctor-Unlock-Status mit atomarem Promise-Lock
   const authState = (() => {
@@ -62,15 +63,16 @@
     if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
       await authState.updateSafely(async (s) => {
         s.pendingAfterUnlock = null;
-        global.lockUi?.(false);
+        getSupabaseApi().lockUi?.(false);
       });
     }
 
     if (name === 'doctor') {
       try {
-        const logged = await global.isLoggedInFast?.();
+        const supaApi = getSupabaseApi();
+        const logged = await supaApi.isLoggedInFast?.();
         if (!logged) {
-          global.showLoginOverlay?.(true);
+          supaApi.showLoginOverlay?.(true);
           return;
         }
 
@@ -83,7 +85,7 @@
         });
 
         if (needPrompt) {
-          const ok = await global.requireDoctorUnlock?.();
+          const ok = await supaApi.requireDoctorUnlock?.();
           if (!ok) return;
           // Nach erfolgreichem Unlock Status updaten
           await authState.updateSafely(async (s) => {

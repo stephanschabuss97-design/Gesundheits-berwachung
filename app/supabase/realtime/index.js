@@ -22,21 +22,24 @@ import { scheduleAuthGrace, finalizeAuthState } from '../auth/core.js';
 // SUBMODULE: globals @internal - sichert window/document Handles ab
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
 const globalDocument = typeof document !== 'undefined' ? document : undefined;
+const getSupabaseApi = () => globalWindow?.AppModules?.supabase || null;
 
 // SUBMODULE: defaults @internal - Fallbacks für Legacy-Kompatibilität
 const defaultSetupRealtime = async () => undefined;
 const defaultTeardownRealtime = () => undefined;
 
-// SUBMODULE: capturedSetup/Teardown @internal - verwendet globale Implementierungen oder Fallbacks
-const capturedSetup =
-  typeof globalWindow?.setupRealtime === 'function'
-    ? globalWindow.setupRealtime
-    : defaultSetupRealtime;
+// SUBMODULE: capturedSetup/Teardown @internal - verwendet externe Implementierungen oder Fallbacks
+const resolveExternalSetup = () => {
+  const supa = getSupabaseApi();
+  const candidate = supa?.setupRealtime || globalWindow?.setupRealtime;
+  return typeof candidate === 'function' && candidate !== setupRealtime ? candidate : defaultSetupRealtime;
+};
 
-const capturedTeardown =
-  typeof globalWindow?.teardownRealtime === 'function'
-    ? globalWindow.teardownRealtime
-    : defaultTeardownRealtime;
+const resolveExternalTeardown = () => {
+  const supa = getSupabaseApi();
+  const candidate = supa?.teardownRealtime || globalWindow?.teardownRealtime;
+  return typeof candidate === 'function' && candidate !== teardownRealtime ? candidate : defaultTeardownRealtime;
+};
 
     // SUBMODULE: diag @internal - Diagnostik-Schnittstelle mit tolerantem Fallback
 const diag =
@@ -111,7 +114,7 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       const msg = `[resume] scheduleAuthGrace failed: ${err?.message || err}`;
       diag.add?.(msg);
       console.error?.(msg, err);
-      const fallback = globalWindow?.scheduleAuthGrace;
+      const fallback = getSupabaseApi()?.scheduleAuthGrace;
       if (typeof fallback === 'function' && fallback !== scheduleAuthGrace) {
         try {
           fallback();
@@ -123,7 +126,7 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
       }
     }
 
-    const supa = await asyncMaybe(globalWindow?.ensureSupabaseClient);
+    const supa = await asyncMaybe(getSupabaseApi()?.ensureSupabaseClient);
     diag.add?.('[resume] supabase client ' + (supa ? 'ready' : 'missing'));
     if (!supa) {
       diag.add?.('[resume] no supabase client -> login overlay');
@@ -146,11 +149,11 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
           diag.add?.('[resume] fallback finalizeAuthState(false) missing');
         }
       }
-      callMaybe(globalWindow?.showLoginOverlay, true);
+      callMaybe(getSupabaseApi()?.showLoginOverlay, true);
       return;
     }
 
-    let loggedIn = await asyncMaybe(globalWindow?.isLoggedInFast, { timeout: 800 });
+    let loggedIn = await asyncMaybe(getSupabaseApi()?.isLoggedInFast, { timeout: 800 });
     diag.add?.(`[resume] loggedFast=${loggedIn}`);
     if (!loggedIn) {
       diag.add?.('[resume] session miss -> refresh');
@@ -184,7 +187,7 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
     diag.add?.(`[resume] logged=${loggedIn}`);
     if (!loggedIn) {
       diag.add?.('[resume] no session -> login overlay');
-      callMaybe(globalWindow?.showLoginOverlay, true);
+      callMaybe(getSupabaseApi()?.showLoginOverlay, true);
       return;
     }
 
@@ -259,12 +262,14 @@ async function resumeFromBackgroundInternal({ source = 'resume' } = {}) {
 
 // SUBMODULE: setupRealtime @public - ruft Legacy- oder Standard-Setup auf
 export async function setupRealtime(...args) {
-  return capturedSetup(...args);
+  const setupFn = resolveExternalSetup();
+  return setupFn(...args);
 }
 
 // SUBMODULE: teardownRealtime @public - beendet Realtime-Session
 export function teardownRealtime(...args) {
-  return capturedTeardown(...args);
+  const teardownFn = resolveExternalTeardown();
+  return teardownFn(...args);
 }
 
 // SUBMODULE: resumeFromBackground @public - öffentlicher Resume-Trigger (Proxy für resumeFromBackgroundInternal)

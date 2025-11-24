@@ -153,7 +153,7 @@
 
   const ensureDoctorUnlocked = async () => {
     const supa = getSupabaseApi();
-    const unlockFn = supa?.requireDoctorUnlock || global.requireDoctorUnlock;
+    const unlockFn = supa?.requireDoctorUnlock;
     if (typeof unlockFn !== 'function') return true;
     try {
       const ok = await unlockFn();
