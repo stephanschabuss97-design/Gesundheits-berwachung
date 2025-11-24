@@ -41,6 +41,68 @@ Make sure barrel and proxy expose the *same* public API before we start cutting.
      - `window.__authState`
      - `window.__lastLoggedIn`.
 
+### Supabase public contract (Phase 0 inventory)
+
+**Core / HTTP / state**
+- `withRetry`
+- `fetchWithAuth`
+- `cacheHeaders`
+- `clearHeaderCache`
+- `getCachedHeaders`
+- `getCachedHeadersAt`
+- `getHeaderPromise`
+- `setHeaderPromise`
+- `setSupabaseDebugPii`
+- `maskUid`
+- `baseUrlFromRest`
+- `ensureSupabaseClient`
+
+**App / data APIs**
+- `syncWebhook`
+- `appendNoteRemote`
+- `deleteRemote`
+- `deleteRemoteDay`
+- `loadIntakeToday`
+- `saveIntakeTotals`
+- `saveIntakeTotalsRpc`
+- `cleanupOldIntake`
+- `loadBpFromView`
+- `loadBodyFromView`
+- `fetchDailyOverview`
+- `pushPendingToRemote`
+- `bindAuthButtons`
+- `prefillSupabaseConfigForm`
+- `setConfigStatus`
+- `showLoginOverlay`
+- `hideLoginOverlay`
+- `setUserUi`
+
+**Auth / guard**
+- `setDoctorAccess`
+- `requireDoctorUnlock`
+- `resumeAfterUnlock`
+- `bindAppLockButtons`
+- `authGuardState`
+- `lockUi`
+- `requireSession`
+- `watchAuthState`
+- `afterLoginBoot`
+- `getUserId`
+- `isLoggedInFast`
+- `scheduleAuthGrace`
+- `finalizeAuthState`
+
+**Realtime**
+- `setupRealtime`
+- `teardownRealtime`
+- `resumeFromBackground`
+- `toEventsUrl`
+
+**State globals mirrored on window**
+- `window.sbClient`
+- `window.__authState`
+- `window.__lastLoggedIn`
+
 2. **Compare with `app/supabase/index.js`**
    - Ensure the barrel exports (directly or via `AppModules.supabase`) cover the same functions.
    - If there is drift (functions only in proxy, not in barrel), decide:
@@ -49,6 +111,11 @@ Make sure barrel and proxy expose the *same* public API before we start cutting.
 
 **Deliverable:**  
 A short API list in this document (“Supabase public contract”) and confirmed parity between barrel and proxy.
+
+**Status (2025-11-24):**  
+- `app/supabase/index.js` imports `{ SupabaseAPI as LegacySupabaseAPI }` from `../supabase.js` and aggregates it as the first module source, so every proxy key remains part of the barrel export (`MODULE_SOURCES` list).  
+- The barrel adds newer modules (`select`, `systemComments`, etc.) on top, so modern consumers already see the superset surface via `AppModules.supabase`.  
+- The three window state bindings (`sbClient`, `__authState`, `__lastLoggedIn`) are still created exclusively by `app/supabase.js`; once we delete the proxy we must recreate those bindings (or refactor their consumers) inside the barrel.
 
 ---
 
