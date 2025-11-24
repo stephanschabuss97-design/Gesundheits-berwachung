@@ -86,6 +86,7 @@ Object.defineProperties(window, {
 
 // SUBMODULE: SupabaseAPI aggregation @public - bündelt alle Forwarder aus Core-, Auth-, API- und Realtime-Modulen
 const supabaseApi = {
+  supabaseState,
   withRetry,
   fetchWithAuth,
   cacheHeaders,
@@ -140,8 +141,22 @@ export const SupabaseAPI = supabaseApi;
 window.AppModules = window.AppModules || {};
 window.AppModules.supabase = SupabaseAPI;
 
-// SUBMODULE: warnLegacy @internal - Platzhalter für zukünftige Warnmeldungen bei globalem Zugriff
-const warnLegacy = () => {};
+// SUBMODULE: warnLegacy @internal - protokolliert Zugriffe auf Legacy-Globals
+const warnedLegacyNames = new Set();
+const isDevBuild =
+  (typeof window !== 'undefined' && typeof window.__DEV__ !== 'undefined' && !!window.__DEV__) ||
+  (typeof process !== 'undefined' && process?.env?.NODE_ENV && process.env.NODE_ENV !== 'production');
+const warnLegacy = (name) => {
+  if (warnedLegacyNames.has(name)) return;
+  warnedLegacyNames.add(name);
+  if (isDevBuild) {
+    const stack = new Error().stack;
+    console.warn('[supabase-proxy] Legacy global accessed:', name, stack ? `\n${stack}` : '');
+    return;
+  }
+  // Production: avoid leaking stack traces/paths but keep visibility.
+  console.warn('[supabase-proxy] Legacy global accessed:', name);
+};
 
 // SUBMODULE: legacy window proxies @internal - leitet alte globale Aufrufe auf SupabaseAPI weiter
 const legacyNames = [...Object.keys(SupabaseAPI), 'SupabaseAPI'];

@@ -197,10 +197,14 @@ Run proxy + barrel in parallel, but actively detect remaining legacy usage.
      - `app/supabase.js` (proxy)
    - The proxy should now be a safety net, not the primary integration point.
 
+   **Status (2025-11-24):** `index.html` now loads both scripts back-to-back (legacy proxy first, then the barrel). The proxy is only kept as a fallback safety net; all modules already consume the barrel via `AppModules.supabase`.
+
 2. **Activate `warnLegacy`**
    - Implement `warnLegacy(name)` in `app/supabase.js` to log when a legacy global is accessed, for example:
      - `console.warn('[supabase-proxy] Legacy global accessed:', name);`
      - optional: include a stack trace for easier tracking.
+
+   **Status (2025-11-24):** `app/supabase.js` now logs once per legacy key via `warnLegacy(name)` (includes stack traces) whenever a window getter/setter is hit. This will highlight any straggling consumers while the proxy is loaded.
 
 3. **Run regression tests**
    - Manually:
@@ -215,6 +219,8 @@ Run proxy + barrel in parallel, but actively detect remaining legacy usage.
 
 **Deliverable:**  
 In dev mode, *no* `warnLegacy` logs appear anymore during normal flows.
+
+   **Status (2025-11-24):** Regression pass completed (login/intake/doctor/resume). Touch-Log shows only expected `[ui]` / `[auth]` entries, and the console stayed free of `[supabase-proxy] Legacy global accessed` warnings. Phase 2 can move toward proxy removal once this state holds across environments.
 
 ---
 
