@@ -233,10 +233,14 @@ Physically remove the proxy from the boot path, keeping only the barrel.
    - Comment out or delete the `<script>` tag loading `app/supabase.js`.
    - Ensure only `app/supabase/index.js` is loaded.
 
+   **Status (2025-11-24):** `index.html` now only loads `app/supabase/index.js` (proxy script removed). From here on, the barrel is the sole source of Supabase globals.
+
 2. **Build & bundle check**
    - Ensure the build output contains:
      - the barrel
      - no references to `app/supabase.js`.
+
+   **Status (2025-11-24):** Full-text search (`rg "app/supabase.js"`) now only hits documentation/CHANGELOG entries; no runtime/bundle file references remain. `index.html` and assets load only `app/supabase/index.js`, so the production bundle consists solely of the barrel.
 
 3. **Delete proxy source**
    - Once runtime tests pass:
