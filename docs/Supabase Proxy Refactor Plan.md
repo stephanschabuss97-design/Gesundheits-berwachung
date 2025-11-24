@@ -233,25 +233,31 @@ Physically remove the proxy from the boot path, keeping only the barrel.
    - Comment out or delete the `<script>` tag loading `app/supabase.js`.
    - Ensure only `app/supabase/index.js` is loaded.
 
-   **Status (2025-11-24):** Initial removal landed, but we had to temporarily re-add `app/supabase.js` after runtime reported “SupabaseAPI missing”. Current state: both scripts load again while we investigate; rerun this step once the root cause is fixed.
+   **Status (2025-11-24):** Completed – `index.html` now loads nur das Barrel (`app/supabase/index.js`). Keine separaten Proxy-Skripte mehr notwendig.
 
 2. **Build & bundle check**
    - Ensure the build output contains:
      - the barrel
      - no references to `app/supabase.js`.
 
-   **Status (2025-11-24):** Rolling back Step 1 brought the proxy script back into the bundle, so a new build check is required after the final removal attempt.
+   **Status (2025-11-24):** Bundle enthält nur noch das Barrel; keine Runtime-Referenzen auf `app/supabase.js`.
 
 3. **Delete proxy source**
    - Once runtime tests pass:
      - Remove `app/supabase.js`.
      - Clean up any leftover imports or references.
 
-   **Status (2025-11-24):** Proxy file now replaced with a thin shim that simply imports/exports the barrel. Hub/Doctor/Trendpilot/UI modules (plus system-comments + core client) were updated to consume Supabase via `AppModules.supabase`, so warnLegacy only fires for truly external callers. Next removal attempt can proceed once scripted flows remain clean.
+   **Status (2025-11-24):** Erledigt – Shim gelöscht, Barrel liefert allein den kompletten Supabase-API-Surface. `rg "app/supabase.js"` trifft nur noch Dokumentation.
 
 4. **Update `CHANGELOG.md`**
    - Add an entry like:
      - “Removed legacy Supabase proxy (`app/supabase.js`), all consumers now use `app/supabase/index.js` barrel.”
+
+4. **Update `CHANGELOG.md`**
+   - Add an entry like:
+     - “Removed legacy Supabase proxy (`app/supabase.js`), all consumers now use `app/supabase/index.js` barrel.”
+
+   **Status (2025-11-24):** Done – CHANGELOG enthält den Eintrag unter `v1.8.1`.
 
 **Deliverable:**  
 Project builds and runs without `app/supabase.js` present. All Supabase usage goes through the barrel.
@@ -271,21 +277,29 @@ Verify that the system behaves correctly in real-world usage without the proxy.
      - Trendpilot / charts
      - Realtime / background resume
      - Unlock / guard / auth grace.
+     
+   **Status (2025-11-24):** ✅ Manuelle Tests auf Live Server: Hub, Capture (Wasser/BP), Doctor-Ansicht, Trendpilot/Charts, Realtime Resume, Unlock/Guard liefen fehlerfrei.
 
 2. **Monitor diag & Touch-Log**
    - Watch for:
      - missing Supabase functions
      - auth-related issues (session loss, broken unlock flows)
      - realtime disconnects.
+     
+   **Status (2025-11-24):** ✅ Touch-Log & Console sauber (nur erwartete CSP/Gotrue-Hinweise). Keine fehlenden Supabase-Funktionen oder Auth/Realtimes-Ausfälle.
 
 3. **External scripts / QA tools**
    - Confirm that any external or QA scripts have been updated or consciously retired.
    - If something absolutely must keep a global:
      - introduce a tiny, explicit compatibility shim (e.g. attach 1–2 functions on `window.AppModules.supabase`) instead of bringing back the full proxy pattern.
+     
+   **Status (2025-11-24):** ✅ interne Module migriert, keine externen Skripte benötigen den Legacy-Proxy; bei Bedarf würde ein gezielter Shim genutzt.
 
 4. **Close the refactor task**
    - Mark proxy removal as complete.
    - Optionally, remove temporary dev-only logging from the barrel.
+     
+   **Status (2025-11-24):** ✅ Refactor abgeschlossen; Barrel bleibt mit `warnLegacy` (nur noch für externe Zugriffe). Proxy entfernt, docs & changelog aktualisiert.
 
 ---
 
