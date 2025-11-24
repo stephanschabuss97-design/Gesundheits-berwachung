@@ -136,6 +136,14 @@ Find and migrate all consumers that still rely on proxy-specific behavior or win
      - QA tools, diag/TouchLog helpers
      - inline scripts (if any).
 
+   **Status (2025-11-24): Current consumers of the legacy globals**
+   - `assets/js/main.js:18-43` owns the shared boot helpers (`getSupabaseApi`, `createSupabaseFn`, `waitForSupabaseApi`) and relies on `window.SupabaseAPI` instead of importing the barrel.
+   - `app/modules/trendpilot/index.js:18-91,384-385` polls `global.SupabaseAPI` (fallback to `AppModules.supabase`) before initializing and logs missing deps based on the legacy namespace.
+   - `app/modules/hub/index.js:30-32` pulls its Supabase helpers via `global.SupabaseAPI` as part of `getSupabaseApi`.
+   - `app/modules/doctor/index.js:19-46` queries `global.SupabaseAPI` both for helper access and `authGuardState`.
+   - `app/modules/charts/index.js:30-31` still reads Supabase through `global.SupabaseAPI` / `AppModules.supabase`.
+   - No direct usages of `window.loadIntakeToday`, `window.saveIntakeTotals`, `window.requireSession`, etc. were found outside documentation. The real-world consumers go through `SupabaseAPI` rather than individual globals.
+
 2. **Identify state-level globals**
    - Search for:
      - `window.sbClient`
@@ -144,6 +152,12 @@ Find and migrate all consumers that still rely on proxy-specific behavior or win
    - Classify each usage:
      - **Read-only diagnostics** → can be migrated to a helper or `diag` module that imports `supabaseState`.
      - **Control logic** (e.g. checking auth state) → should be refactored to use `authCore` / barrel exports directly.
+
+   **Status (2025-11-24): window state bindings still in use**
+   - `assets/js/main.js:382-389,1153-1159` references the implicit global `sbClient` for login checks (`isLoggedIn` shortcut + `watchAuthState` bootstrap). That is control logic and must be rewritten to import `supabaseState` (or call `ensureSupabaseClient`) rather than rely on the window binding.
+   - `app/supabase/auth/guard.js:262-266` reads `globalWindow?.sbClient` to fetch the current session inside `getSessionUser()`. This should swap to `supabaseState.sbClient`.
+   - `app/modules/capture/index.js:332-352` consumes `__authState` and `__lastLoggedIn` to keep Capture unlocked during the “unknown” grace phase. This is control logic; migrate to barrel exports that expose `supabaseState.authState` / `supabaseState.lastLoggedIn` (or provide helpers).
+   - No purely diagnostic (read-only logging) usage of these globals remains; every occurrence influences flow control. Once these modules import state directly, we can remove the `window.sbClient` / `__authState` / `__lastLoggedIn` bindings altogether.
 
 3. **Update consumers**
    - Replace global calls with:
