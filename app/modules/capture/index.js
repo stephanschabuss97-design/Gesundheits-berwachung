@@ -14,6 +14,10 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const getSupabaseApi = () => global.AppModules?.supabase || {};
+  const getSupabaseState = () => getSupabaseApi().supabaseState || null;
+  const getAuthState = () => getSupabaseState()?.authState || 'unauth';
+  const wasRecentlyLoggedIn = () => Boolean(getSupabaseState()?.lastLoggedIn);
 
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
@@ -332,7 +336,7 @@
 
   const logged = await isLoggedInFast();
   // Unknown-Phase: so tun, als ob weiter eingeloggt (keine Sperre!)
-  const effectiveLogged = (__authState === 'unknown' && __lastLoggedIn) ? true : !!logged;
+  const effectiveLogged = (getAuthState() === 'unknown' && wasRecentlyLoggedIn()) ? true : !!logged;
   captureIntakeState.logged = effectiveLogged;
 
   if (!effectiveLogged){
@@ -347,7 +351,7 @@
   try{
     const uid = await getUserId();
     // Unknown-Phase: UID kann transient null sein -> NICHT sperren
-    if (!uid && __authState !== 'unknown'){
+    if (!uid && getAuthState() !== 'unknown'){
       captureIntakeState.logged = false;
       captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
       setCaptureIntakeDisabled(true);

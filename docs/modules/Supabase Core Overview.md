@@ -4,6 +4,14 @@ Dieses Dokument beschreibt das Supabase-Kernsystem des Gesundheits-Loggers. Es d
 
 ---
 
+## Access Policy (Phase 1)
+
+- **Supabase-Zugriff erfolgt ausschlie?lich ?ber das Barrel** (`AppModules.supabase`) oder ?ber die Wrapper aus `createSupabaseFn(...)` (`assets/js/main.js`). Direkte Aufrufe auf `window.SupabaseAPI` oder einzelne `window.<fn>`-Globals gelten als deprecated.
+- **Keine neuen Window-Bindings:** State-Werte wie `sbClient`, `authState`, `lastLoggedIn` werden ?ber `SupabaseAPI.supabaseState` bereitgestellt. Legacy-Bindings aus `app/supabase.js` verschwinden, sobald der Proxy gel?scht wird.
+- **Refactor-Tracking:** Fortschritt und Migrations-Status stehen im [Supabase Proxy Refactor Plan](../Supabase%20Proxy%20Refactor%20Plan.md). Jedes Modul, das Supabase nutzt, sollte dort verlinkt bzw. erfasst sein.
+
+---
+
 ## 1. Zielsetzung
 
 Das Supabase-Core-System bündelt alle Supabase-Funktionen (Auth, REST, RPC, Realtime) in einem gemeinsamen Namespace (`SupabaseAPI` / `AppModules.supabase`). Es soll:

@@ -27,8 +27,7 @@
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
 
-  const getSupabaseApi = () =>
-    appModules.supabase || global.SupabaseAPI || appModules.supabase;
+  const getSupabaseApi = () => appModules.supabase || {};
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {

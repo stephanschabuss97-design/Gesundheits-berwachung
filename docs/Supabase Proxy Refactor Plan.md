@@ -115,7 +115,7 @@ A short API list in this document (“Supabase public contract”) and confirmed
 **Status (2025-11-24):**  
 - `app/supabase/index.js` imports `{ SupabaseAPI as LegacySupabaseAPI }` from `../supabase.js` and aggregates it as the first module source, so every proxy key remains part of the barrel export (`MODULE_SOURCES` list).  
 - The barrel adds newer modules (`select`, `systemComments`, etc.) on top, so modern consumers already see the superset surface via `AppModules.supabase`.  
-- The three window state bindings (`sbClient`, `__authState`, `__lastLoggedIn`) are still created exclusively by `app/supabase.js`; once we delete the proxy we must recreate those bindings (or refactor their consumers) inside the barrel.
+- The three window state bindings (`sbClient`, `__authState`, `__lastLoggedIn`) no longer have production consumers after the refactors below; if we still need them for diagnostics we can recreate the bindings in the barrel (or drop them entirely) when the proxy disappears.
 
 ---
 
@@ -137,12 +137,9 @@ Find and migrate all consumers that still rely on proxy-specific behavior or win
      - inline scripts (if any).
 
    **Status (2025-11-24): Current consumers of the legacy globals**
-   - `assets/js/main.js:18-43` owns the shared boot helpers (`getSupabaseApi`, `createSupabaseFn`, `waitForSupabaseApi`) and relies on `window.SupabaseAPI` instead of importing the barrel.
-   - `app/modules/trendpilot/index.js:18-91,384-385` polls `global.SupabaseAPI` (fallback to `AppModules.supabase`) before initializing and logs missing deps based on the legacy namespace.
-   - `app/modules/hub/index.js:30-32` pulls its Supabase helpers via `global.SupabaseAPI` as part of `getSupabaseApi`.
-   - `app/modules/doctor/index.js:19-46` queries `global.SupabaseAPI` both for helper access and `authGuardState`.
-   - `app/modules/charts/index.js:30-31` still reads Supabase through `global.SupabaseAPI` / `AppModules.supabase`.
-   - No direct usages of `window.loadIntakeToday`, `window.saveIntakeTotals`, `window.requireSession`, etc. were found outside documentation. The real-world consumers go through `SupabaseAPI` rather than individual globals.
+   - `assets/js/main.js:18-43` owns the shared boot helpers (`getSupabaseApi`, `createSupabaseFn`, `waitForSupabaseApi`) and now resolves everything exclusively via `window.AppModules.supabase`.
+   - `app/modules/trendpilot/index.js`, `app/modules/hub/index.js`, `app/modules/doctor/index.js` und `app/modules/charts/index.js` were updated to drop `global.SupabaseAPI` access; they only read the API surface from `AppModules.supabase`.
+   - No direct usages of `window.loadIntakeToday`, `window.saveIntakeTotals`, `window.requireSession`, etc. were found outside documentation. The real-world consumers go through the Supabase API object rather than individual globals.
 
 2. **Identify state-level globals**
    - Search for:
@@ -154,10 +151,10 @@ Find and migrate all consumers that still rely on proxy-specific behavior or win
      - **Control logic** (e.g. checking auth state) → should be refactored to use `authCore` / barrel exports directly.
 
    **Status (2025-11-24): window state bindings still in use**
-   - `assets/js/main.js:382-389,1153-1159` references the implicit global `sbClient` for login checks (`isLoggedIn` shortcut + `watchAuthState` bootstrap). That is control logic and must be rewritten to import `supabaseState` (or call `ensureSupabaseClient`) rather than rely on the window binding.
-   - `app/supabase/auth/guard.js:262-266` reads `globalWindow?.sbClient` to fetch the current session inside `getSessionUser()`. This should swap to `supabaseState.sbClient`.
-   - `app/modules/capture/index.js:332-352` consumes `__authState` and `__lastLoggedIn` to keep Capture unlocked during the “unknown” grace phase. This is control logic; migrate to barrel exports that expose `supabaseState.authState` / `supabaseState.lastLoggedIn` (or provide helpers).
-   - No purely diagnostic (read-only logging) usage of these globals remains; every occurrence influences flow control. Once these modules import state directly, we can remove the `window.sbClient` / `__authState` / `__lastLoggedIn` bindings altogether.
+   - ✅ `assets/js/main.js:382-389,1153-1159` now calls `getSupabaseState()` (which resolves to `SupabaseAPI.supabaseState`) for login checks and `watchAuthState` bootstrap.
+   - ✅ `app/supabase/auth/guard.js:262-266` imports `supabaseState` directly and reads `supabaseState.sbClient`.
+   - ✅ `app/modules/capture/index.js:332-352` derives its “unknown” auth grace from `SupabaseAPI.supabaseState.authState/lastLoggedIn`.
+   - No remaining production usage depends on `window.sbClient`, `window.__authState` oder `window.__lastLoggedIn`. We can recreate or drop those bindings inside the barrel when the proxy disappears.
 
 3. **Update consumers**
    - Replace global calls with:
@@ -168,11 +165,20 @@ Find and migrate all consumers that still rely on proxy-specific behavior or win
        - introduce a small adapter in the barrel that keeps `window.sbClient` etc. alive *temporarily*, **or**
        - refactor all usages so they import `supabaseState` / `authCore` instead of reading window globals.
 
+   **Status (2025-11-24):**
+   - `assets/js/main.js` + Capture/Doctor/Trendpilot/Hub/Charts now exclusively access Supabase via `AppModules.supabase` / `createSupabaseFn`.
+   - State-level consumers (main.js, guard.js, capture/index.js) now read `SupabaseAPI.supabaseState` directly. No code references `window.sbClient`, `window.__authState` oder `window.__lastLoggedIn`.
+   - Remaining work: once all deployments include these changes, mirror (or drop) the `Object.defineProperties(window, …)` bindings inside the barrel so the proxy can be removed without breaking legacy diagnostics.
+
 4. **Documentation**
    - Update module docs so they clearly state:
      - “Supabase access via barrel / `createSupabaseFn` only.”
      - No new code is allowed to depend on `window.*` Supabase globals.
    - Link this refactor plan from Supabase-related docs.
+
+   **Status (2025-11-24):**
+   - `docs/modules/Supabase Core Overview.md` now contains an “Access Policy” section that mandates barrel-only consumption and links back to this plan.
+   - `docs/modules/State Layer Overview.md` documents that `authState` / `lastLoggedIn` must be read from `SupabaseAPI.supabaseState` (legacy `__authState`/`__lastLoggedIn` removed) and reiterates the “no window globals” rule with a link to this plan.
 
 **Deliverable:**  
 All production code (Hub, Capture, Doctor, Trendpilot, Realtime, Unlock) uses barrel exports / `createSupabaseFn`.  

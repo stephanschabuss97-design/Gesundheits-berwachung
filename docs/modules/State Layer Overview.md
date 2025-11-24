@@ -60,10 +60,12 @@ Dieser State bündelt Refresh-Requests (auch aus dem Hub) und führt die Steps seq
 
 | State | Beschreibung |
 |-------|--------------|
-| `authGuardState` (`app/supabase/auth/guard.js`) | Enthält `doctorUnlocked`, `pendingAfterUnlock` etc.; Hub nutzt das, um Doctor-Panels direkt nach Biometrics zu öffnen. |
-| `supabaseMissingLogged` (`main.js`) | Verhindert mehrfaches Loggen „SupabaseAPI nicht geladen“. |
-| `__authState` (`main.js`) | Speichert `unknown/auth`, damit Save-Flows wissen, ob Login erkannt wurde. |
-| `__lastLoggedIn` | Bool, ob der Nutzer vor kurzem eingeloggt war (für Unknown-Phase). |
+| `authGuardState` (`app/supabase/auth/guard.js`) | Enth?lt `doctorUnlocked`, `pendingAfterUnlock` etc.; Hub nutzt das, um Doctor-Panels direkt nach Biometrics zu ?ffnen. |
+| `supabaseMissingLogged` (`assets/js/main.js`) | Verhindert mehrfaches Loggen "SupabaseAPI nicht geladen". |
+| `SupabaseAPI.supabaseState.authState` | Offizieller Auth-Zustand (`unauth`/`unknown`/`auth`). Ersetzt das ehemalige Window-Binding `__authState`. Zugriff nur ?ber `AppModules.supabase.supabaseState`. |
+| `SupabaseAPI.supabaseState.lastLoggedIn` | Bool, ob der Nutzer vor kurzem eingeloggt war (Unknown-Phase). Ersetzt `__lastLoggedIn`. |
+
+> **Policy:** Keine neuen Module d?rfen `window.__authState`, `window.__lastLoggedIn` oder `window.sbClient` verwenden. Nutzt stattdessen `SupabaseAPI.supabaseState`. Fortschritt siehe [Supabase Proxy Refactor Plan](../Supabase%20Proxy%20Refactor%20Plan.md).
 
 ---
 
