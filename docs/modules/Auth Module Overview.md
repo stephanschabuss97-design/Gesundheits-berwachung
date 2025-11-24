@@ -23,7 +23,7 @@ Das Auth-Modul stellt sowohl die klassische Supabase-Auth (Login, Token-Refresh)
 | `app/supabase/index.js` | Aggregiert Auth-Exports (`requireSession`, `watchAuthState`, `afterLoginBoot`). |
 | `assets/js/main.js` | Nutzt Auth-Wrapper (`createSupabaseFn`), steuert UI/Router nach Login. |
 | `assets/js/boot-auth.js` | Entry-Point beim Laden: setzt Auth-Status, bindet Buttons. |
-| `assets/js/guard.js` (falls vorhanden) | App-Lock/Unlock (Passkey, PIN), `requireDoctorUnlock`. |
+| `app/supabase/auth/guard.js` | App-Lock/Unlock (Passkey, PIN), `requireDoctorUnlock`, `resumeAfterUnlock`. |
 | `app/core/config.js` | Flag `DEV_ALLOW_DEFAULTS` steuert, ob Default-Config angezeigt werden darf. |
 | UI-Dateien (`index.html`, `app/styles/auth.css`) | Login-Overlay, Buttons, Fehleranzeigen. |
 
@@ -42,7 +42,8 @@ Das Auth-Modul stellt sowohl die klassische Supabase-Auth (Login, Token-Refresh)
 
 3. **watchAuthState**  
    - Reagiert auf Supabase-Events (`SIGNED_IN`, `TOKEN_REFRESHED`, `SIGNED_OUT`).  
-   - `authGuardState` speichert `doctorUnlocked`, `pendingAfterUnlock`.
+   - `authGuardState` speichert `doctorUnlocked`, `pendingAfterUnlock`.  
+   - `app/modules/hub/index.js` liest diesen State aus, um die Doctor-Ansicht nach einem erfolgreichen Biometrics-/Passkey-Unlock sofort zu öffnen (kein zweiter Klick nötig).
 
 4. **Header-Cache**  
    - `getHeaders()` ruft `fetchWithAuth` (mit Timeout, Cached).  
@@ -66,7 +67,8 @@ Das Auth-Modul stellt sowohl die klassische Supabase-Auth (Login, Token-Refresh)
    - Event `pendingAfterUnlock` → z. B. Chart/Doctor-Refresh `requestUiRefresh`.
 
 3. App-Lock kann erzwungen werden (z. B. beim Tab-Wechsel oder Timeout).  
-   - `lockUi(true)` disablet Buttons/Panel (z. B. `setBusy`-ähnlich), `lockUi(false)` reaktiviert.
+   - `lockUi(true)` disablet Buttons/Panel (z. B. `setBusy`-ähnlich), `lockUi(false)` reaktiviert.  
+   - Das Hub-Modul nutzt `requireDoctorUnlock` + `resumeAfterUnlock`, damit das Doctor-Panel schon beim ersten Klick nach der erfolgreichen Entsperrung erscheint.
 
 ---
 

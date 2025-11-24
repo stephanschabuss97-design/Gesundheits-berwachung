@@ -21,11 +21,11 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, Körpergewicht/Bauc
 | Datei | Zweck |
 |-------|-------|
 | `app/modules/charts/index.js` | Hauptmodul: Daten laden (`getFiltered`), Skalen berechnen, SVG rendern (Linien, Punkte, Bars, Trendpilot-Bänder), Tooltip-/Legend-Logik, Pulse-Link. |
-| `app/modules/charts/chart.css` | Styling für Chart-Panel, KPI-Leiste, Tooltip, Punkte/Bars und Trendpilot-Bänder/Legende (wird über `app/app.css` importiert). |
-| `assets/js/main.js` | Triggert Chart-Refresh via `requestUiRefresh({ chart: true })`, setzt Panel/Hooks (z.B. `setTab('doctor')`). |
+| `app/modules/charts/chart.css` | Styling für Chart-Panel, KPI-Leiste, Tooltip, Punkte/Bars und Trendpilot-Bänder/Legende (im neuen Hub via `app/styles/hub.css` eingebunden). |
+| `assets/js/main.js` | Legacy Entry point; Chart-Refresh wird inzwischen über die Hub-/Doctor-Overlays gesteuert. |
 | `app/modules/capture/index.js` | Stellt KPI-Werte (Wasser/Salz/Protein) bereit, so dass Chart-Daten/Panel mit Capture-Status synchronisiert sind. |
 | `app/modules/trendpilot/index.js` | Liefert Trendpilot-Bänder (Warnung/Kritik) für das Chart (`chartPanel.loadTrendpilotBands`). |
-| `app/modules/doctor/index.js` | Chart-Button im Arzt-Bereich (`#doctorChartBtn` öffnet das Chart-Panel mit gewähltem Zeitraum). |
+| `app/modules/doctor/index.js` | Steuerung der Doctor-Ansicht/Chart-Panel im Hub (inkl. Unlock-Flow). |
 | `app/core/config.js` | Enthält Flags (z.B. `SHOW_CHART_ANIMATIONS`, `TREND_PILOT_ENABLED`), die das Chart respektiert. |
 
 ---
@@ -34,7 +34,7 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, Körpergewicht/Bauc
 
 ### 3.1 Datenbeschaffung (`chartPanel.getFiltered`)
 
-1. Liest Zeitraum `from/to` aus der Arzt-Ansicht.
+1. Liest Zeitraum `from/to` aus der Doctor-Ansicht (Hub-Panel).
 2. Falls Nutzer eingeloggt: `fetchDailyOverview(from, to)` (Supabase) – liefert strukturierte Tagesobjekte (`morning`, `evening`, `weight`, `notes`).
 3. Transformiert in flache Einträge (`context` + `ts`) für Morgen/Abend + Tagessummary.
 4. Offline-Fallback: `getAllEntries()` (IndexedDB) + Filter nach Datum.
@@ -108,7 +108,7 @@ Die Charts visualisieren Tageswerte (Blutdruck morgen/abend, Körpergewicht/Bauc
 ## 6. Speicher-/Flow-Zusammenspiel
 
 1. **Capture Tab** sammelt Tagesdaten → `fetchDailyOverview`.
-2. **Doctor Tab** bestimmt Range + ruft Chart-Panel (Button) oder `setTab('doctor')`.
+2. **Doctor-Panel (Hub)** bestimmt Range + ruft Chart-Panel (Orbit-Button); Unlock-Flow wird über `hub/index.js` handled.
 3. **Trendpilot** sendet Bänder per `loadTrendpilotBands`.
 4. **Supabase** (via `supabase/index.js`) liefert API für `fetchDailyOverview` + `fetchSystemCommentsRange`.
 5. **Config** (`config.js`) bestimmt Flags (Animations, Feature-Enable).

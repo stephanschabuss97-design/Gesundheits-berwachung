@@ -1,16 +1,16 @@
-﻿# Intake Module â€“ Functional Overview
+# Intake Module � Functional Overview
 
-Dieses Dokument beschreibt das Intake-Modul (Wasser/Salz/Protein) des Gesundheits-Loggers. Ziel ist eine vollstÃ¤ndige Referenz, wie das Modul aufgebaut ist, welche Dateien beteiligt sind, wie Daten gespeichert werden und welche UX-/Diagnosefunktionen existieren.
+Dieses Dokument beschreibt das Intake-Modul (Wasser/Salz/Protein) im aktuellen MIDAS Hub. Ziel ist eine vollst�ndige Referenz, welche Dateien beteiligt sind, wie Daten gespeichert werden und welche UX-/Diagnosefunktionen existieren.
 
 ---
 
 ## 1. Zielsetzung
 
-Das Intake-Modul erlaubt das tÃ¤gliche Erfassen von Wasser (ml), Salz (g) und Protein (g), inklusive:
-- Schnellbuttons zum HinzufÃ¼gen von Mengen.
-- TagesÃ¼bersicht (Totals, Pill-Anzeige im Header).
-- RPC-Speicherung in Supabase + lokale Fallbacks.
-- AbhÃ¤ngige Features wie Lifestyle-Bars oder Reset um Mitternacht.
+Das Intake-Modul erlaubt das t�gliche Erfassen von Wasser (ml), Salz (g) und Protein (g), inklusive:
+- Schnellbuttons zum Hinzuf�gen von Mengen
+- Tages�bersicht (Totals + Pills im Hub-Header)
+- Speicherung via Supabase-RPC inklusive Offline-Fallback
+- Automatische Resets (Mitternacht/Noon) und Warnlogik
 
 ---
 
@@ -18,91 +18,79 @@ Das Intake-Modul erlaubt das tÃ¤gliche Erfassen von Wasser (ml), Salz (g) und 
 
 | Datei | Zweck |
 |-------|-------|
-| `app/modules/capture/index.js` | Hauptmodul fÃ¼r Intake-UI: Buttons, Inputs, Status-Pills, RPC-Aufrufe, Timer (Mitternacht/Noon), Warnungen. |
-| `app/core/capture-globals.js` | Shared State (Totals, Timer, Flags), Getter/Setter, Hilfsfunktionen `softWarnRange`, `setBusy`. |
-| `app/styles/capture.css` | Layout der Accordions/Buttons, Pill-Styling, Responsiveness (via `app/app.css`). |
-| `assets/js/main.js` | Bindet Tab-/Unlock-Events, `requestUiRefresh`, setzt Standarddatum und reagiert auf Intake-Status (z.B. `bp:auto`). |
-| `app/supabase/api/intake.js` | RPCs: `loadIntakeToday`, `saveIntakeTotalsRpc`, `cleanupOldIntake`. |
-| `docs/QA_CHECKS.md` | Tests fÃ¼r Capture-Flow, Accessibility, Reset und RPC-Fehler. |
+| `app/modules/hub/index.js` | Orchestriert den Orbit-Button, �ffnet/schlie�t das Intake-Panel (`openIntakeOverlay`) und verschiebt die Pills in den Hub-Header. |
+| `app/modules/capture/index.js` | Enth�lt die komplette Intake-Fachlogik: Inputs, Validierungen, RPC-Aufrufe, Timer (Mitternacht/Noon) und Warnungen. |
+| `app/core/capture-globals.js` | Shared State (Totals, Timer, Flags), Getter/Setter sowie Helper (`softWarnRange`, `setBusy`). |
+| `app/styles/hub.css` | Styles f�r Hub-Orbit, Panel-Layout, Pills und Overlay-Effekte. |
+| `app/supabase/api/intake.js` | RPCs `loadIntakeToday`, `saveIntakeTotalsRpc`, `cleanupOldIntake`. |
+| `docs/QA_CHECKS.md` | Testplan f�r Capture-Flow, Accessibility und Fehlerf�lle. |
 
 ---
 
 ## 3. Ablauf / Flow
 
-### 3.1 UI-Struktur
-
-- Accordion â€žFlÃ¼ssigkeit & Intakeâ€œ mit drei Eingabereihen:
-  1. Wasser (ml, `cap-water-add`), Button `cap-water-add-btn`.
-  2. Salz (g, Textfeld mit `toNumDE`), Button `cap-salt-add-btn`.
-  3. Protein (g, Textfeld), Button `cap-protein-add-btn`.
-- Infos/Hint (hinzugefÃ¼gter Wert, Zielhinweis).
-- Capture-Pills im Header (`#cap-intake-status-top`) zeigen Tagesstatus.
+### 3.1 UI-Struktur (Hub-Panel)
+- Der Orbit-Button �Intake� ruft `openIntakeOverlay` auf und zeigt das Panel mittig im Hub.
+- Die drei Eingabereihen stammen weiterhin aus `capture/index.js` und werden in das Panel gerendert:
+  1. Wasser (ml, `cap-water-add`, Button `cap-water-add-btn`).
+  2. Salz (g, `cap-salt-add`, Button `cap-salt-add-btn`).
+  3. Protein (g, `cap-protein-add`, Button `cap-protein-add-btn`).
+- Hinweise zu zuletzt hinzugef�gten Mengen stehen direkt unter dem jeweiligen Feld.
+- Die Tages-Pills (`#cap-intake-status-top`) werden beim Hub-Init in den Header-Bereich eingebettet (`moveIntakePillsToHub`).
 
 ### 3.2 Status & Speicherung
-
-1. `captureIntakeState` (globals) hÃ¤lt `dayIso`, `totals` und `logged` (bool).
-2. Beim Ã–ffnen: `refreshCaptureIntake()` lÃ¤dt Tagesdaten via `loadIntakeToday({ user_id, dayIso })`.
-3. Buttons (`handleCaptureIntake(kind)`) validieren Eingabe, addieren Wert zu Totals, rufen `saveIntakeTotalsRpc`.
-4. Nach erfolgreichem Save: UI-Reset (`clearCaptureIntakeInputs`), Update der Pills, optional `requestUiRefresh`.
-5. Offline/Not Logged In: Eingaben disabled (`setCaptureIntakeDisabled`), Pill zeigt Hinweis â€žBitte anmeldenâ€œ.
+1. `captureIntakeState` h�lt `dayIso`, `totals` und `logged`.
+2. Beim �ffnen ruft `refreshCaptureIntake()` `loadIntakeToday({ user_id, dayIso })` auf.
+3. Buttons (`handleCaptureIntake(kind)`) validieren Eingaben, addieren zur laufenden Summe und rufen `saveIntakeTotalsRpc`.
+4. Nach erfolgreichem Save: `clearCaptureIntakeInputs`, Pill-Update, optional `requestUiRefresh` f�r abh�ngige Module.
+5. Ohne Login werden Inputs deaktiviert (`setCaptureIntakeDisabled`) und das Panel weist auf �Bitte anmelden� hin.
 
 ### 3.3 Status-Pills
-
-- `prepareIntakeStatusHeader()` sorgt dafÃ¼r, dass `cap-intake-status-top` existiert.
-- `updateCaptureIntakeStatus()` berechnet:
-  - Wasser-Ratio (OK/Warn/Bad vs. `MAX_WATER_ML`).
-  - Salz-Ratio (Warn ab 5 g, Bad > MAX_SALT_G).
-  - Protein (OK zwischen 78 g und MAX).
-- Ergebnis: `<span class="pill {ok|warn|bad}">Label: Wert</span>` + ARIA-Live.
-- Seit Trendpilot-Integration: ZusÃ¤tzliche Pill optional (Trendpilot-Warnung).
+- `prepareIntakeStatusHeader()` stellt sicher, dass `cap-intake-status-top` existiert.
+- `hub/index.js` h�ngt das Element in den Hub-Header (neben Datum und Vital-Pills).
+- `updateCaptureIntakeStatus()` berechnet Wasser/Salz/Protein-Farben (OK/Warn/Bad) und optional Trendpilot-Warnungen.
 
 ### 3.4 Timer & Reset
+- `scheduleMidnightRefresh()` ? `maybeRefreshForTodayChange({ source: 'midnight' })` setzt den State zur�ck.
+- `scheduleNoonSwitch()` toggelt `bp:auto` (morgens/abends) und resettet abendspezifische Felder.
+- `maybeResetIntakeForToday()` sch�tzt vor Doppel-Resets (`__intakeResetDoneFor`).
 
-- `scheduleMidnightRefresh()` â†’ ruft `maybeRefreshForTodayChange({ source: 'midnight' })` und setzt Totals zurÃ¼ck.
-- `scheduleNoonSwitch()` â†’ toggelt BP-Kontext, resettet â€žAbendsâ€œ-Pane.
-- `maybeResetIntakeForToday()` markiert, ob Tagesreset schon lief (`__intakeResetDoneFor`).
-
-### 3.5 Warnungen
-
-- Eingabewarnungen (Wasser/Salz/Protein) via `softWarnRange`.
-- BP-Kommentarpflicht (`bp.js`) interagiert mit Intake-Panel Ã¼ber `updateBpCommentWarnings`.
-- `diag.add` fÃ¼r Fehler (`capture intake load error`, `save start`, `save network ok` etc.).
+### 3.5 Warnungen & UX
+- `softWarnRange` erzeugt Eingabewarnungen bei ungew�hnlichen Mengen.
+- BP-Kommentarpflicht (`bp.js`) informiert den Intake-Flow via `updateBpCommentWarnings`.
+- Fehler (Netzwerk, RPC, Validierung) werden �ber `diag.add` und `uiError` gemeldet.
 
 ---
 
 ## 4. Supabase Flow
-
-1. `loadIntakeToday` ruft Stored Function/SQL View, liefert TagesTotals.
-2. `saveIntakeTotalsRpc` speichert Totals serverseitig (RPC).
-3. `cleanupOldIntake` optional (Cron), um alte Tage zu bereinigen.
-4. Netzwerkfehler â†’ diag + UI-Message â€žSpeichern fehlgeschlagenâ€œ.
+1. `loadIntakeToday` liest Tageswerte aus der View/Funktion `health_intake_today`.
+2. `saveIntakeTotalsRpc` persisted Totals serverseitig; Hub-UI refresh passiert �ber `refreshCaptureIntake`.
+3. `cleanupOldIntake` entfernt alte Datens�tze (Cron / Maintenance).
+4. Netzwerkfehler ? `diag.add('capture intake save error', �)` + UI-Hinweis �Speichern fehlgeschlagen�.
 
 ---
 
 ## 5. Diagnostik
-
 - Touch-Log: `[capture] loadIntakeToday start/done`, `[capture] click water/salt/protein`.
-- `diag.add` protokolliert Save-Status, RPC-Fehler, Auto-Refresh.
-- UI meldet Fehler mit `uiError('Bitte gÃ¼ltige ...')` oder `uiError('Speichern fehlgeschlagen...')`.
+- `diag.add` protokolliert Saves, Warnungen und RPC-Fehler.
+- QA-Dokument listet Tests f�r Offline, Timer, Trendpilot-Hinweise und Panel-Verhalten im Hub.
 
 ---
 
-## 6. AbhÃ¤ngigkeiten & Zusammenspiel
-
-- `main.js`: Synchronisiert Datum, Reset, `bp:auto`, Unlock/Tab.
-- `capture/globals.js`: Teilt State mit anderen Modulen (z.B. Chart, Lifestyle).
-- `doctor/index.js`: Zeigt Totals (Wasser/Salt/Protein) nicht direkt, aber reagiert auf `refreshCaptureIntake`.
-- `Trendpilot`: Pill im Header kann Trendpilot-Hinweise anzeigen (Erweiterung in `capture/index.js`).
+## 6. Abh�ngigkeiten & Zusammenspiel
+- `hub/index.js` steuert Orbit-Button, Panel-Animation, Pill-Migration und Panel-Lock.
+- `capture/index.js` + `capture-globals.js` liefern s�mtliche Business-Logik, RPC-Aufrufe und Timer.
+- `doctor`-Panel ruft nach Biometrics ebenfalls `refreshCaptureIntake()` auf, damit Totals synchron bleiben.
+- Trendpilot, Charts und Diagnostics beziehen ihren Intake-Status �ber den gemeinsamen State.
 
 ---
 
 ## 7. Erweiterungsideen
-
-- ZusÃ¤tzliche Metrics (z.â€¯B. Kalorien, Kohlenhydrate).
-- Historische Intake Charts (Analog Trendpilot, nur fÃ¼r Wasser/Salz/Protein).
+- Weitere Makros (Kalorien, Kohlenhydrate) einf�hren und im gleichen Panel erfassen.
+- Historische Intake-Charts (analog Trendpilot) direkt im Hub.
 - Reminder/Push-Notifications bei zu wenig Wasser.
-- Konfigurierbare Ziele (per User-Settings).
+- Benutzerdefinierte Ziele (per Settings) statt fixer Grenzwerte.
 
 ---
 
-Aktualisiere dieses Dokument, falls Inputs, RPCs oder UI-Flow geÃ¤ndert werden (z.â€¯B. neue Felder, andere Grenzwerte). So bleibt das Intake-Modul transparent fÃ¼r alle Mitwirkenden.
+Aktualisiere dieses Dokument, sobald Felder, RPCs oder der Hub-Flow angepasst werden.

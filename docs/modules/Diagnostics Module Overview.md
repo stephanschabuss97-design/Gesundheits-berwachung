@@ -21,11 +21,11 @@ Alle Komponenten lassen sich über `DIAGNOSTICS_ENABLED` deaktivieren (z. B. p
 | Datei | Zweck |
 |-------|-------|
 | `app/core/config.js` | Stellt `DIAGNOSTICS_ENABLED` bereit (Flags von Config/LocalStorage/data-Attr). |
-| `app/core/diag.js` | Legacy-Orchestrator: Touch-Log UI, `diag.add`, `uiError`, `uiInfo`, global `perfStats`-Proxy. |
-| `app/diagnostics/logger.js` | Neues Layer: Ringpuffer für Logs, API `diagnosticsLayer.logger.add/flush`. |
+| `app/core/diag.js` | Layer-Orchestrator: Touch-Log UI, `diag.add`, `uiError`, `uiInfo`, global `perfStats`-Proxy. |
+| `app/diagnostics/logger.js` | Ringpuffer für Logs, API `diagnosticsLayer.logger.add/flush`. |
 | `app/diagnostics/perf.js` | Performance-Sampler (Bucket-Store, `record`, `addDelta`, `snapshot`). |
-| `app/diagnostics/monitor.js` | Heartbeat/Toggle-API für spätere Overlays, steuert `diagnosticsLayer.monitor`. |
-| `index.html` | Lädt Config → `app/core/diag.js` → `app/diagnostics/{logger,perf,monitor}.js` in dieser Reihenfolge. |
+| `app/diagnostics/monitor.js` | Heartbeat/Toggle-API für zukünftige Overlays, steuert `diagnosticsLayer.monitor`. |
+| `index.html` | Lädt Config → `app/core/diag.js` → `app/diagnostics/{logger,perf,monitor}.js` in dieser Reihenfolge (aktueller Hub-Stand). |
 | `docs/QA_CHECKS.md` | Enthält die Diagnostics-Layer-Checks/Flags (Phase 4 Abschnitt). |
 
 ---

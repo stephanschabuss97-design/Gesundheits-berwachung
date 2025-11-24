@@ -276,22 +276,10 @@
       const saltVal = Number(t.salt_g || 0);
       const proteinVal = Number(t.protein_g || 0);
 
-      const waterRatio = MAX_WATER_ML ? waterVal / MAX_WATER_ML : 0;
-      const waterCls = waterRatio >= 0.9 ? 'ok' : (waterRatio >= 0.5 ? 'warn' : 'bad');
-      const saltCls = saltVal > MAX_SALT_G ? 'bad' : (saltVal >= 5 ? 'warn' : 'ok');
-      const proteinCls = (proteinVal >= 78 && proteinVal <= MAX_PROTEIN_G) ? 'ok' : (proteinVal > MAX_PROTEIN_G ? 'bad' : 'warn');
-
-      const describe = (cls) => ({
-        ok: 'Zielbereich',
-        warn: 'Warnung',
-        bad: 'kritisch',
-        neutral: 'neutral'
-      }[cls] || 'unbekannt');
-
       const pills = [
-        { cls: waterCls, label: 'Wasser', value: `${waterVal} ml` },
-        { cls: saltCls, label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
-        { cls: proteinCls, label: 'Protein', value: `${fmtDE(proteinVal,1)} g` }
+        { cls: 'plain', label: 'Wasser', value: `${waterVal} ml` },
+        { cls: 'plain', label: 'Salz', value: `${fmtDE(saltVal,1)} g` },
+        { cls: 'plain', label: 'Protein', value: `${fmtDE(proteinVal,1)} g` }
       ];
 
       if (latestTrendpilotEntry && latestTrendpilotEntry.severity) {
@@ -312,12 +300,12 @@
         }
       }
 
-      const summary = pills.map(p => `${p.label} ${p.value} (${describe(p.cls)})`).join(', ');
+      const summary = pills.map(p => `${p.label} ${p.value}`).join(', ');
       const html = pills.map(p => {
-        const statusText = describe(p.cls);
-        const aria = p.ariaOverride || `${p.label}: ${p.value}, Status: ${statusText}`;
+        const aria = p.ariaOverride || `${p.label}: ${p.value}`;
         const titleAttr = p.title ? ` title="${escapeAttr(p.title)}"` : '';
-        return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"${titleAttr}><span class="dot" aria-hidden="true"></span>${p.label}: ${p.value}</span>`;
+        const dot = p.cls === 'plain' ? '' : '<span class="dot" aria-hidden="true"></span>';
+        return `<span class="pill ${p.cls}" role="status" aria-label="${aria}"${titleAttr}>${dot}${p.label}: ${p.value}</span>`;
       }).join(' ');
 
       if (statusEl) {

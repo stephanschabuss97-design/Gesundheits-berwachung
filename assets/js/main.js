@@ -327,11 +327,27 @@ function toNumDE(s) {
   v = v.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[\u00A0\u2009\u202F]/g, ' ').replace(/\s+/g, '');
   // decide decimal separator
   const lastComma = v.lastIndexOf(',');
-  const lastDot   = v.lastIndexOf('.');
+  const lastDot = v.lastIndexOf('.');
   let dec = null;
-  if (lastComma !== -1 && lastDot !== -1) dec = (lastComma > lastDot) ? ',' : '.';
-  else if (lastComma !== -1) dec = (v.length - lastComma - 1) <= 2 ? ',' : null;
-  else if (lastDot   !== -1) dec = (v.length - lastDot   - 1) <= 2 ? '.' : null;
+  if (lastComma !== -1 && lastDot !== -1) {
+    dec = lastComma > lastDot ? ',' : '.';
+    const groupSep = dec === ',' ? '.' : ',';
+    const decPos = dec === ',' ? lastComma : lastDot;
+    const decDigits = v.length - decPos - 1;
+    // reject ambiguous inputs wie 1.234.567 (unklar ob Dezimal- oder Tausendertrennzeichen)
+    if (decDigits === 0 || decDigits > 2) return null;
+    const groupSection = v.slice(0, decPos);
+    if (groupSection.includes(groupSep)) {
+      const invalidGroup = groupSection
+        .split(groupSep)
+        .some((part) => part.length > 3 || !/^\d+$/.test(part));
+      if (invalidGroup) return null;
+    }
+  } else if (lastComma !== -1) {
+    dec = v.length - lastComma - 1 <= 2 ? ',' : null;
+  } else if (lastDot !== -1) {
+    dec = v.length - lastDot - 1 <= 2 ? '.' : null;
+  }
   if (dec) {
     // protect the chosen decimal (replace its last occurrence with placeholder)
     v = v.replace(new RegExp('\\' + dec + '(?=[^' + (dec === '.' ? '\\.' : ',') + ']*$)'), '#');
@@ -381,14 +397,7 @@ function setAuthGuard(logged){
 
 // SUBMODULE: setDoctorAccess - toggles doctor tab when auth state changes
 function setDoctorAccess(enabled){
-  // Tab-Button
-  const tabBtn = document.getElementById('tab-doctor');
-  if (tabBtn){
-    tabBtn.disabled = !enabled;
-    tabBtn.classList.toggle('ghost', !enabled);
-    tabBtn.title = enabled ? '' : 'Bitte zuerst anmelden';
-  }
-  // "Werte anzeigen"-Button
+  // "Werte anzeigen"-Button bleibt erhalten
   const chartBtn = document.getElementById('doctorChartBtn');
   if (chartBtn){
     chartBtn.disabled = !enabled;
@@ -1124,13 +1133,22 @@ async function main(){
   getChartPanel()?.init?.();
   bindTabs();
 const todayIso = todayStr();
-$("#date").value = todayIso;
+const setInputValue = (selector, value) => {
+  const el = document.querySelector(selector);
+  if (!el) {
+    diag.add?.(`[boot] input ${selector} missing (possibly moved to overlay)`);
+    return null;
+  }
+  el.value = value;
+  return el;
+};
+setInputValue('#date', todayIso);
 AppModules.captureGlobals.setLastKnownToday(todayIso);
 AppModules.captureGlobals.setDateUserSelected(false);
 AppModules.captureGlobals.setBpUserOverride(false);
 prepareIntakeStatusHeader();
-$("#from").value = new Date(Date.now()-90*24*3600*1000).toISOString().slice(0,10);
-$("#to").value = todayIso;
+setInputValue('#from', new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10));
+setInputValue('#to', todayIso);
 setTab("capture");
 try{ window.AppModules.capture.resetCapturePanels?.(); window.AppModules.bp.updateBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
@@ -1316,7 +1334,9 @@ if (applyBtn) {
   });
 }
 
-$("#doctorChartBtn").addEventListener("click", async ()=>{
+const doctorChartBtn = document.getElementById('doctorChartBtn');
+if (doctorChartBtn) {
+doctorChartBtn.addEventListener("click", async ()=>{
   try {
     const logged = await isLoggedInFast();
     if (!logged) {
@@ -1336,6 +1356,9 @@ $("#doctorChartBtn").addEventListener("click", async ()=>{
   chartPanel?.show?.();
   await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
 });
+} else {
+  diag.add?.('[doctor] chart button missing - hub overlay active?');
+}
 
 document.addEventListener('keydown', (e)=>{
   if (e.key !== 'Escape') return;
@@ -1412,9 +1435,14 @@ window.addEventListener('focus', () => {
 /** END MODULE */
 
 // --- Arzt-Export ---
-$("#doctorExportJson").addEventListener("click", async () => {
-  await getDoctorModule()?.exportDoctorJson?.();
-});
+const doctorExportBtn = document.getElementById('doctorExportJson');
+if (doctorExportBtn) {
+  doctorExportBtn.addEventListener("click", async () => {
+    await getDoctorModule()?.exportDoctorJson?.();
+  });
+} else {
+  diag.add?.('[doctor] export button missing - overlay layout active?');
+}
 
 // --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
 window.AppModules.capture.bindIntakeCapture();

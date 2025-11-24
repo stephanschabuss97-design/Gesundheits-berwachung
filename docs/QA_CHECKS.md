@@ -1,5 +1,25 @@
-# QA Checklists
 
+## Phase 4 – MIDAS Orbit & Trendpilot (2025-11-23)
+
+**Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).
+
+**Smoke**
+- [x] Desktop & Android: #captureHub zeigt den Orbit mittig, Aura pulsiert bei Hover/Touch, Orbit-Buttons haben keine sichtbaren Kreise aber reagieren via Sr-Labels. Panels (Intake/Vitals/Doctor) zentrieren sich, hub-panel-zoom-in/out laufen beim Öffnen/Schließen mit identischer Dauer/Easing, Backdrop dimmt sanft.
+- [x] Capture-Header Trendpilot-Pill: WARN/CRIT Tage blenden Datum + Kurztext ein; Tage ohne Meldung verstecken die Pill vollständig. Logging ([trendpilot] severity=...) erscheint einmal pro Tag.
+- [x] Doctor Trendpilot Block: Alle Meldungen in Von/Bis erscheinen (Datum, Text, Status). Buttons „Geplant“, „Erledigt“, „Zurücksetzen“ schreiben doctorStatus in Supabase und UI markiert den aktiven Button.
+- [x] Chart Overlays: Trendpilot-Bänder (gelb/rot) rendern nur an WARN/CRIT Tagen, Legende ergänzt Swatches, Tooltips zeigen ESC-Farben für MAP/Pulsdruck, KPI-Pillen sind synchron.
+- [x] Guard Flow: Erster Klick auf Arzt-Ansicht ? equireDoctorUnlock() (PIN/Biometrie) ? Panel öffnet sich automatisch. Weitere Klicks nutzen uthGuardState ohne erneute Abfrage; ESC/Escape schließt Panel.
+- [x] Diagnostics Flag: DIAGNOSTICS_ENABLED=false deaktiviert pp/diagnostics/* (nur Stub-Logs), 	rue leitet diag.add, ecordPerfStat, Panel-Toggles an Layer weiter.
+
+**Sanity**
+- Panel-Lock verhindert Body-Scroll & Orbit-Klicks solange .hub-panel.is-visible; ody:has Regeln arbeiten in allen modernen Browsern, Mobilscroll springt nach Close nicht.
+- CSS-Variablen --midas-aura-boost treiben Aura-Brightening unabhängig von DOM-Position; Touch auf Mobil löst denselben Boost aus wie Hover.
+- Doctor-Modul ruft setSystemCommentDoctorStatus (Plan/Done/Reset) nur bei Statuswechseln auf; Fehler zeigen Toast + Log, UI revertiert Button-Highlight.
+- Trendpilot API Fallback: wenn fetchSystemCommentsRange fehlschlägt ? Chart/Bänder zeigen Placeholder, Capture-Pill bleibt leer, diag-Log [trendpilot] bands failed.
+- Guard/Resume: Visibility/PageShow/Focus triggern SupabaseAPI.resumeFromBackground, Trendpilot-Pill + Orbit behalten Zustand nach Resume.
+
+**Regression**
+- Capture-Saves, Charts, Arzt-Daily/Befunde, CSV/JSON-Export laufen unverändert; Legacy QA-Checks (Phase 0–3, v0.x–v1.7.x) bleiben weiter unten als Archiv bestehen.
 ## Phase 2 â€“ Assetsâ†’App Smoke (2025-11-16)
 
 **Scope:** pp/app.css, pp/core/{diag,utils,config,capture-globals}, pp/supabase/index.js (inkl. boot-auth Import-Pfad) â€“ Ziel: sicherstellen, dass Capture/Doctor/Chart/Trendpilot mit neuen Pfaden laufen, bevor Legacy-Assets gelÃ¶scht werden.

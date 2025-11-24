@@ -262,6 +262,8 @@
 .pill.warn .dot { background:var(--color-warn); }
 .pill.bad .dot { background:var(--color-danger); }
 .pill.neutral .dot { background:var(--color-accent); }
+.pill.plain { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); font-weight:500; }
+.pill.plain .dot { display:none; }
 .body-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
 .capture-header{ display:flex; flex-direction:column; gap:8px; }
 .capture-header .capture-date{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }

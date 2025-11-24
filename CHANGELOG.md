@@ -1,45 +1,35 @@
 ## Unreleased
 
 Added:
-- Diagnostics-Scaffolding f�r Phase 4: `app/diagnostics/{logger,perf,monitor}.js` + neues Feature-Flag `DIAGNOSTICS_ENABLED` (Config + Script-Stack) legen das Fundament f�r das kommende Monitoring-Modul, ohne das bestehende `app/core/diag.js` zu beeintr�chtigen.
-
-Removed:
-- ssets/js/trendpilot/ (Legacy data.js/index.js) entfernt; alle Konsumenten beziehen AppModules.trendpilot jetzt aus pp/modules/trendpilot/.
-- Legacy-Reste `assets/js/{capture,charts,doctor,utils}` sowie `*.bak`-Dateien entfernt – App nutzt nur noch die `app/`-Module.
-- Capture-UI zeigt kein Arzttermin-Panel mehr; `index.html`, `assets/css/capture.css`, `assets/js/main.js`, `assets/js/capture/index.js` und `assets/js/supabase/realtime/index.js` enthalten keine Appointment-Badges oder Refresh-Flows mehr.
-- `assets/js/appointments.js` (inkl. globaler State) entfällt; `assets/js/config.js` exportiert nur noch `DEV_ALLOW_DEFAULTS` ohne zusätzliche `window.*`-Zuordnungen.
-- Neues Skript `sql/08_Remove_Appointments.sql` entfernt `public.appointments` inkl. Trigger, Policies und Realtime-Publikation.
-- Legacy-perfStats-Sampler aus `app/core/diag.js` entfernt; globale `perfStats`-Zugriffe zeigen jetzt direkt auf `app/diagnostics/perf.js`.
-
-Docs:
-- `docs/QA_CHECKS.md` aktualisiert (UI-Refresh Steps nur noch doctor/lifestyle/chart).
+- MIDAS Orbit Hub experience: shared hero markup, animated aura overlays, and a doc-ready .hub-panel stage replace the old Capture Hub preview. Panels open/close symmetrically (zoom-in/out easing), intake pills live inside the Intake panel, and stealth orbit buttons now read the same ARIA labels on desktop/mobile.
+- Trendpilot flow refresh: Capture header shows live severity pills, the Doctor Trendpilot block supports Plan/Done/Reset actions, and Supabase exposes fetchSystemCommentsRange + setSystemCommentDoctorStatus for chart overlays and pills.
+- Repository documentation sweep: every file under docs/modules/*.md was rewritten from the Module Update Plan, and docs/Supabase Proxy Refactor Plan.md tracks the upcoming proxy removal.
 
 Changed:
-- Diagnostics-Layer integriert: `app/core/diag.js` forwardet diag-Logs, `recordPerfStat` und Panel-Toggles an `appModules.diagnosticsLayer.{logger,perf,monitor}`; damit sammeln die neuen `app/diagnostics/*`-Module bereits Signale.
-- Trendpilot-Modul läuft nun unter pp/modules/trendpilot/{data,index}; index.html, Build/Module-Doku und QA-Notizen verweisen auf die neuen Pfade (Edge-Headless-Smoketest für AppModules-Trendpilot dokumentiert).
-- Körper-Metrik zeigt wieder Muskel- und Fettmasse als Hintergrundbalken (SVG-Bar-Layer hinter Gewicht/Bauchumfang).
-- Tooltip-Parität für Blutdruck: Sys/Dia eines Tagesabschnitts werden gemeinsam angezeigt (inkl. MAP & Pulsdruck), beide Linien werden hervorgehoben und der Pulse-Link verbindet das Messpaar.
-- Körper-Metrik-Tooltips fassen Gewicht, Bauchumfang sowie verfügbares Muskel-/Fettprofil zusammen und highlighten alle Body-Serien gleichzeitig.
-- KPI-Leiste benennt den Pulsdruck eindeutig als Durchschnitt und blendet die Pill aus, sobald Körper-Metrik aktiv ist.
-- Blutdruck-Tooltips übernehmen die ESC-2018 Farbkategorie des Messwerts und zeigen MAP sowie Pulsdruck mit farbigen Indikatorkugeln an.
-- MAP-Indikatoren (Tooltip + KPI-Dots) folgen jetzt den klinischen Bändern (MAP <60 kritisch, 60–64 Grenzwert, 65–100 normal, 101–110 hoch, >110 kritisch); Pulsdruck-Indikatoren übernehmen dieselben Farben (≤29 sehr niedrig, 30–50 normal, 51–60 gelb, 61–70 orange, ≥71 rot) und passen Schriftkontraste automatisch an.
-- Chart-Render animiert sanft (Linien zeichnen von links nach rechts, Punkte/Balken blenden ein); respektiert `SHOW_CHART_ANIMATIONS` sowie `prefers-reduced-motion`.
+- Doctor unlock flow: the first tap that triggers biometrics now opens the panel immediately after requireDoctorUnlock() resolves; subsequent clicks still reuse the guard state.
+- Hub overlay polish: body/backdrop locking uses smooth transitions, Milky glass dimming is driven by :has(.hub-panel.is-visible), and aura/halo boosts now use CSS variables so hover/touch feedback works regardless of DOM order.
+- QA and knowledge base: docs/QA_CHECKS.md begins with a Phase 4 checklist covering MIDAS Orbit, Trendpilot severity handling, diagnostics flagging and guard/resume; CHANGELOG formatting was normalised (UTF-8 dashes, no stray control chars).
 
+Removed:
+- Legacy duplicates and experiment files (temp_snippet, index_normalized.html, *.bak/*.txt leftovers) to keep the tree clean before the Supabase proxy refactor.
+
+Docs:
+- docs/Module Update Plan.md tracks the refresh, docs/Supabase Proxy Refactor Plan.md defines the rewrite -> test -> remove workflow, and every module overview now reflects the current app/ layout.
 ## v1.8.2 – Phase 2 Step 4-6 (App CSS/JS Switch)
 
 Added:
-- Smoke-Test-Suite für den neuen `app/`-Bundle: Headless Edge (`msedge --headless --dump-dom`) + statischer Pages-Check (`python -m http.server` + `Invoke-WebRequest http://127.0.0.1:8765/app/app.css`). Ergebnisse wurden in `docs/QA_CHECKS.md` und `docs/QA_Notes.md` protokolliert.
+- Smoke-Test-Suite für den neuen `aapp/`-Bundle: Headless Edge (`msedge --headless --dump-dom`) + statischer Pages-Check (`python -m http.server` + `Invoke-WebRequest http://127.0.0.1:8765/aapp/app.css`). Ergebnisse wurden in `docs/QA_CHECKS.md` und `docs/QA_Notes.md` protokolliert.
 
 Changed:
-- `index.html` lädt nun `app/app.css` sowie `app/core/{diag,utils,config,capture-globals}` und `app/supabase/index.js`; Reihenfolge/Kommentare wurden aktualisiert.
-- `assets/js/boot-auth.js` importiert `../../app/supabase/index.js`, `assets/js/main.js`-Logmeldungen verweisen auf den neuen Pfad.
-- Build-/Roadmap-/Modul-Dokumentation reflektiert die `app/`-Pfadstruktur (`docs/Build Deploy Paths.md`, modulare Overviews, Roadmap Phase 2).
+- `index.html` lädt nun `aapp/app.css` sowie `aapp/core/{diag,utils,config,capture-globals}` und `aapp/supabase/index.js`; Reihenfolge/Kommentare wurden aktualisiert.
+- `assets/js/boot-auth.js` importiert `../../aapp/supabase/index.js`, `assets/js/main.js`-Logmeldungen verweisen auf den neuen Pfad.
+- Build-/Roadmap-/Modul-Dokumentation reflektiert die `aapp/`-Pfadstruktur (`docs/Build Deploy Paths.md`, modulare Overviews, Roadmap Phase 2).
 
 Removed:
-- Legacy-Dubletten `assets/css/*`, `assets/js/{config.js,utils.js,diagnostics.js,capture/globals.js,supabase.js,supabase/**}` – alle Funktionen leben jetzt ausschließlich unter `app/`.
+- Legacy-Dubletten `assets/css/*`, `assets/js/{config.js,utils.js,diagnostics.js,capture/globals.js,supabase.js,supabase/**}` – alle Funktionen leben jetzt ausschließlich unter `aapp/`.
 
 Notes:
-- `app/supabase.js` fungiert als neuer Legacy-Proxy, damit `window.SupabaseAPI` unverändert für alte Module bereitgestellt wird.
+- `aapp/supabase.js` fungiert als neuer Legacy-Proxy, damit `window.SupabaseAPI` unverändert für alte Module bereitgestellt wird.
 - Nach jedem weiteren Modul-Move weiterhin „Neu → Test → Umschalten → Entfernen“ befolgen; Import-Inventar/QA-Checklisten wurden entsprechend ergänzt.
 
 ## v1.8.2 - Guard/Resume Cleanup

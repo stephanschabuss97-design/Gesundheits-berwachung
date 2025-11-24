@@ -1,24 +1,24 @@
-﻿# State Layer â€“ Functional Overview
+# State Layer � Functional Overview
 
-Dieses Dokument listet die zentralen globalen States, Timer und Cache-Objekte des Gesundheits-Loggers auf. Ziel ist eine klare Ãœbersicht, wo welche Daten auÃŸerhalb von Komponenten gespeichert werden, um Debugging und Wartung zu erleichtern.
+Dieses Dokument listet die zentralen globalen States, Timer und Cache-Objekte des Gesundheits-Loggers auf. Ziel ist eine klare �bersicht, wo welche Daten au�erhalb der Komponenten gespeichert werden � insbesondere jetzt, da der MIDAS Hub Panels und Locks steuert, aber weiterhin auf die gleichen State-Layer zugreift.
 
 ---
 
 ## 1. Capture / Intake State (`app/core/capture-globals.js`)
 
-| Variable | Beschreibung |
-|----------|--------------|
-| `captureIntakeState` | `{ logged: bool, dayIso: string, totals: { water_ml, salt_g, protein_g } }` â€“ Tagesstatus. |
-| `__lsTotals` | Kopie der Intake-Totals fÃ¼r Lifestyle-Seiten. |
-| `__dateUserSelected` | Bool â€“ ob Nutzer manuell ein anderes Datum gewÃ¤hlt hat (verhindert Auto-Reset). |
-| `__lastKnownToday` | Letzter â€žheuteâ€œ-String (fÃ¼r Day-Change Detection). |
-| `__bpUserOverride` | Bool â€“ ob Nutzer den BP-Kontext manuell eingestellt hat (Noon-Switch stoppt). |
-| `__midnightTimer`, `__noonTimer`, `__dayHeartbeat` | Timer-IDs fÃ¼r Mitternacht-Reset, Noon-Switch, optional Heartbeat. |
-| `__intakeResetDoneFor` | ISO-Day, fÃ¼r den Reset bereits ausgefÃ¼hrt wurde. |
-| `__bpPanesCache` | Cache der BP-Panels (DOM-Refs) zur Performance. |
-| `__lastUserId` | Letzter bekannter Supabase-User â€“ fÃ¼r Reset bei Logout. |
+| Variable / Helper | Beschreibung |
+|-------------------|--------------|
+| `captureIntakeState` | `{ logged, dayIso, totals: { water_ml, salt_g, protein_g } }` � Tagesstatus, den Hub-Panels und Pills lesen. |
+| `__lsTotals` | Kopie der Intake-Totals f�r Lifestyle-/Trendpilot-Funktionen. |
+| `__dateUserSelected` | Bool, ob der Nutzer ein anderes Datum gew�hlt hat (verhindert Auto-Reset). |
+| `__lastKnownToday` | Zuletzt bekannter ISO-Tag �heute� (f�r Day-Change Detection). |
+| `__bpUserOverride` | Bool, ob BP-Kontext manuell gesetzt wurde (stoppt Noon-Switch). |
+| `__midnightTimer`, `__noonTimer`, `__dayHeartbeat` | Timer-IDs f�r Midnight-Reset, Noon-Switch, optionalen Heartbeat. |
+| `__intakeResetDoneFor` | ISO-Day, f�r den bereits ein Reset ausgef�hrt wurde. |
+| `__bpPanesCache` | Cache der BP-Panels (DOM-Referenzen) zur Performance. |
+| `__lastUserId` | Letzter bekannter Supabase-User � wichtig f�r Logout-Reset. |
 
-Getter/Setter (`getDateUserSelected`, `setMidnightTimer`, â€¦) gewÃ¤hrleisten, dass andere Module stets die aktuelle Referenz erhalten.
+Getter/Setter wie `setMidnightTimer`, `getDateUserSelected` usw. sorgen daf�r, dass alle Module stets dieselbe Referenz verwenden (auch der Hub).
 
 ---
 
@@ -27,19 +27,19 @@ Getter/Setter (`getDateUserSelected`, `setMidnightTimer`, â€¦) gewÃ¤hrleis
 | State | Beschreibung |
 |-------|--------------|
 | `uiRefreshState` | `{ running, timer, docNeeded, chartNeeded, lifestyleNeeded, appointmentsNeeded, resolvers, lastReason }`. |
-| `uiRefreshTimeoutSymbol` | Symbol fÃ¼r Timeout-Diagnose. |
-| `uiRefreshState.reasons` | Set aller GrÃ¼nde (z.â€¯B. `boot:initial`, `panel:bp`) â€“ Hilft bei Logging. |
+| `uiRefreshTimeoutSymbol` | Symbol f�r Timeout-Diagnose im Touch-Log. |
+| `uiRefreshState.reasons` | Set aller Refresh-Gr�nde (z.?B. `boot:initial`, `panel:bp`). |
 
-Dieser State sorgt dafÃ¼r, dass mehrere Refresh-Requests zusammengefÃ¼hrt werden und Steps sequentiell laufen.
+Dieser State b�ndelt Refresh-Requests (auch aus dem Hub) und f�hrt die Steps sequentiell aus.
 
 ---
 
-## 3. Arzt-Ansicht
+## 3. Arzt-Ansicht (Doctor Overlay)
 
 | Variable | Beschreibung |
 |----------|--------------|
-| `__doctorScrollSnapshot` (`app/modules/doctor/index.js`) | `{ top, ratio }`, um nach Refresh zum vorherigen Scrollpunkt zu springen. |
-| `trendpilotWrap.dataset.tpBound` | Flag, ob Trendpilot-Events bereits gebunden wurden. |
+| `__doctorScrollSnapshot` (`app/modules/doctor/index.js`) | `{ top, ratio }`, damit das Overlay nach einem Refresh wieder zur gleichen Position scrollt. |
+| `trendpilotWrap.dataset.tpBound` | Flag, ob Trendpilot-Events schon gebunden wurden. |
 
 ---
 
@@ -48,11 +48,11 @@ Dieser State sorgt dafÃ¼r, dass mehrere Refresh-Requests zusammengefÃ¼hrt we
 | State | Beschreibung |
 |-------|--------------|
 | `lastStatus` (`trendpilot/index.js`) | Letzter Trendpilot-Run `{ severity, delta, day }`. |
-| `latestSystemComment` | Zuletzt geladener Supabase-Systemkommentar (fÃ¼r Capture-Pill & Chart). |
-| `trendpilotInitialized` / `dependencyWarned` | Flags fÃ¼r Init-Status. |
-| `chartPanel.currentMeta`, `currentBpPairs` | Map aus BP-Meta (Punkte + Tooltips). |
-| `chartPanel.currentBodyMeta` | Map mit Body-Notizen. |
-| `chartPanel.currentTrendpilotBands` | Array der Trendpilot-BÃ¤nder fÃ¼r Chart-Rendering. |
+| `latestSystemComment` | Zuletzt geladener Supabase-Systemkommentar (f�r Capture-Pill & Charts). |
+| `trendpilotInitialized` / `dependencyWarned` | Flags f�r Init-/Warnzustand. |
+| `chartPanel.currentMeta`, `currentBpPairs` | Map aus BP-Daten + Tooltip-Meta. |
+| `chartPanel.currentBodyMeta` | Map mit K�rpernotizen. |
+| `chartPanel.currentTrendpilotBands` | Array mit Trendpilot-B�ndern f�r den Chart. |
 
 ---
 
@@ -60,10 +60,10 @@ Dieser State sorgt dafÃ¼r, dass mehrere Refresh-Requests zusammengefÃ¼hrt we
 
 | State | Beschreibung |
 |-------|--------------|
-| `authGuardState` (Supabase) | EnthÃ¤lt `doctorUnlocked`, `pendingAfterUnlock`, evtl. weitere Flags. |
-| `supabaseMissingLogged` (`main.js`) | Verhindert mehrfaches Loggen â€žSupabaseAPI nicht geladenâ€œ. |
-| `__authState` (`main.js`) | Speichert `unknown/auth` etc., damit Save-Flows wissen, ob Login bereits erkannt wurde. |
-| `__lastLoggedIn` | Bool â€“ ob Nutzer vor kurzem eingeloggt war (fÃ¼r Unknown-Phase). |
+| `authGuardState` (`app/supabase/auth/guard.js`) | Enth�lt `doctorUnlocked`, `pendingAfterUnlock` etc.; Hub nutzt das, um Doctor-Panels direkt nach Biometrics zu �ffnen. |
+| `supabaseMissingLogged` (`main.js`) | Verhindert mehrfaches Loggen �SupabaseAPI nicht geladen�. |
+| `__authState` (`main.js`) | Speichert `unknown/auth`, damit Save-Flows wissen, ob Login erkannt wurde. |
+| `__lastLoggedIn` | Bool, ob der Nutzer vor kurzem eingeloggt war (f�r Unknown-Phase). |
 
 ---
 
@@ -71,23 +71,23 @@ Dieser State sorgt dafÃ¼r, dass mehrere Refresh-Requests zusammengefÃ¼hrt we
 
 | State | Beschreibung |
 |-------|--------------|
-| `AppModules.captureGlobals.setBusy` | Zeigt Busy-Overlay fÃ¼r Capture (globaler Flag in DOM). |
-| `AppModules.captureGlobals.setDateUserSelected` | Siehe Capture. |
-| `window.AppModules.bp.updateBpCommentWarnings` | State, ob Kommentarfelder rot markiert werden (nicht global, aber setter-like). |
-| `touchLog` (`#touchLog`) | DOM-Element, das diag-Log-EintrÃ¤ge anhÃ¤uft. |
-| `AppModules.chartPanel.tipSticky` | Bool â€“ ob Tooltip fixiert ist (z.â€¯B. nach Klick). |
-| `AppModules.chartPanel.SHOW_CHART_ANIMATIONS` | Flag, ob Animationen laufen dÃ¼rfen. |
-| `AppModules.trendpilot.refreshLatestSystemComment` | Funktion, die den `latestSystemComment`-State aktualisiert (Event `trendpilot:latest`). |
+| `AppModules.captureGlobals.setBusy` | Steuert das Busy-Overlay global. |
+| `AppModules.captureGlobals.setDateUserSelected` | Setter f�r Datum-Override (siehe Abschnitt 1). |
+| `window.AppModules.bp.updateBpCommentWarnings` | Markiert Kommentarfelder rot, wenn Pflicht erf�llt werden muss. |
+| `touchLog` (`#touchLog`) | DOM-Element, das Diag-Logs auff�ngt. |
+| `AppModules.chartPanel.tipSticky` | Bool, ob Chart-Tooltip fixiert ist. |
+| `AppModules.chartPanel.SHOW_CHART_ANIMATIONS` | Flag, ob Chart-Animationen laufen d�rfen. |
+| `AppModules.trendpilot.refreshLatestSystemComment` | Funktion, die `latestSystemComment` aktualisiert (Event `trendpilot:latest`). |
 
 ---
 
 ## 7. Hinweise zur Pflege
 
-- **Kein direktes Mutieren:** MÃ¶glichst Ã¼ber Getter/Setter gehen (`capture/globals`), damit Referenzen Ã¼berall aktualisiert werden.
-- **Timer aufrÃ¤umen:** Bei `scheduleMidnightRefresh`/`scheduleNoonSwitch` immer alte Timer clearen.
-- **Reset bei Logout:** `main.js` setzt `AppModules.captureGlobals.setLastKnownToday(todayStr())`, `setBpUserOverride(false)` etc. â€“ muss synchron bleiben.
-- **Trendpilot-BÃ¤nder:** Nach Save/ACK `refreshLatestSystemComment` aufrufen, damit Capture/Chart/Doctor denselben State sehen.
+- **Nicht direkt mutieren:** Immer Getter/Setter aus `capture/globals` verwenden, damit Hub, Capture und Doctor denselben State sehen.
+- **Timer aufr�umen:** Bei `scheduleMidnightRefresh` / `scheduleNoonSwitch` alte Timer unbedingt clearen.
+- **Reset bei Logout:** `main.js` setzt u.?a. `setLastKnownToday(todayStr())`, `setBpUserOverride(false)` � diese Reihenfolge muss beibehalten werden.
+- **Trendpilot-B�nder:** Nach Save oder ACK `refreshLatestSystemComment` und `requestUiRefresh({ chart: true })`, damit alle Oberfl�chen synchron sind.
 
 ---
 
-Aktualisiere dieses Dokument, sobald neue globale States oder Timer hinzukommen (z.â€¯B. weitere Module, die `AppModules` nutzen), damit Debugging-Teams schnell erkennen, wo sie eingreifen mÃ¼ssen.
+Dieses Dokument sollte angepasst werden, sobald neue globale States oder Timer hinzukommen (z.?B. KI-/PWA-Features oder zus�tzliche Hub-Panels), damit Debugging-Teams schnell erkennen, wo sie eingreifen m�ssen.

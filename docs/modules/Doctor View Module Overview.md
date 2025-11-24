@@ -23,7 +23,8 @@ Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Akt
 |-------|-------|
 | `app/modules/doctor/index.js` | Hauptlogik: Rendern, Scroll-Restore, Trendpilot-Block, Delete/Export, Chart-Button. |
 | `app/styles/doctor.css` | Layout/Stil (Toolbar, Badge, Trendpilot-Karten, Tagesgrid). |
-| `assets/js/main.js` | Bindet Tab-Wechsel, Unlock-Flow, `requestUiRefresh({ doctor: true })`. |
+| `app/modules/hub/index.js` | Orbit-Buttons & Overlay-Steuerung (öffnet Doctor-Panel nach Unlock). |
+| `assets/js/main.js` | Legacy Tab-Wechsel (bleibt für Altansichten); Hub überlagert dies mit Orbit. |
 | `app/supabase/api/vitals.js` & `app/supabase/api/system-comments.js` | REST-Fetch für Tageswerte und Trendpilot-Kommentare. |
 | `app/modules/trendpilot/index.js` | Liefert `trendpilot:latest` Events, Ack-Patching etc. |
 | `assets/js/charts/index.js` | Chart-Button nutzt das gleiche Range, um Diagramm zu öffnen. |
@@ -35,8 +36,9 @@ Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Akt
 
 ### 3.1 Unlock & Setup
 
-1. Beim Tab-Wechsel zu „Arzt-Ansicht“ (`setTab('doctor')`) prüft `requireDoctorUnlock`. Ohne Freigabe bleibt Ansicht verborgen.
-2. Nach Unlock ruft `requestUiRefresh({ doctor: true })` die Renderlogik.
+1. Beim Orbit-Button-Klick für die Arzt-Ansicht ruft `hub/index.js` `requireDoctorUnlock`.
+2. Nach erfolgreichem Unlock öffnet `hub/index.js` das Doctor-Panel automatisch und triggert `requestUiRefresh({ doctor: true })`.
+3. Legacy-Tab (`setTab('doctor')`) existiert weiterhin für Altansichten/QA, folgt aber demselben Guard.
 
 ### 3.2 Render (`renderDoctor`)
 
@@ -85,7 +87,7 @@ Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Akt
 
 ## 6. Speicherfluss & Abhängigkeiten
 
-1. `main.js` orchestriert Unlock, Tab, Refresh.
+1. `hub/index.js` steuert Orbit/Unlock/Panel-Overlay (neu), `main.js` bedient Legacy-Workflow.
 2. `doctor/index.js` ruft Supabase APIs (Vitals, System-Comments).
 3. `trendpilot/index.js` sorgt dafür, dass `fetchSystemCommentsRange`/`setSystemCommentAck`/`setSystemCommentDoctorStatus` bereitstehen; Capture-Hook sendet `trendpilot:latest`, was an die Arzt-Ansicht weitergegeben wird.
 4. Chart-Benutzung (gleicher Zeitraum) -> `assets/js/charts/index.js`.

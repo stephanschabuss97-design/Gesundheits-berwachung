@@ -1,17 +1,17 @@
-﻿# Supabase Core â€“ Functional Overview
+# Supabase Core � Functional Overview
 
-Dieses Dokument beschreibt das Supabase-Kernsystem des Gesundheits-Loggers. Es dient als Referenz dafÃ¼r, wie das Supabase-Barrel (`app/supabase/index.js`) aufgebaut ist, welche Untermodule existieren und wie externe Module (`main.js`, Trendpilot, Capture etc.) mit den APIs interagieren.
+Dieses Dokument beschreibt das Supabase-Kernsystem des Gesundheits-Loggers. Es dient als Referenz daf�r, wie das Supabase-Barrel (`app/supabase/index.js`) aufgebaut ist, welche Untermodule existieren und wie externe Module (`main.js`, Hub, Trendpilot, Capture etc.) mit den APIs interagieren.
 
 ---
 
 ## 1. Zielsetzung
 
-Das Supabase-Core-System bÃ¼ndelt alle Supabase-Funktionen (Auth, REST, RPC, Realtime) in einem gemeinsamen Namespace (`SupabaseAPI` / `AppModules.supabase`). Es soll:
+Das Supabase-Core-System b�ndelt alle Supabase-Funktionen (Auth, REST, RPC, Realtime) in einem gemeinsamen Namespace (`SupabaseAPI` / `AppModules.supabase`). Es soll:
 
 - Einheitliche Wrapper (`fetchWithAuth`, `ensureSupabaseClient`) bereitstellen.
-- Verschiedene API-Bereiche (intake, vitals, notes, system-comments) aggregieren.
+- Verschiedene API-Bereiche (Intake, Vitals, Notes, Doctor, System-Comments) aggregieren.
 - Realtime/Resume-Mechaniken (Websocket, App-Lock) koordinieren.
-- Ein globales Ready-Event (`supabase:ready`) auslÃ¶sen, damit andere Module erst nach Initialisierung starten.
+- Ein globales Ready-Event (`supabase:ready`) ausl�sen, damit andere Module erst nach Initialisierung starten.
 
 ---
 
@@ -20,56 +20,56 @@ Das Supabase-Core-System bÃ¼ndelt alle Supabase-Funktionen (Auth, REST, RPC, R
 ### 2.1 Imports / Submodule
 
 Das Barrel importiert folgende Bereiche:
-- `../supabase.js` (Legacy API, falls vorhanden).
+- `../supabase.js` (Legacy Proxy � wird nach und nach entfernt).
 - Core (`./core/state.js`, `./core/client.js`, `./core/http.js`).
 - Auth (`./auth/index.js`).
 - Realtime (`./realtime/index.js`).
-- Domains: `api/intake.js`, `api/vitals.js`, `api/notes.js`, `api/select.js`, `api/push.js`, `api/system-comments.js`.
+- Domains: `api/intake.js`, `api/vitals.js`, `api/notes.js`, `api/select.js`, `api/push.js`, `api/system-comments.js`, `api/doctor.js`.
 
 ### 2.2 Aggregation
 
-1. `MODULE_SOURCES` enthÃ¤lt Paare `(label, moduleExports)`.
-2. Schleife Ã¼ber alle Exporte â†’ in `aggregated` schreiben. Bei Namenskonflikt ersetzt neuere Quelle Legacy-Eintrag.
-3. Ergebnis = `SupabaseAPI`.
+1. `MODULE_SOURCES` enth�lt Paare `(label, moduleExports)`.
+2. Schleife �ber alle Exporte ? in `aggregated` schreiben. Bei Namenskonflikt ersetzt neuere Quelle Legacy-Eintrag (Warnung im Log).
+3. Ergebnis = `SupabaseAPI` (Plain Object).
 
 ### 2.3 Global Bindings
 
 - `globalWindow.AppModules.supabase = SupabaseAPI`.
-- `window.SupabaseAPI` wird definert (falls nicht vorhanden).
-- `notifySupabaseReady()` dispatcht Event `supabase:ready` (CustomEvent).
-- `SupabaseAPI.isReady = true`, `scheduleSupabaseReady()` sorgt fÃ¼r DOMContentLoaded-Version.
+- `window.SupabaseAPI` wird definiert (falls nicht vorhanden).
+- `notifySupabaseReady()` dispatcht Event `supabase:ready`.
+- `SupabaseAPI.isReady = true`, `scheduleSupabaseReady()` sorgt f�r DOMContentLoaded-Fallback.
 
 ### 2.4 Diagnose
 
 - Bei Konflikten: `console.warn('[supabase/index] Duplicate export keys ...')`.
-- Normalerweise keine weiteren Logs, aber Submodule loggen bei Bedarf.
+- Submodule loggen eigene Fehler (z.?B. `system-comments`).
 
 ---
 
 ## 3. Wichtige Exports
 
-Eine Auswahl (nicht vollstÃ¤ndig):
 - **Core/HTTP:** `fetchWithAuth`, `getHeaders`, `cacheHeaders`, `baseUrlFromRest`.
-- **Auth:** `requireSession`, `watchAuthState`, `afterLoginBoot`, `bindAuthButtons`.
-- **Realtime:** `setupRealtime`, `teardownRealtime`, `resumeFromBackground`.
+- **Auth:** `requireSession`, `watchAuthState`, `afterLoginBoot`, `bindAuthButtons`, `authGuardState`, `setAuthPendingAfterUnlock`.
+- **Realtime:** `setupRealtime`, `teardownRealtime`, `resumeFromBackground` (f�r Intake/Hub-Resume).
 - **Intake APIs:** `loadIntakeToday`, `saveIntakeTotalsRpc`, `cleanupOldIntake`.
 - **Vitals APIs:** `fetchDailyOverview`, `loadBpFromView`, `loadBodyFromView`.
 - **Notes:** `appendNoteRemote`, `deleteRemoteDay`.
 - **System Comments:** `upsertSystemCommentRemote`, `setSystemCommentAck`, `setSystemCommentDoctorStatus`, `fetchSystemCommentsRange`.
-- **State/Lock:** `requireDoctorUnlock`, `bindAppLockButtons`, `authGuardState`, `lockUi`.
+- **Doctor/Trendpilot:** `loadDoctorDailyRange`, `loadTrendpilotBands`, `setTrendpilotAck`.
 
-Andere Module greifen Ã¼ber `createSupabaseFn(name)` (`assets/js/main.js`) darauf zu, sodass Aufrufe bei fehlender API sauber fehlschlagen.
+Andere Module greifen �ber `createSupabaseFn(name)` (`assets/js/main.js`) darauf zu, sodass Aufrufe bei fehlender API sauber fehlschlagen.
 
 ---
 
 ## 4. Initialisierungsfluss
 
-1. `app/supabase/index.js` wird nach Body/Doctor/Capture-Skripten geladen (aber vor Trendpilot).
-2. Sobald das Module ausgefÃ¼hrt ist, ruft es `scheduleSupabaseReady()` â†’ `supabase:ready`.
-3. AbhÃ¤ngige Module:
-   - `trendpilot/index.js`: wartet auf `supabase:ready`, init erst danach.
+1. `app/supabase/index.js` wird nach Body/Doctor/Capture-Skripten geladen (aber vor Trendpilot/Hellfire).
+2. Sobald das Module ausgef�hrt ist, ruft es `scheduleSupabaseReady()` ? `supabase:ready`.
+3. Abh�ngige Module:
+   - Hub (`app/modules/hub/index.js`) ruft `waitForSupabaseApi` bevor Orbit/Guards starten.
+   - `trendpilot/index.js`: wartet auf `supabase:ready`.
    - `main.js`: nutzt `waitForSupabaseApi()` (Promise + Event).
-   - Chart/Doctor/Capture rufen sofort `createSupabaseFn(...)`; falls Supabase noch nicht ready ist, wirft der Wrapper user-freundliche Errors.
+   - Charts/Doctor/Capture verwenden `createSupabaseFn(...)`; wenn Supabase noch nicht ready ist, erscheint ein freundlicher Fehler.
 
 ---
 
@@ -77,17 +77,18 @@ Andere Module greifen Ã¼ber `createSupabaseFn(name)` (`assets/js/main.js`) dar
 
 - Supabase-Keys/URLs werden via App-Config (`getConf('webhookUrl'/'webhookKey')`) gelesen.
 - `fetchWithAuth` erneuert Token bei 401 und loggt Fehler anonymisiert (`maskUid`).
-- HTTP-Aufrufe markieren ihre â€žtagsâ€œ (z. B. `systemComment:post`) fÃ¼r Logging/Retry.
-- Das Barrel selbst wirft keine Errors, aber Submodule (z. B. `system-comments`) enthalten Fallbacks in `diag`.
+- HTTP-Aufrufe markieren ihre Tags (z.?B. `systemComment:post`) f�r Logging/Retry.
+- Guard/Unlock-Flows (`requireDoctorUnlock`, `lockUi`) leben ebenfalls unter Supabase-Core, damit Doctor-Overlay/KI sp�ter denselben Pfad nutzen.
 
 ---
 
 ## 6. Erweiterung / Wartung
 
-- Neue API-Bereiche (z. B. `api/comments.js`) einfach dem `MODULE_SOURCES`-Array hinzufÃ¼gen.
-- Bei Breaking Changes (z. B. Supabase V3) muss nur das Barrel aktualisiert werden; alle Caller bleiben konstant.
-- Dokumentation in QA/Docs aktualisieren (z. B. Trendpilot/Charts, sobald neue Supabase-Exports benÃ¶tigt werden).
+1. Neue API-Bereiche (z.?B. KI-Proxy) dem `MODULE_SOURCES`-Array hinzuf�gen.
+2. Legacy-Dateien (`../supabase.js`) nur noch solange beibehalten, bis Proxy/Hub komplett migriert ist.
+3. Bei Breaking Changes (Supabase SDK, Auth Flow) muss nur das Barrel aktualisiert werden; alle Caller bleiben konstant.
+4. Dokumentation in QA/Docs aktualisieren (z.?B. Trendpilot/Charts, sobald neue Supabase-Exports ben�tigt werden).
 
 ---
 
-Halte dieses Overview aktuell, wenn weitere Submodule hinzugefÃ¼gt oder InitialisierungsflÃ¼sse geÃ¤ndert werden.
+Halte dieses Overview aktuell, wenn weitere Submodule hinzugef�gt, Legacy-Teile entfernt oder Initialisierungsfl�sse ge�ndert werden.
