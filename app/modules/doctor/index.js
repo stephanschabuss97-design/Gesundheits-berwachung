@@ -16,7 +16,7 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
-  const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
+  const getSupabaseApi = () => global.AppModules?.supabase || {};
   const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[doctor]', msg));
   const escapeAttr = (value = '') =>
     String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
@@ -41,7 +41,7 @@
     return false;
   };
   const getAuthGuardState = () => {
-    const api = global.SupabaseAPI || global.AppModules?.supabase;
+    const api = global.AppModules?.supabase;
     const state = api?.authGuardState;
     return state && typeof state === 'object' ? state : null;
   };
@@ -52,7 +52,7 @@
     return !!getAuthGuardState()?.doctorUnlocked;
   };
   const requestDoctorUnlock = async () => {
-    const unlockFn = global.requireDoctorUnlock;
+    const unlockFn = global.AppModules?.supabase?.requireDoctorUnlock;
     if (typeof unlockFn === 'function') {
       return unlockFn();
     }

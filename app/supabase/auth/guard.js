@@ -29,6 +29,7 @@
 // SUBMODULE: imports @internal - Auth Core & UI Overlay
 import { isLoggedInFast } from './core.js';
 import { showLoginOverlay } from './ui.js';
+import { supabaseState } from '../core/state.js';
 
 // SUBMODULE: globals @internal - Diagnosezugang & Window-Hilfen
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
@@ -260,7 +261,7 @@ const toUserHandleBytes = (value) => {
 };
 
 const getSessionUser = async () => {
-  const client = globalWindow?.sbClient;
+  const client = supabaseState.sbClient;
   const auth = client?.auth;
   if (!auth?.getSession) return null;
   try {

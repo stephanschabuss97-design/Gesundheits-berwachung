@@ -30,6 +30,7 @@ const diag =
     globalWindow?.AppModules?.diag ||
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
+const getSupabaseApi = () => globalWindow?.AppModules?.supabase || null;
 
     // SUBMODULE: constants @internal - Authentifizierungs-Timing & Defaults
 const AUTH_GRACE_MS = 400;
@@ -85,11 +86,11 @@ const callLoginOverlay = (visible) => {
     } catch (err) {
       diag.add?.('[auth] overlay hook error: ' + (err?.message || err));
     }
-  } else if (typeof globalWindow?.showLoginOverlay === 'function') {
-    try {
-      globalWindow.showLoginOverlay(!!visible);
-    } catch (_) {}
   }
+  const supa = getSupabaseApi();
+  try {
+    supa?.showLoginOverlay?.(!!visible);
+  } catch (_) {}
 };
 
 const callUserUi = (email) => {
@@ -101,11 +102,10 @@ const callUserUi = (email) => {
       diag.add?.('[auth] user hook error: ' + (err?.message || err));
     }
   }
-  if (typeof globalWindow?.setUserUi === 'function') {
-    try {
-      globalWindow.setUserUi(email);
-    } catch (_) {}
-  }
+  const supa = getSupabaseApi();
+  try {
+    supa?.setUserUi?.(email);
+  } catch (_) {}
 };
 
 const callDoctorAccess = (enabled) => {
@@ -117,11 +117,10 @@ const callDoctorAccess = (enabled) => {
       diag.add?.('[auth] doctor hook error: ' + (err?.message || err));
     }
   }
-  if (typeof globalWindow?.setDoctorAccess === 'function') {
-    try {
-      globalWindow.setDoctorAccess(!!enabled);
-    } catch (_) {}
-  }
+  const supa = getSupabaseApi();
+  try {
+    supa?.setDoctorAccess?.(!!enabled);
+  } catch (_) {}
 };
 
 const callAuthGuard = (enabled) => {

@@ -15,8 +15,6 @@
  */
 
 // SUBMODULE: imports @internal - bindet Supabase-Submodule (Core, Auth, API)
-import { SupabaseAPI as LegacySupabaseAPI } from '../supabase.js';
-
 import * as state from './core/state.js';
 import * as client from './core/client.js';
 import * as http from './core/http.js';
@@ -31,7 +29,6 @@ import * as systemComments from './api/system-comments.js';
 
 // SUBMODULE: aggregation @internal - kombiniert alle Module, erkennt doppelte Exporte
 const MODULE_SOURCES = [
-  ['legacy', LegacySupabaseAPI],
   ['state', state],
   ['client', client],
   ['http', http],
@@ -53,12 +50,6 @@ for (const [label, mod] of MODULE_SOURCES) {
   for (const [exportName, exportValue] of Object.entries(mod)) {
     if (exportName in aggregated) {
       const existingOwner = owners[exportName];
-      // Neuere Module dürfen Legacy-Exports überschreiben, ohne Konfliktmeldung.
-      if (existingOwner === 'legacy' && label !== 'legacy') {
-        aggregated[exportName] = exportValue;
-        owners[exportName] = label;
-        continue;
-      }
       if (aggregated[exportName] !== exportValue) {
         conflicts.push({ key: exportName, existingOwner, incomingOwner: label });
       }
@@ -80,7 +71,74 @@ if (conflicts.length) {
 export const SupabaseAPI = aggregated;
 
 const globalWindow = typeof window !== 'undefined' ? window : undefined;
+const bindStateToWindow = () => {
+  if (!globalWindow) return;
+  Object.defineProperties(globalWindow, {
+    sbClient: {
+      configurable: true,
+      get() {
+        return state.supabaseState.sbClient;
+      },
+      set(value) {
+        state.supabaseState.sbClient = value;
+      }
+    },
+    __authState: {
+      configurable: true,
+      get() {
+        return state.supabaseState.authState;
+      },
+      set(value) {
+        state.supabaseState.authState = value;
+      }
+    },
+    __lastLoggedIn: {
+      configurable: true,
+      get() {
+        return state.supabaseState.lastLoggedIn;
+      },
+      set(value) {
+        state.supabaseState.lastLoggedIn = value;
+      }
+    }
+  });
+};
+const attachLegacyProxies = () => {
+  if (!globalWindow) return;
+  const warned = new Set();
+  const isDevBuild =
+    (typeof globalWindow.__DEV__ !== 'undefined' && !!globalWindow.__DEV__) ||
+    (typeof process !== 'undefined' && process?.env?.NODE_ENV && process.env.NODE_ENV !== 'production');
+  const warnLegacy = (name) => {
+    if (warned.has(name)) return;
+    warned.add(name);
+    if (isDevBuild) {
+      const stack = new Error().stack;
+      globalWindow.console?.warn?.('[supabase/index] Legacy global accessed:', name, stack ? `\n${stack}` : '');
+      return;
+    }
+    globalWindow.console?.warn?.('[supabase/index] Legacy global accessed:', name);
+  };
+  const legacyNames = [...Object.keys(SupabaseAPI), 'SupabaseAPI'];
+  legacyNames.forEach((name) => {
+    if (Object.prototype.hasOwnProperty.call(globalWindow, name)) return;
+    Object.defineProperty(globalWindow, name, {
+      configurable: true,
+      get() {
+        warnLegacy(name);
+        return name === 'SupabaseAPI' ? SupabaseAPI : SupabaseAPI[name];
+      },
+      set(value) {
+        warnLegacy(name);
+        if (name !== 'SupabaseAPI') {
+          SupabaseAPI[name] = value;
+        }
+      }
+    });
+  });
+};
 if (globalWindow) {
+  bindStateToWindow();
   globalWindow.AppModules = globalWindow.AppModules || {};
   globalWindow.AppModules.supabase = SupabaseAPI;
   const PUBLIC_GLOBALS = {
@@ -94,6 +152,7 @@ if (globalWindow) {
       value
     });
   }
+  attachLegacyProxies();
 }
 
 // SUBMODULE: notifySupabaseReady @internal - löst CustomEvent 'supabase:ready' aus

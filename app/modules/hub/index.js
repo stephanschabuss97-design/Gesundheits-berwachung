@@ -27,8 +27,7 @@
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
 
-  const getSupabaseApi = () =>
-    appModules.supabase || global.SupabaseAPI || appModules.supabase;
+  const getSupabaseApi = () => appModules.supabase || {};
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -154,7 +153,7 @@
 
   const ensureDoctorUnlocked = async () => {
     const supa = getSupabaseApi();
-    const unlockFn = supa?.requireDoctorUnlock || global.requireDoctorUnlock;
+    const unlockFn = supa?.requireDoctorUnlock;
     if (typeof unlockFn !== 'function') return true;
     try {
       const ok = await unlockFn();

@@ -15,7 +15,7 @@
   const RETRY_DELAY_BASE = 250;
   const MAX_RETRY_DELAY = 4000;
 
-  const getSupabaseApi = () => global.SupabaseAPI || global.AppModules?.supabase || {};
+  const getSupabaseApi = () => global.AppModules?.supabase || {};
 
   const initTrendpilot = () => {
     if (trendpilotInitialized || initializingTrendpilot) return;
@@ -53,10 +53,10 @@
     const supabaseApi = getSupabaseApi();
     return {
       supabaseApi,
-      fetchDailyOverview: supabaseApi.fetchDailyOverview || global.fetchDailyOverview,
+      fetchDailyOverview: supabaseApi.fetchDailyOverview,
       upsertSystemCommentRemote: supabaseApi.upsertSystemCommentRemote,
       setSystemCommentAck: supabaseApi.setSystemCommentAck,
-      fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange || global.fetchSystemCommentsRange
+      fetchSystemCommentsRange: supabaseApi.fetchSystemCommentsRange
     };
   };
 
@@ -381,7 +381,7 @@
   initRetryCount = 0;
   };
 
-  if (global.SupabaseAPI || appModules.supabase) {
+  if (appModules.supabase) {
     initTrendpilot();
   } else if (global.document) {
     const onReady = () => {

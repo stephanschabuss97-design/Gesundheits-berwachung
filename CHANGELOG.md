@@ -772,6 +772,7 @@ Added:
 - API-Layer modularisiert: `assets/js/supabase/api/{intake.js,vitals.js,notes.js}` inkl. Header-Kommentare und gemeinsamer Fetch-/Config-Hooks.
 - Realtime-Barrel `assets/js/supabase/realtime/index.js` kapselt bestehende Browser-Hooks (`setupRealtime`, `teardownRealtime`, `resumeFromBackground`, `toEventsUrl`).
 - Neues Barrel `assets/js/supabase/index.js` bündelt Legacy-SupabaseAPI mit Core/Auth/API/Realtime-Modulen und spiegelte Exporte auf `window.AppModules.supabase`.
+- Legacy-Supabase-Proxy (`app/supabase.js`) entfernt; `index.html` lädt ausschließlich das Barrel und alle Verbraucher nutzen `AppModules.supabase`/`createSupabaseFn`.
 
 Changed:
 - `assets/js/supabase.js` entfernt Duplikate (syncWebhook, Intake/Vitals/Notes, Realtime) und delegiert über saubere Proxy-Funktionen an die neuen Module.

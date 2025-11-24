@@ -18,10 +18,10 @@
 // SUBMODULE: getSupabaseApi @internal - prüft SupabaseAPI-Verfügbarkeit und loggt fehlende Instanz
 let supabaseMissingLogged = false;
 const getSupabaseApi = () => {
-  const api = window.SupabaseAPI;
+  const api = window.AppModules?.supabase;
   if (!api) {
     if (!supabaseMissingLogged) {
-      console.error('[BOOT] SupabaseAPI nicht geladen – prüfe app/supabase/index.js / Script-Reihenfolge.');
+      console.error('[BOOT] Supabase (AppModules.supabase) nicht geladen – prüfe app/supabase/index.js / Script-Reihenfolge.');
       supabaseMissingLogged = true;
     }
     return null;
@@ -31,6 +31,7 @@ const getSupabaseApi = () => {
 };
 const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
+const getSupabaseState = () => getSupabaseApi()?.supabaseState || null;
 
 // SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
@@ -382,7 +383,7 @@ function toNumDE(s) {
 /* ===== Auth-Guard ===== */
 // SUBMODULE: isLoggedIn @public - quick check to gate protected actions
 async function isLoggedIn(){
-  const client = (typeof sbClient !== 'undefined' && sbClient) || getSupabaseApi()?.sbClient || null;
+  const client = getSupabaseState()?.sbClient || null;
   if (!client) return false;
   return await isLoggedInFast({ timeout: 800 });
 }
@@ -1153,7 +1154,7 @@ setTab("capture");
 try{ window.AppModules.capture.resetCapturePanels?.(); window.AppModules.bp.updateBpCommentWarnings?.(); }catch(_){ }
 try { addCapturePanelKeys?.(); } catch(_){ }
 bindAuthButtons();
-if (sbClient) watchAuthState()
+if (getSupabaseState()?.sbClient) watchAuthState();
 
 // Wenn schon eingeloggt -> App starten, sonst Login-Leiste zeigen
 const hasSession = await requireSession();

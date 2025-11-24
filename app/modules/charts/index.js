@@ -27,7 +27,7 @@ const safeGetConf = async (k) => {
   try { if (typeof getConf === "function") return await getConf(k); } catch(_) {}
   return null;
 };
-const getSupabaseApi = () => global.AppModules?.supabase || global.SupabaseAPI || {};
+const getSupabaseApi = () => global.AppModules?.supabase || {};
 
 const getFocusTrap = () => {
   const trap = global.AppModules?.uiCore?.focusTrap || global.focusTrap || null;
