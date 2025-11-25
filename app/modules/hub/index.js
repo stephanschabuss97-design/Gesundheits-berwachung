@@ -10,6 +10,11 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   const doc = global.document;
+  const MIDAS_ENDPOINTS = {
+    assistant: '/api/midas-assistant',
+    transcribe: '/api/midas-transcribe',
+    tts: '/api/midas-tts',
+  };
 
   const ORBIT_BUTTONS = {
     north: { angle: -90 },
@@ -20,12 +25,21 @@
     sw: { angle: 135, radiusScale: 0.88 },
     w: { angle: 180 },
     nw: { angle: -135, radiusScale: 0.88 },
+    core: { angle: 0, radiusScale: 0 },
+  };
+  const VOICE_STATE_LABELS = {
+    idle: 'Bereit',
+    listening: 'Ich hoere zu',
+    thinking: 'Verarbeite',
+    speaking: 'Spreche',
+    error: 'Fehler',
   };
 
   let hubButtons = [];
   let activePanel = null;
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
+  let voiceCtrl = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
 
@@ -212,6 +226,7 @@
       global.console?.debug?.('[hub] #captureHub element not found', { config });
       return;
     }
+    setupVoiceChat(hub);
     setupIconBar(hub);
     setupOrbitHotspots(hub);
     setupPanels();
@@ -272,6 +287,9 @@
         await doctorPanelHandler(btn);
       }
     }, { sync: false });
+    bindButton('[data-hub-module="assistant-voice"]', () => {
+      handleVoiceTrigger();
+    }, { sync: false });
     bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
   };
@@ -327,6 +345,298 @@
     hub.innerHTML = '';
     pills.classList.add('hub-intake-pills');
     hub.appendChild(pills);
+  };
+
+  const setupVoiceChat = (hub) => {
+    const button = hub.querySelector('[data-hub-module="assistant-voice"]');
+    if (!button || !navigator?.mediaDevices?.getUserMedia) {
+      return;
+    }
+    voiceCtrl = {
+      button,
+      status: 'idle',
+      recorder: null,
+      stream: null,
+      chunks: [],
+      audioEl: null,
+      history: [],
+      sessionId: (global.crypto?.randomUUID?.() ?? `voice-${Date.now()}`),
+      currentAudioUrl: null,
+    };
+    setVoiceState('idle');
+  };
+
+  const setVoiceState = (state, customLabel) => {
+    if (!voiceCtrl?.button) return;
+    voiceCtrl.status = state;
+    const label = customLabel ?? VOICE_STATE_LABELS[state] ?? '';
+    voiceCtrl.button.dataset.voiceState = state;
+    voiceCtrl.button.dataset.voiceLabel = label;
+    voiceCtrl.button.setAttribute('aria-pressed', state === 'listening');
+  };
+
+  const handleVoiceTrigger = () => {
+    if (!voiceCtrl) {
+      console.warn('[hub] voice controller missing');
+      return;
+    }
+    if (voiceCtrl.status === 'listening') {
+      stopVoiceRecording();
+      return;
+    }
+    if (voiceCtrl.status === 'speaking') {
+      stopVoicePlayback();
+      setVoiceState('idle');
+      return;
+    }
+    if (voiceCtrl.status === 'thinking') {
+      console.info('[hub] voice assistant is already processing');
+      return;
+    }
+    startVoiceRecording();
+  };
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = {};
+      const preferredTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+      ];
+      const supportedType = preferredTypes.find((type) =>
+        global.MediaRecorder?.isTypeSupported?.(type)
+      );
+      if (supportedType) {
+        options.mimeType = supportedType;
+      }
+      const recorder = new MediaRecorder(stream, options);
+      voiceCtrl.chunks = [];
+      recorder.addEventListener('dataavailable', (event) => {
+        if (event.data?.size) {
+          voiceCtrl.chunks.push(event.data);
+        }
+      });
+      recorder.addEventListener('stop', () => handleRecordingStop(recorder));
+      recorder.start();
+      voiceCtrl.stream = stream;
+      voiceCtrl.recorder = recorder;
+      setVoiceState('listening');
+    } catch (err) {
+      console.error('[hub] Unable to access microphone', err);
+      setVoiceState('error', 'Mikrofon blockiert?');
+      setTimeout(() => setVoiceState('idle'), 2400);
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (!voiceCtrl?.recorder) return;
+    try {
+      voiceCtrl.recorder.stop();
+    } catch (err) {
+      console.warn('[hub] recorder stop failed', err);
+    }
+    if (voiceCtrl.stream) {
+      voiceCtrl.stream.getTracks().forEach((track) => track.stop());
+    }
+    voiceCtrl.stream = null;
+    voiceCtrl.recorder = null;
+    setVoiceState('thinking');
+  };
+
+  const handleRecordingStop = async (recorder) => {
+    try {
+      if (!voiceCtrl?.chunks?.length) {
+        setVoiceState('idle');
+        return;
+      }
+      const blob = new Blob(voiceCtrl.chunks, {
+        type: recorder?.mimeType || 'audio/webm',
+      });
+      voiceCtrl.chunks = [];
+      await processVoiceBlob(blob);
+    } catch (err) {
+      console.error('[hub] voice processing failed', err);
+      setVoiceState('error', 'Verarbeitung fehlgeschlagen');
+      setTimeout(() => setVoiceState('idle'), 2400);
+    }
+  };
+
+  const processVoiceBlob = async (blob) => {
+    const transcript = await transcribeAudio(blob);
+    if (!transcript) {
+      setVoiceState('idle');
+      return;
+    }
+    voiceCtrl.history.push({ role: 'user', content: transcript });
+    const reply = await fetchAssistantReply();
+    if (!reply) {
+      setVoiceState('idle');
+      return;
+    }
+    voiceCtrl.history.push({ role: 'assistant', content: reply });
+    const audioUrl = await requestTtsAudio(reply);
+    if (!audioUrl) {
+      setVoiceState('idle');
+      return;
+    }
+    await playVoiceAudio(audioUrl);
+    setVoiceState('idle');
+  };
+
+  const transcribeAudio = async (blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'midas-voice.webm');
+      const res = await fetch(MIDAS_ENDPOINTS.transcribe, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Transcribe error: ${errText}`);
+      }
+      const data = await res.json();
+      const text = data?.text || data?.transcript || '';
+      return text.trim();
+    } catch (err) {
+      console.error('[hub] transcription failed', err);
+      setVoiceState('error', 'Transkription fehlgeschlagen');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw err;
+    }
+  };
+
+  const fetchAssistantReply = async () => {
+    try {
+      const payload = {
+        session_id: voiceCtrl?.sessionId ?? `voice-${Date.now()}`,
+        mode: 'voice',
+        messages: voiceCtrl?.history ?? [],
+      };
+      const res = await fetch(MIDAS_ENDPOINTS.assistant, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'assistant error');
+      }
+      return (data?.reply || '').trim();
+    } catch (err) {
+      console.error('[hub] assistant reply failed', err);
+      setVoiceState('error', 'Assistant nicht erreichbar');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw err;
+    }
+  };
+
+  const requestTtsAudio = async (text) => {
+    if (!text) return null;
+    try {
+      const res = await fetch(MIDAS_ENDPOINTS.tts, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`TTS error: ${errText}`);
+      }
+      const contentType = res.headers.get('Content-Type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data?.audio_base64) {
+          const blob = base64ToBlob(data.audio_base64, data.mime_type || 'audio/mpeg');
+          return URL.createObjectURL(blob);
+        }
+        if (data?.audio_url) {
+          return data.audio_url;
+        }
+        return null;
+      }
+      const buffer = await res.arrayBuffer();
+      const blob = new Blob([buffer], { type: contentType || 'audio/mpeg' });
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error('[hub] tts request failed', err);
+      setVoiceState('error', 'TTS fehlgeschlagen');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw err;
+    }
+  };
+
+  const playVoiceAudio = (audioUrl) =>
+    new Promise((resolve, reject) => {
+      if (!audioUrl) {
+        resolve();
+        return;
+      }
+      setVoiceState('speaking');
+      const audioEl = ensureVoiceAudioElement();
+      stopVoicePlayback();
+      voiceCtrl.currentAudioUrl = audioUrl;
+      audioEl.src = audioUrl;
+      const cleanup = () => {
+        if (voiceCtrl?.currentAudioUrl) {
+          URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
+          voiceCtrl.currentAudioUrl = null;
+        }
+        audioEl.onended = null;
+        audioEl.onerror = null;
+      };
+      audioEl.onended = () => {
+        cleanup();
+        resolve();
+      };
+      audioEl.onerror = (event) => {
+        cleanup();
+        reject(event?.error || new Error('Audio playback failed'));
+      };
+      audioEl
+        .play()
+        .catch((err) => {
+          cleanup();
+          reject(err);
+        });
+    });
+
+  const ensureVoiceAudioElement = () => {
+    if (!voiceCtrl.audioEl) {
+      voiceCtrl.audioEl = new Audio();
+      voiceCtrl.audioEl.preload = 'auto';
+    }
+    return voiceCtrl.audioEl;
+  };
+
+  const stopVoicePlayback = () => {
+    if (!voiceCtrl?.audioEl) return;
+    try {
+      voiceCtrl.audioEl.pause();
+      voiceCtrl.audioEl.currentTime = 0;
+    } catch (err) {
+      console.warn('[hub] audio pause failed', err);
+    }
+    if (voiceCtrl?.currentAudioUrl) {
+      URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
+      voiceCtrl.currentAudioUrl = null;
+    }
+  };
+
+  const base64ToBlob = (base64, mimeType = 'application/octet-stream') => {
+    const byteChars = global.atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i += 1) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
   };
 
   if (doc?.readyState === 'loading') {

@@ -314,6 +314,83 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   transform: translate(-50%, -50%);
 }
 
+.hub-core-trigger {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(140px, 32vw, 420px);
+  height: clamp(140px, 32vw, 420px);
+  z-index: 8;
+  pointer-events: auto;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.08),
+    0 0 22px rgba(120, 170, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
+  position: relative;
+}
+
+.hub-core-trigger:hover,
+.hub-core-trigger:focus-visible {
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 0 24px rgba(255, 255, 255, 0.16),
+    0 0 30px rgba(120, 170, 255, 0.45);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.02) 70%);
+}
+
+.hub-core-trigger:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 28px rgba(255, 255, 255, 0.2),
+    0 0 34px rgba(120, 170, 255, 0.6);
+}
+
+.hub-core-trigger span[aria-hidden="true"] {
+  display: flex !important;
+  font-size: clamp(1.5rem, 6vw, 3rem);
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.35));
+}
+
+.hub-core-trigger::after {
+  content: attr(data-voice-label);
+  position: absolute;
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hub-core-trigger[data-voice-state="listening"] {
+  border-color: rgba(130, 220, 255, 0.65);
+  background: radial-gradient(circle, rgba(130, 220, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  animation: hubCorePulse 1200ms ease-in-out infinite;
+}
+
+.hub-core-trigger[data-voice-state="thinking"] {
+  border-color: rgba(255, 214, 130, 0.6);
+  background: radial-gradient(circle, rgba(255, 214, 130, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.hub-core-trigger[data-voice-state="speaking"] {
+  border-color: rgba(255, 140, 200, 0.65);
+  background: radial-gradient(circle, rgba(255, 140, 200, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.hub-core-trigger[data-voice-state="error"] {
+  border-color: rgba(255, 120, 120, 0.7);
+  background: radial-gradient(circle, rgba(255, 120, 120, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
 /* Stealth-Touch-Targets: unsichtbare Buttons, Feedback über Aura + Vibration */
 .hub-icon {
   border: none;
@@ -423,6 +500,35 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 
 .hub-orbit:has(.hub-icon:is(:active, [aria-pressed='true'])) {
   --midas-aura-boost: 0.5;
+}
+
+.hub-orbit:has(.hub-core-trigger:is(:hover, :focus-visible)) {
+  --midas-aura-boost: 0.6;
+}
+
+.hub-orbit:has(.hub-core-trigger:is(:active, [aria-pressed='true'])) {
+  --midas-aura-boost: 0.75;
+}
+
+@keyframes hubCorePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      inset 0 0 18px rgba(255, 255, 255, 0.1),
+      0 0 22px rgba(120, 170, 255, 0.2);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.02);
+    box-shadow:
+      inset 0 0 26px rgba(255, 255, 255, 0.18),
+      0 0 32px rgba(120, 170, 255, 0.38);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      inset 0 0 18px rgba(255, 255, 255, 0.1),
+      0 0 22px rgba(120, 170, 255, 0.2);
+  }
 }
 
 
