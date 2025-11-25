@@ -1,11 +1,3 @@
-
----
-
-## 2️⃣ JS-Dispatcher: `app/modules/assistant/actions.js`
-
-Jetzt der Client-Teil, der diese Actions entgegen nimmt und (später) Supabase-Funktionen ruft.
-
-```js
 'use strict';
 
 /**
