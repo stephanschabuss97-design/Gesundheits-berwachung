@@ -10,11 +10,22 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   const doc = global.document;
-  const MIDAS_ENDPOINTS = {
-    assistant: '/api/midas-assistant',
-    transcribe: '/api/midas-transcribe',
-    tts: '/api/midas-tts',
-  };
+  const MIDAS_ENDPOINTS = (() => {
+    const supabaseProject = 'https://jlylmservssinsavlkdi.supabase.co';
+    const base = `${supabaseProject}/functions/v1`;
+    if (global.location?.hostname?.includes('github.io')) {
+      return {
+        assistant: `${base}/midas-assistant`,
+        transcribe: `${base}/midas-transcribe`,
+        tts: `${base}/midas-tts`,
+      };
+    }
+    return {
+      assistant: '/api/midas-assistant',
+      transcribe: '/api/midas-transcribe',
+      tts: '/api/midas-tts',
+    };
+  })();
 
   const ORBIT_BUTTONS = {
     north: { angle: -90 },
