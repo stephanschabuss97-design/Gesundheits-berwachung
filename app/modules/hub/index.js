@@ -10,9 +10,9 @@
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
   const doc = global.document;
+  const SUPABASE_PROJECT_URL = 'https://jlylmservssinsavlkdi.supabase.co';
   const MIDAS_ENDPOINTS = (() => {
-    const supabaseProject = 'https://jlylmservssinsavlkdi.supabase.co';
-    const base = `${supabaseProject}/functions/v1`;
+    const base = `${SUPABASE_PROJECT_URL}/functions/v1`;
     if (global.location?.hostname?.includes('github.io')) {
       return {
         assistant: `${base}/midas-assistant`,
@@ -26,6 +26,9 @@
       tts: '/api/midas-tts',
     };
   })();
+  const DIRECT_SUPABASE_CALL = Object.values(MIDAS_ENDPOINTS).some((url) =>
+    typeof url === 'string' && url.includes('.supabase.co/'),
+  );
 
   const ORBIT_BUTTONS = {
     north: { angle: -90 },
@@ -53,6 +56,7 @@
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
   let voiceCtrl = null;
+  let supabaseFunctionHeadersPromise = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
 
@@ -488,8 +492,16 @@
     formData.append('audio', blob, 'midas-voice.webm');
     let response;
     try {
+      const headers = await getSupabaseFunctionHeaders();
+      if (DIRECT_SUPABASE_CALL && !headers) {
+        console.warn('[hub] Supabase headers missing for direct call');
+        setVoiceState('error', 'Konfiguration fehlt');
+        setTimeout(() => setVoiceState('idle'), 2600);
+        throw new Error('supabase-headers-missing');
+      }
       response = await fetch(MIDAS_ENDPOINTS.transcribe, {
         method: 'POST',
+        headers: headers ?? undefined,
         body: formData,
       });
     } catch (networkErr) {
@@ -507,6 +519,42 @@
     }
     const payload = await response.json().catch(() => ({}));
     return (payload.text || payload.transcript || '').trim();
+  };
+
+  const getSupabaseFunctionHeaders = async () => {
+    if (!DIRECT_SUPABASE_CALL) {
+      return null;
+    }
+    if (supabaseFunctionHeadersPromise) {
+      return supabaseFunctionHeadersPromise;
+    }
+    const loader = (async () => {
+      if (typeof global.getConf !== 'function') {
+        console.warn('[hub] getConf missing – cannot load Supabase key');
+        return null;
+      }
+      try {
+        const stored = await global.getConf('webhookKey');
+        const raw = String(stored || '').trim();
+        if (!raw) {
+          console.warn('[hub] Supabase webhookKey missing – voice API locked');
+          return null;
+        }
+        const bearer = raw.startsWith('Bearer ') ? raw : `Bearer ${raw}`;
+        const apikey = bearer.replace(/^Bearer\s+/i, '');
+        return {
+          'Authorization': bearer,
+          'apikey': apikey,
+        };
+      } catch (err) {
+        console.error('[hub] Failed to load Supabase headers', err);
+        return null;
+      } finally {
+        supabaseFunctionHeadersPromise = null;
+      }
+    })();
+    supabaseFunctionHeadersPromise = loader;
+    return loader;
   };
 
   if (doc?.readyState === 'loading') {
