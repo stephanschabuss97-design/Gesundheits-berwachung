@@ -30,8 +30,10 @@
   const VOICE_STATE_LABELS = {
     idle: 'Bereit',
     listening: 'Ich hoere zu',
-    thinking: 'Verarbeite',
-    speaking: 'Spreche',
+    thinking:
+      global.location?.hostname === 'localhost'
+        ? 'Verarbeite'
+        : 'Verarbeite',
     error: 'Fehler',
   };
 
@@ -358,10 +360,6 @@
       recorder: null,
       stream: null,
       chunks: [],
-      audioEl: null,
-      history: [],
-      sessionId: (global.crypto?.randomUUID?.() ?? `voice-${Date.now()}`),
-      currentAudioUrl: null,
     };
     setVoiceState('idle');
   };
@@ -382,15 +380,6 @@
     }
     if (voiceCtrl.status === 'listening') {
       stopVoiceRecording();
-      return;
-    }
-    if (voiceCtrl.status === 'speaking') {
-      stopVoicePlayback();
-      setVoiceState('idle');
-      return;
-    }
-    if (voiceCtrl.status === 'thinking') {
-      console.info('[hub] voice assistant is already processing');
       return;
     }
     startVoiceRecording();
@@ -455,6 +444,11 @@
         type: recorder?.mimeType || 'audio/webm',
       });
       voiceCtrl.chunks = [];
+      console.info(
+        '[midas-voice] Aufnahme abgeschlossen:',
+        blob.type,
+        `${(blob.size / 1024).toFixed(1)} KB`,
+      );
       await processVoiceBlob(blob);
     } catch (err) {
       console.error('[hub] voice processing failed', err);
@@ -464,179 +458,44 @@
   };
 
   const processVoiceBlob = async (blob) => {
-    const transcript = await transcribeAudio(blob);
-    if (!transcript) {
+    try {
+      setVoiceState('thinking');
+      const transcript = await transcribeAudio(blob);
+      if (!transcript) {
+        setVoiceState('idle');
+        return;
+      }
+      console.info('[midas-voice] Transcript:', transcript);
       setVoiceState('idle');
-      return;
-    }
-    voiceCtrl.history.push({ role: 'user', content: transcript });
-    const reply = await fetchAssistantReply();
-    if (!reply) {
+    } catch {
       setVoiceState('idle');
-      return;
     }
-    voiceCtrl.history.push({ role: 'assistant', content: reply });
-    const audioUrl = await requestTtsAudio(reply);
-    if (!audioUrl) {
-      setVoiceState('idle');
-      return;
-    }
-    await playVoiceAudio(audioUrl);
-    setVoiceState('idle');
   };
 
   const transcribeAudio = async (blob) => {
+    const formData = new FormData();
+    formData.append('audio', blob, 'midas-voice.webm');
+    let response;
     try {
-      const formData = new FormData();
-      formData.append('audio', blob, 'midas-voice.webm');
-      const res = await fetch(MIDAS_ENDPOINTS.transcribe, {
+      response = await fetch(MIDAS_ENDPOINTS.transcribe, {
         method: 'POST',
         body: formData,
       });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Transcribe error: ${errText}`);
-      }
-      const data = await res.json();
-      const text = data?.text || data?.transcript || '';
-      return text.trim();
-    } catch (err) {
-      console.error('[hub] transcription failed', err);
+    } catch (networkErr) {
+      console.error('[hub] network error transcribing', networkErr);
+      setVoiceState('error', 'Keine Verbindung');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw networkErr;
+    }
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      console.error('[hub] transcribe failed:', errText);
       setVoiceState('error', 'Transkription fehlgeschlagen');
       setTimeout(() => setVoiceState('idle'), 2600);
-      throw err;
+      throw new Error(errText || 'Transcription failed');
     }
-  };
-
-  const fetchAssistantReply = async () => {
-    try {
-      const payload = {
-        session_id: voiceCtrl?.sessionId ?? `voice-${Date.now()}`,
-        mode: 'voice',
-        messages: voiceCtrl?.history ?? [],
-      };
-      const res = await fetch(MIDAS_ENDPOINTS.assistant, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || 'assistant error');
-      }
-      return (data?.reply || '').trim();
-    } catch (err) {
-      console.error('[hub] assistant reply failed', err);
-      setVoiceState('error', 'Assistant nicht erreichbar');
-      setTimeout(() => setVoiceState('idle'), 2600);
-      throw err;
-    }
-  };
-
-  const requestTtsAudio = async (text) => {
-    if (!text) return null;
-    try {
-      const res = await fetch(MIDAS_ENDPOINTS.tts, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`TTS error: ${errText}`);
-      }
-      const contentType = res.headers.get('Content-Type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (data?.audio_base64) {
-          const blob = base64ToBlob(data.audio_base64, data.mime_type || 'audio/mpeg');
-          return URL.createObjectURL(blob);
-        }
-        if (data?.audio_url) {
-          return data.audio_url;
-        }
-        return null;
-      }
-      const buffer = await res.arrayBuffer();
-      const blob = new Blob([buffer], { type: contentType || 'audio/mpeg' });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('[hub] tts request failed', err);
-      setVoiceState('error', 'TTS fehlgeschlagen');
-      setTimeout(() => setVoiceState('idle'), 2600);
-      throw err;
-    }
-  };
-
-  const playVoiceAudio = (audioUrl) =>
-    new Promise((resolve, reject) => {
-      if (!audioUrl) {
-        resolve();
-        return;
-      }
-      setVoiceState('speaking');
-      const audioEl = ensureVoiceAudioElement();
-      stopVoicePlayback();
-      voiceCtrl.currentAudioUrl = audioUrl;
-      audioEl.src = audioUrl;
-      const cleanup = () => {
-        if (voiceCtrl?.currentAudioUrl) {
-          URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
-          voiceCtrl.currentAudioUrl = null;
-        }
-        audioEl.onended = null;
-        audioEl.onerror = null;
-      };
-      audioEl.onended = () => {
-        cleanup();
-        resolve();
-      };
-      audioEl.onerror = (event) => {
-        cleanup();
-        reject(event?.error || new Error('Audio playback failed'));
-      };
-      audioEl
-        .play()
-        .catch((err) => {
-          cleanup();
-          reject(err);
-        });
-    });
-
-  const ensureVoiceAudioElement = () => {
-    if (!voiceCtrl.audioEl) {
-      voiceCtrl.audioEl = new Audio();
-      voiceCtrl.audioEl.preload = 'auto';
-    }
-    return voiceCtrl.audioEl;
-  };
-
-  const stopVoicePlayback = () => {
-    if (!voiceCtrl?.audioEl) return;
-    try {
-      voiceCtrl.audioEl.pause();
-      voiceCtrl.audioEl.currentTime = 0;
-    } catch (err) {
-      console.warn('[hub] audio pause failed', err);
-    }
-    if (voiceCtrl?.currentAudioUrl) {
-      URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
-      voiceCtrl.currentAudioUrl = null;
-    }
-  };
-
-  const base64ToBlob = (base64, mimeType = 'application/octet-stream') => {
-    const byteChars = global.atob(base64);
-    const byteNumbers = new Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i += 1) {
-      byteNumbers[i] = byteChars.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: mimeType });
+    const payload = await response.json().catch(() => ({}));
+    return (payload.text || payload.transcript || '').trim();
   };
 
   if (doc?.readyState === 'loading') {
