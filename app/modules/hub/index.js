@@ -45,6 +45,7 @@
     idle: 'Bereit',
     listening: 'Ich hoere zu',
     thinking: 'Verarbeite',
+    speaking: 'Spreche',
     error: 'Fehler',
   };
 
@@ -374,6 +375,8 @@
       chunks: [],
       history: [],
       sessionId: `voice-${Date.now()}`,
+      audioEl: null,
+      currentAudioUrl: null,
     };
     setVoiceState('idle');
   };
@@ -394,6 +397,15 @@
     }
     if (voiceCtrl.status === 'listening') {
       stopVoiceRecording();
+      return;
+    }
+    if (voiceCtrl.status === 'speaking') {
+      stopVoicePlayback();
+      setVoiceState('idle');
+      return;
+    }
+    if (voiceCtrl.status === 'thinking') {
+      console.info('[hub] voice is busy processing');
       return;
     }
     startVoiceRecording();
@@ -599,6 +611,7 @@
           content: reply,
         });
         console.info('[midas-voice] Assistant reply:', reply);
+        await synthesizeAndPlay(reply);
       } else {
         console.info('[midas-voice] Assistant reply empty');
       }
@@ -637,11 +650,139 @@
       throw new Error(errText || 'assistant failed');
     }
     const data = await response.json().catch(() => ({}));
-    const reply = (data?.reply || '').trim();
+    let reply = (data?.reply || '').trim();
+    if (!reply) {
+      console.info('[midas-voice] Assistant reply empty, using fallback.');
+      reply = VOICE_FALLBACK_REPLY;
+    }
     if (Array.isArray(data?.actions) && data.actions.length) {
       console.info('[midas-voice] Assistant actions:', data.actions);
     }
     return reply;
+  };
+
+  const synthesizeAndPlay = async (text) => {
+    if (!text) {
+      setVoiceState('idle');
+      return;
+    }
+    try {
+      const audioUrl = await requestTtsAudio(text);
+      if (!audioUrl) {
+        setVoiceState('idle');
+        return;
+      }
+      await playVoiceAudio(audioUrl);
+    } catch (err) {
+      console.error('[midas-voice] tts failed', err);
+      setVoiceState('error', 'TTS fehlgeschlagen');
+      setTimeout(() => setVoiceState('idle'), 2600);
+    }
+  };
+
+  const requestTtsAudio = async (text) => {
+    const headers = await buildFunctionJsonHeaders();
+    let response;
+    try {
+      response = await fetch(MIDAS_ENDPOINTS.tts, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ text }),
+      });
+    } catch (networkErr) {
+      console.error('[hub] tts network error', networkErr);
+      throw networkErr;
+    }
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(errText || 'tts failed');
+    }
+    const contentType = response.headers.get('Content-Type') || '';
+    if (contentType.includes('application/json')) {
+      const payload = await response.json();
+      if (payload?.audio_base64) {
+        const blob = base64ToBlob(payload.audio_base64, payload.mime_type || 'audio/mpeg');
+        return URL.createObjectURL(blob);
+      }
+      if (payload?.audio_url) {
+        return payload.audio_url;
+      }
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    const blob = new Blob([buffer], { type: contentType || 'audio/mpeg' });
+    return URL.createObjectURL(blob);
+  };
+
+  const playVoiceAudio = (audioUrl) =>
+    new Promise((resolve, reject) => {
+      if (!voiceCtrl) {
+        resolve();
+        return;
+      }
+      const audioEl = ensureVoiceAudioElement();
+      stopVoicePlayback();
+      setVoiceState('speaking');
+      voiceCtrl.currentAudioUrl = audioUrl;
+      audioEl.src = audioUrl;
+      const cleanup = () => {
+        if (voiceCtrl?.currentAudioUrl) {
+          URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
+          voiceCtrl.currentAudioUrl = null;
+        }
+        audioEl.onended = null;
+        audioEl.onerror = null;
+      };
+      audioEl.onended = () => {
+        cleanup();
+        setVoiceState('idle');
+        resolve();
+      };
+      audioEl.onerror = (event) => {
+        cleanup();
+        setVoiceState('idle');
+        reject(event?.error || new Error('audio playback failed'));
+      };
+      audioEl
+        .play()
+        .catch((err) => {
+          cleanup();
+          setVoiceState('idle');
+          reject(err);
+        });
+    });
+
+  const ensureVoiceAudioElement = () => {
+    if (!voiceCtrl) return null;
+    if (!voiceCtrl.audioEl) {
+      voiceCtrl.audioEl = new Audio();
+      voiceCtrl.audioEl.preload = 'auto';
+    }
+    return voiceCtrl.audioEl;
+  };
+
+  const stopVoicePlayback = () => {
+    if (!voiceCtrl?.audioEl) return;
+    try {
+      voiceCtrl.audioEl.pause();
+      voiceCtrl.audioEl.currentTime = 0;
+    } catch (err) {
+      console.warn('[hub] audio pause failed', err);
+    }
+    if (voiceCtrl?.currentAudioUrl) {
+      URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
+      voiceCtrl.currentAudioUrl = null;
+    }
+  };
+
+  const base64ToBlob = (base64, mimeType = 'application/octet-stream') => {
+    const byteChars = global.atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i += 1) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
   };
 
   if (doc?.readyState === 'loading') {
@@ -652,3 +793,4 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
+  const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';

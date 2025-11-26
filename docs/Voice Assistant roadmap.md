@@ -19,7 +19,7 @@ Ziel: Vollständiger, modularer Voice- & Text-Assistent – Record → Transcrib
    MediaRecorder-Setup, States `idle → listening`, Fehlerfallback, Test: Klick → Blob im Log.
 2. **Transcribe Integration (done)**  
    Upload zu `/api/midas-transcribe`, State `thinking`, Fehler zurück zu `idle`, Test: Transcript erscheint.
-3. **Assistant Roundtrip**  
+3. **Assistant Roundtrip (done)**  
    Transcript in Voice-History, Request an `/api/midas-assistant`, Antwort/Actions verarbeiten, History sauber halten.
 4. **TTS Playback**  
    Antwort → `/api/midas-tts`, `<audio>` abspielen, Stop/Interrupt, Cleanup.
