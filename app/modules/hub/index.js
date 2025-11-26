@@ -44,10 +44,7 @@
   const VOICE_STATE_LABELS = {
     idle: 'Bereit',
     listening: 'Ich hoere zu',
-    thinking:
-      global.location?.hostname === 'localhost'
-        ? 'Verarbeite'
-        : 'Verarbeite',
+    thinking: 'Verarbeite',
     error: 'Fehler',
   };
 
@@ -375,6 +372,8 @@
       recorder: null,
       stream: null,
       chunks: [],
+      history: [],
+      sessionId: `voice-${Date.now()}`,
     };
     setVoiceState('idle');
   };
@@ -481,9 +480,19 @@
         return;
       }
       console.info('[midas-voice] Transcript:', transcript);
-      setVoiceState('idle');
+      await handleAssistantRoundtrip(transcript);
     } catch {
       setVoiceState('idle');
+    }
+  };
+
+  const ensureVoiceHistory = () => {
+    if (!voiceCtrl) return;
+    if (!Array.isArray(voiceCtrl.history)) {
+      voiceCtrl.history = [];
+    }
+    if (!voiceCtrl.sessionId) {
+      voiceCtrl.sessionId = `voice-${Date.now()}`;
     }
   };
 
@@ -555,6 +564,84 @@
     })();
     supabaseFunctionHeadersPromise = loader;
     return loader;
+  };
+
+  const buildFunctionJsonHeaders = async () => {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (!DIRECT_SUPABASE_CALL) {
+      return headers;
+    }
+    const authHeaders = await getSupabaseFunctionHeaders();
+    if (!authHeaders) {
+      console.warn('[hub] Supabase headers missing for assistant call');
+      setVoiceState('error', 'Konfiguration fehlt');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw new Error('supabase-headers-missing');
+    }
+    return { ...headers, ...authHeaders };
+  };
+
+  const handleAssistantRoundtrip = async (transcript) => {
+    ensureVoiceHistory();
+    if (!voiceCtrl) return;
+    const userMessage = {
+      role: 'user',
+      content: transcript,
+    };
+    voiceCtrl.history.push(userMessage);
+    try {
+      const reply = await fetchAssistantReply();
+      if (reply) {
+        voiceCtrl.history.push({
+          role: 'assistant',
+          content: reply,
+        });
+        console.info('[midas-voice] Assistant reply:', reply);
+      } else {
+        console.info('[midas-voice] Assistant reply empty');
+      }
+      setVoiceState('idle');
+    } catch (err) {
+      voiceCtrl.history.pop();
+      console.error('[midas-voice] assistant roundtrip failed', err);
+      setVoiceState('error', 'Assistant nicht erreichbar');
+      setTimeout(() => setVoiceState('idle'), 2600);
+      throw err;
+    }
+  };
+
+  const fetchAssistantReply = async () => {
+    if (!voiceCtrl) return '';
+    const payload = {
+      session_id: voiceCtrl.sessionId ?? `voice-${Date.now()}`,
+      mode: 'voice',
+      messages: voiceCtrl.history ?? [],
+    };
+    let response;
+    try {
+      const headers = await buildFunctionJsonHeaders();
+      response = await fetch(MIDAS_ENDPOINTS.assistant, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+    } catch (networkErr) {
+      console.error('[hub] assistant network error', networkErr);
+      throw networkErr;
+    }
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      console.error('[hub] assistant failed:', errText);
+      throw new Error(errText || 'assistant failed');
+    }
+    const data = await response.json().catch(() => ({}));
+    const reply = (data?.reply || '').trim();
+    if (Array.isArray(data?.actions) && data.actions.length) {
+      console.info('[midas-voice] Assistant actions:', data.actions);
+    }
+    return reply;
   };
 
   if (doc?.readyState === 'loading') {
