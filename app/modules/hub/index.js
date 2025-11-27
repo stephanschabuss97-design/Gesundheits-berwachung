@@ -50,6 +50,17 @@
   };
   const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
   const VAD_SILENCE_MS = 1000;
+  const CONVERSATION_AUTO_RESUME_DELAY = 450;
+  const END_PHRASES = [
+    /nein danke/i,
+    /danke[, ]?(das)? war( es|)?/i,
+    /(das )?(war'?|ist) alles/i,
+    /fertig/i,
+    /stop(p)?/i,
+    /tsch[üu]ss/i,
+    /ciao/i,
+  ];
+  const END_ACTIONS = ['endSession', 'closeConversation'];
 
   let hubButtons = [];
   let activePanel = null;
@@ -394,6 +405,9 @@
       }),
       vadSilenceTimer: null,
       lastSpeechAt: 0,
+      conversationMode: false,
+      conversationEndPending: false,
+      pendingResumeTimer: null,
     };
     voiceCtrl.orbitEl?.setAttribute('data-voice-state', 'idle');
     voiceCtrl.orbitEl?.style.setProperty('--voice-amp', '0');
@@ -407,6 +421,9 @@
     voiceCtrl.button.dataset.voiceState = state;
     voiceCtrl.button.dataset.voiceLabel = label;
     voiceCtrl.button.setAttribute('aria-pressed', state === 'listening');
+    if (state !== 'idle') {
+      clearPendingResume();
+    }
     if (state !== 'listening') {
       clearVadSilenceTimer();
     }
@@ -501,6 +518,43 @@
     }
   };
 
+  const shouldEndConversationFromTranscript = (text) => {
+    if (!text) return false;
+    const normalized = text.trim();
+    if (!normalized) return false;
+    return END_PHRASES.some((regex) => regex.test(normalized));
+  };
+
+  const clearPendingResume = () => {
+    if (voiceCtrl?.pendingResumeTimer) {
+      global.clearTimeout(voiceCtrl.pendingResumeTimer);
+      voiceCtrl.pendingResumeTimer = null;
+    }
+  };
+
+  const endConversationSession = () => {
+    if (!voiceCtrl) return;
+    voiceCtrl.conversationMode = false;
+    voiceCtrl.conversationEndPending = false;
+    clearPendingResume();
+  };
+
+  const scheduleConversationResume = () => {
+    if (!voiceCtrl || !voiceCtrl.conversationMode) return;
+    clearPendingResume();
+    voiceCtrl.pendingResumeTimer = global.setTimeout(() => {
+      voiceCtrl.pendingResumeTimer = null;
+      if (
+        !voiceCtrl ||
+        voiceCtrl.status !== 'idle' ||
+        voiceCtrl.recorder
+      ) {
+        return;
+      }
+      startVoiceRecording();
+    }, CONVERSATION_AUTO_RESUME_DELAY);
+  };
+
   const clearVadSilenceTimer = () => {
     if (voiceCtrl?.vadSilenceTimer) {
       global.clearTimeout(voiceCtrl.vadSilenceTimer);
@@ -538,6 +592,9 @@
       }, 220);
     }
     if (voiceCtrl.status === 'listening') {
+      voiceCtrl.conversationMode = false;
+      voiceCtrl.conversationEndPending = false;
+      clearPendingResume();
       stopVoiceRecording();
       return;
     }
@@ -550,11 +607,17 @@
       console.info('[hub] voice is busy processing');
       return;
     }
+    if (voiceCtrl.status === 'idle') {
+      voiceCtrl.conversationMode = true;
+      voiceCtrl.conversationEndPending = false;
+      clearPendingResume();
+    }
     startVoiceRecording();
   };
 
   const startVoiceRecording = async () => {
     try {
+      clearPendingResume();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const options = {};
       const preferredTypes = [
@@ -603,6 +666,7 @@
 
   const stopVoiceRecording = () => {
     clearVadSilenceTimer();
+    clearPendingResume();
     try {
       voiceCtrl?.vadCtrl?.stop();
     } catch (err) {
@@ -654,6 +718,12 @@
         return;
       }
       console.info('[midas-voice] Transcript:', transcript);
+      if (
+        voiceCtrl?.conversationMode &&
+        shouldEndConversationFromTranscript(transcript)
+      ) {
+        voiceCtrl.conversationEndPending = true;
+      }
       await handleAssistantRoundtrip(transcript);
     } catch {
       setVoiceState('idle');
@@ -776,17 +846,30 @@
         console.info('[midas-voice] Assistant reply:', replyText);
         if (assistantResponse.actions?.length) {
           console.info('[midas-voice] Assistant actions:', assistantResponse.actions);
+          if (
+            voiceCtrl.conversationMode &&
+            assistantResponse.actions.some((action) => END_ACTIONS.includes(action))
+          ) {
+            voiceCtrl.conversationEndPending = true;
+          }
         }
         await synthesizeAndPlay(replyText);
       } else {
         console.info('[midas-voice] Assistant reply empty');
       }
+      const allowResume = voiceCtrl.conversationMode && !voiceCtrl.conversationEndPending;
       setVoiceState('idle');
+      if (allowResume) {
+        scheduleConversationResume();
+      } else {
+        endConversationSession();
+      }
     } catch (err) {
       voiceCtrl.history.pop();
       console.error('[midas-voice] assistant roundtrip failed', err);
       setVoiceState('error', 'Assistant nicht erreichbar');
       setTimeout(() => setVoiceState('idle'), 2600);
+      endConversationSession();
       throw err;
     }
   };
