@@ -657,7 +657,7 @@
       throw new Error(errText || 'assistant failed');
     }
     const rawText = await response.text();
-    let data: any = {};
+    let data = {};
     try {
       data = rawText ? JSON.parse(rawText) : {};
     } catch (err) {
