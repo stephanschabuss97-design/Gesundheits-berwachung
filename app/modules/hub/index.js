@@ -48,6 +48,7 @@
     speaking: 'Spreche',
     error: 'Fehler',
   };
+  const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
 
   let hubButtons = [];
   let activePanel = null;
@@ -604,14 +605,18 @@
     };
     voiceCtrl.history.push(userMessage);
     try {
-      const reply = await fetchAssistantReply();
-      if (reply) {
+      const assistantResponse = await fetchAssistantReply();
+      const replyText = assistantResponse.reply;
+      if (replyText) {
         voiceCtrl.history.push({
           role: 'assistant',
-          content: reply,
+          content: replyText,
         });
-        console.info('[midas-voice] Assistant reply:', reply);
-        await synthesizeAndPlay(reply);
+        console.info('[midas-voice] Assistant reply:', replyText);
+        if (assistantResponse.actions?.length) {
+          console.info('[midas-voice] Assistant actions:', assistantResponse.actions);
+        }
+        await synthesizeAndPlay(replyText);
       } else {
         console.info('[midas-voice] Assistant reply empty');
       }
@@ -626,7 +631,9 @@
   };
 
   const fetchAssistantReply = async () => {
-    if (!voiceCtrl) return '';
+    if (!voiceCtrl) {
+      return { reply: '', actions: [], meta: null };
+    }
     const payload = {
       session_id: voiceCtrl.sessionId ?? `voice-${Date.now()}`,
       mode: 'voice',
@@ -655,10 +662,12 @@
       console.info('[midas-voice] Assistant reply empty, using fallback.');
       reply = VOICE_FALLBACK_REPLY;
     }
-    if (Array.isArray(data?.actions) && data.actions.length) {
-      console.info('[midas-voice] Assistant actions:', data.actions);
-    }
-    return reply;
+    const actions = Array.isArray(data?.actions) ? data.actions : [];
+    return {
+      reply,
+      actions,
+      meta: data?.meta ?? null,
+    };
   };
 
   const synthesizeAndPlay = async (text) => {
@@ -793,4 +802,3 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
-  const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
