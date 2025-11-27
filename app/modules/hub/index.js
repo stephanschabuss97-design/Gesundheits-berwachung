@@ -1,4 +1,4 @@
-ï»¿'use strict';
+'use strict';
 /**
  * MODULE: hub/index.js
  * Description: Aktiviert das neue MIDAS Hub Layout, sobald `CAPTURE_HUB_V2` gesetzt ist.
@@ -55,9 +55,13 @@
     /nein danke/i,
     /danke[, ]?(das)? war( es|)?/i,
     /(das )?(war'?|ist) alles/i,
+    /passt[, ]?(danke)?/i,
+    /danke[, ]?(das )?passt/i,
     /fertig/i,
+    /alles erledigt/i,
+    /nein[, ]?(alles )?(erledigt|gut|fertig)/i,
     /stop(p)?/i,
-    /tsch[Ã¼u]ss/i,
+    /tsch[üu]ss/i,
     /ciao/i,
   ];
   const END_ACTIONS = ['endSession', 'closeConversation'];
@@ -783,14 +787,14 @@
     }
     const loader = (async () => {
       if (typeof global.getConf !== 'function') {
-        console.warn('[hub] getConf missing â€“ cannot load Supabase key');
+        console.warn('[hub] getConf missing – cannot load Supabase key');
         return null;
       }
       try {
         const stored = await global.getConf('webhookKey');
         const raw = String(stored || '').trim();
         if (!raw) {
-          console.warn('[hub] Supabase webhookKey missing â€“ voice API locked');
+          console.warn('[hub] Supabase webhookKey missing – voice API locked');
           return null;
         }
         const bearer = raw.startsWith('Bearer ') ? raw : `Bearer ${raw}`;
@@ -928,7 +932,7 @@
         if (typeof nested?.reply === 'string' && nested.reply.trim()) {
           reply = nested.reply.trim();
         }
-        // Wenn das verschachtelte Objekt Actions enthÃ¤lt, nutze sie nur, wenn oben nichts Ã¼bertragen wurde.
+        // Wenn das verschachtelte Objekt Actions enthält, nutze sie nur, wenn oben nichts übertragen wurde.
         if (!actions.length && Array.isArray(nested?.actions)) {
           actions.push(...nested.actions);
         }
@@ -1082,3 +1086,4 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
+
