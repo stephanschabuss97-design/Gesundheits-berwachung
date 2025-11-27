@@ -47,6 +47,7 @@ Deployment über `supabase functions deploy <name> --project-ref jlylmservssinsa
 
 - **midas-assistant (`index.ts`)**
   - Nutzt `buildChatMessages()` (Systemprompt + Voice-/Text-Mode + History).
+  - Gleicher Endpunkt für Voice & Text (Hub-Panel ruft dieselbe Edge Function, keine Browser-Keys).
   - Responses API (`input`, `max_output_tokens`) → `extractReplyFromCompletion()`.
   - Liefert `{ reply, actions: [], meta }`; Fallback bei leeren Antworten.
   - Logging deckt OpenAI-Fehler und JSON-Parsing ab.
