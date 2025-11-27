@@ -552,9 +552,22 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 @keyframes hubCorePulse {
   0% {
     transform: translate(-50%, -50%) scale(1);
-  box-shadow:
-    inset 0 0 18px rgba(255, 255, 255, 0.1),
-    0 0 22px rgba(120, 170, 255, 0.2);
+    box-shadow:
+      inset 0 0 18px rgba(255, 255, 255, 0.1),
+      0 0 22px rgba(120, 170, 255, 0.2);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.02);
+    box-shadow:
+      inset 0 0 26px rgba(255, 255, 255, 0.18),
+      0 0 32px rgba(120, 170, 255, 0.38);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      inset 0 0 18px rgba(255, 255, 255, 0.1),
+      0 0 22px rgba(120, 170, 255, 0.2);
+  }
 }
 
 .hub-core-trigger::before {
@@ -598,20 +611,6 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
       0 0 22px rgba(120, 170, 255, 0.2);
   }
 }
-  50% {
-    transform: translate(-50%, -50%) scale(1.02);
-    box-shadow:
-      inset 0 0 26px rgba(255, 255, 255, 0.18),
-      0 0 32px rgba(120, 170, 255, 0.38);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow:
-      inset 0 0 18px rgba(255, 255, 255, 0.1),
-      0 0 22px rgba(120, 170, 255, 0.2);
-  }
-}
-
 
 /* ==========================================================================
    HUB – Intake pills
