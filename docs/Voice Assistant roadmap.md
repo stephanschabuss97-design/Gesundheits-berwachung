@@ -21,10 +21,10 @@ Ziel: Vollständiger, modularer Voice- & Text-Assistent – Record → Transcrib
    Upload zu `/api/midas-transcribe`, State `thinking`, Fehler zurück zu `idle`, Test: Transcript erscheint.
 3. **Assistant Roundtrip (done)**  
    Transcript in Voice-History, Request an `/api/midas-assistant`, Antwort/Actions verarbeiten, History sauber halten.
-4. **TTS Playback**  
-   Antwort → `/api/midas-tts`, `<audio>` abspielen, Stop/Interrupt, Cleanup.
-5. **Glow-Ring Animation**  
-   Aura/Nadel reagiert auf States (Listening = feiner Pulse, Speaking = breite Pulse).
+4. **TTS Playback (done)**  
+   Antwort → `/api/midas-tts`, `<audio>` abspielen, Stop/Interrupt, Cleanup, JSON-Sauberkeit garantiert (keine `"reply"`/`"actions"`-Fragmente mehr in TTS).
+5. **Glow-Ring Animation (done v1)**  
+   Goldring + Aura reagieren auf Voice-Stati (`idle/listening/thinking/speaking`); beim Sprechen pulsiert der Ring mit der GPT-Audio-Amplitude (KITT-Style).
 6. **Nadel als Voice-Trigger**  
    Klick startet Voice, Tageszeit-Grüße („Guten Morgen, Stephan“ etc.).
 
@@ -71,10 +71,8 @@ Jede Phase = eigener Commit inkl. README-/Changelog-/QA-Notiz; Voice-Feature ble
 ---
 
 ## Nächste Schritte
-1. Assistant-Roundtrip finalisieren.
-2. TTS Playback implementieren.
-3. (Optional) Bootstrapper/Logger vorbereiten.
-4. Textchat-UI implementieren.
-5. Glow-/Nadel-UX.
-6. Intake Copy Button.
-7. Termin-/Arztfunktionen.
+1. Glow-/Nadel-UX umsetzen (Phase 1.5/1.6).
+2. (Optional) Bootstrapper/Logger (Phase 0) vorbereiten.
+3. Textchat-UI (Phase 3) starten.
+4. Actions & Terminmodul (Phase 4/6) vorbereiten.
+5. Intake Copy Utility (Phase 5).

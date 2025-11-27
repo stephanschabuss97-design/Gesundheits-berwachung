@@ -378,7 +378,16 @@
       sessionId: `voice-${Date.now()}`,
       audioEl: null,
       currentAudioUrl: null,
+      orbitEl: hub.querySelector('.hub-orbit'),
+      audioCtx: null,
+      analyser: null,
+      mediaSource: null,
+      ampData: null,
+      ampRaf: null,
+      lastAmp: 0,
     };
+    voiceCtrl.orbitEl?.setAttribute('data-voice-state', 'idle');
+    voiceCtrl.orbitEl?.style.setProperty('--voice-amp', '0');
     setVoiceState('idle');
   };
 
@@ -389,6 +398,95 @@
     voiceCtrl.button.dataset.voiceState = state;
     voiceCtrl.button.dataset.voiceLabel = label;
     voiceCtrl.button.setAttribute('aria-pressed', state === 'listening');
+    if (voiceCtrl.orbitEl) {
+      voiceCtrl.orbitEl.setAttribute('data-voice-state', state);
+      if (state !== 'speaking') {
+        setVoiceAmplitude(0);
+      }
+    }
+    if (state !== 'speaking') {
+      stopVoiceMeter();
+    }
+  };
+
+  const setVoiceAmplitude = (value) => {
+    if (!voiceCtrl?.orbitEl) return;
+    const clamped = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+    voiceCtrl.orbitEl.style.setProperty('--voice-amp', clamped.toFixed(3));
+    voiceCtrl.lastAmp = clamped;
+  };
+
+  const ensureVoiceAnalyser = () => {
+    if (!voiceCtrl) return false;
+    const AudioCtx = global.AudioContext || global.webkitAudioContext;
+    if (!AudioCtx) return false;
+    if (!voiceCtrl.audioCtx) {
+      try {
+        voiceCtrl.audioCtx = new AudioCtx();
+      } catch (err) {
+        console.warn('[hub] AudioContext init failed', err);
+        return false;
+      }
+    }
+    if (!voiceCtrl.analyser && voiceCtrl.audioCtx) {
+      voiceCtrl.analyser = voiceCtrl.audioCtx.createAnalyser();
+      voiceCtrl.analyser.fftSize = 1024;
+      voiceCtrl.analyser.smoothingTimeConstant = 0.85;
+      voiceCtrl.ampData = new Uint8Array(voiceCtrl.analyser.fftSize);
+    }
+    const audioEl = ensureVoiceAudioElement();
+    if (audioEl && voiceCtrl.audioCtx && !voiceCtrl.mediaSource) {
+      try {
+        voiceCtrl.mediaSource = voiceCtrl.audioCtx.createMediaElementSource(audioEl);
+        voiceCtrl.mediaSource.connect(voiceCtrl.analyser);
+        voiceCtrl.analyser.connect(voiceCtrl.audioCtx.destination);
+      } catch (err) {
+        console.warn('[hub] media source init failed', err);
+      }
+    }
+    return !!voiceCtrl.analyser;
+  };
+
+  const startVoiceMeter = async () => {
+    if (!voiceCtrl || !ensureVoiceAnalyser()) return;
+    try {
+      if (voiceCtrl.audioCtx?.state === 'suspended') {
+        await voiceCtrl.audioCtx.resume();
+      }
+    } catch (err) {
+      console.warn('[hub] audioCtx resume failed', err);
+    }
+    if (voiceCtrl.ampRaf) {
+      global.cancelAnimationFrame(voiceCtrl.ampRaf);
+      voiceCtrl.ampRaf = null;
+    }
+    const tick = () => {
+      if (!voiceCtrl?.analyser || !voiceCtrl.ampData) return;
+      voiceCtrl.analyser.getByteTimeDomainData(voiceCtrl.ampData);
+      let sum = 0;
+      for (let i = 0; i < voiceCtrl.ampData.length; i += 1) {
+        sum += Math.abs(voiceCtrl.ampData[i] - 128);
+      }
+      const avg = sum / voiceCtrl.ampData.length; // 0..128
+      const normalized = Math.min(1, avg / 70);
+      const smoothed = voiceCtrl.lastAmp * 0.8 + normalized * 0.2;
+      setVoiceAmplitude(smoothed);
+      voiceCtrl.ampRaf = global.requestAnimationFrame(tick);
+    };
+    tick();
+  };
+
+  const stopVoiceMeter = () => {
+    if (voiceCtrl?.ampRaf) {
+      global.cancelAnimationFrame(voiceCtrl.ampRaf);
+      voiceCtrl.ampRaf = null;
+    }
+    if (voiceCtrl?.orbitEl) {
+      voiceCtrl.orbitEl.style.setProperty('--voice-amp', '0');
+    }
+    if (voiceCtrl) {
+      voiceCtrl.lastAmp = 0;
+    }
   };
 
   const handleVoiceTrigger = () => {
@@ -764,6 +862,7 @@
       setVoiceState('speaking');
       voiceCtrl.currentAudioUrl = audioUrl;
       audioEl.src = audioUrl;
+      startVoiceMeter();
       const cleanup = () => {
         if (voiceCtrl?.currentAudioUrl) {
           URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
@@ -771,6 +870,7 @@
         }
         audioEl.onended = null;
         audioEl.onerror = null;
+        stopVoiceMeter();
       };
       audioEl.onended = () => {
         cleanup();
@@ -796,6 +896,9 @@
     if (!voiceCtrl.audioEl) {
       voiceCtrl.audioEl = new Audio();
       voiceCtrl.audioEl.preload = 'auto';
+      if (voiceCtrl.orbitEl && !voiceCtrl.orbitEl.style.getPropertyValue('--voice-amp')) {
+        voiceCtrl.orbitEl.style.setProperty('--voice-amp', '0');
+      }
     }
     return voiceCtrl.audioEl;
   };
@@ -808,6 +911,7 @@
     } catch (err) {
       console.warn('[hub] audio pause failed', err);
     }
+    stopVoiceMeter();
     if (voiceCtrl?.currentAudioUrl) {
       URL.revokeObjectURL(voiceCtrl.currentAudioUrl);
       voiceCtrl.currentAudioUrl = null;
