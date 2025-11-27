@@ -22,6 +22,7 @@ Dieses Dokument beschreibt den aktuellen Stand des MIDAS-Assistant-Moduls (Voice
 | Frontend | `docs/Voice Assistant roadmap.md` | Roadmap/QA (Phase 0–7, Tests je Schritt). |
 | Backend | `supabase/functions/midas-transcribe/index.ts` | Whisper (`gpt-4o-transcribe`), FormData Upload. |
 | Backend | `supabase/functions/midas-assistant/index.ts` | OpenAI Responses API (`gpt-4.1-mini`), Persona, `{ reply, actions, meta }`. |
+| Backend | `supabase/functions/midas-vision/index.ts` | Responses API Vision-Proxy, nimmt Foto (Base64) + Verlauf entgegen und liefert Analyse/Empfehlung. |
 | Backend | `supabase/functions/midas-tts/index.ts` | `gpt-4o-mini-tts`, default Voice `verse`, Base64 oder Direktstream. |
 
 Deployment über `supabase functions deploy <name> --project-ref jlylmservssinsavlkdi`. Secrets (z.B. `OPENAI_API_KEY`) im Edge-Function-Secret-Store hinterlegen.
@@ -57,6 +58,11 @@ Deployment über `supabase functions deploy <name> --project-ref jlylmservssinsa
   - Antwort als Base64 + MIME-Type oder Roh-Audio; Frontend erstellt Blob-URL.
   - Fehler führen zu JSON `{ error: "TTS request failed" }`.
 
+- **midas-vision (`index.ts`)**
+  - Erwartet `{ image_base64, history?, session_id? }` und prüft Bildgröße (≈6 MB).
+  - Baut standardisierte Foto-Prompts, ruft OpenAI Responses (Vision) und extrahiert Reply.
+  - Liefert `{ reply, meta }`; keine Secrets/Keys mehr im Browser nötig.
+
 - **Supabase Headers**
   - GitHub Pages nutzen direkte Supabase-URLs → `getConf('webhookKey')` liefert `Authorization`/`apikey`.
   - Lokale Entwicklung bedient `/api/midas-*` Proxy (kein zusätzlicher Header nötig).
@@ -86,7 +92,7 @@ Deployment über `supabase functions deploy <name> --project-ref jlylmservssinsa
 - ✅ Phase 1.1-1.4: Audio Capture, Transcribe, Assistant, TTS.
 - 🟡 Phase 1.5/1.6: Glow-Ring Animation, Voice-Greeting (Needle).
 - ✅ Phase 3.1: Assistant Text-UI als Hub-Panel (flüchtige Session, Foto-/Diktat-Stubs).
-- 🔄 Phase 3.2/3.3: Foto-Upload & Diktiermodus (Hooks vorhanden, Backend folgt).
+- ?? Phase 3.2/3.3: Foto-Upload via `midas-vision` live; Diktiermodus (Web Speech) noch offen.
 - 🟡 Phase 4: Allowed Actions (`IntakeSave`, `DoctorRouting`) und Terminmodul.
 - 🟡 Phase 0: Boot-Logger, Bootstrap-Validator.
 - 🟣 Zukunft: Streaming-TTS, Wakeword, Offline-Modus, Health-Briefings.

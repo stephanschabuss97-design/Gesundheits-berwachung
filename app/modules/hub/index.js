@@ -18,12 +18,14 @@
         assistant: `${base}/midas-assistant`,
         transcribe: `${base}/midas-transcribe`,
         tts: `${base}/midas-tts`,
+        vision: `${base}/midas-vision`,
       };
     }
     return {
       assistant: '/api/midas-assistant',
       transcribe: '/api/midas-transcribe',
       tts: '/api/midas-tts',
+      vision: '/api/midas-vision',
     };
   })();
   const DIRECT_SUPABASE_CALL = Object.values(MIDAS_ENDPOINTS).some((url) =>
@@ -49,7 +51,6 @@
     error: 'Fehler',
   };
   const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
-  const OPENAI_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
   const MAX_ASSISTANT_PHOTO_BYTES = 6 * 1024 * 1024;
   const VAD_SILENCE_MS = 1000;
   const CONVERSATION_AUTO_RESUME_DELAY = 450;
@@ -674,17 +675,17 @@
     });
     setAssistantSending(true);
     try {
-      const reply = await fetchAssistantVisionReply(dataUrl);
+      const reply = await fetchAssistantVisionReply(dataUrl, file);
       if (previewMessage) {
         previewMessage.content = 'Foto gesendet.';
       }
       appendAssistantMessage('assistant', reply);
     } catch (err) {
       console.error('[assistant-chat] vision request failed', err);
-      if (err.message === 'vision-key-missing') {
+      if (err?.message === 'supabase-headers-missing') {
         appendAssistantMessage(
           'system',
-          'OpenAI Vision Key fehlt. Bitte im Konfig-Menü als `openaiVisionKey` hinterlegen.',
+          'Supabase-Konfiguration fehlt. Bitte REST-Endpoint + Key speichern.',
         );
       } else {
         appendAssistantMessage('system', 'Das Foto konnte nicht analysiert werden.');
@@ -695,118 +696,48 @@
     }
   };
 
-  const fetchAssistantVisionReply = async (dataUrl) => {
-    const apiKey = await getOpenAiVisionKey();
-    if (!apiKey) {
-      throw new Error('vision-key-missing');
+  const fetchAssistantVisionReply = async (dataUrl, file) => {
+    ensureAssistantSession();
+    if (!assistantChatCtrl) {
+      throw new Error('vision-unavailable');
     }
-    const base64 = dataUrl.includes(',')
-      ? dataUrl.split(',').pop()
-      : dataUrl;
-    const history = buildAssistantPhotoHistory();
-    const userPrompt = [
-      'Analysiere dieses Foto einer Mahlzeit.',
-      'Schätze Wasser (ml), Salz (g) und Protein (g).',
-      'Gib kurze Empfehlungen (max. 3 Sätze).',
-      'Antwort auf Deutsch.',
-    ];
-    if (history) {
-      userPrompt.push(`Kontext:\n${history}`);
+    const base64 = (dataUrl.includes(',') ? dataUrl.split(',').pop() : dataUrl)?.trim() || '';
+    if (!base64) {
+      throw new Error('vision-image-missing');
     }
-    const body = {
-      model: OPENAI_VISION_MODEL,
-      input: [
-        {
-          role: 'system',
-          content: [
-            {
-              type: 'input_text',
-              text:
-                'Du bist MIDAS, der Gesundheits-Assistent von Stephan. Antworte knapp, praxisnah und fokussiere dich auf Salz/Wasser/Protein.',
-            },
-          ],
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'input_text', text: userPrompt.join('\n') },
-            { type: 'input_image', image_base64: base64 },
-          ],
-        },
-      ],
-      max_output_tokens: 400,
+    const payload = {
+      session_id: assistantChatCtrl.sessionId ?? `text-${Date.now()}`,
+      mode: 'vision',
+      history: buildAssistantPhotoHistory(),
+      image_base64: base64,
     };
-    const response = await fetch(OPENAI_RESPONSES_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    if (!payload.history) {
+      delete payload.history;
+    }
+    if (file?.name) {
+      payload.meta = { fileName: file.name };
+    }
+    const headers = await buildFunctionJsonHeaders();
+    let response;
+    try {
+      response = await fetch(MIDAS_ENDPOINTS.vision, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+    } catch (networkErr) {
+      throw networkErr;
+    }
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
       throw new Error(errText || 'vision-failed');
     }
-    const completion = await response.json().catch(() => ({}));
-    const reply = extractVisionReplyText(completion);
+    const data = await response.json().catch(() => ({}));
+    const reply = (data?.reply || '').trim();
     if (!reply) {
       throw new Error('vision-empty');
     }
     return reply;
-  };
-
-  const extractVisionReplyText = (completion) => {
-    if (!completion) return '';
-    if (typeof completion.output_text === 'string') {
-      return completion.output_text.trim();
-    }
-    if (Array.isArray(completion.output_text)) {
-      return completion.output_text.join('\n').trim();
-    }
-    if (Array.isArray(completion.output)) {
-      const collected = [];
-      completion.output.forEach((item) => {
-        if (typeof item?.output_text === 'string') {
-          collected.push(item.output_text);
-          return;
-        }
-        if (Array.isArray(item?.output_text)) {
-          collected.push(item.output_text.join(''));
-        }
-        if (Array.isArray(item?.content)) {
-          item.content.forEach((segment) => {
-            const text = extractSegmentText(segment);
-            if (text) collected.push(text);
-          });
-        }
-      });
-      if (collected.length) {
-        return collected.join('\n').trim();
-      }
-    }
-    if (Array.isArray(completion.messages)) {
-      const merged = completion.messages
-        .map((msg) => (Array.isArray(msg?.content) ? msg.content.map(extractSegmentText).join('') : msg?.content || ''))
-        .join('\n')
-        .trim();
-      if (merged) return merged;
-    }
-    if (typeof completion.content === 'string') {
-      return completion.content.trim();
-    }
-    return '';
-  };
-
-  const extractSegmentText = (segment) => {
-    if (!segment) return '';
-    if (typeof segment === 'string') return segment;
-    if (typeof segment.text === 'string') return segment.text;
-    if (Array.isArray(segment.text)) return segment.text.join('');
-    if (typeof segment.output_text === 'string') return segment.output_text;
-    if (Array.isArray(segment.output_text)) return segment.output_text.join('');
-    if (typeof segment.content === 'string') return segment.content;
-    return '';
   };
 
   const buildAssistantPhotoHistory = () => {
