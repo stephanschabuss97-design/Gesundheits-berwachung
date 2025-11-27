@@ -170,6 +170,23 @@ body:has(.hub-panel.is-visible) .hub-icon {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  transition: transform 220ms ease;
+}
+
+@keyframes hubNeedlePress {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+body:has(.hub-core-trigger.is-pressed) .hub-orb-fg {
+  animation: hubNeedlePress 200ms ease-out;
 }
 
 /* 🔵🟣 M.I.D.A.S. Aura — Blau/Magenta */
