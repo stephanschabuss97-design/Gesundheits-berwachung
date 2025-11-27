@@ -52,7 +52,7 @@
   const VAD_SILENCE_MS = 1000;
   const CONVERSATION_AUTO_RESUME_DELAY = 450;
   const END_PHRASES = [
-    /nein danke/i,
+/nein danke/i,
     /danke[, ]?(das)? war( es|)?/i,
     /(das )?(war'?|ist) alles/i,
     /passt[, ]?(danke)?/i,
@@ -61,8 +61,54 @@
     /alles erledigt/i,
     /nein[, ]?(alles )?(erledigt|gut|fertig)/i,
     /stop(p)?/i,
-    /tsch[üu]ss/i,
+    /tsch[Ã¼u]ss/i,
     /ciao/i,
+
+    // --- Neue, fÃ¼r dich typische Varianten ---
+    /passt so/i,
+    /passt scho/i,
+    /jo passt/i,
+    /eh passt/i,
+    /alles gut/i,
+    /passt eh/i,
+    /passt fÃ¼r mich/i,
+    /mehr brauch ich nicht/i,
+    /brauch nichts mehr/i,
+    /brauch (ich )?sonst nix/i,
+    /nix mehr/i,
+    /nichts mehr/i,
+    /keine ahnung, passt/i,   // du sagst das Ã¶fter scherzhaft
+    /das wÃ¤rs?/i,
+    /des wars/i,             // dein Dialekt kommt bei dir durch :)
+    /bin fertig/i,
+    /eh fertig/i,
+    /jo eh/i,
+    /reicht/i,
+    /reicht schon/i,
+    /genug/i,
+    /ok passt/i,
+    /passt danke dir/i,
+    /passt danke dir eh/i,
+    /passt eh danke/i,
+    /gut is/i,
+    /is gut/i,
+    /schon gut/i,
+    /ja, danke dir/i,
+    /ja passt/i,
+    /ja danke passt/i,
+    /fÃ¼rs erste passts/i,
+    /fÃ¼r jetzt passts/i,
+    /alles gut danke/i,
+    /nein passt eh/i,
+    /ne passt/i,
+    /passt schon danke/i,
+    /ok danke/i,
+    /jo danke/i,
+    /gut so/i,
+    /oke? passt/i,
+    /gut, danke/i,
+    /passt, erledigt/i,
+    /alles erledigt danke/i
   ];
   const END_ACTIONS = ['endSession', 'closeConversation'];
 
@@ -787,14 +833,14 @@
     }
     const loader = (async () => {
       if (typeof global.getConf !== 'function') {
-        console.warn('[hub] getConf missing – cannot load Supabase key');
+        console.warn('[hub] getConf missing ï¿½ cannot load Supabase key');
         return null;
       }
       try {
         const stored = await global.getConf('webhookKey');
         const raw = String(stored || '').trim();
         if (!raw) {
-          console.warn('[hub] Supabase webhookKey missing – voice API locked');
+          console.warn('[hub] Supabase webhookKey missing ï¿½ voice API locked');
           return null;
         }
         const bearer = raw.startsWith('Bearer ') ? raw : `Bearer ${raw}`;
@@ -932,7 +978,7 @@
         if (typeof nested?.reply === 'string' && nested.reply.trim()) {
           reply = nested.reply.trim();
         }
-        // Wenn das verschachtelte Objekt Actions enthält, nutze sie nur, wenn oben nichts übertragen wurde.
+        // Wenn das verschachtelte Objekt Actions enthï¿½lt, nutze sie nur, wenn oben nichts ï¿½bertragen wurde.
         if (!actions.length && Array.isArray(nested?.actions)) {
           actions.push(...nested.actions);
         }
