@@ -657,16 +657,20 @@
       throw new Error(errText || 'assistant failed');
     }
     const rawText = await response.text();
-    let data = {};
-    try {
-      data = rawText ? JSON.parse(rawText) : {};
-    } catch (err) {
-      console.warn('[hub] assistant response not JSON, using raw text');
-      data = {};
+    let data = null;
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch (err) {
+        console.warn('[hub] assistant response not JSON, falling back to default', err);
+      }
     }
 
-    let reply = (data?.reply || rawText || '').trim();
+    let reply = typeof data?.reply === 'string' ? data.reply.trim() : '';
     if (!reply) {
+      if (rawText) {
+        console.warn('[hub] assistant payload missing reply, snippet:', rawText.slice(0, 160));
+      }
       console.info('[midas-voice] Assistant reply empty, using fallback.');
       reply = VOICE_FALLBACK_REPLY;
     }
@@ -674,7 +678,7 @@
     return {
       reply,
       actions,
-      meta: data?.meta ?? null,
+      meta: data && typeof data === 'object' ? data.meta ?? null : null,
     };
   };
 
