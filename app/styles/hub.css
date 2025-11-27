@@ -1045,6 +1045,25 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   font-size: 0.9rem;
 }
 
+.assistant-bubble.assistant-has-image {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assistant-photo img {
+  display: block;
+  width: min(240px, 60vw);
+  max-height: 320px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.assistant-text-line {
+  margin: 0;
+}
+
 .assistant-input-bar {
   display: flex;
   gap: 10px;

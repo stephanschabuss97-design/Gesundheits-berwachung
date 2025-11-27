@@ -49,6 +49,9 @@
     error: 'Fehler',
   };
   const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
+  const OPENAI_VISION_ENDPOINT = 'https://api.openai.com/v1/responses';
+  const OPENAI_VISION_MODEL = 'gpt-4.1-mini';
+  const MAX_ASSISTANT_PHOTO_BYTES = 6 * 1024 * 1024;
   const VAD_SILENCE_MS = 1000;
   const CONVERSATION_AUTO_RESUME_DELAY = 450;
   const END_PHRASES = [
@@ -119,6 +122,8 @@
   let voiceCtrl = null;
   let assistantChatCtrl = null;
   let supabaseFunctionHeadersPromise = null;
+  let openAiVisionKeyCache = null;
+  let openAiVisionKeyPromise = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
 
@@ -354,6 +359,7 @@
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
     bindButton('[data-hub-module="vitals"]', openPanelHandler('vitals'), { sync: false });
+    bindButton('[data-hub-module="assistant-text"]', openPanelHandler('assistant-text'), { sync: false });
     const doctorPanelHandler = openPanelHandler('doctor');
     bindButton('[data-hub-module="doctor"]', async (btn) => {
       if (await ensureDoctorUnlocked()) {
@@ -438,6 +444,13 @@
     const dictateBtn = panel.querySelector('#assistantDictateBtn');
     const clearBtn = panel.querySelector('#assistantClearChat');
 
+    const photoInput = doc.createElement('input');
+    photoInput.type = 'file';
+    photoInput.accept = 'image/*';
+    photoInput.capture = 'environment';
+    photoInput.hidden = true;
+    panel.appendChild(photoInput);
+
     assistantChatCtrl = {
       panel,
       chatEl,
@@ -447,6 +460,7 @@
       cameraBtn,
       dictateBtn,
       clearBtn,
+      photoInput,
       messages: [],
       sessionId: null,
       sending: false,
@@ -454,14 +468,35 @@
 
     form?.addEventListener('submit', handleAssistantChatSubmit);
     clearBtn?.addEventListener('click', () => resetAssistantChat(true));
-    cameraBtn?.addEventListener('click', handleAssistantCameraStub);
+    photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
+    cameraBtn?.addEventListener('click', handleAssistantCameraClick);
     dictateBtn?.addEventListener('click', handleAssistantDictateStub);
     resetAssistantChat();
   };
 
-  const handleAssistantCameraStub = () => {
-    console.info('[assistant-chat] camera capture placeholder');
-    diag?.add?.('[assistant-chat] Kamera', 'Noch nicht implementiert');
+  const handleAssistantCameraClick = () => {
+    if (!assistantChatCtrl?.photoInput) {
+      appendAssistantMessage('system', 'Kamera nicht verfügbar.');
+      return;
+    }
+    assistantChatCtrl.photoInput.value = '';
+    assistantChatCtrl.photoInput.click();
+  };
+
+  const handleAssistantPhotoSelected = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_ASSISTANT_PHOTO_BYTES) {
+      appendAssistantMessage('system', 'Das Foto ist zu groß (max. ca. 6 MB).');
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      await sendAssistantPhotoMessage(dataUrl, file);
+    } catch (err) {
+      console.error('[assistant-chat] foto konnte nicht gelesen werden', err);
+      appendAssistantMessage('system', 'Das Foto konnte nicht gelesen werden.');
+    }
   };
 
   const handleAssistantDictateStub = () => {
@@ -518,14 +553,18 @@
     }
   };
 
-  const appendAssistantMessage = (role, content) => {
-    if (!assistantChatCtrl) return;
-    assistantChatCtrl.messages.push({
+  const appendAssistantMessage = (role, content, extras = {}) => {
+    if (!assistantChatCtrl) return null;
+    const message = {
       role: role === 'assistant' ? 'assistant' : role === 'system' ? 'system' : 'user',
       content: content?.trim?.() || '',
-      id: `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
-    });
+      id: extras.id || `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
+      imageData: extras.imageData || null,
+      meta: extras.meta || null,
+    };
+    assistantChatCtrl.messages.push(message);
     renderAssistantChat();
+    return message;
   };
 
   const renderAssistantChat = () => {
@@ -544,7 +583,25 @@
       const bubble = doc.createElement('div');
       bubble.className = `assistant-bubble assistant-${message.role}`;
       bubble.setAttribute('data-role', message.role);
-      bubble.textContent = message.content;
+      if (message.imageData) {
+        bubble.classList.add('assistant-has-image');
+        const figure = doc.createElement('div');
+        figure.className = 'assistant-photo';
+        const img = doc.createElement('img');
+        img.src = message.imageData;
+        img.alt =
+          message.meta?.fileName
+            ? `Foto ${message.meta.fileName}`
+            : 'Hochgeladenes Foto';
+        figure.appendChild(img);
+        bubble.appendChild(figure);
+      }
+      if (message.content) {
+        const text = doc.createElement('p');
+        text.className = 'assistant-text-line';
+        text.textContent = message.content;
+        bubble.appendChild(text);
+      }
       frag.appendChild(bubble);
     });
     container.appendChild(frag);
@@ -560,9 +617,13 @@
     if (assistantChatCtrl.sending) {
       assistantChatCtrl.sendBtn?.setAttribute('disabled', 'disabled');
       assistantChatCtrl.input?.setAttribute('disabled', 'disabled');
+      assistantChatCtrl.cameraBtn?.setAttribute('disabled', 'disabled');
+      assistantChatCtrl.dictateBtn?.setAttribute('disabled', 'disabled');
     } else {
       assistantChatCtrl.sendBtn?.removeAttribute('disabled');
       assistantChatCtrl.input?.removeAttribute('disabled');
+      assistantChatCtrl.cameraBtn?.removeAttribute('disabled');
+      assistantChatCtrl.dictateBtn?.removeAttribute('disabled');
       assistantChatCtrl.input?.focus();
     }
   };
@@ -599,6 +660,196 @@
     const reply = (data?.reply || '').trim();
     return reply;
   };
+
+  const sendAssistantPhotoMessage = async (dataUrl, file) => {
+    if (!assistantChatCtrl || assistantChatCtrl.sending) return;
+    ensureAssistantSession();
+    const previewMessage = appendAssistantMessage('user', 'Foto wird analysiert …', {
+      imageData: dataUrl,
+      meta: { fileName: file?.name || '' },
+    });
+    setAssistantSending(true);
+    try {
+      const reply = await fetchAssistantVisionReply(dataUrl);
+      if (previewMessage) {
+        previewMessage.content = 'Foto gesendet.';
+      }
+      appendAssistantMessage('assistant', reply);
+    } catch (err) {
+      console.error('[assistant-chat] vision request failed', err);
+      if (err.message === 'vision-key-missing') {
+        appendAssistantMessage(
+          'system',
+          'OpenAI Vision Key fehlt. Bitte im Konfig-Menü als `openaiVisionKey` hinterlegen.',
+        );
+      } else {
+        appendAssistantMessage('system', 'Das Foto konnte nicht analysiert werden.');
+      }
+    } finally {
+      setAssistantSending(false);
+      renderAssistantChat();
+    }
+  };
+
+  const fetchAssistantVisionReply = async (dataUrl) => {
+    const apiKey = await getOpenAiVisionKey();
+    if (!apiKey) {
+      throw new Error('vision-key-missing');
+    }
+    const base64 = dataUrl.includes(',')
+      ? dataUrl.split(',').pop()
+      : dataUrl;
+    const history = buildAssistantPhotoHistory();
+    const userPrompt = [
+      'Analysiere dieses Foto einer Mahlzeit.',
+      'Schätze Wasser (ml), Salz (g) und Protein (g).',
+      'Gib kurze Empfehlungen (max. 3 Sätze).',
+      'Antwort auf Deutsch.',
+    ];
+    if (history) {
+      userPrompt.push(`Kontext:\n${history}`);
+    }
+    const body = {
+      model: OPENAI_VISION_MODEL,
+      input: [
+        {
+          role: 'system',
+          content: [
+            {
+              type: 'input_text',
+              text:
+                'Du bist MIDAS, der Gesundheits-Assistent von Stephan. Antworte knapp, praxisnah und fokussiere dich auf Salz/Wasser/Protein.',
+            },
+          ],
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'input_text', text: userPrompt.join('\n') },
+            { type: 'input_image', image_base64: base64 },
+          ],
+        },
+      ],
+      max_output_tokens: 400,
+    };
+    const response = await fetch(OPENAI_VISION_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(errText || 'vision-failed');
+    }
+    const completion = await response.json().catch(() => ({}));
+    const reply = extractVisionReplyText(completion);
+    if (!reply) {
+      throw new Error('vision-empty');
+    }
+    return reply;
+  };
+
+  const getOpenAiVisionKey = async () => {
+    if (openAiVisionKeyCache) return openAiVisionKeyCache;
+    if (!openAiVisionKeyPromise) {
+      openAiVisionKeyPromise = (async () => {
+        let key = '';
+        if (typeof global.getConf === 'function') {
+          try {
+            key = String((await global.getConf('openaiVisionKey')) || '').trim();
+          } catch (err) {
+            console.warn('[assistant-chat] openaiVisionKey konnte nicht gelesen werden', err);
+          }
+        }
+        if (!key && typeof global.MIDAS_OPENAI_KEY === 'string') {
+          key = global.MIDAS_OPENAI_KEY.trim();
+        }
+        if (!key && typeof global.OPENAI_API_KEY === 'string') {
+          key = global.OPENAI_API_KEY.trim();
+        }
+        return key;
+      })();
+    }
+    const key = (await openAiVisionKeyPromise) || '';
+    openAiVisionKeyCache = key;
+    openAiVisionKeyPromise = null;
+    return openAiVisionKeyCache;
+  };
+
+  const extractVisionReplyText = (completion) => {
+    if (!completion) return '';
+    if (typeof completion.output_text === 'string') {
+      return completion.output_text.trim();
+    }
+    if (Array.isArray(completion.output_text)) {
+      return completion.output_text.join('\n').trim();
+    }
+    if (Array.isArray(completion.output)) {
+      const collected = [];
+      completion.output.forEach((item) => {
+        if (typeof item?.output_text === 'string') {
+          collected.push(item.output_text);
+          return;
+        }
+        if (Array.isArray(item?.output_text)) {
+          collected.push(item.output_text.join(''));
+        }
+        if (Array.isArray(item?.content)) {
+          item.content.forEach((segment) => {
+            const text = extractSegmentText(segment);
+            if (text) collected.push(text);
+          });
+        }
+      });
+      if (collected.length) {
+        return collected.join('\n').trim();
+      }
+    }
+    if (Array.isArray(completion.messages)) {
+      const merged = completion.messages
+        .map((msg) => (Array.isArray(msg?.content) ? msg.content.map(extractSegmentText).join('') : msg?.content || ''))
+        .join('\n')
+        .trim();
+      if (merged) return merged;
+    }
+    if (typeof completion.content === 'string') {
+      return completion.content.trim();
+    }
+    return '';
+  };
+
+  const extractSegmentText = (segment) => {
+    if (!segment) return '';
+    if (typeof segment === 'string') return segment;
+    if (typeof segment.text === 'string') return segment.text;
+    if (Array.isArray(segment.text)) return segment.text.join('');
+    if (typeof segment.output_text === 'string') return segment.output_text;
+    if (Array.isArray(segment.output_text)) return segment.output_text.join('');
+    if (typeof segment.content === 'string') return segment.content;
+    return '';
+  };
+
+  const buildAssistantPhotoHistory = () => {
+    if (!assistantChatCtrl?.messages?.length) return '';
+    const relevant = assistantChatCtrl.messages
+      .filter((msg) => (msg.role === 'assistant' || msg.role === 'user') && !msg.imageData)
+      .slice(-6);
+    if (!relevant.length) return '';
+    return relevant
+      .map((msg) => `${msg.role === 'assistant' ? 'MIDAS' : 'Stephan'}: ${msg.content}`)
+      .join('\n');
+  };
+
+  const readFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
 
   const setupVoiceChat = (hub) => {
     const button = hub.querySelector('[data-hub-module="assistant-voice"]');
