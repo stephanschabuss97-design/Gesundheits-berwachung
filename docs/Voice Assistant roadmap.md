@@ -25,8 +25,8 @@ Ziel: Vollständiger, modularer Voice- & Text-Assistent – Record → Transcrib
    Antwort → `/api/midas-tts`, `<audio>` abspielen, Stop/Interrupt, Cleanup, JSON-Sauberkeit garantiert (keine `"reply"`/`"actions"`-Fragmente mehr in TTS).
 5. **Glow-Ring Animation (done v1)**  
    Goldring + Aura reagieren auf Voice-Stati (`idle/listening/thinking/speaking`); beim Sprechen pulsiert der Ring mit der GPT-Audio-Amplitude (KITT-Style).
-6. **Nadel als Voice-Trigger**  
-   Klick startet Voice, Tageszeit-Grüße („Guten Morgen, Stephan“ etc.).
+6. **Nadel als Voice-Trigger (done)**  
+   Zentrales State-Icon l�st den Voice-Chat aus; Tageszeit-Gr��e folgen separat.).
 
 ---
 
@@ -76,3 +76,4 @@ Jede Phase = eigener Commit inkl. README-/Changelog-/QA-Notiz; Voice-Feature ble
 3. Textchat-UI (Phase 3) starten.
 4. Actions & Terminmodul (Phase 4/6) vorbereiten.
 5. Intake Copy Utility (Phase 5).
+

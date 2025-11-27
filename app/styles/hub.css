@@ -173,6 +173,32 @@ body:has(.hub-panel.is-visible) .hub-icon {
   transition: transform 220ms ease;
 }
 
+.hub-orb-needle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(110px, 24vw, 320px);
+  height: clamp(110px, 24vw, 320px);
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  cursor: pointer;
+}
+
+.hub-orb-needle:focus-visible {
+  outline: none;
+}
+
+.hub-orb-needle img {
+  pointer-events: none;
+}
+
 @keyframes hubNeedlePress {
   0% {
     transform: translate(-50%, -50%) scale(1);
@@ -389,33 +415,26 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   z-index: 8;
   pointer-events: auto;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
-  box-shadow:
-    inset 0 0 18px rgba(255, 255, 255, 0.08),
-    0 0 22px rgba(120, 170, 255, 0.18);
+  border: none;
+  background: transparent;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
   position: relative;
-  --core-tap-scale: 1;
 }
 
 .hub-core-trigger:hover,
 .hub-core-trigger:focus-visible {
   border-color: rgba(255, 255, 255, 0.35);
-  box-shadow:
-    inset 0 0 24px rgba(255, 255, 255, 0.16),
-    0 0 30px rgba(120, 170, 255, 0.45);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.02) 70%);
+  box-shadow: none;
+  background: transparent;
 }
 
 .hub-core-trigger:focus-visible {
   outline: none;
-  box-shadow:
-    inset 0 0 28px rgba(255, 255, 255, 0.2),
-    0 0 34px rgba(120, 170, 255, 0.6);
+  box-shadow: none;
 }
 
 .hub-core-trigger span[aria-hidden="true"] {
@@ -427,24 +446,24 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 }
 
 .hub-core-trigger[data-voice-state="listening"] {
-  border-color: rgba(130, 220, 255, 0.65);
-  background: radial-gradient(circle, rgba(130, 220, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  border-color: transparent;
+  background: transparent;
   animation: hubCorePulse 1200ms ease-in-out infinite;
 }
 
 .hub-core-trigger[data-voice-state="thinking"] {
-  border-color: rgba(255, 214, 130, 0.6);
-  background: radial-gradient(circle, rgba(255, 214, 130, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  border-color: transparent;
+  background: transparent;
 }
 
 .hub-core-trigger[data-voice-state="speaking"] {
-  border-color: rgba(255, 140, 200, 0.65);
-  background: radial-gradient(circle, rgba(255, 140, 200, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  border-color: transparent;
+  background: transparent;
 }
 
 .hub-core-trigger[data-voice-state="error"] {
-  border-color: rgba(255, 120, 120, 0.7);
-  background: radial-gradient(circle, rgba(255, 120, 120, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+  border-color: transparent;
+  background: transparent;
 }
 
 /* Stealth-Touch-Targets: unsichtbare Buttons, Feedback über Aura + Vibration */
@@ -585,23 +604,6 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
       inset 0 0 18px rgba(255, 255, 255, 0.1),
       0 0 22px rgba(120, 170, 255, 0.2);
   }
-}
-
-.hub-core-trigger::before {
-  content: '';
-  position: absolute;
-  inset: 5%;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transform: scale(var(--core-tap-scale, 1));
-  opacity: 0.5;
-  transition: transform 180ms ease-out, opacity 180ms ease-out;
-  pointer-events: none;
-}
-
-.hub-core-trigger.is-pressed::before {
-  transform: scale(0.93);
-  opacity: 0.8;
 }
 
 .hub-core-trigger.is-pressed {
@@ -1083,3 +1085,4 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
     filter: hue-rotate(18deg);
   }
 }
+
