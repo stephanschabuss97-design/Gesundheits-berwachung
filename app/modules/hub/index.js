@@ -674,7 +674,25 @@
       console.info('[midas-voice] Assistant reply empty, using fallback.');
       reply = VOICE_FALLBACK_REPLY;
     }
-    const actions = Array.isArray(data?.actions) ? data.actions : [];
+    const actions = Array.isArray(data?.actions) ? [...data.actions] : [];
+
+    // Manche Antworten enthalten versehentlich ein JSON-Objekt als Text ({"reply":"...","actions":[]}).
+    // In diesem Fall extrahieren wir den inneren reply-Text, damit TTS keinen JSON-Block vorliest.
+    if (reply.startsWith('{')) {
+      try {
+        const nested = JSON.parse(reply);
+        if (typeof nested?.reply === 'string' && nested.reply.trim()) {
+          reply = nested.reply.trim();
+        }
+        // Wenn das verschachtelte Objekt Actions enthält, nutze sie nur, wenn oben nichts übertragen wurde.
+        if (!actions.length && Array.isArray(nested?.actions)) {
+          actions.push(...nested.actions);
+        }
+      } catch (err) {
+        console.warn('[hub] nested assistant reply not JSON-parsable', err);
+      }
+    }
+
     return {
       reply,
       actions,
