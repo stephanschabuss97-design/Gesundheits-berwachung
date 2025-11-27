@@ -117,6 +117,7 @@
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
   let voiceCtrl = null;
+  let assistantChatCtrl = null;
   let supabaseFunctionHeadersPromise = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
@@ -305,6 +306,7 @@
       return;
     }
     setupVoiceChat(hub);
+    setupAssistantChat(hub);
     setupIconBar(hub);
     setupOrbitHotspots(hub);
     setupPanels();
@@ -423,6 +425,179 @@
     hub.innerHTML = '';
     pills.classList.add('hub-intake-pills');
     hub.appendChild(pills);
+  };
+
+  const setupAssistantChat = (hub) => {
+    const panel = hub.querySelector('#hubAssistantPanel');
+    if (!panel) return;
+    const chatEl = panel.querySelector('#assistantChat');
+    const form = panel.querySelector('#assistantChatForm');
+    const input = panel.querySelector('#assistantMessage');
+    const sendBtn = panel.querySelector('#assistantSendBtn');
+    const cameraBtn = panel.querySelector('#assistantCameraBtn');
+    const dictateBtn = panel.querySelector('#assistantDictateBtn');
+    const clearBtn = panel.querySelector('#assistantClearChat');
+
+    assistantChatCtrl = {
+      panel,
+      chatEl,
+      form,
+      input,
+      sendBtn,
+      cameraBtn,
+      dictateBtn,
+      clearBtn,
+      messages: [],
+      sessionId: null,
+      sending: false,
+    };
+
+    form?.addEventListener('submit', handleAssistantChatSubmit);
+    clearBtn?.addEventListener('click', () => resetAssistantChat(true));
+    cameraBtn?.addEventListener('click', handleAssistantCameraStub);
+    dictateBtn?.addEventListener('click', handleAssistantDictateStub);
+    resetAssistantChat();
+  };
+
+  const handleAssistantCameraStub = () => {
+    console.info('[assistant-chat] camera capture placeholder');
+    diag?.add?.('[assistant-chat] Kamera', 'Noch nicht implementiert');
+  };
+
+  const handleAssistantDictateStub = () => {
+    console.info('[assistant-chat] dictate placeholder');
+    diag?.add?.('[assistant-chat] Diktat', 'Noch nicht implementiert');
+  };
+
+  const resetAssistantChat = (focusInput = false) => {
+    if (!assistantChatCtrl) return;
+    assistantChatCtrl.messages = [];
+    assistantChatCtrl.sessionId = null;
+    renderAssistantChat();
+    setAssistantSending(false);
+    if (focusInput) {
+      assistantChatCtrl.input?.focus();
+    }
+  };
+
+  const ensureAssistantSession = () => {
+    if (!assistantChatCtrl) return;
+    if (!assistantChatCtrl.sessionId) {
+      assistantChatCtrl.sessionId = `text-${Date.now()}`;
+    }
+  };
+
+  const handleAssistantChatSubmit = (event) => {
+    event.preventDefault();
+    if (!assistantChatCtrl) return;
+    const value = assistantChatCtrl.input?.value?.trim();
+    if (!value) return;
+    sendAssistantChatMessage(value);
+  };
+
+  const sendAssistantChatMessage = async (text) => {
+    if (!assistantChatCtrl || assistantChatCtrl.sending) return;
+    ensureAssistantSession();
+    appendAssistantMessage('user', text);
+    if (assistantChatCtrl.input) {
+      assistantChatCtrl.input.value = '';
+    }
+    setAssistantSending(true);
+    try {
+      const reply = await fetchAssistantTextReply();
+      if (reply) {
+        appendAssistantMessage('assistant', reply);
+      } else {
+        appendAssistantMessage('assistant', 'Ich habe nichts empfangen.');
+      }
+    } catch (err) {
+      console.error('[assistant-chat] request failed', err);
+      appendAssistantMessage('system', 'Assistant nicht erreichbar.');
+    } finally {
+      setAssistantSending(false);
+    }
+  };
+
+  const appendAssistantMessage = (role, content) => {
+    if (!assistantChatCtrl) return;
+    assistantChatCtrl.messages.push({
+      role: role === 'assistant' ? 'assistant' : role === 'system' ? 'system' : 'user',
+      content: content?.trim?.() || '',
+      id: `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
+    });
+    renderAssistantChat();
+  };
+
+  const renderAssistantChat = () => {
+    if (!assistantChatCtrl?.chatEl) return;
+    const container = assistantChatCtrl.chatEl;
+    container.innerHTML = '';
+    if (!assistantChatCtrl.messages.length) {
+      const placeholder = doc.createElement('div');
+      placeholder.className = 'assistant-chat-empty';
+      placeholder.innerHTML = '<p class="muted">Starte eine Unterhaltung oder schicke ein Foto deines Essens.</p>';
+      container.appendChild(placeholder);
+      return;
+    }
+    const frag = doc.createDocumentFragment();
+    assistantChatCtrl.messages.forEach((message) => {
+      const bubble = doc.createElement('div');
+      bubble.className = `assistant-bubble assistant-${message.role}`;
+      bubble.setAttribute('data-role', message.role);
+      bubble.textContent = message.content;
+      frag.appendChild(bubble);
+    });
+    container.appendChild(frag);
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    });
+  };
+
+  const setAssistantSending = (state) => {
+    if (!assistantChatCtrl) return;
+    assistantChatCtrl.sending = !!state;
+    if (assistantChatCtrl.sending) {
+      assistantChatCtrl.sendBtn?.setAttribute('disabled', 'disabled');
+      assistantChatCtrl.input?.setAttribute('disabled', 'disabled');
+    } else {
+      assistantChatCtrl.sendBtn?.removeAttribute('disabled');
+      assistantChatCtrl.input?.removeAttribute('disabled');
+      assistantChatCtrl.input?.focus();
+    }
+  };
+
+  const fetchAssistantTextReply = async () => {
+    ensureAssistantSession();
+    if (!assistantChatCtrl) return '';
+    const payload = {
+      session_id: assistantChatCtrl.sessionId ?? `text-${Date.now()}`,
+      mode: 'text',
+      messages: assistantChatCtrl.messages
+        .filter((msg) => msg.role === 'assistant' || msg.role === 'user')
+        .map((msg) => ({
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content,
+        })),
+    };
+    let response;
+    const headers = await buildFunctionJsonHeaders();
+    try {
+      response = await fetch(MIDAS_ENDPOINTS.assistant, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+    } catch (networkErr) {
+      throw networkErr;
+    }
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(errText || 'assistant failed');
+    }
+    const data = await response.json().catch(() => ({}));
+    const reply = (data?.reply || '').trim();
+    return reply;
   };
 
   const setupVoiceChat = (hub) => {

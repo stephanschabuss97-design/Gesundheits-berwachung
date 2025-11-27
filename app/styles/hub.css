@@ -996,6 +996,113 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   background: linear-gradient(to top, rgba(0,0,0,0.45), transparent);
 }
 
+.assistant-chat {
+  min-height: 320px;
+  border-radius: 18px;
+  background: rgba(10, 12, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.assistant-chat-empty {
+  text-align: center;
+  padding: 60px 12px;
+  opacity: 0.75;
+}
+
+.assistant-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  line-height: 1.4;
+  max-width: 80%;
+  word-break: break-word;
+}
+
+.assistant-bubble[data-role="user"],
+.assistant-bubble.assistant-user {
+  align-self: flex-end;
+  background: rgba(120, 170, 255, 0.15);
+  border: 1px solid rgba(120, 170, 255, 0.35);
+}
+
+.assistant-bubble[data-role="assistant"],
+.assistant-bubble.assistant-assistant {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.assistant-bubble[data-role="system"],
+.assistant-bubble.assistant-system {
+  align-self: center;
+  background: rgba(255, 120, 120, 0.12);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  font-size: 0.9rem;
+}
+
+.assistant-input-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.assistant-input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  padding: 10px 16px;
+}
+
+.assistant-input:focus-visible {
+  outline: none;
+  border-color: rgba(120, 170, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(120, 170, 255, 0.3);
+}
+
+.assistant-input-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.assistant-tool-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fefefe;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.assistant-tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.assistant-panel-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.assistant-panel-actions .btn.small {
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.assistant-panel-actions .hub-panel-close {
+  margin-left: 8px;
+}
+
 
 /* ==========================================================================
    HUB — Legacy Utility Animations (Reserve)

@@ -114,11 +114,12 @@
             <button
               type="button"
               class="hub-icon"
+              data-hub-module="assistant-text"
               data-orbit-pos="ne"
-              disabled
+              aria-pressed="false"
             >
               <span aria-hidden="true">??</span>
-              <span class="sr-only">Termine (bald)</span>
+              <span class="sr-only">Assistant Chat</span>
             </button>
             <button
               type="button"
@@ -177,6 +178,75 @@
               <span class="sr-only">Hilfe</span>
             </button>
           </div>
+        </div>
+      </div>
+    </section>
+    <!-- HUB-PANEL: Assistant Chat -->
+    <section
+      class="hub-panel"
+      id="hubAssistantPanel"
+      data-hub-panel="assistant-text"
+      role="region"
+      aria-labelledby="hubAssistantTitle"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubAssistantTitle">Assistant</h2>
+          <div class="assistant-panel-actions">
+            <button
+              type="button"
+              class="btn ghost small"
+              id="assistantClearChat"
+              aria-label="Chat leeren"
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              class="hub-panel-close"
+              data-panel-close
+              aria-label="Fenster schliessen"
+            >
+              &times;
+            </button>
+          </div>
+        </header>
+        <div class="hub-panel-body">
+          <div class="assistant-chat" id="assistantChat" aria-live="polite">
+            <div class="assistant-chat-empty">
+              <p class="muted">Starte eine Unterhaltung oder schicke ein Foto deines Essens.</p>
+            </div>
+          </div>
+          <form class="assistant-input-bar" id="assistantChatForm" autocomplete="off">
+            <div class="assistant-input-tools">
+              <button
+                type="button"
+                class="assistant-tool-btn"
+                id="assistantCameraBtn"
+                aria-label="Foto aufnehmen"
+              >
+                📷
+              </button>
+              <button
+                type="button"
+                class="assistant-tool-btn"
+                id="assistantDictateBtn"
+                aria-label="Eingabe diktieren"
+              >
+                🎙
+              </button>
+            </div>
+            <input
+              type="text"
+              id="assistantMessage"
+              class="assistant-input"
+              placeholder="Frage MIDAS etwas …"
+              required
+            >
+            <button class="btn primary" type="submit" id="assistantSendBtn">Senden</button>
+          </form>
         </div>
       </div>
     </section>
