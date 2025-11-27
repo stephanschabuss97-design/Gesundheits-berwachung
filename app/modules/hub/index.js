@@ -549,10 +549,10 @@
       }
     } catch (err) {
       console.error('[assistant-chat] request failed', err);
-      if (err?.message === 'vision-key-missing') {
+      if (err?.message === 'client-key-missing' || err?.message === 'vision-key-missing') {
         appendAssistantMessage(
           'system',
-          'OpenAI Vision Key fehlt. Bitte im Konfig-Menü als `openaiVisionKey` oder `openaiClientKey` hinterlegen.',
+          'OpenAI Client Key fehlt. Bitte im Konfig-Menü als `openaiClientKey` (oder `openaiVisionKey`) hinterlegen.',
         );
       } else {
         appendAssistantMessage('system', 'Assistant nicht erreichbar.');
@@ -675,7 +675,7 @@
 
   const fetchAssistantTextReplyDirect = async () => {
     const apiKey = await getOpenAiClientKey();
-    if (!apiKey) throw new Error('vision-key-missing');
+    if (!apiKey) throw new Error('client-key-missing');
     const conversation = buildAssistantConversationText();
     const body = {
       model: OPENAI_RESPONSES_MODEL,
