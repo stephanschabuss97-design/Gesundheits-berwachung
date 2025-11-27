@@ -49,6 +49,7 @@
     error: 'Fehler',
   };
   const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
+  const VAD_SILENCE_MS = 1000;
 
   let hubButtons = [];
   let activePanel = null;
@@ -385,6 +386,14 @@
       ampData: null,
       ampRaf: null,
       lastAmp: 0,
+      vadCtrl: global.MidasVAD?.createController({
+        threshold: 0.015,
+        minSpeechFrames: 2,
+        minSilenceFrames: 8,
+        reportInterval: 4,
+      }),
+      vadSilenceTimer: null,
+      lastSpeechAt: 0,
     };
     voiceCtrl.orbitEl?.setAttribute('data-voice-state', 'idle');
     voiceCtrl.orbitEl?.style.setProperty('--voice-amp', '0');
@@ -398,6 +407,9 @@
     voiceCtrl.button.dataset.voiceState = state;
     voiceCtrl.button.dataset.voiceLabel = label;
     voiceCtrl.button.setAttribute('aria-pressed', state === 'listening');
+    if (state !== 'listening') {
+      clearVadSilenceTimer();
+    }
     if (voiceCtrl.orbitEl) {
       voiceCtrl.orbitEl.setAttribute('data-voice-state', state);
       if (state !== 'speaking') {
@@ -489,6 +501,31 @@
     }
   };
 
+  const clearVadSilenceTimer = () => {
+    if (voiceCtrl?.vadSilenceTimer) {
+      global.clearTimeout(voiceCtrl.vadSilenceTimer);
+      voiceCtrl.vadSilenceTimer = null;
+    }
+  };
+
+  const handleVadStateChange = (state) => {
+    if (!voiceCtrl || voiceCtrl.status !== 'listening') return;
+    if (state === 'speech') {
+      voiceCtrl.lastSpeechAt = Date.now();
+      clearVadSilenceTimer();
+      return;
+    }
+    if (state === 'silence') {
+      if (voiceCtrl.vadSilenceTimer) return;
+      voiceCtrl.vadSilenceTimer = global.setTimeout(() => {
+        voiceCtrl.vadSilenceTimer = null;
+        if (!voiceCtrl || voiceCtrl.status !== 'listening') return;
+        console.info('[midas-voice] Auto-stop nach Stille');
+        stopVoiceRecording();
+      }, VAD_SILENCE_MS);
+    }
+  };
+
   const handleVoiceTrigger = () => {
     if (!voiceCtrl) {
       console.warn('[hub] voice controller missing');
@@ -542,15 +579,35 @@
       recorder.start();
       voiceCtrl.stream = stream;
       voiceCtrl.recorder = recorder;
+      voiceCtrl.lastSpeechAt = Date.now();
+      clearVadSilenceTimer();
+      if (voiceCtrl.vadCtrl) {
+        try {
+          await voiceCtrl.vadCtrl.start(stream, handleVadStateChange);
+        } catch (vadErr) {
+          console.warn('[hub] vad start failed', vadErr);
+        }
+      }
       setVoiceState('listening');
     } catch (err) {
       console.error('[hub] Unable to access microphone', err);
+      try {
+        voiceCtrl?.vadCtrl?.stop();
+      } catch (_) {
+        /* no-op */
+      }
       setVoiceState('error', 'Mikrofon blockiert?');
       setTimeout(() => setVoiceState('idle'), 2400);
     }
   };
 
   const stopVoiceRecording = () => {
+    clearVadSilenceTimer();
+    try {
+      voiceCtrl?.vadCtrl?.stop();
+    } catch (err) {
+      console.warn('[hub] vad stop failed', err);
+    }
     if (!voiceCtrl?.recorder) return;
     try {
       voiceCtrl.recorder.stop();
