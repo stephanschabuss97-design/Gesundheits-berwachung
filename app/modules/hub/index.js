@@ -494,6 +494,12 @@
       console.warn('[hub] voice controller missing');
       return;
     }
+    if (voiceCtrl.button) {
+      voiceCtrl.button.classList.add('is-pressed');
+      global.setTimeout(() => {
+        voiceCtrl?.button?.classList.remove('is-pressed');
+      }, 220);
+    }
     if (voiceCtrl.status === 'listening') {
       stopVoiceRecording();
       return;

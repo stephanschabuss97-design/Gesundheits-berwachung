@@ -382,6 +382,7 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   justify-content: center;
   transition: box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
   position: relative;
+  --core-tap-scale: 1;
 }
 
 .hub-core-trigger:hover,
@@ -401,21 +402,11 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 }
 
 .hub-core-trigger span[aria-hidden="true"] {
-  display: flex !important;
-  font-size: clamp(1.5rem, 6vw, 3rem);
-  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.35));
+  display: none !important;
 }
 
 .hub-core-trigger::after {
-  content: attr(data-voice-label);
-  position: absolute;
-  bottom: -34px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.85rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
+  content: '';
 }
 
 .hub-core-trigger[data-voice-state="listening"] {
@@ -561,10 +552,52 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
 @keyframes hubCorePulse {
   0% {
     transform: translate(-50%, -50%) scale(1);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.1),
+    0 0 22px rgba(120, 170, 255, 0.2);
+}
+
+.hub-core-trigger::before {
+  content: '';
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform: scale(var(--core-tap-scale, 1));
+  opacity: 0.5;
+  transition: transform 180ms ease-out, opacity 180ms ease-out;
+  pointer-events: none;
+}
+
+.hub-core-trigger.is-pressed::before {
+  transform: scale(0.93);
+  opacity: 0.8;
+}
+
+.hub-core-trigger.is-pressed {
+  animation: hubCorePressWave 260ms ease-out 1;
+}
+
+@keyframes hubCorePressWave {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
     box-shadow:
       inset 0 0 18px rgba(255, 255, 255, 0.1),
       0 0 22px rgba(120, 170, 255, 0.2);
   }
+  60% {
+    transform: translate(-50%, -50%) scale(0.97);
+    box-shadow:
+      inset 0 0 26px rgba(255, 255, 255, 0.22),
+      0 0 32px rgba(120, 170, 255, 0.45);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      inset 0 0 18px rgba(255, 255, 255, 0.1),
+      0 0 22px rgba(120, 170, 255, 0.2);
+  }
+}
   50% {
     transform: translate(-50%, -50%) scale(1.02);
     box-shadow:
