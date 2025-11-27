@@ -468,8 +468,8 @@
         sum += Math.abs(voiceCtrl.ampData[i] - 128);
       }
       const avg = sum / voiceCtrl.ampData.length; // 0..128
-      const normalized = Math.min(1, avg / 70);
-      const smoothed = voiceCtrl.lastAmp * 0.8 + normalized * 0.2;
+      const normalized = Math.min(1, avg / 50);
+      const smoothed = voiceCtrl.lastAmp * 0.7 + normalized * 0.3;
       setVoiceAmplitude(smoothed);
       voiceCtrl.ampRaf = global.requestAnimationFrame(tick);
     };
