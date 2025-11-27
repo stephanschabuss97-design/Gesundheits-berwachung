@@ -1132,4 +1132,3 @@
 
   appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
 })(typeof window !== 'undefined' ? window : globalThis);
-
