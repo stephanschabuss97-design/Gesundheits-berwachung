@@ -49,8 +49,8 @@
     error: 'Fehler',
   };
   const VOICE_FALLBACK_REPLY = 'Hallo Stephan, ich bin bereit.';
-  const OPENAI_VISION_ENDPOINT = 'https://api.openai.com/v1/responses';
-  const OPENAI_VISION_MODEL = 'gpt-4.1-mini';
+  const OPENAI_RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
+  const OPENAI_RESPONSES_MODEL = 'gpt-4.1-mini';
   const MAX_ASSISTANT_PHOTO_BYTES = 6 * 1024 * 1024;
   const VAD_SILENCE_MS = 1000;
   const CONVERSATION_AUTO_RESUME_DELAY = 450;
@@ -122,8 +122,10 @@
   let voiceCtrl = null;
   let assistantChatCtrl = null;
   let supabaseFunctionHeadersPromise = null;
-  let openAiVisionKeyCache = null;
-  let openAiVisionKeyPromise = null;
+  let openAiClientKeyCache = null;
+  let openAiClientKeyPromise = null;
+  const USE_DIRECT_ASSISTANT_CHAT =
+    typeof window !== 'undefined' && window.location?.hostname?.includes('github.io');
 
   const getSupabaseApi = () => appModules.supabase || {};
 
@@ -547,7 +549,14 @@
       }
     } catch (err) {
       console.error('[assistant-chat] request failed', err);
-      appendAssistantMessage('system', 'Assistant nicht erreichbar.');
+      if (err?.message === 'vision-key-missing') {
+        appendAssistantMessage(
+          'system',
+          'OpenAI Vision Key fehlt. Bitte im Konfig-Menü als `openaiVisionKey` oder `openaiClientKey` hinterlegen.',
+        );
+      } else {
+        appendAssistantMessage('system', 'Assistant nicht erreichbar.');
+      }
     } finally {
       setAssistantSending(false);
     }
@@ -629,6 +638,9 @@
   };
 
   const fetchAssistantTextReply = async () => {
+    if (USE_DIRECT_ASSISTANT_CHAT) {
+      return fetchAssistantTextReplyDirect();
+    }
     ensureAssistantSession();
     if (!assistantChatCtrl) return '';
     const payload = {
@@ -658,6 +670,53 @@
     }
     const data = await response.json().catch(() => ({}));
     const reply = (data?.reply || '').trim();
+    return reply;
+  };
+
+  const fetchAssistantTextReplyDirect = async () => {
+    const apiKey = await getOpenAiClientKey();
+    if (!apiKey) throw new Error('vision-key-missing');
+    const conversation = buildAssistantConversationText();
+    const body = {
+      model: OPENAI_RESPONSES_MODEL,
+      input: [
+        {
+          role: 'system',
+          content: [
+            {
+              type: 'input_text',
+              text:
+                'Du bist MIDAS, der Gesundheits-Assistent von Stephan. Antworte kurz, freundlich und fokussiere dich auf Wasser/Salz/Protein bzw. die zuletzt besprochenen Werte.',
+            },
+          ],
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: conversation || 'Stephan: Hallo MIDAS.',
+            },
+          ],
+        },
+      ],
+      max_output_tokens: 500,
+    };
+    const response = await fetch(OPENAI_RESPONSES_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(errText || 'vision-failed');
+    }
+    const completion = await response.json().catch(() => ({}));
+    const reply = extractVisionReplyText(completion);
+    if (!reply) throw new Error('vision-empty');
     return reply;
   };
 
@@ -732,7 +791,7 @@
       ],
       max_output_tokens: 400,
     };
-    const response = await fetch(OPENAI_VISION_ENDPOINT, {
+    const response = await fetch(OPENAI_RESPONSES_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -752,16 +811,20 @@
     return reply;
   };
 
-  const getOpenAiVisionKey = async () => {
-    if (openAiVisionKeyCache) return openAiVisionKeyCache;
-    if (!openAiVisionKeyPromise) {
-      openAiVisionKeyPromise = (async () => {
+  const getOpenAiClientKey = async () => {
+    if (openAiClientKeyCache) return openAiClientKeyCache;
+    if (!openAiClientKeyPromise) {
+      openAiClientKeyPromise = (async () => {
         let key = '';
         if (typeof global.getConf === 'function') {
           try {
-            key = String((await global.getConf('openaiVisionKey')) || '').trim();
+            key = String(
+              (await global.getConf('openaiClientKey')) ||
+                (await global.getConf('openaiVisionKey')) ||
+                '',
+            ).trim();
           } catch (err) {
-            console.warn('[assistant-chat] openaiVisionKey konnte nicht gelesen werden', err);
+            console.warn('[assistant-chat] openai client key konnte nicht gelesen werden', err);
           }
         }
         if (!key && typeof global.MIDAS_OPENAI_KEY === 'string') {
@@ -773,10 +836,10 @@
         return key;
       })();
     }
-    const key = (await openAiVisionKeyPromise) || '';
-    openAiVisionKeyCache = key;
-    openAiVisionKeyPromise = null;
-    return openAiVisionKeyCache;
+    const key = (await openAiClientKeyPromise) || '';
+    openAiClientKeyCache = key;
+    openAiClientKeyPromise = null;
+    return openAiClientKeyCache;
   };
 
   const extractVisionReplyText = (completion) => {
