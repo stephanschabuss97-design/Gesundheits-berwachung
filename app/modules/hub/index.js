@@ -656,8 +656,16 @@
       console.error('[hub] assistant failed:', errText);
       throw new Error(errText || 'assistant failed');
     }
-    const data = await response.json().catch(() => ({}));
-    let reply = (data?.reply || '').trim();
+    const rawText = await response.text();
+    let data: any = {};
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (err) {
+      console.warn('[hub] assistant response not JSON, using raw text');
+      data = {};
+    }
+
+    let reply = (data?.reply || rawText || '').trim();
     if (!reply) {
       console.info('[midas-voice] Assistant reply empty, using fallback.');
       reply = VOICE_FALLBACK_REPLY;
