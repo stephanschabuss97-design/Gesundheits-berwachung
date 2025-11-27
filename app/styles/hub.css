@@ -90,43 +90,14 @@ body:has(.hub-panel.is-visible) .hub-icon {
 .hub-orbit {
   --midas-aura-boost: 0;
   --hub-orb-size: clamp(320px, 92vw, 920px);
-  --voice-base-glow: 0.2;
+  --voice-base-glow: 0.25;
+  --voice-ring-scale: 0.02;
   --voice-amp: 0;
-  --voice-ring-scale: 0.025;
   position: relative;
   width: var(--hub-orb-size);
   aspect-ratio: 1;
   margin: 0 auto clamp(6px, 2vw, 20px);
   transition: filter 260ms ease-out, transform 260ms ease-out;
-}
-
-.hub-orbit[data-voice-state="idle"] {
-  --voice-base-glow: 0.2;
-  --voice-ring-scale: 0.025;
-}
-
-.hub-orbit[data-voice-state="listening"] {
-  --voice-base-glow: 0.6;
-  --voice-ring-scale: 0.085;
-  --midas-aura-boost: 0.4;
-}
-
-.hub-orbit[data-voice-state="thinking"] {
-  --voice-base-glow: 0.32;
-  --voice-ring-scale: 0.04;
-  --midas-aura-boost: 0.2;
-}
-
-.hub-orbit[data-voice-state="speaking"] {
-  --voice-base-glow: 0.42;
-  --voice-ring-scale: 0.052;
-  --midas-aura-boost: calc(0.45 + 0.45 * min(var(--voice-amp), 1));
-}
-
-.hub-orbit[data-voice-state="error"] {
-  --voice-base-glow: 0.12;
-  --voice-ring-scale: 0.02;
-  --midas-aura-boost: 0.05;
 }
 
 .hub-orb {
@@ -170,49 +141,6 @@ body:has(.hub-panel.is-visible) .hub-icon {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  transition: transform 220ms ease;
-}
-
-.hub-orb-needle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: clamp(110px, 24vw, 320px);
-  height: clamp(110px, 24vw, 320px);
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4;
-  cursor: pointer;
-}
-
-.hub-orb-needle:focus-visible {
-  outline: none;
-}
-
-.hub-orb-needle img {
-  pointer-events: none;
-}
-
-@keyframes hubNeedlePress {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-  40% {
-    transform: translate(-50%, -50%) scale(0.96);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-body:has(.hub-core-trigger.is-pressed) .hub-orb-fg {
-  animation: hubNeedlePress 200ms ease-out;
 }
 
 /* 🔵🟣 M.I.D.A.S. Aura — Blau/Magenta */
@@ -321,55 +249,88 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   pointer-events: none;
 
   border: 2px solid rgba(255, 210, 130, 0.9);
-  box-shadow:
-    0 0 10px rgba(255, 210, 130, 0.7),
-    0 0 26px rgba(255, 210, 130, 0.4);
-
   background:
     radial-gradient(circle at 32% 20%,
       rgba(255, 255, 255, 0.22),
       transparent 80%
     );
 
-  --ring-glow: clamp(calc(var(--voice-base-glow, 0.2) + var(--voice-amp, 0)), 0, 1.3);
-  opacity: calc(0.35 + 0.5 * var(--ring-glow));
-  animation: midasRingPulse 60s ease-in-out infinite;
+  --ring-glow: clamp(calc(var(--voice-base-glow, 0.25) + var(--voice-amp, 0)), 0, 1.3);
+  opacity: calc(0.3 + 0.45 * var(--ring-glow));
   transform: scale(calc(1 + var(--voice-ring-scale, 0.02) + 0.08 * var(--ring-glow)));
   box-shadow:
-    0 0 calc(12px + 30px * var(--ring-glow)) rgba(255, 210, 130, 0.75),
-    0 0 calc(26px + 56px * var(--ring-glow)) rgba(255, 210, 130, 0.48);
+    0 0 calc(12px + 28px * var(--ring-glow)) rgba(255, 210, 130, 0.75),
+    0 0 calc(26px + 48px * var(--ring-glow)) rgba(255, 210, 130, 0.45);
   transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    opacity 160ms ease;
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    opacity 140ms ease;
+  animation: midasRingIdle 26s ease-in-out infinite;
 }
 
-@keyframes midasRingPulse {
-  0%, 100% {
-    opacity: 0.9;
-  }
-  50% {
-    opacity: 1;
-  }
+@keyframes midasRingIdle {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+
+@keyframes midasRingThinking {
+  0%   { filter: hue-rotate(0deg); opacity: 0.7; }
+  45%  { filter: hue-rotate(12deg); opacity: 1; }
+  90%  { filter: hue-rotate(0deg); opacity: 0.8; }
+  100% { filter: hue-rotate(0deg); opacity: 0.7; }
+}
+
+@keyframes midasRingSpeak {
+  0%   { box-shadow: 0 0 18px rgba(255, 210, 130, 0.55), 0 0 40px rgba(255, 210, 130, 0.32); }
+  50%  { box-shadow: 0 0 32px rgba(255, 230, 160, 0.9), 0 0 70px rgba(255, 210, 130, 0.55); }
+  100% { box-shadow: 0 0 18px rgba(255, 210, 130, 0.55), 0 0 40px rgba(255, 210, 130, 0.32); }
+}
+
+/* Voice state modifiers */
+.hub-orbit[data-voice-state="idle"] {
+  --voice-base-glow: 0.22;
+  --voice-ring-scale: 0.02;
+}
+
+.hub-orbit[data-voice-state="listening"] {
+  --voice-base-glow: 0.45;
+  --voice-ring-scale: 0.065;
+}
+
+.hub-orbit[data-voice-state="thinking"] {
+  --voice-base-glow: 0.34;
+  --voice-ring-scale: 0.04;
+}
+
+.hub-orbit[data-voice-state="speaking"] {
+  --voice-base-glow: 0.5;
+  --voice-ring-scale: 0.035;
+}
+
+.hub-orbit[data-voice-state="error"] {
+  --voice-base-glow: 0.18;
+  --voice-ring-scale: 0.015;
 }
 
 .hub-orbit[data-voice-state="listening"] .midas-ring-gold {
-  animation-duration: 30s;
+  animation-duration: 14s;
+}
+
+.hub-orbit[data-voice-state="thinking"] .midas-ring-gold {
+  animation: midasRingThinking 1.6s ease-in-out infinite;
+  box-shadow:
+    0 0 18px rgba(120, 190, 255, 0.55),
+    0 0 36px rgba(220, 130, 255, 0.45);
 }
 
 .hub-orbit[data-voice-state="speaking"] .midas-ring-gold {
-  animation-duration: 24s;
+  animation: midasRingSpeak 2.4s ease-in-out infinite;
 }
 
-.hub-orbit[data-voice-state="speaking"] .midas-aura-flow {
-  filter: blur(calc(4px + 14px * min(var(--voice-amp), 1)));
-  opacity: calc(1 + 0.7 * min(var(--voice-amp), 1));
-}
-
-/* Wenn Panel aktiv → Ring etwas lebendiger */
-body:has(.hub-panel.is-visible) .midas-ring-gold {
-  opacity: 0.95;
-  animation: midasRingPulse 32s ease-in-out infinite;
+.hub-orbit[data-voice-state="speaking"] .midas-ring-gold,
+.hub-orbit[data-voice-state="listening"] .midas-ring-gold {
+  filter: drop-shadow(0 0 6px rgba(255, 215, 160, 0.45));
 }
 
 /* Glas-Highlight-Ring */
@@ -405,68 +366,67 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   transform: translate(-50%, -50%);
 }
 
-/* ORBIT – Button Positions (Restored) */
-.hub-orbit-icons {
-  --orbit-radius: calc(var(--hub-orb-size) * 0.42);
-}
-
-.hub-orbit-icons .hub-icon {
-  transform:
-    translate(-50%, -50%)
-    rotate(var(--angle))
-    translateX(var(--orbit-radius))
-    rotate(calc(-1 * var(--angle)));
-}
-
-.hub-icon[data-id="intake"] {
-  --angle: 0deg;
-}
-
-.hub-icon[data-id="bp"] {
-  --angle: 72deg;
-}
-
-.hub-icon[data-id="body"] {
-  --angle: 144deg;
-}
-
-.hub-icon[data-id="events"] {
-  --angle: 216deg;
-}
-
-.hub-icon[data-id="training"] {
-  --angle: 288deg;
-}
-
 .hub-core-trigger {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: clamp(120px, 24vw, 280px);
-  height: clamp(120px, 24vw, 280px);
+  width: clamp(140px, 32vw, 420px);
+  height: clamp(140px, 32vw, 420px);
   z-index: 8;
   pointer-events: auto;
   border-radius: 50%;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, 0.08),
+    0 0 22px rgba(120, 170, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
   position: relative;
-  clip-path: circle(45%);
 }
 
 .hub-core-trigger:hover,
 .hub-core-trigger:focus-visible {
-  border-color: transparent;
-  background: transparent;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 0 24px rgba(255, 255, 255, 0.16),
+    0 0 30px rgba(120, 170, 255, 0.45);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.02) 70%);
+}
+
+.hub-core-trigger:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 28px rgba(255, 255, 255, 0.2),
+    0 0 34px rgba(120, 170, 255, 0.6);
 }
 
 .hub-core-trigger span[aria-hidden="true"] {
   display: none !important;
+}
+
+.hub-core-trigger[data-voice-state="listening"] {
+  border-color: rgba(130, 220, 255, 0.65);
+  background: radial-gradient(circle, rgba(130, 220, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  animation: hubCorePulse 1200ms ease-in-out infinite;
+}
+
+.hub-core-trigger[data-voice-state="thinking"] {
+  border-color: rgba(255, 214, 130, 0.6);
+  background: radial-gradient(circle, rgba(255, 214, 130, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.hub-core-trigger[data-voice-state="speaking"] {
+  border-color: rgba(255, 140, 200, 0.65);
+  background: radial-gradient(circle, rgba(255, 140, 200, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.hub-core-trigger[data-voice-state="error"] {
+  border-color: rgba(255, 120, 120, 0.7);
+  background: radial-gradient(circle, rgba(255, 120, 120, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 /* Stealth-Touch-Targets: unsichtbare Buttons, Feedback über Aura + Vibration */
@@ -609,30 +569,6 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
   }
 }
 
-.hub-core-trigger.is-pressed {
-  animation: hubCorePressWave 260ms ease-out 1;
-}
-
-@keyframes hubCorePressWave {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow:
-      inset 0 0 18px rgba(255, 255, 255, 0.1),
-      0 0 22px rgba(120, 170, 255, 0.2);
-  }
-  60% {
-    transform: translate(-50%, -50%) scale(0.97);
-    box-shadow:
-      inset 0 0 26px rgba(255, 255, 255, 0.22),
-      0 0 32px rgba(120, 170, 255, 0.45);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow:
-      inset 0 0 18px rgba(255, 255, 255, 0.1),
-      0 0 22px rgba(120, 170, 255, 0.2);
-  }
-}
 
 /* ==========================================================================
    HUB – Intake pills
@@ -1088,4 +1024,3 @@ body:has(.hub-panel.is-visible) .midas-ring-gold {
     filter: hue-rotate(18deg);
   }
 }
-
