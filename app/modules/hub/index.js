@@ -431,13 +431,30 @@
     hub.appendChild(pills);
   };
 
+  let assistantChatSetupAttempts = 0;
+  const ASSISTANT_CHAT_MAX_ATTEMPTS = 10;
+  const ASSISTANT_CHAT_RETRY_DELAY = 250;
+
   const setupAssistantChat = (hub) => {
     console.info('[assistant-chat] setupAssistantChat called');
-    const panel = hub.querySelector('#hubAssistantPanel');
-    if (!panel) {
-      console.info('[assistant-chat] panel missing');
+    if (assistantChatCtrl) {
+      console.info('[assistant-chat] controller already initialised');
       return;
     }
+    const panel = hub.querySelector('#hubAssistantPanel');
+    if (!panel) {
+      assistantChatSetupAttempts += 1;
+      console.warn('[assistant-chat] panel missing', {
+        attempt: assistantChatSetupAttempts,
+      });
+      if (assistantChatSetupAttempts < ASSISTANT_CHAT_MAX_ATTEMPTS) {
+        global.setTimeout(() => setupAssistantChat(hub), ASSISTANT_CHAT_RETRY_DELAY);
+      } else {
+        console.error('[assistant-chat] panel missing after retries');
+      }
+      return;
+    }
+    assistantChatSetupAttempts = 0;
     console.info('[assistant-chat] panel found');
     const chatEl = panel.querySelector('#assistantChat');
     const form = panel.querySelector('#assistantChatForm');
