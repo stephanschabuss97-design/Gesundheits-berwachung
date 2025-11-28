@@ -517,6 +517,7 @@
     if (!assistantChatCtrl) return;
     if (!assistantChatCtrl.sessionId) {
       assistantChatCtrl.sessionId = `text-${Date.now()}`;
+      console.info('[assistant-chat] new session', assistantChatCtrl.sessionId);
     }
   };
 
@@ -525,11 +526,13 @@
     if (!assistantChatCtrl) return;
     const value = assistantChatCtrl.input?.value?.trim();
     if (!value) return;
+    console.info('[assistant-chat] submit', { value });
     sendAssistantChatMessage(value);
   };
 
   const sendAssistantChatMessage = async (text) => {
     if (!assistantChatCtrl || assistantChatCtrl.sending) return;
+    console.info('[assistant-chat] send start', { text });
     ensureAssistantSession();
     appendAssistantMessage('user', text);
     if (assistantChatCtrl.input) {
@@ -555,6 +558,7 @@
       }
     } finally {
       setAssistantSending(false);
+      console.info('[assistant-chat] send end');
     }
   };
 
@@ -1168,14 +1172,16 @@
     }
     const loader = (async () => {
       if (typeof global.getConf !== 'function') {
-        console.warn('[hub] getConf missing � cannot load Supabase key');
+        console.warn('[hub] getConf missing - cannot load Supabase key');
         return null;
       }
       try {
+        console.info('[assistant-chat] loading webhookKey via getConf');
         const stored = await global.getConf('webhookKey');
         const raw = String(stored || '').trim();
+        console.info('[assistant-chat] webhookKey present?', !!raw);
         if (!raw) {
-          console.warn('[hub] Supabase webhookKey missing � voice API locked');
+          console.warn('[hub] Supabase webhookKey missing - voice API locked');
           return null;
         }
         const bearer = raw.startsWith('Bearer ') ? raw : `Bearer ${raw}`;
@@ -1194,7 +1200,6 @@
     supabaseFunctionHeadersPromise = loader;
     return loader;
   };
-
   const buildFunctionJsonHeaders = async () => {
     const headers = {
       'Content-Type': 'application/json',
