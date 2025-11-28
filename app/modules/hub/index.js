@@ -461,7 +461,6 @@
     const input = panel.querySelector('#assistantMessage');
     const sendBtn = panel.querySelector('#assistantSendBtn');
     const cameraBtn = panel.querySelector('#assistantCameraBtn');
-    const dictateBtn = panel.querySelector('#assistantDictateBtn');
     const clearBtn = panel.querySelector('#assistantClearChat');
 
     const photoInput = doc.createElement('input');
@@ -478,7 +477,6 @@
       input,
       sendBtn,
       cameraBtn,
-      dictateBtn,
       clearBtn,
       photoInput,
       messages: [],
@@ -510,7 +508,6 @@
     clearBtn?.addEventListener('click', () => resetAssistantChat(true));
     photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
     cameraBtn?.addEventListener('click', handleAssistantCameraClick);
-    dictateBtn?.addEventListener('click', handleAssistantDictateStub);
     resetAssistantChat();
     console.info('[assistant-chat] setup complete');
   };
@@ -538,11 +535,6 @@
       console.error('[assistant-chat] foto konnte nicht gelesen werden', err);
       appendAssistantMessage('system', 'Das Foto konnte nicht gelesen werden.');
     }
-  };
-
-  const handleAssistantDictateStub = () => {
-    console.info('[assistant-chat] dictate placeholder');
-    diag?.add?.('[assistant-chat] Diktat', 'Noch nicht implementiert');
   };
 
   const resetAssistantChat = (focusInput = false) => {
@@ -670,12 +662,10 @@
       assistantChatCtrl.sendBtn?.setAttribute('disabled', 'disabled');
       assistantChatCtrl.input?.setAttribute('disabled', 'disabled');
       assistantChatCtrl.cameraBtn?.setAttribute('disabled', 'disabled');
-      assistantChatCtrl.dictateBtn?.setAttribute('disabled', 'disabled');
     } else {
       assistantChatCtrl.sendBtn?.removeAttribute('disabled');
       assistantChatCtrl.input?.removeAttribute('disabled');
       assistantChatCtrl.cameraBtn?.removeAttribute('disabled');
-      assistantChatCtrl.dictateBtn?.removeAttribute('disabled');
       assistantChatCtrl.input?.focus();
     }
   };
