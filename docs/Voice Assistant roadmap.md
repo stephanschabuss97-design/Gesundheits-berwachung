@@ -101,156 +101,197 @@ Each phase → dedicated commit + README/Changelog/QA snippet; keep a feature fl
 2. Add dictation hook/Web Speech integration for the chat input (Phase 3.3).
 3. Optional: revisit Bootstrap Layer items when voice/chat remain stable.
 
+´´´
 
 New roadmap für CODEX Abgleich:
-# MIDAS Voice Assistant – Incremental Roadmap (final, “Butler + Foodcoach”)
+MIDAS Voice Assistant – Incremental Roadmap (final, “Butler + Foodcoach”)
 
-**Goal:** A modular assistant loop for MIDAS  
-→ **Voice = hands-free Butler** (steuert UI + loggt Intakes direkt)  
-→ **Textchat = Foodcoach** (Fotoanalyse → Vorschlag → *optional* loggen)  
-→ **No chat archive**, Session-only memory, **Intakes-first**.
-
----
+Goal: A modular assistant loop for MIDAS
+→ Voice = hands-free Butler (steuert UI + loggt Intakes direkt, mit Hybrid-Engine)
+→ Textchat = Foodcoach (Fotoanalyse → Vorschlag → optional loggen)
+→ No chat archive, Session-only memory, Intakes-first.
 
 ## 0) Bootstrap Layer (Pre-Init) — nice-to-have, darf NICHT blocken
-- **0.1 Boot-Logger** (`<head>`)  
-  Fängt Syntaxfehler, Promise-Rejections, CSP/Ladefehler → `localStorage: midas_bootlog_v1`
-- **0.2 Bootlog-Merge**  
-  Merge nach App-Start in Touchlog (`midas_touchlog_vX`) → Bootlog danach löschen
-- **0.3 Bootstrap Validator (optional later)**  
-  Checks: Supabase ready, (PWA/SW später), AudioContext erlaubt, KI-Session init, etc.  
-  Fail → Diagnose-Screen
-- **0.4 Bootstrap Finish**  
-  `midas-state="idle"` + Touchlog “BOOT OK – vX.Y.Z” + Voice Engine ready
 
----
+**1 Boot-Logger (<head>)**
+Fängt Syntaxfehler, Promise-Rejections, CSP/Ladefehler → localStorage: midas_bootlog_v1
+**2 Bootlog-Merge**
+Merge nach App-Start in Touchlog (midas_touchlog_vX), danach Bootlog löschen
+**3 Bootstrap Validator (optional später)**
+Checks: Supabase ready, (PWA/SW später), AudioContext erlaubt, KI-Session init etc.
+Fail → Diagnose-Screen
+**4 Bootstrap Finish**
+midas-state="idle" + Touchlog “BOOT OK – vX.Y.Z” + Voice Engine ready
 
 ## 1) Frontend – Voice Controller (Phase 1 ✅)
-Implementiert in `app/modules/hub/index.js`, Styling in `app/styles/hub.css`.
+Implementiert in app/modules/hub/index.js, Styling in app/styles/hub.css.
 
-1. **Audio Capture Skeleton ✅**
-2. **Transcribe Integration ✅** (voll testbar sobald Billing aktiv)
-3. **Assistant Roundtrip ✅**
-4. **TTS Playback ✅**
-5. **Glow-Ring Animation ✅/WIP**  
-   Idle/listening/thinking/speaking/error → Ring/Aura
-6. **Needle Trigger Feedback ✅**  
-   Nadel = Start/Stop, Press-Scale
-7. **Auto-stop via VAD ✅**  
-   1s Stille → stop capture
-
-**Add-on (jetzt gerade im Bau):**
-- **Conversation Loop / End-of-Conversation**  
-  “Brauchst du sonst noch was?” → erkennt “nein danke” etc. → beendet Session clean.
-
----
+**1 Audio Capture Skeleton** ✅
+MediaRecorder, idle→listening State, Blob-Logging
+**2 Transcribe Integration** ✅
+Upload zu /midas-transcribe, thinking State, Transcript-Logging
+**3 Assistant Roundtrip** ✅
+Request → /midas-assistant → Antwort/Actions
+**4 TTS Playback** ✅
+/midas-tts, <audio>-Playback, Stop/Interrupt, saubere JSON-Struktur
+**5 Glow-Ring Animation** ✅
+idle/listening/thinking/speaking/error → Ring/Aura-State
+**6 Needle Trigger Feedback** ✅
+Nadel-Button startet/stoppt Voice-Session, Press-Animation + State-Glow
+**7 Auto-stop via VAD** ✅
+1 s Stille → Aufnahme wird gestoppt
+**8 Conversation Loop / End-of-Conversation** ✅
+„Brauchst du sonst noch was?“ → erkennt Phrasen wie „nein danke“ etc. → beendet Session sauber.
 
 ## 2) Backend – Supabase Edge Functions (Phase 2 ✅)
-1. **midas-transcribe ✅** (Whisper / `gpt-4o-transcribe`)
-2. **midas-assistant ✅** (Responses API, System Prompt, voice/text mode)
-3. **midas-tts ✅** (OpenAI TTS; Audio output + fallback)
-4. **midas-vision ✅** (Foto → strukturierter Intake-Vorschlag)
 
-> Prinzip: **Kein OpenAI-Key im Browser**, alles über Supabase Functions.
-
----
+**1 midas-transcribe** ✅
+Whisper / gpt-4o-transcribe, CORS, Logging, Error-Passthrough
+**2 midas-assistant** ✅
+Responses API, System Prompt, mode = text | voice, Session/Meta
+**3 midas-tts** ✅
+OpenAI TTS (gpt-4o-mini-tts), Default-Stimme cedar, Emotion-Parameter (calm, motivating, empathic, focusing, encouraging)
+**4 midas-vision** ✅
+Foto → Base64 → /midas-vision → gpt-4.1-mini → Wasser/Salz/Protein + Empfehlung (kein OpenAI-Key im Browser)
 
 ## 3) Assistant UI – Textchat / Foodcoach (Phase 3)
-1. **Assistant Text UI ✅**  
-   Orbit-Button öffnet Textchat, RAM-History, Session-only
-2. **Foto-Analyse ✅**  
-   Kamera → base64 → `/midas-vision` → **Wasser/Salz/Protein + Empfehlung**
-3. **Diktiermodus (optional)**  
-   WebSpeech nur als “Input Hilfe” für Textbox (nicht Voice-Chat)
 
----
+**1 Assistant Text UI** ✅
+Orbit-Button öffnet Textchat; RAM-History, Session-only; Anfragen laufen über midas-assistant.
 
-## 4) Actions & Flows (Phase 4) — HIER wird MIDAS “Butler”
-### 4.1 Grundsatz: Was MIDAS darf (und was nicht)
-**Allowed (jetzt):**
-- `IntakeSave` (direkt loggen; Voice darf ohne Rückfrage, Text fragt standardmäßig nach)
-- `OpenModule` (Hub Panels öffnen: Intakes / Vitals / Doctor / später Termine)
-- `ReadSummary` (wenn Panel offen: “fass zusammen” → in Worten, ohne neue Daten zu erfinden)
-- `ShowIntakeStatus` (heute / aktuell: Wasser, Salz, Protein aus DB holen und kurz einordnen)
-- `StartTextChatWithCamera` (Voice kann dich in den Foto-Flow “werfen”: Panel öffnen + Kamera triggern)
-- `AssistantDiagnostics` (nur App-/Session-Diagnose, kein Code lesen)
+**2 Foto-Analyse** ✅
+Kamera / File-Picker → Base64 → /midas-vision → strukturierte Antwort (Wasser/Salz/Protein + Kurz-Empfehlung).
 
-**Not allowed:**
-- Chat-Persistenz in Supabase
-- Code-Introspection / Self-Update / Web-Tech-Scanning
-- Medizinische Diagnosen/Therapieanweisungen
+**3 Diktiermodus** (optional)
+WebSpeech nur als Input-Hilfe für das Textfeld
+→ nicht Teil des Voice-Assistant-Loops, sondern nur schnellere Eingabe für den Textchat.
 
-**Explizit NICHT geplant (vorerst):**
-- `BPSave`, `BodySave` via Voice/Text (du machst das manuell: schneller & sicherer)
+## 4) Actions & Flows (Phase 4) — HIER wird MIDAS zum “Butler”
+4.0 Voice Intent Engine – Client-Side Fast Path (NEW, Hybrid-Architektur)
 
-### 4.2 Voice-Butler Flows (hands-free)
-**Flow V1 – Quick Intake (direkt speichern):**
-- User: “Trag 500 ml Wasser ein.”  
-- MIDAS: speichert → bestätigt → “Noch etwas?”
-- End: “Nein danke”/”passt”/… → Session endet
+Ziel:
+Voice bleibt über die Nadel gesteuert (press → listening → thinking → speaking), aber:
+- Der Transkript-Text wird zuerst von einer lokalen Intent-Engine geprüft.
+- Wenn der Befehl eindeutig ist → JS führt ihn direkt aus (Fast Path).
+- Wenn unklar/komplex → Transkript geht an /midas-assistant (Smart Path).
+- Fast Path (JS-only, ohne KI-Roundtrip):
+- "öffne intakes" → openModule("intakes")
+- "öffne doctor view" → openModule("doctor")
+- "wasser 300 ml" / "300 milliliter wasser" → saveWater(300)
+- "protein 25 gramm" → saveIntake({ protein_g: 25 })
+- "zeig mir meine werte" → showIntakeStatusToday()
+- "schließ den chat" / "fertig" → Conversation-Loop-Ende
+- Smart Path (KI, über /midas-assistant):
+- „Wie schaut mein Tag heute aus?“
+- „Wie geht es meinen Nieren insgesamt?“
+- „Kannst du mir meine Werte erklären?“
+- „Soll ich heute noch etwas trinken/essen?“
+- „Was sagst du zu meinem Pulsdruck?“
 
-**Flow V2 – Status & Empfehlung (ohne Foto):**
-- User: “Wie schau ich heute aus mit Salz?”  
-- MIDAS: holt Tageswerte → kurzer Status + 1 next step
+Technische Idee:
+- detectIntent(transcript: string) → intent | null
+- Lives in z. B. app/modules/hub/voice-intent.js
+- Nutzt einfache Patterns/RegEx, keine KI.
+- executeIntent(intent)
+- Ruft UI/State-Funktionen auf (openModule, saveWater, saveIntake, showIntakeStatus etc.)
+- Wenn detectIntent kein Intent findet → Transkript an /midas-assistant, wie bisher.
 
-**Flow V3 – UI-Steuerung:**
-- User: “Öffne Intakes.” / “Zeig Doctor View.”  
-- MIDAS: `OpenModule` → optional `ReadSummary` wenn gefragt  
-- Doctor View: nur wenn Biometrie/Unlock aktiv (Front-end Gate bleibt Boss)
+Ergebnis:
+- Nadel-Button-Flow bleibt unverändert (kein Wakeword).
+- 90 % der Steuer-Befehle laufen instant über JS.
+- KI wird nur für echte „Denkarbeit“ angefragt.
+- Latenz beim Steuern der App ≈ 0.
 
-**Flow V4 – Übergabe an Foodcoach (Voice → Text):**
-- User: “Ich will Essen analysieren.”  
-- MIDAS: öffnet Textchat + Kamera → “Mach Foto, dann sag ‘logg das’ wenn’s passt.”
+**1 Grundsatz: Was MIDAS darf (und was nicht)**
 
-### 4.3 Textchat Foodcoach Flows (Fotoanalyse)
-**Flow T1 – Suggest → Confirm → Save:**
-- Foto → `suggestIntake` (midas-vision liefert **konkrete** Werte, keine Spannen)
-- MIDAS fragt: “Soll ich das loggen?”
-- User: “Ja” → `IntakeSave`
-- User: “Nein” → verwirft Vorschlag
+Allowed (current focus):
+IntakeSave
+– Intakes direkt speichern (über Voice oder Text).
+– Voice darf bei klaren Zahlen direkt speichern (Fast Path).
+– Text fragt standardmäßig nach („Soll ich das loggen?“).
 
----
+OpenModule
+– Panels im Hub öffnen: intakes, vitals, doctor (später termine).
+– Wird bevorzugt über JS-Fast-Path ausgeführt.
 
-## 5) Intake Copy Utilities (Phase 5) — kleiner Turbo für dich
-**Warum überhaupt, wenn MIDAS schon DB kann?**  
-Weil es ultra-schnell ist, um *außerhalb* von MIDAS (oder als Debug) Werte zu teilen.
+ReadSummary
+– Wenn ein Panel offen ist: kurze Zusammenfassung in Worten, ohne neue Werte zu erfinden.
+– Typischerweise KI-Pfad, optional auch JS-basierte Kurz-Zusammenfassung.
 
-- **Intake Copy Button** (nur Intakes)
-  - Kopiert Datum/Zeit/Wasser/Salz/Protein
-  - Format:
-    - **Text** (human)
-    - **Optional** “maschinenlesbar” als *eine Zeile* (kein großes JSON nötig)
-      - z. B. `INTAKE|2025-11-28|13:05|water_ml=500|salt_g=2.1|protein_g=52`
-  - (Optional) “Copy last intake” vs “Copy today totals”
+ShowIntakeStatus
+– Holt Tageswerte (Wasser/Salz/Protein) aus DB, ordnet sie kurz ein.
 
-> JSON ist *nicht* zu viel – aber für deinen Use Case reicht oft ein **parsebarer Einzeiler**.
+StartTextChatWithCamera
+– Voice kann nahtlos in den Foto-Flow übergeben:
+„Ich will Essen analysieren“ → Textchat/Cam öffnen, Hinweis geben.
 
----
+AssistantDiagnostics
+– Nur App-/Session-Diagnose, kein Code lesen oder introspektieren.
+
+Not allowed:
+Chat-Persistenz in Supabase (keine Archivierung).
+Code-Introspection / Self-Updates / Tech-Scanning.
+Medizinische Diagnosen oder Therapieempfehlungen.
+Explizit NICHT geplant (vorerst):
+BPSave, BodySave via Voice/Text.
+→ Blutdruck und Körperdaten loggst du manuell im UI (schneller & sicherer).
+
+**2 Voice-Butler Flows (Hands-Free, mit Hybrid-Engine)**
+
+- Flow V1 – Quick Intake (JS-first, KI optional):
+User: „Trag 500 ml Wasser ein.“
+detectIntent erkennt Wasser-Intake → JS saveWater(500)
+MIDAS (Cedar, emotion = encouraging oder calm):
+„500 ml Wasser sind eingetragen. Brauchst du sonst noch etwas?“
+User: „Nein danke.“ → Conversation-Loop beendet (end-of-session).
+- Flow V2 – Status & Empfehlung (Mix aus JS + KI):
+User: „Wie schau ich heute aus mit Salz?“
+JS: showIntakeStatusToday() holt Zahlen
+KI formatiert Antwort („Du liegst heute bei …, das ist innerhalb deines Zielbereichs.“)
+- Flow V3 – UI-Steuerung (JS-only, ultra-fast):
+User: „Öffne Intakes.“
+JS: openModule("intakes") → sofortiger Panel-Switch
+Optional: Cedar bestätigt kurz („Intakes sind offen.“).
+- Flow V4 – Übergabe an Foodcoach (Voice → Text + Vision):
+User: „Ich will mein Essen analysieren.“
+JS: öffnet Textchat + Kamera-Panel → UI-Hinweis „Mach ein Foto und schick es mir.“
+Ab hier: Foto → midas-vision → Text-Flow (Suggest → Confirm → Save).
+
+**3 Textchat Foodcoach Flows (Fotoanalyse, Text-only)**
+
+- Flow T1 – Suggest → Confirm → Save:
+Foto → /midas-vision → konkrete Salz-/Protein-/Wasser-Schätzung (keine Spanne, sondern Wert).
+MIDAS: „Ich würde das auf X g Salz und Y g Protein schätzen. Soll ich das so loggen?“
+User: „Ja.“ → IntakeSave mit diesen Werten.
+User: „Nein.“ → Vorschlag verwerfen, ggf. manueller Entry.
+
+## 5) Intake Copy Utilities (Phase 5)
+
+- Kleiner Turbo für Debugging/Sharing außerhalb von MIDAS.
+- Intake Copy Button
+- Kopiert Datum/Zeit/Wasser/Salz/Protein.
+
+Formate:
+- Menschlich lesbarer Text
+- Optional: parsebarer Einzeiler, z. B.: INTAKE|2025-11-28|13:05|water_ml=500|salt_g=2.1|protein_g=52
 
 ## 6) Termin- & Arztmodul (Phase 6 – später, nach PWA/TWA stabil)
-- Terminliste + Arztkartei
-- Voice: “Nächster Termin?” “Bring mich zum …”
-- `DoctorRouting` → Maps deep link
 
----
+- Terminliste + Arztkartei
+Voice: „Nächster Termin?“ / „Bring mich zum Nephrologen.“
+DoctorRouting → Maps-Deep-Link o. Ä.
+Sicherheitsgates im Frontend (Biometrie/Unlock) bleiben entscheidend.
 
 ## 7) Optional / Future
+
 - Streaming TTS
-- Wakeword
-- Offline fallback (Text-only)
-- Wearables/Watch readiness (erst **wenn** App & Actions sauber sind)
+- Wakeword („Midas?“) – nur falls technisch/energetisch sinnvoll
+- Offline-Fallback (Text-only Assistant, kein OpenAI)
+- Wearables/Watch readiness (nachdem Voice/Actions stabil sind)
+- Health-Briefings („Deine Woche war…“) als geschedulte Auswertung
 
----
+8) Commit-Strategie
 
-## 8) Commit-Strategie
-Jede Phase → eigener Commit + mini QA Note + Changelog Snippet  
-Feature-Flag bleibt: Voice komplett deaktivierbar.
-
----
-
-## Next Steps (dein aktueller Kurs)
-1. **Conversation Loop sauber machen** (End-of-convo erkannt → Session close)
-2. **Phase 4 Actions definieren** (Butler: OpenModule/ReadSummary/ShowIntakeStatus/IntakeSave)
-3. **Foodcoach Confirm→Save Flow** (suggestIntake → confirm → IntakeSave; keine Spannen!)
-4. **Glow-Ring Amplitude** (KITT-Style, speaking intensity)
-5. Optional: **Copy Button** als Debug-/Sharing-Turbo
+- Jede Phase → eigener Commit + mini QA-Note + Changelog-Snippet.
+- Feature-Flag bleibt: Voice-/Assistant-Modul kann komplett deaktiviert werden.
+- Hybrid-Engine (Intent-Detector) bleibt klar gekapselt (voice-intent.js), damit Codex gezielt daran arbeiten kann.
