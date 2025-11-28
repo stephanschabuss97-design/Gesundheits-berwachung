@@ -528,6 +528,8 @@
     sendAssistantChatMessage(value);
   };
 
+  console.log('[chat-test] headers', headers, payload);
+
   const sendAssistantChatMessage = async (text) => {
     if (!assistantChatCtrl || assistantChatCtrl.sending) return;
     ensureAssistantSession();
