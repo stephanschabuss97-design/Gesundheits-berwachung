@@ -441,7 +441,7 @@
       console.info('[assistant-chat] controller already initialised');
       return;
     }
-    const panel = hub.querySelector('#hubAssistantPanel');
+    const panel = doc?.getElementById('hubAssistantPanel');
     if (!panel) {
       assistantChatSetupAttempts += 1;
       console.warn('[assistant-chat] panel missing', {
