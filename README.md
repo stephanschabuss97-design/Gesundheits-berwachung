@@ -129,7 +129,9 @@ M.I.D.A.S
 │  │  └─ perf.js
 │  ├─ modules
 │  │  ├─ assistant
-│  │  │  └─ index.js
+│  │  │  ├─ actions.js
+│  │  │  ├─ index.js
+│  │  │  └─ session-agent.js
 │  │  ├─ capture
 │  │  │  ├─ body.js
 │  │  │  ├─ bp.js
@@ -141,7 +143,10 @@ M.I.D.A.S
 │  │  ├─ doctor
 │  │  │  └─ index.js
 │  │  ├─ hub
-│  │  │  └─ index.js
+│  │  │  ├─ index.js
+│  │  │  └─ vad
+│  │  │     ├─ vad-worklet.js
+│  │  │     └─ vad.js
 │  │  └─ trendpilot
 │  │     ├─ data.js
 │  │     └─ index.js
@@ -198,6 +203,9 @@ M.I.D.A.S
 │     └─ ui.js
 ├─ CHANGELOG.md
 ├─ docs
+│  ├─ assistant
+│  │  ├─ Assistant_Actions_Spec.md
+│  │  └─ Assistant_Endpoint_Spec.md
 │  ├─ Codex Programmandi.docx
 │  ├─ Future Refactors.md
 │  ├─ Git Survival Guide für Stephan.md
@@ -219,12 +227,14 @@ M.I.D.A.S
 │  │  ├─ State Layer Overview.md
 │  │  ├─ Supabase Core Overview.md
 │  │  ├─ Trendpilot Module Overview.md
-│  │  └─ Unlock Flow Overview.md
+│  │  ├─ Unlock Flow Overview.md
+│  │  └─ VAD Module Overview.md
 │  ├─ PWA-TWA Readiness.md
 │  ├─ QA_CHECKS.md
 │  ├─ QA_Notes.md
 │  ├─ Repo Tree v2.md
 │  ├─ Supabase Proxy Refactor Plan.md
+│  ├─ Voice Assistant roadmap.md
 │  └─ Zeus Feedback Engine.md
 ├─ index.html
 ├─ M.I.D.A.S..code-workspace
