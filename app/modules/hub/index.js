@@ -2,7 +2,7 @@
 /**
  * MODULE: hub/index.js
  * Description: Aktiviert das neue MIDAS Hub Layout, sobald `CAPTURE_HUB_V2` gesetzt ist.
- * Notes:
+ * Notes: 
  *  - UI-only: Buttons/Chat reagieren lokal, steuern noch keine Module.
  */
 
