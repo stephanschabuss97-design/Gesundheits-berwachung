@@ -650,6 +650,7 @@
     };
     let response;
     const headers = await buildFunctionJsonHeaders();
+    console.log('[assistant-chat] headers', headers, payload);
     try {
       response = await fetch(MIDAS_ENDPOINTS.assistant, {
         method: 'POST',
