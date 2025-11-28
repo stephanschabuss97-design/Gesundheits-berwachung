@@ -432,8 +432,13 @@
   };
 
   const setupAssistantChat = (hub) => {
+    console.info('[assistant-chat] setupAssistantChat called');
     const panel = hub.querySelector('#hubAssistantPanel');
-    if (!panel) return;
+    if (!panel) {
+      console.info('[assistant-chat] panel missing');
+      return;
+    }
+    console.info('[assistant-chat] panel found');
     const chatEl = panel.querySelector('#assistantChat');
     const form = panel.querySelector('#assistantChatForm');
     const input = panel.querySelector('#assistantMessage');
@@ -464,12 +469,33 @@
       sending: false,
     };
 
+    console.info('[assistant-chat] ctrl ready', {
+      hasForm: !!form,
+      hasInput: !!input,
+      hasSendBtn: !!sendBtn,
+    });
+
+    form?.addEventListener(
+      'submit',
+      (event) => {
+        console.info('[assistant-chat] form submit event', {
+          defaultPrevented: event.defaultPrevented,
+          type: event.type,
+        });
+      },
+      true,
+    );
+    sendBtn?.addEventListener('click', () => {
+      console.info('[assistant-chat] send button click');
+    });
+
     form?.addEventListener('submit', handleAssistantChatSubmit);
     clearBtn?.addEventListener('click', () => resetAssistantChat(true));
     photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
     cameraBtn?.addEventListener('click', handleAssistantCameraClick);
     dictateBtn?.addEventListener('click', handleAssistantDictateStub);
     resetAssistantChat();
+    console.info('[assistant-chat] setup complete');
   };
 
   const handleAssistantCameraClick = () => {
