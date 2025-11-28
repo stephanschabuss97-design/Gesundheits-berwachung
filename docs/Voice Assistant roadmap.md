@@ -78,6 +78,8 @@ Edge Function only: Text-, Voice- und Foto-Pfade laufen ?ber Supabase (`midas-as
 
 3. **Diktiermodus (planned)** ? hook Web Speech API (or reuse VAD capture) to fill the chat input quickly; offline-friendly fallback.
 
+4. **Intake Auto-Fill (planned)** ? Vision/Text-Antworten liefern strukturierte `suggestIntake`-Actions mit Salz-/Protein-Schätzung, Session-ID und Kontext. Frontend speichert die vorgeschlagenen Werte und fragt nach ("Soll ich die Zahlen loggen?"). Bei Zustimmung (Keywords wie "ja", "logg das", "passt") wird direkt ein Intake-Eintrag erstellt; Ablehnung verwirft die Schätzung.
+
 
 
 
@@ -91,6 +93,8 @@ Edge Function only: Text-, Voice- und Foto-Pfade laufen ?ber Supabase (`midas-as
 - Allowed: `IntakeSave`, `BPSave`, `BodySave`, `AddNote`, `OpenModule`, `AssistantDiagnostics`, `DoctorRouting`.
 
 - Not allowed: Chat storage, code introspection, self-updates, technology scans.
+
+- Upcoming Flow: `suggestIntake` (Edge Function liefert Werte) -> `confirmIntake` (User-Zusage im Text/Voice-Flow) -> `IntakeSave` (Supabase REST). Salz- und Proteinwerte müssen eindeutig sein, damit der Assistent nicht "zwischen 5 und 7 g" zurückliefert, sondern konkret speichert.
 
 
 
