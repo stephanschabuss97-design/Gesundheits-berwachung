@@ -71,180 +71,335 @@ async function handleSingleAction(action, sb, notify) {
     return;
   }
 
+  const type = action.type;
   const payload = action.payload || {};
 
-  switch (action.type) {
-    case 'add_intake_water':
-      await handleAddIntakeWater(payload, sb, notify);
+  switch (type) {
+    // -----------------------------------------------------------------------
+    // CORE
+    // -----------------------------------------------------------------------
+    case 'intake_save':
+      await handleIntakeSave(payload, sb, notify);
       break;
 
-    case 'add_intake_custom':
-      await handleAddIntakeCustom(payload, sb, notify);
+    // -----------------------------------------------------------------------
+    // UI
+    // -----------------------------------------------------------------------
+    case 'open_module':
+      await handleOpenModule(payload, sb, notify);
       break;
 
-    case 'log_blood_pressure':
-      await handleLogBloodPressure(payload, sb, notify);
+    case 'show_status':
+      await handleShowStatus(payload, sb, notify);
       break;
 
-    case 'log_body_metrics':
-      await handleLogBodyMetrics(payload, sb, notify);
+    case 'highlight':
+      await handleHighlight(payload, sb, notify);
       break;
 
-    case 'add_note':
-      await handleAddNote(payload, sb, notify);
+    // -----------------------------------------------------------------------
+    // CONVERSATION FLOW
+    // -----------------------------------------------------------------------
+    case 'ask_confirmation':
+      await handleAskConfirmation(payload, sb, notify);
       break;
 
-    case 'schedule_appointment':
-      await handleScheduleAppointment(payload, sb, notify);
+    case 'close_conversation':
+      await handleCloseConversation(payload, sb, notify);
       break;
 
+    case 'transition_to_photo_mode':
+      await handleTransitionToPhotoMode(payload, sb, notify);
+      break;
+
+    case 'transition_to_text_chat':
+      await handleTransitionToTextChat(payload, sb, notify);
+      break;
+
+    // -----------------------------------------------------------------------
+    // FOODCOACH / VISION
+    // -----------------------------------------------------------------------
+    case 'suggest_intake':
+      await handleSuggestIntake(payload, sb, notify);
+      break;
+
+    case 'confirm_intake':
+      await handleConfirmIntake(payload, sb, notify);
+      break;
+
+    // -----------------------------------------------------------------------
+    // SYSTEM AWARENESS
+    // -----------------------------------------------------------------------
+    case 'system_status':
+      await handleSystemStatus(payload, sb, notify);
+      break;
+
+    case 'read_touchlog':
+      await handleReadTouchlog(payload, sb, notify);
+      break;
+
+    case 'read_diagnostics':
+      await handleReadDiagnostics(payload, sb, notify);
+      break;
+
+    case 'read_bootstrap_status':
+      await handleReadBootstrapStatus(payload, sb, notify);
+      break;
+
+    // -----------------------------------------------------------------------
+    // GENERIC INFO / LEGACY
+    // -----------------------------------------------------------------------
     case 'show_info_message':
       handleShowInfoMessage(payload, notify);
       break;
 
     default:
-      console.warn('[MIDAS Assistant] Unknown action type:', action.type, action);
+      console.warn('[MIDAS Assistant] Unknown action type:', type, action);
       break;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Action Handlers
+// Action Handlers – CORE
 // ---------------------------------------------------------------------------
 
-async function handleAddIntakeWater(payload, sb, notify) {
-  const amount = Number(payload.amount_ml);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    console.warn('[MIDAS Assistant] add_intake_water – invalid amount_ml:', payload.amount_ml);
+async function handleIntakeSave(payload, sb, notify) {
+  const hasWater = payload.water_ml != null && payload.water_ml !== '';
+  const hasSalt = payload.salt_g != null && payload.salt_g !== '';
+  const hasProtein = payload.protein_g != null && payload.protein_g !== '';
+
+  const waterMl = hasWater ? safeNumber(payload.water_ml, NaN) : null;
+  const saltG = hasSalt ? safeNumber(payload.salt_g, NaN) : null;
+  const proteinG = hasProtein ? safeNumber(payload.protein_g, NaN) : null;
+
+  const label = (payload.label || '').trim() || null;
+  const note = (payload.note || '').trim() || null;
+
+  if (!hasWater && !hasSalt && !hasProtein) {
+    console.warn('[MIDAS Assistant] intake_save – no metrics provided:', payload);
     return;
   }
 
-  // TODO: Hier deine echte Intake-Logik verdrahten:
-  // 1) loadIntakeToday()
-  // 2) Wasser um `amount` erhöhen
-  // 3) saveIntakeTotals() oder saveIntakeTotalsRpc() aufrufen
+  if (hasWater && (!Number.isFinite(waterMl) || waterMl <= 0)) {
+    console.warn('[MIDAS Assistant] intake_save – invalid water_ml:', payload.water_ml);
+  }
 
-  console.log('[MIDAS Assistant] Would add water intake (ml):', amount, payload.note);
+  if (hasSalt && !Number.isFinite(saltG)) {
+    console.warn('[MIDAS Assistant] intake_save – invalid salt_g:', payload.salt_g);
+  }
 
-  notify(`Ich habe ${amount} ml Wasser für heute vorgemerkt (Assist-Action).`, 'success');
+  if (hasProtein && !Number.isFinite(proteinG)) {
+    console.warn('[MIDAS Assistant] intake_save – invalid protein_g:', payload.protein_g);
+  }
+
+  console.log('[MIDAS Assistant] IntakeSave requested:', {
+    waterMl,
+    saltG,
+    proteinG,
+    label,
+    note
+  });
+
+  // TODO: Hier deine echte Intake-Speicherlogik verdrahten (Supabase / RPCs).
+  // z. B.: await sb.intake.saveAssistantIntake({ waterMl, saltG, proteinG, label, note });
+
+  const parts = [];
+  if (Number.isFinite(waterMl) && waterMl > 0) parts.push(`${waterMl} ml Wasser`);
+  if (Number.isFinite(saltG)) parts.push(`${saltG} g Salz`);
+  if (Number.isFinite(proteinG)) parts.push(`${proteinG} g Protein`);
+
+  const summary = parts.length ? parts.join(', ') : 'deinen Eintrag';
+
+  notify(`Ich habe ${summary} für heute vorgemerkt (Assist-Action).`, 'success');
 }
 
-async function handleAddIntakeCustom(payload, sb, notify) {
-  const label = (payload.label || '').trim();
-  if (!label) {
-    console.warn('[MIDAS Assistant] add_intake_custom – missing label:', payload);
+// ---------------------------------------------------------------------------
+// Action Handlers – UI
+// ---------------------------------------------------------------------------
+
+async function handleOpenModule(payload, _sb, notify) {
+  const target = (payload.target || payload.module || '').trim();
+
+  if (!target) {
+    console.warn('[MIDAS Assistant] open_module – missing target:', payload);
     return;
   }
 
-  const waterMl = safeNumber(payload.water_ml);
-  const saltG = safeNumber(payload.salt_g);
-  const proteinG = safeNumber(payload.protein_g);
-  const carbsG = safeNumber(payload.carbs_g);
-  const fatG = safeNumber(payload.fat_g);
+  console.log('[MIDAS Assistant] OpenModule requested:', target);
 
-  // TODO: Hier Intake-Eintrag ins Tagesmodell integrieren (z. B. als "Meal Item")
-  console.log('[MIDAS Assistant] Would add custom intake:', {
+  // TODO: Hier echtes UI-Routing verdrahten (z. B. AppModules.hub.openPanel(target)).
+  notify(`Ich öffne das Modul "${target}".`, 'info');
+}
+
+async function handleShowStatus(payload, sb, notify) {
+  const kind = (payload.kind || '').trim() || 'intake_today';
+
+  console.log('[MIDAS Assistant] ShowStatus requested:', kind);
+
+  // TODO: Hier echte Status-Abfrage einbauen, z. B. via sb.api.intake.getTodayTotals().
+  // Vorerst nur konservatives Logging:
+  try {
+    // Placeholder – später: echte DB-Abfrage + kurze Interpretation.
+    notify('Ich prüfe deinen aktuellen Status.', 'info');
+  } catch (err) {
+    console.error('[MIDAS Assistant] show_status – error while reading status:', err);
+    notify('Beim Lesen deines Status ist ein Fehler aufgetreten.', 'warning');
+  }
+}
+
+async function handleHighlight(payload, _sb, notify) {
+  const target = (payload.target || '').trim();
+  if (!target) {
+    console.warn('[MIDAS Assistant] highlight – missing target:', payload);
+    return;
+  }
+
+  console.log('[MIDAS Assistant] Highlight requested:', target);
+
+  // TODO: Hier echtes UI-Highlighting verdrahten (CSS-Klasse, kurze Animation o.ä.).
+  notify(`Ich markiere den Bereich "${target}".`, 'info');
+}
+
+// ---------------------------------------------------------------------------
+// Action Handlers – Conversation Flow
+// ---------------------------------------------------------------------------
+
+async function handleAskConfirmation(payload, _sb, notify) {
+  // Diese Action dient vor allem der Klarheit im Flow; die eigentliche
+  // Frage stellt der Assistant bereits in seiner Text-/Voice-Antwort.
+  console.log('[MIDAS Assistant] AskConfirmation:', payload);
+  // Kein direktes notify nötig – der sprachliche Teil kommt aus der KI.
+}
+
+async function handleCloseConversation(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] CloseConversation:', payload);
+  // TODO: Hier kannst du später den Voice-Loop explizit schließen (State reset etc.).
+  notify('Das Gespräch ist beendet. Ich bin bereit, wenn du mich wieder brauchst.', 'info');
+}
+
+async function handleTransitionToPhotoMode(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] TransitionToPhotoMode:', payload);
+  // TODO: Textchat-Panel + Kamera öffnen.
+  notify('Wechsle in den Foto-Modus. Mach ein Bild deiner Mahlzeit.', 'info');
+}
+
+async function handleTransitionToTextChat(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] TransitionToTextChat:', payload);
+  // TODO: Assistant-Textchat-Panel öffnen.
+  notify('Wechsle in den Text-Chat.', 'info');
+}
+
+// ---------------------------------------------------------------------------
+// Action Handlers – Foodcoach / Vision
+// ---------------------------------------------------------------------------
+
+async function handleSuggestIntake(payload, _sb, notify) {
+  // Diese Action kommt typischerweise aus /midas-vision (Fotoanalyse).
+  const waterMl = payload.water_ml != null ? safeNumber(payload.water_ml, NaN) : null;
+  const saltG = payload.salt_g != null ? safeNumber(payload.salt_g, NaN) : null;
+  const proteinG = payload.protein_g != null ? safeNumber(payload.protein_g, NaN) : null;
+  const label = (payload.label || '').trim() || 'Mahlzeit';
+  const confidence = payload.confidence != null ? safeNumber(payload.confidence, NaN) : null;
+
+  console.log('[MIDAS Assistant] SuggestIntake received:', {
     label,
     waterMl,
     saltG,
     proteinG,
-    carbsG,
-    fatG,
-    category: payload.category,
-    note: payload.note
+    confidence
   });
 
-  notify(`Ich habe "${label}" als Intake-Eintrag vorgemerkt.`, 'success');
+  // Die eigentliche Frage ("Soll ich das loggen?") stellt der Assistant,
+  // hier geben wir nur optional ein kleines UI-Signal.
+  notify(`Ich habe einen Vorschlag für "${label}" vorbereitet.`, 'info');
 }
 
-async function handleLogBloodPressure(payload, sb, notify) {
-  const sys = safeNumber(payload.systolic);
-  const dia = safeNumber(payload.diastolic);
-  const hr = payload.heart_rate != null ? safeNumber(payload.heart_rate) : null;
+async function handleConfirmIntake(payload, sb, notify) {
+  // ConfirmIntake ist ein Wrapper um IntakeSave – entweder übernimmt er
+  // direkt die Werte oder er greift auf den letzten Vorschlag zurück.
+  console.log('[MIDAS Assistant] ConfirmIntake:', payload);
 
-  if (!isValidBp(sys, dia)) {
-    console.warn('[MIDAS Assistant] log_blood_pressure – invalid BP values:', payload);
+  // Standardfall: Payload enthält bereits intake_save-kompatible Felder.
+  await handleIntakeSave(payload, sb, notify);
+}
+
+// ---------------------------------------------------------------------------
+// Action Handlers – System Awareness
+// ---------------------------------------------------------------------------
+
+async function handleSystemStatus(payload, sb, notify) {
+  console.log('[MIDAS Assistant] SystemStatus requested:', payload);
+
+  const online = typeof navigator !== 'undefined' ? navigator.onLine : null;
+  const hasSupabase = !!sb;
+
+  const touchlog = readLatestTouchlogSnapshot();
+  const diag = readDiagnosticsSnapshot();
+  const bootstrap = readBootstrapLogSnapshot();
+
+  const parts = [];
+
+  if (online != null) {
+    parts.push(online ? 'Online-Verbindung vorhanden' : 'Der Browser ist aktuell offline');
+  } else {
+    parts.push('Netzwerkstatus nicht verfügbar');
+  }
+
+  parts.push(hasSupabase ? 'Supabase-Client aktiv' : 'Supabase-Client nicht verfügbar');
+
+  if (touchlog) parts.push('Touchlog-Daten vorhanden');
+  if (bootstrap) parts.push('Bootstrap-Log vorhanden');
+  if (diag) parts.push('Diagnosedaten verfügbar');
+
+  if (!parts.length) {
+    parts.push('Keine Systemdaten verfügbar.');
+  }
+
+  notify(parts.join(' · '), 'info');
+}
+
+async function handleReadTouchlog(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] ReadTouchlog requested:', payload);
+
+  const snapshot = readLatestTouchlogSnapshot();
+  if (!snapshot) {
+    notify('Ich habe keinen Touchlog gefunden.', 'info');
     return;
   }
 
-  // TODO: Hier deine vitals-Logik integrieren:
-  // z. B. sb.logBp({ systolic: sys, diastolic: dia, heart_rate: hr, ... })
-
-  console.log('[MIDAS Assistant] Would log blood pressure:', {
-    systolic: sys,
-    diastolic: dia,
-    heart_rate: hr,
-    context: payload.context,
-    note: payload.note
-  });
-
-  notify(`Blutdruck ${sys}/${dia}${hr ? ` (Puls ${hr})` : ''} gespeichert (Assist-Action).`, 'success');
+  console.log('[MIDAS Assistant] Touchlog snapshot:', snapshot);
+  notify('Ich habe den Touchlog geprüft.', 'info');
 }
 
-async function handleLogBodyMetrics(payload, sb, notify) {
-  const weight = payload.weight_kg != null ? safeNumber(payload.weight_kg) : null;
-  const waist = payload.waist_cm != null ? safeNumber(payload.waist_cm) : null;
-  const bodyFat = payload.body_fat_pct != null ? safeNumber(payload.body_fat_pct) : null;
-  const muscle = payload.muscle_pct != null ? safeNumber(payload.muscle_pct) : null;
+async function handleReadDiagnostics(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] ReadDiagnostics requested:', payload);
 
-  if (weight == null && waist == null && bodyFat == null && muscle == null) {
-    console.warn('[MIDAS Assistant] log_body_metrics – no metrics provided:', payload);
+  const diag = readDiagnosticsSnapshot();
+  if (!diag) {
+    notify('Ich habe keine Diagnosedaten gefunden.', 'info');
     return;
   }
 
-  // TODO: Hier supabase/api/vitals.js für Body-Insert nutzen.
-  console.log('[MIDAS Assistant] Would log body metrics:', {
-    weight,
-    waist,
-    bodyFat,
-    muscle,
-    note: payload.note
-  });
-
-  notify('Körperdaten gespeichert (Assist-Action).', 'success');
+  console.log('[MIDAS Assistant] Diagnostics snapshot:', diag);
+  notify('Ich habe die Diagnosedaten geprüft.', 'info');
 }
 
-async function handleAddNote(payload, sb, notify) {
-  const title = (payload.title || '').trim();
-  const text = (payload.text || '').trim();
-  const category = (payload.category || 'info').trim();
+async function handleReadBootstrapStatus(payload, _sb, notify) {
+  console.log('[MIDAS Assistant] ReadBootstrapStatus requested:', payload);
 
-  if (!title && !text) {
-    console.warn('[MIDAS Assistant] add_note – empty note payload:', payload);
+  const bootstrap = readBootstrapLogSnapshot();
+  if (!bootstrap) {
+    notify('Es liegen keine Bootstrap-Informationen vor.', 'info');
     return;
   }
 
-  // TODO: sb.appendNoteRemote(...) nutzen, um Notiz in Supabase zu schreiben.
-  console.log('[MIDAS Assistant] Would add note:', {
-    category,
-    title,
-    text,
-    severity: payload.severity
-  });
-
-  notify('Notiz gespeichert (Assist-Action).', 'success');
+  console.log('[MIDAS Assistant] Bootstrap snapshot:', bootstrap);
+  notify('Ich habe den Bootstrap-Status geprüft.', 'info');
 }
 
-async function handleScheduleAppointment(payload, sb, notify) {
-  const date = (payload.date || '').trim();
-  const label = (payload.label || payload.kind || '').trim();
-
-  if (!date || !label) {
-    console.warn('[MIDAS Assistant] schedule_appointment – missing date/label:', payload);
-    return;
-  }
-
-  // TODO: Hier deine Appointments-Logik andocken (sql/03_Appointments.sql etc.)
-  console.log('[MIDAS Assistant] Would schedule appointment:', {
-    date,
-    time: payload.time,
-    kind: payload.kind,
-    label,
-    note: payload.note
-  });
-
-  notify(`Termin "${label}" am ${date} vorgemerkt (Assist-Action).`, 'success');
-}
+// ---------------------------------------------------------------------------
+// Generic Info Handler
+// ---------------------------------------------------------------------------
 
 function handleShowInfoMessage(payload, notify) {
   const text = (payload.text || '').trim();
@@ -265,13 +420,6 @@ function safeNumber(val, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function isValidBp(sys, dia) {
-  if (!Number.isFinite(sys) || !Number.isFinite(dia)) return false;
-  if (sys <= 50 || sys >= 260) return false;
-  if (dia <= 30 || dia >= 160) return false;
-  return true;
-}
-
 function defaultSupabaseAccessor() {
   if (typeof window === 'undefined') return null;
   return window.AppModules && window.AppModules.supabase
@@ -286,4 +434,80 @@ function defaultNotify(msg, level = 'info') {
 
 function defaultOnError(err) {
   console.error('[MIDAS Assistant] Action dispatch error:', err);
+}
+
+// ---------------------------------------------------------------------------
+// System Snapshot Helpers (Touchlog / Diagnostics / Bootstrap)
+// ---------------------------------------------------------------------------
+
+function readLatestTouchlogSnapshot() {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+
+  try {
+    const keys = Object.keys(window.localStorage)
+      .filter((k) => k.startsWith('midas_touchlog'));
+
+    if (keys.length === 0) return null;
+
+    keys.sort(); // letzte Version = "höchster" Key
+    const raw = window.localStorage.getItem(keys[keys.length - 1]);
+    if (!raw) return null;
+
+    return tryParseJson(raw);
+  } catch (err) {
+    console.warn('[MIDAS Assistant] Failed to read touchlog from localStorage:', err);
+    return null;
+  }
+}
+
+function readBootstrapLogSnapshot() {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+
+  try {
+    const keys = Object.keys(window.localStorage)
+      .filter((k) => k.startsWith('midas_bootlog'));
+
+    if (keys.length === 0) return null;
+
+    keys.sort();
+    const raw = window.localStorage.getItem(keys[keys.length - 1]);
+    if (!raw) return null;
+
+    return tryParseJson(raw);
+  } catch (err) {
+    console.warn('[MIDAS Assistant] Failed to read bootstrap log from localStorage:', err);
+    return null;
+  }
+}
+
+function readDiagnosticsSnapshot() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const appModules = window.AppModules || {};
+    const diagnostics = appModules.diagnostics;
+
+    if (diagnostics && typeof diagnostics.getSnapshot === 'function') {
+      return diagnostics.getSnapshot();
+    }
+
+    // Fallback: global Diag-Objekt, falls vorhanden.
+    if (window.__MIDAS_DIAG__) {
+      return window.__MIDAS_DIAG__;
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('[MIDAS Assistant] Failed to read diagnostics snapshot:', err);
+    return null;
+  }
+}
+
+function tryParseJson(raw) {
+  if (typeof raw !== 'string') return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
