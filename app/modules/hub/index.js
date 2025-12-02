@@ -297,6 +297,8 @@
       doctorUnlockWaitCancel = cleanup;
     });
 
+  const isBootReady = () => doc?.body?.dataset?.bootStage === 'idle';
+
   const activateHubLayout = () => {
     const config = appModules.config || {};
     if (!doc) {
@@ -327,6 +329,7 @@
       const btn = hub.querySelector(selector);
       if (!btn) return;
       const invoke = async () => {
+        if (!isBootReady()) return;
         if (sync) syncButtonState(btn);
         try {
           await handler(btn);
@@ -336,6 +339,7 @@
         }
       };
       btn.addEventListener('click', () => {
+        if (!isBootReady()) return;
         invoke();
       });
     };
@@ -1497,7 +1501,10 @@
     return new Blob([byteArray], { type: mimeType });
   };
 
-  if (doc?.readyState === 'loading') {
+  const bootFlow = global.AppModules?.bootFlow;
+  if (bootFlow?.whenStage) {
+    bootFlow.whenStage('INIT_UI', () => activateHubLayout());
+  } else if (doc?.readyState === 'loading') {
     doc.addEventListener('DOMContentLoaded', activateHubLayout, { once: true });
   } else {
     activateHubLayout();

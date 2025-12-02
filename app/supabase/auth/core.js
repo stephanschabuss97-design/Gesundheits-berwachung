@@ -31,6 +31,14 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 const getSupabaseApi = () => globalWindow?.AppModules?.supabase || null;
+const getBootFlow = () => globalWindow?.AppModules?.bootFlow || null;
+const reportBootStatus = (msg, tone = 'info') => {
+  try {
+    getBootFlow()?.report?.(msg, tone);
+  } catch (_) {
+    /* noop */
+  }
+};
 
     // SUBMODULE: constants @internal - Authentifizierungs-Timing & Defaults
 const AUTH_GRACE_MS = 400;
@@ -153,6 +161,11 @@ export const finalizeAuthState = (logged) => {
   clearAuthGrace();
   supabaseState.authState = logged ? 'auth' : 'unauth';
   supabaseState.lastLoggedIn = logged;
+  if (!logged) {
+    reportBootStatus('Nicht angemeldet', 'error');
+  } else {
+    reportBootStatus('');
+  }
   if (logged) {
     supabaseState.pendingSignOut = null;
   } else if (typeof supabaseState.pendingSignOut === 'function') {
@@ -188,6 +201,8 @@ export const scheduleAuthGrace = () => {
 // SUBMODULE: requireSession @public - prüft aktuelle Session und aktualisiert UI
 export async function requireSession() {
   if (!supabaseState.sbClient) {
+    reportBootStatus('Supabase Client fehlt', 'error');
+    getBootFlow()?.markFailed?.('Supabase Client fehlt');
     callUserUi('');
     callLoginOverlay(true);
     callAuthGuard(false);
@@ -290,6 +305,7 @@ export function watchAuthState() {
 export async function afterLoginBoot() {
   if (supabaseState.booted) return;
   supabaseState.booted = true;
+  getBootFlow()?.setStage?.('INIT_CORE');
   globalWindow
     ?.requestUiRefresh?.({ reason: 'boot:afterLogin' })
     .catch((err) => diag.add?.('ui refresh err: ' + (err?.message || err)));

@@ -1,6 +1,8 @@
+---
+
 # MIDAS – Voice Assistant, Butler & Foodcoach
 
-**Roadmap (Dev View, v5)**
+**Roadmap (Dev View, v6 – Codex-ready)**
 
 **Ziel:**
 MIDAS wird ein modularer Gesundheits-Helper, der:
@@ -8,6 +10,11 @@ MIDAS wird ein modularer Gesundheits-Helper, der:
 * per **Voice** Panels steuert, Wasser/Protein loggt und Zustände erklärt (Butler-Modus)
 * per **Text & Foto** Mahlzeiten analysiert und beim Loggen unterstützt (Foodcoach)
 * später sauber als **PWA/TWA** läuft – mit stabilem Auth & Persistent Login
+
+**Wichtig für Codex:**
+Diese Roadmap beschreibt *Phasen*, keine einzelnen Prompts.  
+Jede Phase wird separat umgesetzt (eigener Branch / eigener Prompt).  
+Innerhalb einer Phase nur an den explizit genannten Dateien/Modulen arbeiten und keine neuen Features aus anderen Phasen vorziehen.
 
 ---
 
@@ -17,12 +24,63 @@ MIDAS wird ein modularer Gesundheits-Helper, der:
 Vom Prototyp zur stabilen App: deterministischer Boot, klarer Auth-State, kein „halb initialisiert“.
 **Wichtig:** Kein Persistent Login in dieser Phase, nur die Basis.
 
-| Task                       | Status | Beschreibung                                                                                                               |
+| Task                       | Status | Beschreibung |
 | -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| 0.1 Bootstrap Flow rebuild | TODO   | Neuer Bootfluss: `BOOT → AUTH_CHECK → INIT_CORE → INIT_MODULES → INIT_UI → IDLE`. UI bleibt geblockt, bis Supabase + Auth + Basis-Konfig bestätigt sind.           |
-| 0.2 Cleanup Pass (Light)   | TODO   | Erste Runde: alte Logger/Workarounds raus, doppelte Listener/Guards entschärfen, dead code entfernen, `/core` minimal entschlacken. Deep Cleanup folgt in Phase 6. |
-| 0.3 Auth Flow Fix          | TODO   | Pre-render Auth Gate: App rendert erst nach Supabase-Entscheid (`auth` / `unauth`). Kein klickbares UI im „auth unknown“. Klare `authState`-Übergänge.             |
-| 0.4 Voice Safety Init      | TODO   | Voice/Needle bleiben deaktiviert, bis Bootflow durchlaufen + Auth klar. Keine Mic-Prompts/Audio, bevor `state=idle`.                                               |
+| 0.1 Bootstrap Flow rebuild | ✅ | Neuer Bootfluss: `BOOT → AUTH_CHECK → INIT_CORE → INIT_MODULES → INIT_UI → IDLE`. UI bleibt geblockt, bis Supabase + Auth + Basis-Konfig bestätigt sind. Umsetzung primär in `index.html`, `app/core/boot-flow.js`, `assets/js/main.js`. |
+
+Phase 0.1 Dateiliste
+
+index.html:7,572-620 – Body und Script-Loader. ✅
+- Ergänze data-boot-stage + aria-busy auf <body> sowie ein kleines <div id="bootScreen">, das Hub/Forms blockiert, bis Stage IDLE erreicht ist. Der Loader bekommt Platz dicht hinter <body> damit app/styles/base.css ihn per Klassen (body[data-boot-stage="boot"]) dimmen kann.
+- Im Script-Block (Zeile 572ff.) muss app/core/boot-flow.js neu vor allen anderen Bundles eingebunden werden, damit AppModules.bootFlow verfügbar ist, bevor hub/index.js, boot-auth.js oder assets/js/main.js loslaufen.
+
+app/styles/base.css (lines 98-111) (+ Anhänge in app/styles/auth.css) – Globale Sperr-States. ✅
+- Zusätzlich zu body.auth-locked main brauchst du Selektoren für body[data-boot-stage] (z. B. body.boot-block main { pointer-events:none; opacity:.25; }) und Stile für #bootScreen (fixe Position, Spinner, Stage-Label). So bleibt der komplette Hub visuell blockiert, bis bootFlow auf IDLE wechselt.
+- Ergänze Transition-Tokens (z. B. CSS-Variablen für Statusfarben), damit Stage-Text („BOOT“, „AUTH_CHECK“… ) sichtbar wird.
+
+Neue Datei app/core/boot-flow.js. ✅
+- Enthält die Stage-Definition (const STAGES = ['BOOT','AUTH_CHECK','INIT_CORE','INIT_MODULES','INIT_UI','IDLE']), setStage/whenStage/onStageChange APIs sowie DOM-Side-Effects (Body-Dataset, #bootScreen Text, Logging). Binde sie unter window.AppModules.bootFlow.
+- Zuständig auch für Timeout/Fehlerhandling (falls Stage hängt → setConfigStatus('Boot hängt', 'error')).
+
+assets/js/main.js (lines 1114-1495). ✅
+- Zerlege main() nach Stage-Funktionen:
+runBoot() (DOM ready, ensureModulesReady, diag.init),
+runAuthCheck() (wartet auf waitForSupabaseApi, requireSession, afterLoginBoot, setupRealtime),
+initCore() (DB/init, capture state seeds, AppModules.captureGlobals Reset),
+initModules() (bind tabs/buttons, watchers, midnight/noon timers, bindAppLockButtons, config fetch),
+initUiAndLiftLock() (erster requestUiRefresh, remove overlays, enable inputs).
+Jede Phase ruft bootFlow.setStage(...).
+- Entferne doppelte DOMContentLoaded-Warteblöcke (Zeile 1114-1119, 1483-1495) und ersetze sie durch bootFlow.whenStage.
+- Die Failsafe-Schritte (z. B. Buttons wieder aktivieren, Onlinesync) bleiben, laufen aber nur nach INIT_UI.
+
+assets/js/boot-auth.js (lines 1-40). ✅
+- Statt sofort initAuth zu callen, registriert das Modul seine Hooks erst, wenn bootFlow.whenStage('AUTH_CHECK', ...) erreicht ist. Im Hook onStatus rufst du bootFlow.setStage('INIT_CORE'), sobald status !== 'unknown' (Supabase hat Auth entschieden). Außerdem liefert das Modul Status-Text an den Loader (bootFlow.report('Prüfe Session…')).
+
+app/supabase/auth/core.js (lines 291-320). ✅
+- Nach supabaseState.booted = true (Zeile 292) informieren wir den Boot-Flow, dass Auth fertig ist (AppModules.bootFlow?.markAuthReady()), damit INIT_CORE nicht vorzeitig durchläuft.
+- In finalizeAuthState und requireSession sollte der neue Stage-Manager getriggert werden, wenn authState zu auth/unauth wechselt, damit UI-Block sauber aufgehoben wird und Fehler (kein Supabase-Client) direkt auf dem Bootscreen landen (setConfigStatusSafe + bootFlow.fail('Supabase Client fehlt')).
+
+app/modules/hub/index.js (lines 1500-1504). ✅
+- Der Hub initialisiert aktuell sofort nach DOM ready. Schieb activateHubLayout() hinter AppModules.bootFlow.whenStage('INIT_UI', activateHubLayout) und füge body[data-boot-stage!="IDLE"]-Checks in allen Orbit-Klick-Handlern hinzu (so bleiben Buttons inaktiv solange Stage < INIT_UI). Optional: BootFlow liefert lockReason → Zeige im Panel-Header „Hub lädt…“.
+
+app/modules/doctor/index.js & app/modules/capture/index.js. ✅
+- Beide Module greifen beim Laden bereits auf DOM zu. Ergänze am Anfang Guard-Code if (!AppModules.bootFlow?.isStageAtLeast('INIT_MODULES')) return; für Handler, die vom Boot-Overlay aus ausgelöst werden könnten, und registriere ihre globalen window.AppModules.* APIs erst nach INIT_CORE. Damit kollidiert der Stage-Lock nicht mit Legacy-Tab-Aufrufen.
+
+app/core/config.js & assets/js/ui.js.✅
+- config.js erhält optional einen Flag (window.BOOT_STAGE_DEBUG) plus body.dataset.bootStageDebug, womit QA bootFlow zwingen kann, im Loader zu verbleiben.
+- ui.js (hier laufen setUnderlayInert, Help-Panel etc.) muss bootFlow.whenStage('INIT_UI', () => bindHelpPanel()) verwenden, damit Modals nicht starten, solange #bootScreen oben ist.
+
+Diese Übersicht liefert dir eine roadmap, welche Stellen für den neuen deterministischen Boot-Prozess angefasst werden müssen. Sobald du loslegen willst, gehen wir Datei für Datei durch und setzen die beschriebenen Anpassungen um.
+
+| 0.2 Cleanup Pass (Light)   | TODO   | Erste Runde: alte Logger/Workarounds raus, doppelte Listener/Guards entschärfen, dead code entfernen, `/core` minimal entschlacken. Nur offensichtliche Altlasten entfernen, keine tiefen Refactors (die kommen in Phase 6).         |
+| 0.3 Auth Flow Fix          | TODO   | Pre-render Auth Gate: App rendert erst nach Supabase-Entscheid (`auth` / `unauth`). Kein klickbares UI im „auth unknown“. Klare `authState`-Übergänge in `app/supabase/auth/core.js` und `assets/js/boot-auth.js`.                     |
+| 0.4 Voice Safety Init      | TODO   | Voice/Needle bleiben deaktiviert, bis Bootflow durchlaufen + Auth klar. Keine Mic-Prompts/Audio, bevor `state=idle`. Technischer Fokus: `app/modules/hub/index.js`, VAD/Needle-Handler, einfache Guards gegen frühe Klicks.          |
+
+**Codex-Hinweis (Phase 0):**
+
+- 0.2: Nur in bereits existierenden Loggern/Guards und offensichtlichen Workarounds aufräumen (z. B. doppelte `DOMContentLoaded`-Listener, alte `console.log`-Spams). Keine neuen Features einbauen.
+- 0.3: Auth-Flow vereinheitlichen, aber **kein** `persistSession` aktivieren; Persistent Login kommt erst in Phase 7.
+- 0.4: Nur Voice/Hub-Modul absichern, keine neuen Voice-Features.
 
 ---
 
@@ -31,17 +89,18 @@ Vom Prototyp zur stabilen App: deterministischer Boot, klarer Auth-State, kein �
 **Ziel:**
 Voice-State-Machine im Hub: Aufnahme → Transcribe → Assistant → TTS → Playback.
 
-| Task                       | Status | Beschreibung                                                                                                               |
-| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+Code-Schwerpunkt: `app/modules/hub/index.js` + zugehörige Styles/Skripte.
 
-| 1.1 Audio Capture Skeleton | ✅    | MediaRecorder, State-Handling, Blob-Logging.
-| 1.2 Transcribe Integration | ✅    | `/midas-transcribe`, `thinking`-State, Transcript-Logging.
-| 1.3 Assistant Roundtrip    | ✅    | History → `/midas-assistant`; Reply + Actions werden geparst.
-| 1.4 TTS Playback           | ✅    | `/midas-tts`, `<audio>`-Pipeline inkl. Interrupt/Retry.
-| 1.5 Glow-Ring Animation    | ✅    | Idle/Listening/Thinking/Speaking/Error → Ring/Aura.
-| 1.6 Needle Trigger Feedba. | ✅    | Button steuert Session, inkl. Press-Animation.
-| 1.7 Auto-stop via VAD      | ✅    | 1 s Stille stoppt Aufnahme (Worklet in `app/modules/hub/vad`).
-| 1.8 Conversation Loop End  | ✅    | Phrasen wie „nein danke“ beenden die Session sauber.
+| Task                       | Status | Beschreibung                                                   |
+| -------------------------- | ------ | -------------------------------------------------------------- |
+| 1.1 Audio Capture Skeleton | ✅      | MediaRecorder, State-Handling, Blob-Logging.                   |
+| 1.2 Transcribe Integration | ✅      | `/midas-transcribe`, `thinking`-State, Transcript-Logging.     |
+| 1.3 Assistant Roundtrip    | ✅      | History → `/midas-assistant`; Reply + Actions werden geparst.  |
+| 1.4 TTS Playback           | ✅      | `/midas-tts`, `<audio>`-Pipeline inkl. Interrupt/Retry.        |
+| 1.5 Glow-Ring Animation    | ✅      | Idle/Listening/Thinking/Speaking/Error → Ring/Aura.            |
+| 1.6 Needle Trigger Feedba. | ✅      | Button steuert Session, inkl. Press-Animation.                 |
+| 1.7 Auto-stop via VAD      | ✅      | 1 s Stille stoppt Aufnahme (Worklet in `app/modules/hub/vad`). |
+| 1.8 Conversation Loop End  | ✅      | Phrasen wie „nein danke“ beenden die Session sauber.           |
 
 ---
 
@@ -49,13 +108,19 @@ Voice-State-Machine im Hub: Aufnahme → Transcribe → Assistant → TTS → Pl
 
 **Ziel:**
 Stabile KI-Funktionen ohne Browser-Keys.
-  
-| Task                       | Status | Beschreibung                                                                                                               |
-| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `midas-transcribe`         | ✅    | Whisper (`gpt-4o-transcribe`), FormData Upload, CORS, Logging.                                                                                                     |
-| `midas-assistant`          | ✅    | Responses API, System Prompt, Text & Voice Mode, liefert `{ reply, actions, meta }`.                                                                               |
-| `midas-tts`                | ✅    | `gpt-4o-mini-tts` (Voice „cedar“), liefert Base64 oder Raw Audio.                                                                                                  |
-| `midas-vision`             | ✅    | Foto-Proxy → `gpt-4.1-mini`, liefert Wasser/Salz/Protein + Empfehlung.                                                                                             |
+
+Code-Schwerpunkt: Supabase Edge Functions unter `supabase/functions/*`.
+
+| Task               | Status | Beschreibung                                                                         |
+| ------------------ | ------ | ------------------------------------------------------------------------------------ |
+| `midas-transcribe` | ✅      | Whisper (`gpt-4o-transcribe`), FormData Upload, CORS, Logging.                       |
+| `midas-assistant`  | ✅      | Responses API, System Prompt, Text & Voice Mode, liefert `{ reply, actions, meta }`. |
+| `midas-tts`        | ✅      | `gpt-4o-mini-tts` (Voice „cedar“), liefert Base64 oder Raw Audio.                    |
+| `midas-vision`     | ✅      | Foto-Proxy → `gpt-4.1-mini`, liefert Wasser/Salz/Protein + Empfehlung.               |
+
+**Hinweis:**
+In `midas-assistant` ist bereits eine feste System-Persona hinterlegt: MIDAS versteht sich als „Medical Incidents and Data Analysis Software“ und persönlicher Gesundheits-Assistent von Stephan (inkl. Voice/Text-Mode-Unterscheidung).  
+Später greift diese Persona zusätzlich auf das Health-Profil aus Phase 4.4 zu (d. h. dort wird nur zusätzlicher Kontext + DB-Read ergänzt, keine komplette Neuschreibung).
 
 ---
 
@@ -64,14 +129,19 @@ Stabile KI-Funktionen ohne Browser-Keys.
 **Ziel:**
 Assistant-Panel & Foto-Flow im Hub. Der Assistant kann beraten und analysieren, aber noch keine Daten schreiben.
 
-| Task                          | Status  | Notizen                                                                                                     |
-| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
-| 3.1 Assistant Text UI         | ✅       | Orbit-Button öffnet Panel `assistant-text`; Session-only History; gleicher Edge Endpoint wie Voice.         |
-| 3.2 Foto-Analyse (UI)         | ✅       | Kamera/File → Base64 → `/midas-vision` → strukturierte Antwort (Salz/Protein/Wasser + Empfehlung) anzeigen. |
-| 3.3 Diktiermodus (Input only) | PLANNED | Web Speech API als Eingabe-Helfer für den Textchat. Kein Teil des Voice-Loops, keine Actions.               |
+UI-Schwerpunkt: `app/modules/hub/index.js`, eventuell eigene Assistant-Templates/Styles.
 
-> **Hinweis:**
-> Kein „Suggest UI“ in Phase 3. Vorschläge, Bestätigung & Save kommen geschlossen in Phase 5 (Butler/Actions).
+| Task                       | Status | Beschreibung |
+| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 3.1 Assistant Text UI         | ✅       | Hub-Center-Button (Short Press) öffnet Panel `assistant-text`; Session-only History; gleicher Edge Endpoint wie Voice.                                                                                                                                                                       |
+| 3.2 Foto-Analyse (UI)         | ✅       | Kamera/File → Base64 → `/midas-vision` → strukturierte Antwort (Salz/Protein/Wasser + Empfehlung) anzeigen.                                                                                                                                                                                  |
+| 3.3 Diktiermodus (Input only) | PLANNED | Web Speech API als Eingabe-Helfer für den Textchat. Kein Teil des Voice-Loops, keine Actions. Nur Textinput in das vorhandene Textfeld, keine neuen Endpoints.                                                                                                                               |
+| 3.4 Hub Center Mapping        | TODO    | **Short Press:** öffnet Assistant-Text-Panel. **Long Press:** startet Voice-Loop. Einheitliches Long-Press-Handling für Desktop (Maus) & Touch (ca. 700 ms, inkl. Cancel bei frühem `mouseup`/`touchend`) direkt im Hub-Modul.                                                               |
+| 3.5 Butler-Panel Integration  | TODO    | Erweiterung des Assistant-Text-Panels zum „Butler Screen“: Anzeige der heutigen Intake-Pills (Wasser/Salz/Protein) und der nächsten 1–2 Termine direkt im Panelkopf. Daten readonly aus bestehenden Intakes-/Termine-Tabellen laden; kein Speichern, kein Auto-Fill in dieser Phase.           |
+
+> **Hinweis (wichtig für Codex):**
+> **Kein** „Suggest UI“ und **kein** automatisches Speichern in Phase 3.  
+> Alle Flows, die Daten schreiben (`IntakeSave` etc.), kommen gebündelt in Phase 5.
 
 ---
 
@@ -82,52 +152,249 @@ MIDAS als Alltags-Tool vollständig machen, bevor der Butler & Persistent Login 
 
 ### 4.1 Copy Utilities
 
-* Intake Copy Button im UI (z. B. Capture/Doctor).
+* **Ziel:** Daten aus Intakes/Doctor/Terminen schnell kopierbar machen (z. B. für Arztbesuch oder Chat).
+* UI-Schwerpunkt: Panels, in denen Tages-/Zeitreihen angezeigt werden (z. B. Capture, Doctor, ggf. Intakes).
+
+**Anforderungen:**
+
+* Intake Copy Button im UI (z. B. in Capture/Doctor/Intakes-Ansicht).
 * Formate:
 
   * Menschlich lesbarer Text (für Arzt/Chat/Notizen).
-  * Parsebarer Einzeiler, z. B.:
+  * Parsebarer Einzeiler, z. B.:  
     `INTAKE|2025-11-28|13:05|water_ml=500|salt_g=2.1|protein_g=52`.
 
-### 4.2 Termin- & Arztmodul
+* **Codex-Hinweis:**  
+  Nur bestehende Daten lesen und Formatstrings generieren. Keine neue Business-Logik und keine zusätzlichen DB-Tabellen.
 
-* Terminliste & Arztkartei (Nephrologe, Hausarzt, etc.).
-* Voice-Queries:
+---
 
-  * „Wann ist mein nächster Termin?“
-  * „Bring mich zum Nephrologen.“
-* `DoctorRouting`: Deep Links in Maps/Telefon/Notizen, abgesichert über bestehende Unlocks/Biometrie.
+### 4.2 Vitals & Doctor – Panel-Konsolidierung
+
+**Ziel:**
+Nur noch **ein** Hub-Entry für Blutdruck/Körper, aber schneller Einstieg in Arzt-Ansicht **und** Chart.
+
+**Betroffene Module:**
+
+* Hub-Layout (`app/modules/hub/index.js` oder Hub-Konfiguration).
+* Vitals-/Body-Input-Panel (Capture/Vitals-Module, z. B. `app/modules/capture/*`).
+* Doctor-View (`app/modules/doctor/index.js` + ggf. Charts-Modul).
+
+**Anpassungen:**
+
+* Hub:
+
+  * **Vitals-Orbit-Button** ersetzt die Doppelstruktur Vitals/Doctor am Hub (ein Icon, ein Entry).
+
+* Vitals-Panel:
+
+  * Eingabe Blutdruck (Morgen/Abend).
+  * Eingabe Körperdaten.
+  * Button **„Arzt-Ansicht“**:
+
+    * nutzt bestehende `requireDoctorUnlock()`-Logik.
+    * öffnet Doctor-Ansicht klassisch (Werteliste, Trendpilot, Export, Delete).
+
+  * Button **„Diagramm“**:
+
+    * ebenfalls `requireDoctorUnlock()` nutzen (falls noch nicht freigeschaltet).
+    * lädt intern die Doctor-Ansicht, springt aber direkt ins SVG-Chart (z. B. über einen Parameter oder speziellen Initialisierungs-Mode).
+    * UX: Klick auf „Diagramm“ → Arzt sieht direkt das Chart.
+    * Schließen (`X`) im Chart → zeigt **Doctor-Ansicht** statt Hub (also im medizinischen Kontext bleiben).
+
+* Ziel-Flows:
+
+  * Für den Arzt:
+
+    * „Einzelwerte ansehen?“ → Button „Arzt-Ansicht“.
+    * „Nur Verlauf/Chart?“ → Button „Diagramm“.
+
+  * Beide Wege landen im gleichen „medizinischen Raum“, nur mit unterschiedlichem Einstiegspunkt.
+
+**Codex-Hinweis:**
+
+- Keine neue Tabelle, keine neuen Supabase-Funktionen.
+- Nur Routing/Umschalten der bestehenden Panels und Views umbauen.
+
+---
+
+### 4.3 Termin- & Arztmodul (Termine + Übersicht)
+
+**Ziel:**
+Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor-UI, ohne den Hub zu überladen.
+
+**Backend:**
+
+* Neue Supabase-Tabelle, z. B. `appointments`:
+
+  * `id`
+  * `user_id`
+  * `date` (oder `date + time`)
+  * `title`
+  * `type` (Privat / Arzttermin / Geburtstag / …)
+  * `location` (optional)
+  * `note` (optional)
+  * `created_at`, `updated_at`
+
+* RLS: wie bei anderen user-basierten Tabellen (nur eigener User sieht eigene Termine).
+
+**Frontend:**
+
+* **Termin-Eingabe-Panel (Orbit-Button „Termine“):**
+
+  * Felder:
+
+    * Datum
+    * Uhrzeit
+    * Titel
+    * Typ (Privat / Arzttermin / Geburtstag / …)
+    * Ort (optional)
+    * Notiz (optional)
+
+  * Button **„Termin speichern“** → schreibt in `appointments`.
+
+  * Unterhalb der Maske:
+
+    * Anzeige der nächsten **1–2 anstehenden Termine**
+      (z. B. „So 08:30 – Geburtstag“, „Mo 09:00 – Nephro“).
+    * Button **„Terminübersicht öffnen“** → öffnet Listenansicht.
+
+* **Terminübersicht-Panel (Doctor-Style):**
+
+  * Drei-Spalten-Layout:
+
+    1. **Spalte 1:**
+       * Datum
+       * Uhrzeit
+       * Lösch-Button
+
+    2. **Spalte 2:**
+       * Titel
+       * Typ
+       * Ort
+       * (später) Alarm/Reminder-Info
+
+    3. **Spalte 3 (optional):**
+       * Notizen
+
+  * Optional: Von/Bis-Filter ähnlich Doctor-Ansicht (für später).
+
+* **Voice- und KI-Integration (Vorbereitung):**
+
+  * Voice-Queries (Phase 5+), z. B.:
+
+    * „Wann ist mein nächster Termin?“
+    * „Zeig mir meine Arzttermine.“
+
+  * `DoctorRouting`:
+
+    * Deep Links in Maps/Telefon/Notizen für Arzttermine, abgesichert über bestehende Unlocks/Biometrie (nur Vorplanung, Umsetzung kann später kommen).
+
+---
+
+### 4.4 Health-Profil & Persona Layer (Supabase)
+
+**Ziel:**
+Stephan-spezifische Gesundheitsdaten und Limits zentral in Supabase halten, statt sie hart in Prompts zu kodieren.
+
+**Supabase-Tabelle (z. B. `user_health_profile`):**
+
+* Primärschlüssel via `user_id` (1:1-Beziehung zu Benutzer).
+* Felder:
+
+  * Fixdaten:
+
+    * `birth_date`
+    * `height_cm`
+    * `sex` (falls benötigt)
+    * evtl. `smoker_status` o. ä.
+
+  * CKD/Diagnose-Status:
+
+    * `ckd_stage` (z. B. `"G3a1"`)
+    * Weitere relevante Diagnosen (Hypertonie, Dyslipidämie, etc.) als Flags/Felder.
+
+  * Intake-Grenzen:
+
+    * `salt_limit_g_per_day`
+    * `protein_target_g_per_day_min`
+    * `protein_target_g_per_day_max`
+    * `water_target_ml_per_day` (optional)
+
+  * Metadaten:
+
+    * `updated_at`
+    * `source` (z. B. „Nephro 2025-01“, „Eigenanpassung“)
+
+**Verwendung in Edge Functions:**
+
+* `midas-assistant`:
+
+  * liest Health-Profil per `user_id` (aus Supabase Session / JWT).
+  * injiziert Health-Kontext als **zusätzlichen System-Block** vor den Chat-Messages, z. B.:  
+    „Stephan hat CKD G3a1, Salzlimit 5–6 g/Tag, Nichtraucher. Passe Empfehlungen entsprechend an und sei konservativ bei Salz-/Proteinvorschlägen.“
+
+* `midas-vision`:
+
+  * nutzt Health-Profil, um Foto-Empfehlungen zu contextualisieren (z. B. Hinweis bei hoher Salzlast).
+
+**UI-Anbindung (später, minimal):**
+
+* Einfaches Profil-Panel:
+
+  * Eingabe/Änderung von CKD-Status, Limits, Lifestyle-Flags.
+  * Jede Änderung erzeugt optional einen Eintrag in System-Notes (Audit).
+
+**Vorteile:**
+
+* Assistant muss Health-Kontext nicht in jedem Prompt neu erklärt bekommen.
+* Änderungen (z. B. G3a1 → G3a2) sind mit einem Datensatz-Update erledigt.
+* Voice & Text greifen auf denselben, sauberen Persona-/Health-Layer zu.
+
+**Codex-Hinweis:**
+
+- In dieser Phase nur Tabellen + Edge Function-Kontext erweitern.
+- Keine neuen großen UI-Bereiche bauen – ein einfaches Profil-Panel reicht.
 
 ---
 
 ## Phase 5 – Actions & Flows – Voice Butler / Hybrid Engine
 
 **Ziel:**
-Der Assistant wird vom Erklärer zum **Butler**.
+Der Assistant wird vom Erklärer zum **Butler**.  
 Voice und Text/Foodcoach können kontrolliert **Daten verändern** (z. B. Intakes loggen, Module öffnen).
 
 ---
 
 ### 5.1 Intent Engine (JS Fast Path)
 
-* `detectIntent(transcript)` in `app/modules/hub/voice-intent.js`.
-* Pattern-/Regex-Matching, kein KI-Roundtrip.
-* `executeIntent(intent)` ruft DOM-/Supabase-Helper.
+* Datei: `app/modules/hub/voice-intent.js` (neu oder bestehend).
+* `detectIntent(transcript)`:
+
+  * Pattern-/Regex-Matching, kein KI-Roundtrip.
+  * Liefert strukturierte Intent-Objekte, z. B.: `{ type: "OPEN_MODULE", module: "intakes" }`.
+
+* `executeIntent(intent)`:
+
+  * Ruft DOM-/Supabase-Helper auf (z. B. `openModule("intakes")`, oder Wrapper für `IntakeSave`).
+  * Fehler robust loggen (keine harten Crashes).
 
 **Beispiele (Fast Path):**
 
 * „öffne intakes“ → `openModule("intakes")`
 * „wasser 300 ml“ → `saveWater(300)`
 * „protein 25 gramm“ → `saveIntake({ protein_g: 25 })`
-* „schließ den chat“ → Conversation-Ende
+* „schließ den chat“ → Conversation-Ende (Panel schließen / Voice-Loop beenden)
 
-Fallback: alles, was nicht erkannt wird, geht wie bisher über `/midas-assistant`.
+Fallback: alles, was nicht erkannt wird, geht wie bisher über `/midas-assistant` (keine Änderung der Backend-API nötig, nur Routing-Logik).
 
 ---
 
 ### 5.2 Allowed Actions
 
-Definierte, geprüfte Actions, die Voice/Text/Foodcoach auslösen dürfen:
+Definierte, geprüfte Actions, die Voice/Text/Foodcoach auslösen dürfen.
+
+**Whiteliste (z. B. `allowedActions.js` oder Ähnliches):**
 
 * `IntakeSave`
 * `OpenModule`
@@ -136,8 +403,18 @@ Definierte, geprüfte Actions, die Voice/Text/Foodcoach auslösen dürfen:
 * `StartTextChatWithCamera`
 * `AssistantDiagnostics`
 
+**Regeln:**
+
+* Nur diese Actions dürfen von KI-Output/Intent Engine in konkrete Funktionen übersetzt werden.
+* Alle anderen Befehle → Text-Antwort ohne Seiteneffekt.
+
 **Nicht erlaubt:**
-Chat-Persistenz, Self-Updates, Tech-Scanning, medizinische Diagnosen. Blutdruck & Körperdaten bleiben manuell im UI.
+
+* Chat-Persistenz (Archiv)
+* Self-Updates (Code introspection, Config-Änderungen)
+* Tech-Scanning (Repo-Analyse)
+* medizinische Diagnosen (nur Empfehlung, kein „Diagnose“-Label)
+* Blutdruck & Körperdaten speichern (bleiben manuell im UI)
 
 ---
 
@@ -145,23 +422,37 @@ Chat-Persistenz, Self-Updates, Tech-Scanning, medizinische Diagnosen. Blutdruck 
 
 1. **V1 Quick Intake**
 
-   * „Trag 500 ml Wasser ein.“
-   * Fast Path → `IntakeSave` → kurze TTS-Bestätigung.
+   * Beispiel: „Trag 500 ml Wasser ein.“
+   * Flow:
+
+     * Transcript → `detectIntent` → Intent `IntakeSave`
+     * `executeIntent` ruft Save-Helper auf.
+     * TTS: „Ich habe 500 ml Wasser eingetragen.“
 
 2. **V2 Status & Empfehlung**
 
-   * „Wie schau ich heute aus mit Salz?“
-   * JS zieht Werte → KI bewertet → kurze Antwort mit Kontext.
+   * Beispiel: „Wie schau ich heute aus mit Salz?“
+   * Flow:
+
+     * JS zieht Werte aus Intakes (heute).
+     * KI formuliert Antwort mit Kontext (Health-Profil, Zielbereiche).
 
 3. **V3 UI-Steuerung**
 
-   * „Öffne Intakes.“
-   * Panel-Switch direkt, optionale Bestätigung.
+   * Beispiel: „Öffne Intakes.“
+   * Flow:
+
+     * Intent `OpenModule("intakes")`.
+     * Panel-Switch direkt, optionale Bestätigung per Voice/TTS.
 
 4. **V4 Übergabe an Foodcoach**
 
-   * „Ich will mein Essen analysieren.“
-   * Assistant öffnet Textchat + Kamera, erklärt den Foto-Flow, dann Vision.
+   * Beispiel: „Ich will mein Essen analysieren.“
+   * Flow:
+
+     * Assistant öffnet Textchat + Kamera.
+     * Erklärt kurz, wie der Foto-Flow funktioniert.
+     * Vision-Call bei Foto-Upload.
 
 ---
 
@@ -169,38 +460,55 @@ Chat-Persistenz, Self-Updates, Tech-Scanning, medizinische Diagnosen. Blutdruck 
 
 * Vision/Text liefern `suggestIntake`-Payload (z. B. `water_ml`, `salt_g`, `protein_g`).
 * Butler entscheidet, ob dieser Vorschlag in einen konkreten Save-Call (Allowed Action `IntakeSave`) übersetzt wird.
-* Flow:
 
-  * Vorschlag generieren (UI/Voice)
-  * Bestätigung einholen
-  * Auf `IntakeSave` routen oder verwerfen.
+**Flow:**
+
+1. Vorschlag generieren (über Vision/Assistant).
+2. Vorschlag in der UI darstellen (siehe 5.5).
+3. Bestätigung einholen („Ja/Nein“ oder Voice).
+4. Auf `IntakeSave` routen oder verwerfen.
+
+**Codex-Hinweis:**
+
+- Kein direktes Auto-Speichern ohne explizite Bestätigung.
+- Die Logik zur Übersetzung von `suggestIntake` → `IntakeSave` sollte zentral gekapselt sein (z. B. Helper `applyIntakeSuggestion(suggest)`).
 
 ---
 
 ### 5.5 Intake Suggest & Confirm UI (gemeinsame UI für Voice & Text)
 
 **Ziel:**
-Eine gemeinsame UI-Schicht für Vorschlag/Bestätigung, die **sowohl vom Voice-Flow als auch vom Text/Foodcoach-Flow** wiederverwendet wird. Deshalb MUSS dieser Punkt in dieselbe Phase wie die Allowed Actions und der Save-Mechanismus.
+Eine gemeinsame UI-Schicht für Vorschlag/Bestätigung, die **sowohl vom Voice-Flow als auch vom Text/Foodcoach-Flow** wiederverwendet wird.
 
 **Inhalt:**
 
-* UI-Komponente, die `suggestIntake` visualisiert (z. B. kleines Card-Panel im Assistant-Bereich):
+* UI-Komponente im Assistant-Bereich (z. B. `assistant-suggest-card`):
 
-  * Wasser/Salz/Protein-Werte
-  * ggf. Kontext (z. B. „geschätzte Menge für dieses Foto“)
-* Standard-Dialog:
+  * Zeigt `suggestIntake`:
 
-  * Frage: „Soll ich das so loggen?“
-  * Buttons: **„Ja“ / „Nein“**
-* „Ja“ → ruft `IntakeSave` (Allowed Action) mit der Payload auf.
-* „Nein“ → verwirft die Suggestion, keine Datenänderung.
+    * Wasser/Salz/Protein-Werte.
+    * Optional: Kontext („geschätzte Menge für dieses Foto“).
+
+  * Standard-Dialog:
+
+    * Frage: „Soll ich das so loggen?“
+    * Buttons: **„Ja“ / „Nein“**.
+
+* Aktionen:
+
+  * „Ja“ → ruft `IntakeSave` (Allowed Action) mit der Payload auf.
+  * „Nein“ → verwirft die Suggestion, keine Datenänderung.
+
 * **Wiederverwendung im Voice-Flow:**
 
-  * Voice kann denselben Suggest-Mechanismus triggern („Das sieht nach ca. 25 g Protein aus. Soll ich das eintragen?“).
-  * Bestätigung kann entweder per Voice („Ja, bitte“) oder per Tap im UI erfolgen, nutzt aber dieselbe `Suggest & Confirm`-Logik.
+  * Voice kann denselben Suggest-Mechanismus triggern:  
+    „Das sieht nach ca. 25 g Protein aus. Soll ich das eintragen?“
+  * Bestätigung per Voice („Ja, bitte“) oder per Tap im UI; beide Wege nutzen dieselben Hooks.
+
 * **Wiederverwendung im Text-Flow:**
 
-  * Text-/Foto-Foodcoach zeigt dieselbe UI-Komponente (z. B. unter der Analyse) und nutzt dieselben Confirm/Save-Hooks.
+  * Text-/Foto-Foodcoach zeigt dieselbe Komponente unterhalb der Analyse.
+  * Klicks laufen über dieselben Confirm/Save-Funktionen wie im Voice-Flow.
 
 > **Dev-Sicht:**
 > 5.5 bildet die Brücke zwischen:
@@ -208,7 +516,8 @@ Eine gemeinsame UI-Schicht für Vorschlag/Bestätigung, die **sowohl vom Voice-F
 > * Vision/Text-Suggestions
 > * Voice-Suggestions
 > * und dem gemeinsamen Save-Layer (`IntakeSave`).
->   Genau deshalb gehört alles, inkl. UI-Logik, in dieselbe Phase wie die Butler-Engine – nicht isoliert in Phase 3.
+>
+> Alles, inkl. UI-Logik, gehört in **diese Phase**, nicht in Phase 3.
 
 ---
 
@@ -217,11 +526,93 @@ Eine gemeinsame UI-Schicht für Vorschlag/Bestätigung, die **sowohl vom Voice-F
 **Ziel:**
 Wenn alle Kernfeatures stehen, Code so aufräumen, dass er langfristig wartbar bleibt.
 
-* Logger konsolidieren (`diag`, `touch-log`, `console`).
-* State-Layer weiter entschlacken (`/core/state`, Guards, Flags).
-* Toter Code, verwaiste Helper, alte Experimente entfernen.
-* Modul-Schnittstellen schärfen (Public/Private, Exports dokumentieren).
-* Kommentare minimal, aber gezielt mit `// [anchor:...]`.
+**Schwerpunkte:**
+
+* Logger konsolidieren (`diag`, `touch-log`, `console`):
+
+  * vereinheitlichte Logging-API, z. B. `diag.log/info/warn/error`.
+  * Überflüssige `console.log`-Spuren aus Produktivcode entfernen (nur gezielte Debug-Punkte lassen).
+
+* State-Layer weiter entschlacken (`/core/state`, Guards, Flags):
+
+  * Überflüssige Flags entfernen.
+  * Doppelte State-Pfade zusammenführen.
+  * Guards dokumentieren (kurz: „wogegen schützt dieser Guard?“).
+
+* Toter Code, verwaiste Helper, alte Experimente entfernen:
+
+  * Nur klar identifizierbare Leichen – der systematische Scan kommt in Phase 6.5.
+
+* Modul-Schnittstellen schärfen:
+
+  * Public/Private-Exports in Kernmodulen dokumentieren (kurzer Header-Kommentar).
+  * Unnötige Exports entfernen.
+
+* Kommentare minimal, aber gezielt mit `// [anchor:...]` als Update-Marker.
+
+**Codex-Hinweis:**
+
+- In dieser Phase explizit **kein** neues Feature bauen.
+- Fokus: Lesbarkeit, Konsistenz, kleinere Refactors.
+
+---
+
+## Phase 6.5 – Repo Audit & Dead Code Removal
+
+**Ziel:**
+Kompletten Codebaum systematisch auf Altlasten prüfen und verschlanken, bevor Persistent Login, PWA und TWA kommen.
+
+**Inhalt:**
+
+* Vollständiger Repo-Scan (Ordner für Ordner) mit Fokus auf:
+
+  * ungenutzte Dateien (nie importiert / nie referenziert)
+  * ungenutzte Funktionen, Konstanten, Helpers
+  * verwaiste Imports
+  * alte Prototypen und Monolith-Reste
+  * doppelte Utilities / Duplikate
+  * Debug-Fragmente, alte Test-Routen
+  * dead paths (If-Zweige/Branches, die nie mehr ausgeführt werden)
+
+* Ergebnis: Klassifizierung pro Datei/Funktion:
+
+  * **A – Aktiv:** produktiv genutzt, bleibt.
+  * **B – Fraglich:** verdächtig, aber evtl. noch referenziert → markieren.
+  * **C – Tot:** sicher löschbar (keine Referenzen, kein Pfad, kein Import).
+
+**Methode (für Codex):**
+
+* Spezieller „Repo Audit“-Prompt:
+
+  * Keine automatischen Codeänderungen.
+  * Nur Analyse & Bericht erstellen.
+  * Ordnerstruktur durchgehen (z. B. `/core`, `/modules/*`, `/app/styles`, Edge Functions).
+  * Pro Ordner eine Liste erstellen, Dateien als A/B/C markieren.
+  * Refactor-/Lösch-Empfehlungen formulieren.
+
+**Output:**
+
+* `REPO_AUDIT.md` mit:
+
+  * Auflistung aller Ordner/Dateien.
+  * A/B/C-Klassifizierung.
+  * Liste „Safe to delete“.
+  * Liste „Kandidat für Zusammenlegung/Refactor“.
+  * Hinweisen auf doppelte Muster (z. B. ähnliche Helpers in mehreren Modulen).
+
+**Warum vor Phase 7–9:**
+
+* Persistent Login (Phase 7) profitiert von:
+
+  * weniger alten Auth-/Guard-Resten.
+  * weniger versteckten Event-Handlern.
+  * weniger Seiteneffekten aus alten Flows.
+
+* PWA/TWA (Phase 8/9) profitieren von:
+
+  * schlankeren Bundles.
+  * weniger unnötigen Assets.
+  * klareren Caching-Grenzen.
 
 ---
 
@@ -230,11 +621,53 @@ Wenn alle Kernfeatures stehen, Code so aufräumen, dass er langfristig wartbar b
 **Ziel:**
 Stabile Sessions und gutes Startverhalten im Browser – Vorbereitung für PWA/TWA.
 
+**Code-Schwerpunkt:**  
+`app/supabase/auth/core.js`, Bootflow (`boot-flow.js`, `main.js`), Guards im UI.
+
 | Task                      | Status | Beschreibung                                                                                                                                                                                   |
 | ------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 7.1 Persistent Login Mode | TODO   | `persistSession: true`, Silent Refresh für Google OAuth, Session Restore beim Boot. App öffnet eingeloggt, sofern Session gültig – ohne erzwungenen Re-Login.                                  |
 | 7.2 Session/Guard QA Pass | TODO   | Sicherstellen, dass `authState`, Guards und Doctor-Unlock deterministisch sind (kein „missing session“, kein Doppel-Login). Resume-/Background-Flow definieren (Tab-Wechsel, Reload, Timeout). |
 | 7.3 Performance Pass      | TODO   | Nicht-kritische Module lazy laden. Charts/Vision/Doctor/Trendpilot erst nach Idle oder on-demand booten. Ziel: schneller First Paint, „fühlt sich wie native App an“.                          |
+
+### 7.4 Wearable/Remote API Readiness
+
+**Ziel:**
+MIDAS so vorbereiten, dass spätere Wearables (DIY-Watch, AR-Brille, Kommunikator) sich wie ein schlanker Remote-Client verhalten können, ohne die App-Architektur umzubauen.
+
+**Backend-Konzept:**
+
+* Definierte, schmale Endpunkte (z. B. als neue Edge Function oder API-Route):
+
+  * `GET /api/midas-remote-status` → kompakter Snapshot:
+
+    * heutige Intakes (Summen Wasser/Salz/Protein),
+    * nächster Termin,
+    * kurzer Health-Profil-Auszug.
+
+  * `POST /api/midas-remote-intake` → einfacher Intake-Write:
+
+    * Payload nur mit Basisfeldern (`water_ml`, `protein_g`, `salt_g`, `timestamp`).
+
+  * `GET /api/midas-remote-ping` → Healthcheck/Version für Client.
+
+* Auth:
+
+  * token-basiert (z. B. Device-Token oder API-Key, gebunden an Stephans Account).
+  * Kein vollständiger OAuth-Flow am Wearable.
+
+**Verwendung:**
+
+* Externe Clients (z. B. DIY-Uhr) können:
+
+  * aktuellen Intake-Status abfragen („wie weit bin ich heute?“),
+  * kleine Intakes eintragen („+20 g Protein“, „+300 ml Wasser“),
+  * später Termine anzeigen („nächster Arzttermin“).
+
+**Abgrenzung:**
+
+* Keine KI direkt im Wearable – weiterhin über Edge Functions.
+* Kein neues UI in MIDAS selbst in dieser Phase, nur API-Schicht + Doku (`Wearable_API.md`).
 
 ---
 
@@ -242,6 +675,9 @@ Stabile Sessions und gutes Startverhalten im Browser – Vorbereitung für PWA/T
 
 **Ziel:**
 MIDAS als saubere Progressive Web App bereitstellen – installierbar auf Desktop/Android mit Offline-Grundfunktionalität.
+
+**Files:**  
+`manifest.json`, `sw.js`, evtl. PWA-spezifische Notes.
 
 ### 8.1 Manifest
 
@@ -283,6 +719,23 @@ MIDAS als saubere Progressive Web App bereitstellen – installierbar auf Deskto
 * App-Start im Offline-Modus
 * Verhalten bei Reload im Offline-Zustand
 * Dokumentation in `PWA_NOTES.md` (z. B. „Ohne Internet kein KI-Assistant“).
+
+### 8.6 Push-Reminder (Vorbereitung)
+
+**Ziel:**
+PWA/Service Worker so vorbereiten, dass später Web-Push für Wasser-/Intake-/Termin-Reminder möglich ist.
+
+* Konzept für Web-Push-Benachrichtigungen:
+
+  * Wasser-/Intake-Reminder.
+  * Termin-Erinnerungen (z. B. „Übermorgen Nephro um 09:00“).
+
+* Technische Vorbereitung:
+
+  * Klären, wie Push im Backend angebunden wird (eigener Push-Service oder Browser-Push).
+  * Sicherstellen, dass Notifications so gestaltet sind, dass spätere Wearables sie als System-Notifications mitnutzen können (Uhr liest Handy-Notifications).
+
+> Umsetzung der Push-Logik (Zeitpläne, CRON, Notification-Texte) kann später in eine eigene Phase ausgelagert werden; hier geht es primär um PWA-Readiness für Push.
 
 ---
 
@@ -340,7 +793,11 @@ MIDAS als Trusted Web Activity für Android bereitstellen, auf Basis der stabile
   * Kurzbeschreibung
   * CHANGELOG-Update
   * Mini-QA (Smoke Tests)
+
 * Feature-Flags für Assistant/Voice beibehalten, um bei Bedarf schnell deaktivieren zu können.
+
 * KI-nahe Module (`voice-intent.js`, Assistant-Panel, Edge-Functions) möglichst gekapselt halten, damit Codex-Refactors nicht in Boot/Auth/Session eingreifen.
+
+* **Text-Assistant bleibt der primäre Interaktionsmodus** (Analyse, Foodcoach, Vorschläge); der Voice-Butler ist ein ergänzender Hands-free-Kanal für Shortcuts, Status & einfache Intakes.
 
 ---

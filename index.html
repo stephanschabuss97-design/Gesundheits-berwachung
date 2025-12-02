@@ -13,7 +13,18 @@
   <link rel="stylesheet" href="app/app.css">
   <!-- END MODULE -->
 </head>
-<body>
+<body data-boot-stage="boot" aria-busy="true">
+  <div
+    id="bootScreen"
+    class="boot-screen"
+    role="status"
+    aria-live="polite"
+  >
+    <div class="boot-screen__inner">
+      <p class="boot-stage-label" data-boot-stage-label>Boot</p>
+      <p class="boot-stage-desc">MIDAS startet gleich ...</p>
+    </div>
+  </div>
   <!-- ANKER: touch-log-fallback -->
   <pre id="touchLog" class="u-diag-log"></pre>
   <header></header>
@@ -574,6 +585,7 @@
     integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
     crossorigin="anonymous"
   ></script>
+  <script src="app/core/boot-flow.js"></script>
   <script src="app/core/config.js"></script>
   <script src="app/core/diag.js"></script>
   <script src="app/diagnostics/logger.js"></script>

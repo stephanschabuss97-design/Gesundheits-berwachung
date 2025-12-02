@@ -15,6 +15,11 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const isStageReady = () => {
+    const bootFlow = global.AppModules?.bootFlow;
+    if (!bootFlow?.isStageAtLeast) return true;
+    return bootFlow.isStageAtLeast('INIT_MODULES');
+  };
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
   const getSupabaseApi = () => global.AppModules?.supabase || {};
   const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[doctor]', msg));
@@ -187,6 +192,7 @@ const __t0 = performance.now();
 
 // SUBMODULE: renderDoctor @extract-candidate - orchestrates gated render flow, fetches days, manages scroll state
 async function renderDoctor(){
+  if (!isStageReady()) return;
   const host = $("#doctorView");
   if (!host) return;
 
@@ -398,6 +404,7 @@ async function renderDoctor(){
 // --- Arzt-Export ---
 // SUBMODULE: exportDoctorJson @internal - triggers download (future: route via buildDoctorSummaryJson @extract-candidate @public)
 async function exportDoctorJson(){
+  if (!isStageReady()) return;
   try {
     const logged = await isLoggedInFast();
     if (!logged) {
@@ -422,7 +429,10 @@ async function exportDoctorJson(){
     exportDoctorJson
   };
   appModules.doctor = Object.assign({}, appModules.doctor, doctorApi);
-  global.AppModules = appModules;
-  global.renderDoctor = renderDoctor;
-  global.exportDoctorJson = exportDoctorJson;
+  if (typeof global.renderDoctor === 'undefined') {
+    global.renderDoctor = renderDoctor;
+  }
+  if (typeof global.exportDoctorJson === 'undefined') {
+    global.exportDoctorJson = exportDoctorJson;
+  }
 })(typeof window !== 'undefined' ? window : globalThis);

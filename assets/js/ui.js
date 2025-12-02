@@ -16,6 +16,14 @@
 (function (global) {
   const MODULE_NAME = 'uiCore';
   const appModules = (global.AppModules = global.AppModules || {});
+  const waitForInitUi = (fn) => {
+    const bootFlow = global.AppModules?.bootFlow;
+    if (bootFlow?.whenStage) {
+      bootFlow.whenStage('INIT_UI', fn);
+    } else {
+      fn();
+    }
+  };
 
   // SUBMODULE: helpPanel @public - steuert das Inline-Hilfe-Overlay mit Open/Close-Logik
   const helpPanel = {
@@ -41,15 +49,18 @@
         else this.hide();
       };
 
-      if (t1 && typeof t1.addEventListener === 'function') {
-        t1.addEventListener('click', toggle);
-      }
-      if (t2 && typeof t2.addEventListener === 'function') {
-        t2.addEventListener('click', toggle);
-      }
-      if (close && typeof close.addEventListener === 'function') {
-        close.addEventListener('click', () => this.hide());
-      }
+      const bindHelpAfterBoot = () => {
+        if (t1 && typeof t1.addEventListener === 'function') {
+          t1.addEventListener('click', toggle);
+        }
+        if (t2 && typeof t2.addEventListener === 'function') {
+          t2.addEventListener('click', toggle);
+        }
+        if (close && typeof close.addEventListener === 'function') {
+          close.addEventListener('click', () => this.hide());
+        }
+      };
+      waitForInitUi(bindHelpAfterBoot);
     },
 
     show() {

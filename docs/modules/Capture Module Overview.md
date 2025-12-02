@@ -96,6 +96,7 @@ Siehe `docs/modules/Intake Module Overview.md`. Capture-Modul stellt Buttons, Ti
 - Kommentar-Pflicht: `requiresBpComment`/`updateBpCommentWarnings`.
 - Locking: Buttons disabled bei `setBusy(true)`, `AppModules.captureGlobals.setBusy`.
 - Undo/Reset: `resetCapturePanels` (Intake/Body/BP) – z.B. nach Tab-Wechsel oder Unlock.
+- Boot-Flow Guard: Handler greifen erst zu, wenn `AppModules.bootFlow` mindestens `INIT_MODULES` erreicht; davor ignorieren sie Klicks und Timer-Callbacks, sodass der Hub während des Boot-Overlays nicht reagiert.
 
 ---
 

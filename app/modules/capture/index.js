@@ -18,6 +18,11 @@
   const getSupabaseState = () => getSupabaseApi().supabaseState || null;
   const getAuthState = () => getSupabaseState()?.authState || 'unauth';
   const wasRecentlyLoggedIn = () => Boolean(getSupabaseState()?.lastLoggedIn);
+  const isHandlerStageReady = () => {
+    const bootFlow = global.AppModules?.bootFlow;
+    if (!bootFlow?.isStageAtLeast) return true;
+    return bootFlow.isStageAtLeast('INIT_MODULES');
+  };
 
   const MAX_WATER_ML = 6000;
   const MAX_SALT_G = 30;
@@ -375,6 +380,7 @@
 
   // SUBMODULE: handleCaptureIntake @internal - validiert Intake-Eingaben, triggert RPC-Speicherpfad und Refresh-Fallbacks
   async function handleCaptureIntake(kind){
+    if (!isHandlerStageReady()) return;
     const btn = document.getElementById(`cap-${kind}-add-btn`);
     const input = document.getElementById(`cap-${kind}-add`);
     if (!btn || !input) return;
@@ -468,6 +474,7 @@
 
   // SUBMODULE: bindIntakeCapture @extract-candidate - verbindet Intake-Inputs mit Save/Guard Flows
   function bindIntakeCapture(){
+    if (!isHandlerStageReady()) return;
     const wire = (id, kind) => {
       const oldBtn = document.getElementById(id);
       if (!oldBtn) return;
@@ -506,6 +513,7 @@
   }
 
   function updateLifestyleBars(){
+    if (!isHandlerStageReady()) return;
     const wBar = document.getElementById('ls-water-bar');
     const wProg = document.getElementById('ls-water-prog');
     const wLbl = document.getElementById('ls-water-label');
@@ -571,6 +579,7 @@
   }
 
   async function renderLifestyle(){
+    if (!isHandlerStageReady()) return;
     const logged = await isLoggedIn();
     if (!logged){
       // Nichts anzeigen, Tab ist ohnehin gesperrt
@@ -586,6 +595,7 @@
   }
 
   function bindLifestyle(){
+    if (!isHandlerStageReady()) return;
     const addWaterBtn = document.getElementById('ls-water-add-btn');
     const addSaltBtn = document.getElementById('ls-salt-add-btn');
     const addProtBtn = document.getElementById('ls-protein-add-btn');
@@ -677,6 +687,7 @@
   return null;
 };
   function resetCapturePanels(opts = {}) {
+    if (!isHandlerStageReady()) return;
     const { focus = true } = opts;
     invokeResetBpPanel('M', { focus: false });
     invokeResetBpPanel('A', { focus: false });
@@ -694,6 +705,7 @@
     }
   }
   function addCapturePanelKeys(){
+    if (!isHandlerStageReady()) return;
     const bind = (selectors, onEnter, onEsc) => {
       document.querySelectorAll(selectors).forEach(el => {
         el.addEventListener('keydown', e => {

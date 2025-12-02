@@ -33,6 +33,22 @@ const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
 const getSupabaseState = () => getSupabaseApi()?.supabaseState || null;
 
+const getBootFlow = () => window.AppModules?.bootFlow || null;
+const setBootStage = (stage) => {
+  try {
+    getBootFlow()?.setStage(stage);
+  } catch (_) {
+    /* ignore */
+  }
+};
+const failBootStage = (message) => {
+  try {
+    getBootFlow()?.markFailed?.(message);
+  } catch (_) {
+    /* ignore */
+  }
+};
+
 // SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
 const createSupabaseFn = (name, { optional = false } = {}) => (...args) => {
   const fn = getSupabaseApi()?.[name];
@@ -167,6 +183,147 @@ function getDoctorModule(){
 
 function getChartPanel(){
   return window.AppModules?.charts?.chartPanel;
+}
+
+const waitForDomReady = () => {
+  if (document.readyState !== 'loading') return Promise.resolve();
+  return new Promise((resolve) => {
+    document.addEventListener('DOMContentLoaded', resolve, { once: true });
+  });
+};
+
+const setInputValue = (selector, value) => {
+  const el = document.querySelector(selector);
+  if (!el) {
+    diag.add?.(`[boot] input ${selector} missing (possibly moved to overlay)`);
+    return null;
+  }
+  el.value = value;
+  return el;
+};
+
+async function runBootPhase() {
+  setBootStage('BOOT');
+  await waitForDomReady();
+  const modulesReady = await ensureModulesReady();
+  if (!modulesReady) {
+    throw new Error('required modules missing');
+  }
+  diag.init();
+  helpPanel?.init?.();
+}
+
+async function runAuthCheckPhase(context) {
+  setBootStage('AUTH_CHECK');
+  await waitForSupabaseApi();
+  await initDB();
+  await ensureSupabaseClient();
+  context.hasSession = await requireSession();
+  if (context.hasSession) {
+    await afterLoginBoot();
+    await setupRealtime();
+  }
+}
+
+async function initCorePhase() {
+  setBootStage('INIT_CORE');
+  window.AppModules?.uiLayout?.updateStickyOffsets?.();
+  bindHeaderShadow();
+  await ensureSupabaseClient();
+  getChartPanel()?.init?.();
+
+  const todayIso = todayStr();
+  setInputValue('#date', todayIso);
+  AppModules.captureGlobals.setLastKnownToday(todayIso);
+  AppModules.captureGlobals.setDateUserSelected(false);
+  AppModules.captureGlobals.setBpUserOverride(false);
+  prepareIntakeStatusHeader();
+  setInputValue('#from', new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10));
+  setInputValue('#to', todayIso);
+  setTab('capture');
+  try {
+    window.AppModules.capture.resetCapturePanels?.();
+    window.AppModules.bp.updateBpCommentWarnings?.();
+  } catch (_) {}
+  try { addCapturePanelKeys?.(); } catch(_){ }
+}
+
+async function initModulesPhase() {
+  setBootStage('INIT_MODULES');
+  bindTabs();
+  bindAuthButtons();
+  if (getSupabaseState()?.sbClient) watchAuthState();
+  try {
+    await window.AppModules.capture.refreshCaptureIntake();
+  } catch(_) {}
+  await maybeRefreshForTodayChange({ force: true, source: 'boot' });
+  AppModules.captureGlobals.setLastKnownToday(todayStr());
+  scheduleMidnightRefresh();
+  scheduleNoonSwitch();
+  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
+  bindAppLockButtons();
+
+  const savedUrl = await getConf('webhookUrl');
+  const savedKey = await getConf('webhookKey');
+  diag.add?.('Config URL: ' + (savedUrl || '(none)'));
+  diag.add?.(
+    'Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)')
+  );
+  if (!savedUrl || !savedKey) {
+    setTab('capture');
+  }
+
+  ['#captureAmount', '#diaM', '#bpCommentM', '#sysA', '#diaA', '#bpCommentA'].forEach((sel) => {
+    const el = $(sel);
+    if (!el) return;
+    el.addEventListener('input', () => window.AppModules.bp.updateBpCommentWarnings?.());
+  });
+  window.AppModules.bp.updateBpCommentWarnings?.();
+
+  const bpContextSel = document.getElementById('bpContextSel');
+  AppModules.captureGlobals.setBpPanesCache(Array.from(document.querySelectorAll('.bp-pane')));
+  if (bpContextSel) {
+    applyBpContext(bpContextSel.value || 'M');
+    maybeAutoApplyBpContext({ force: true, source: 'boot' });
+    bpContextSel.addEventListener('change', (e) => {
+      AppModules.captureGlobals.setBpUserOverride(true);
+      applyBpContext(e.target.value);
+      window.AppModules.bp.updateBpCommentWarnings?.();
+    });
+  }
+
+  window.AppModules.capture.bindIntakeCapture();
+  try {
+    if (hasSupabaseFn('cleanupOldIntake') && await isLoggedInFast()) {
+      await cleanupOldIntake();
+    }
+  } catch (_) {}
+}
+
+async function initUiAndLiftLockPhase() {
+  setBootStage('INIT_UI');
+  await requestUiRefresh({ reason: 'boot:initial' });
+  $$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button').forEach((el) => {
+    el.disabled = false;
+  });
+  document.body.classList.remove('auth-locked');
+  setBootStage('IDLE');
+
+  window.addEventListener('online', async () => {
+    try {
+      if (!hasSupabaseFn('pushPendingToRemote')) return;
+      const resPush = await pushPendingToRemote();
+      if (resPush?.pushed || resPush?.failed) {
+        diag.add?.('Online-Push: OK=' + (resPush.pushed || 0) + ', FAIL=' + (resPush.failed || 0));
+        if (hasSupabaseFn('reconcileFromRemote')) {
+          await reconcileFromRemote();
+        }
+      }
+    } catch (err) {
+      diag.add?.('[online] push failed: ' + (err?.message || err));
+      console.error('[online] pushPendingToRemote failed', err);
+    }
+  }, { once: true });
 }
 
 // SUBMODULE: UI Refresh Core @public - steuert UI-Neuladen (Doctor/Chart/Capture)
@@ -1112,101 +1269,13 @@ function flashButtonOk(btn, successHtml){
 /* Doctor-Lock-Logik lebt in SupabaseAPI.guard (requireDoctorUnlock/bindAppLockButtons). */
 /* ===== Main ===== */
 async function main(){
-  if (document.readyState === 'loading') {
-    await new Promise((resolve) => {
-      document.addEventListener('DOMContentLoaded', resolve, { once: true });
-    });
-  }
-  if (!(await ensureModulesReady())) {
-    return;
-  }
-  diag.init();
-  helpPanel?.init?.();
-  await initDB();
-  window.AppModules?.uiLayout?.updateStickyOffsets?.();
-  bindHeaderShadow();
-  try {
-    await getConf("webhookUrl");
-    await getConf("webhookKey");
-  } catch (_) {}
-  // Dep: chart panel and refresh flows expect Supabase client to exist beforehand.
-  await ensureSupabaseClient();
-  getChartPanel()?.init?.();
-  bindTabs();
-const todayIso = todayStr();
-const setInputValue = (selector, value) => {
-  const el = document.querySelector(selector);
-  if (!el) {
-    diag.add?.(`[boot] input ${selector} missing (possibly moved to overlay)`);
-    return null;
-  }
-  el.value = value;
-  return el;
-};
-setInputValue('#date', todayIso);
-AppModules.captureGlobals.setLastKnownToday(todayIso);
-AppModules.captureGlobals.setDateUserSelected(false);
-AppModules.captureGlobals.setBpUserOverride(false);
-prepareIntakeStatusHeader();
-setInputValue('#from', new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10));
-setInputValue('#to', todayIso);
-setTab("capture");
-try{ window.AppModules.capture.resetCapturePanels?.(); window.AppModules.bp.updateBpCommentWarnings?.(); }catch(_){ }
-try { addCapturePanelKeys?.(); } catch(_){ }
-bindAuthButtons();
-if (getSupabaseState()?.sbClient) watchAuthState();
-
-// Wenn schon eingeloggt -> App starten, sonst Login-Leiste zeigen
-const hasSession = await requireSession();
-if (hasSession) {
-  await afterLoginBoot(); // wichtig fuer Reload mit persistierter Session
-      // Doctor-Unlock: nur bei Arzt-Ansicht (kein globaler App-Lock)  //  App-Lock direkt nach Boot pruefen/anzeigen
-  await setupRealtime();  //  NEU: Realtime direkt aktivieren
-  await requestUiRefresh();
+  const context = { hasSession: false };
+  await runBootPhase();
+  await runAuthCheckPhase(context);
+  await initCorePhase();
+  await initModulesPhase();
+  await initUiAndLiftLockPhase();
 }
-  try {
-    await window.AppModules.capture.refreshCaptureIntake();
-  } catch(_) {}
-await maybeRefreshForTodayChange({ force: true, source: 'boot' });
-  AppModules.captureGlobals.setLastKnownToday(todayStr());
-  scheduleMidnightRefresh();
-  scheduleNoonSwitch();
-  maybeAutoApplyBpContext({ source: 'boot-post-refresh' });
-// appointments refresh removed
-bindAppLockButtons();     //  Buttons der Lock-Card binden
-
-// Konfiguration laden
-const savedUrl = await getConf("webhookUrl");
-const savedKey = await getConf("webhookKey");
-// Diagnose: aktive REST-URL und Key-Typ
-diag.add?.('Config URL: ' + (savedUrl || '(none)'));
-diag.add?.('Config Key: ' + (savedKey ? (isServiceRoleKey(savedKey) ? 'service_role(BLOCKED)' : 'anon/ok') : '(none)'));
-if (!savedUrl || !savedKey) {
-  setTab("capture"); // In Erfassung bleiben
-}
-
-// Sanfte Warnung
-// === Live-Kommentar-Pflicht: sofort roter Rand bei Grenzwertueberschreitung ===
-['#captureAmount','#diaM','#bpCommentM','#sysA','#diaA','#bpCommentA'].forEach(sel=>{
-  const el = $(sel); if(!el) return;
-  el.addEventListener('input', () => window.AppModules.bp.updateBpCommentWarnings?.());
-});
-window.AppModules.bp.updateBpCommentWarnings?.();
-
-
-// Toggle-Handler
-const bpContextSel = document.getElementById('bpContextSel');
-AppModules.captureGlobals.setBpPanesCache(Array.from(document.querySelectorAll('.bp-pane')));
-if (bpContextSel){
-  applyBpContext(bpContextSel.value || 'M');
-  maybeAutoApplyBpContext({ force: true, source: 'boot' });
-  bpContextSel.addEventListener('change', (e)=>{
-    AppModules.captureGlobals.setBpUserOverride(true);
-    applyBpContext(e.target.value);
-    window.AppModules.bp.updateBpCommentWarnings?.();
-  });
-}
-
 function getCaptureDayIso() {
   const input = document.getElementById('date');
   const raw = typeof input?.value === 'string' ? input.value.trim() : '';
@@ -1445,57 +1514,28 @@ if (doctorExportBtn) {
   diag.add?.('[doctor] export button missing - overlay layout active?');
 }
 
-// --- Lifestyle binden und initial (falls bereits angemeldet) laden ---
-window.AppModules.capture.bindIntakeCapture();
-// appointments panel removed
-try {
-  if (hasSupabaseFn('cleanupOldIntake') && await isLoggedInFast()) {
-    await cleanupOldIntake();
-  }
-} catch(_) {}
-
-// Initial Render
-await requestUiRefresh({ reason: 'boot:initial' });
-
-// --- Failsafe: nach Reload alles sicher freigeben (falls etwas "disabled" haengen blieb)
-$$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button').forEach(el=>{
-el.disabled = false;
-});
-document.body.classList.remove('auth-locked');
-
-// Auto-Push Pending sobald online
-window.addEventListener('online', async ()=>{
-  try {
-    if (!hasSupabaseFn('pushPendingToRemote')) return;
-    const resPush = await pushPendingToRemote();
-    if(resPush?.pushed || resPush?.failed){
-      diag.add?.('Online-Push: OK=' + (resPush.pushed || 0) + ', FAIL=' + (resPush.failed || 0));
-      if (hasSupabaseFn('reconcileFromRemote')) {
-        await reconcileFromRemote();
-      }
-    }
-  } catch (err) {
-    diag.add?.('[online] push failed: ' + (err?.message || err));
-    console.error('[online] pushPendingToRemote failed', err);
-  }
-});
-}
-
-// appointments UI reset removed
-
 /* boot */
-if (!window.__bootDone) {
+const startBootProcess = () => {
+  if (window.__bootDone) return;
   window.__bootDone = true;
-  if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", main);
+  main().catch((err) => {
+    failBootStage(err?.message || 'Boot fehlgeschlagen.');
+    console.error('Boot failed', err);
+  });
+};
 
-    window.addEventListener('focus', () => {
-      try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
-    });
-  } else {
-    main();
-  }
+const bootFlowInstance = getBootFlow();
+if (bootFlowInstance) {
+  bootFlowInstance.whenStage('BOOT', startBootProcess);
+} else if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', startBootProcess, { once: true });
+} else {
+  startBootProcess();
 }
+
+window.addEventListener('focus', () => {
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+});
 
 /** MODULE: FUTURE (placeholders)
  * intent: haelt geplante Assist/PWA/BLE-Refactors fuer die Zeit nach dem Annotations-Pass bereit

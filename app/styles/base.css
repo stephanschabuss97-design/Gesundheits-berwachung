@@ -41,6 +41,16 @@
   --color-chart-tooltip-bg: rgba(20, 23, 28, 0.96);
   --size-header-height: 56px;
   --size-tabs-height: 48px;
+  --boot-stage-bg: rgba(8, 10, 14, 0.96);
+  --boot-stage-border: rgba(255, 255, 255, 0.08);
+  --boot-stage-text: var(--color-text-primary);
+  --boot-stage-color-boot: #7d81ff;
+  --boot-stage-color-auth: #38bdf8;
+  --boot-stage-color-init: #fbbf24;
+  --boot-stage-color-ui: #2ecc71;
+  --boot-stage-color-error: var(--color-danger);
+  --boot-stage-spinner: rgba(255, 255, 255, 0.2);
+  --boot-stage-spinner-active: #fff;
 
 /* SUBMODULE: Legacy Aliases @internal - Übergangsvariablen für Alt-Styles (werden später entfernt) */
   --bg: var(--color-bg-primary);
@@ -107,6 +117,108 @@ body {
 
 body.auth-locked main {
   opacity: .6;
+}
+
+body[data-boot-stage]:not([data-boot-stage="idle"]) #appMain,
+body[data-boot-stage]:not([data-boot-stage="idle"]) header,
+body[data-boot-stage]:not([data-boot-stage="idle"]) #touchLog {
+  filter: blur(1px);
+  pointer-events: none;
+  user-select: none;
+  opacity: .35;
+  transition: opacity .35s ease, filter .35s ease;
+}
+
+#bootScreen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--boot-stage-bg);
+  backdrop-filter: blur(6px);
+  z-index: 100000;
+  transition: opacity .35s ease, visibility .35s ease;
+  color: var(--boot-stage-text);
+}
+
+body[data-boot-stage]:not([data-boot-stage="idle"]) #bootScreen {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+}
+
+body[data-boot-stage="idle"] #bootScreen {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-screen__inner {
+  min-width: 280px;
+  padding: 32px 36px;
+  border-radius: 20px;
+  border: 1px solid var(--boot-stage-border);
+  background: rgba(10, 12, 17, 0.85);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.boot-screen__inner::before {
+  content: '';
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid var(--boot-stage-spinner);
+  border-top-color: var(--boot-stage-spinner-active);
+  animation: boot-spin 1s linear infinite;
+  margin-bottom: 18px;
+}
+
+.boot-stage-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: .78rem;
+  margin: 0;
+  transition: color .25s ease;
+}
+
+.boot-stage-desc {
+  margin: 6px 0 0;
+  font-size: .95rem;
+  color: var(--color-text-muted);
+}
+
+body[data-boot-stage="boot" i] .boot-stage-label {
+  color: var(--boot-stage-color-boot);
+}
+
+body[data-boot-stage="auth_check" i] .boot-stage-label {
+  color: var(--boot-stage-color-auth);
+}
+
+body[data-boot-stage="init_core" i] .boot-stage-label,
+body[data-boot-stage="init_modules" i] .boot-stage-label {
+  color: var(--boot-stage-color-init);
+}
+
+body[data-boot-stage="init_ui" i] .boot-stage-label {
+  color: var(--boot-stage-color-ui);
+}
+
+body[data-boot-stage="idle" i] .boot-stage-label {
+  color: var(--boot-stage-color-ui);
+}
+
+body[data-boot-stage="boot_error" i] .boot-stage-label {
+  color: var(--boot-stage-color-error);
+}
+
+@keyframes boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* SUBMODULE: Form Controls @public - vereinheitlichte Eingabeelemente mit dynamischen Rändern */

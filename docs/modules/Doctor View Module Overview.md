@@ -82,6 +82,7 @@ Die Arzt-Ansicht konsolidiert Tagesdaten, Trendpilot-Hinweise und Management-Akt
 - Touch-Log-Einträge (`[doctor] ...`, `[sbSelect] ... failed`) zeigen REST-Probleme.
 - Unlock-Warnungen: `[doctor] requireDoctorUnlock missing` etc., falls Guard nicht konfiguriert.
 - Trendpilot-Button-Fehler (Patch) werden als `alert` + diag gemeldet.
+- Boot-Flow Guard: Panel-Handler reagieren erst, wenn `AppModules.bootFlow` mindestens `INIT_MODULES` erreicht – während des Boot-Overlays bleiben Buttons damit inaktiv.
 
 ---
 

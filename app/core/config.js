@@ -64,12 +64,18 @@
     return false;
   };
   const CAPTURE_HUB_V2 = readCaptureHubFlag();
+  const bootStageDebug =
+    typeof global?.BOOT_STAGE_DEBUG === 'boolean' ? global.BOOT_STAGE_DEBUG : false;
+  if (bootStageDebug && global?.document?.body) {
+    global.document.body.dataset.bootStageDebug = 'true';
+  }
 
   const configApi = Object.freeze({
     DEV_ALLOW_DEFAULTS,
     TREND_PILOT_ENABLED,
     DIAGNOSTICS_ENABLED,
-    CAPTURE_HUB_V2
+    CAPTURE_HUB_V2,
+    BOOT_STAGE_DEBUG: bootStageDebug
   });
 
   global.AppModules = global.AppModules || {};

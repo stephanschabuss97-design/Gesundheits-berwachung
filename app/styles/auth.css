@@ -173,6 +173,12 @@ body.app-locked {
   color: #fff;
 }
 
+body[data-boot-stage]:not([data-boot-stage="idle"]) #loginOverlay,
+body[data-boot-stage]:not([data-boot-stage="idle"]) #appLock,
+body[data-boot-stage]:not([data-boot-stage="idle"]) #busy {
+  display: none !important;
+}
+
 /* SUBMODULE: Visibility Guards @internal - blendet Overlays und Elemente sicher aus */
 #loginOverlay[hidden],
 #appLock[hidden],
