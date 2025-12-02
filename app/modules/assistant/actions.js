@@ -43,7 +43,7 @@ export async function dispatchAssistantActions(actions, options = {}) {
 
   const sb = getSupabaseApi();
   if (!sb) {
-    console.warn('[MIDAS Assistant] Supabase API not available, skipping actions.');
+    logWarn('Supabase API not available, skipping actions.');
     return;
   }
 
@@ -67,7 +67,7 @@ export async function dispatchAssistantActions(actions, options = {}) {
  */
 async function handleSingleAction(action, sb, notify) {
   if (!action || typeof action.type !== 'string') {
-    console.warn('[MIDAS Assistant] Invalid action:', action);
+    logWarn('Invalid action payload');
     return;
   }
 
@@ -113,6 +113,7 @@ async function handleSingleAction(action, sb, notify) {
       break;
 
     case 'transition_to_text_chat':
+      // Placeholder – UI wiring folgt in Phase 3.x
       await handleTransitionToTextChat(payload, sb, notify);
       break;
 
@@ -135,14 +136,17 @@ async function handleSingleAction(action, sb, notify) {
       break;
 
     case 'read_touchlog':
+      // Debug-only, nur bei DEV_ALLOW_DEFAULTS sinnvoll
       await handleReadTouchlog(payload, sb, notify);
       break;
 
     case 'read_diagnostics':
+      // Debug-only, nur bei DEV_ALLOW_DEFAULTS sinnvoll
       await handleReadDiagnostics(payload, sb, notify);
       break;
 
     case 'read_bootstrap_status':
+      // Debug-only, nur bei DEV_ALLOW_DEFAULTS sinnvoll
       await handleReadBootstrapStatus(payload, sb, notify);
       break;
 
@@ -154,7 +158,7 @@ async function handleSingleAction(action, sb, notify) {
       break;
 
     default:
-      console.warn('[MIDAS Assistant] Unknown action type:', type, action);
+      logWarn(`Unknown action type: ${type}`);
       break;
   }
 }
@@ -176,29 +180,23 @@ async function handleIntakeSave(payload, sb, notify) {
   const note = (payload.note || '').trim() || null;
 
   if (!hasWater && !hasSalt && !hasProtein) {
-    console.warn('[MIDAS Assistant] intake_save – no metrics provided:', payload);
+    logWarn('intake_save – no metrics provided');
     return;
   }
 
   if (hasWater && (!Number.isFinite(waterMl) || waterMl <= 0)) {
-    console.warn('[MIDAS Assistant] intake_save – invalid water_ml:', payload.water_ml);
+    logWarn('intake_save – invalid water_ml');
   }
 
   if (hasSalt && !Number.isFinite(saltG)) {
-    console.warn('[MIDAS Assistant] intake_save – invalid salt_g:', payload.salt_g);
+    logWarn('intake_save – invalid salt_g');
   }
 
   if (hasProtein && !Number.isFinite(proteinG)) {
-    console.warn('[MIDAS Assistant] intake_save – invalid protein_g:', payload.protein_g);
+    logWarn('intake_save – invalid protein_g');
   }
 
-  console.log('[MIDAS Assistant] IntakeSave requested:', {
-    waterMl,
-    saltG,
-    proteinG,
-    label,
-    note
-  });
+  logInfo('IntakeSave requested');
 
   // TODO: Hier deine echte Intake-Speicherlogik verdrahten (Supabase / RPCs).
   // z. B.: await sb.intake.saveAssistantIntake({ waterMl, saltG, proteinG, label, note });
@@ -221,11 +219,11 @@ async function handleOpenModule(payload, _sb, notify) {
   const target = (payload.target || payload.module || '').trim();
 
   if (!target) {
-    console.warn('[MIDAS Assistant] open_module – missing target:', payload);
+    logWarn('open_module – missing target');
     return;
   }
 
-  console.log('[MIDAS Assistant] OpenModule requested:', target);
+  logInfo('OpenModule requested');
 
   // TODO: Hier echtes UI-Routing verdrahten (z. B. AppModules.hub.openPanel(target)).
   notify(`Ich öffne das Modul "${target}".`, 'info');
@@ -234,15 +232,12 @@ async function handleOpenModule(payload, _sb, notify) {
 async function handleShowStatus(payload, sb, notify) {
   const kind = (payload.kind || '').trim() || 'intake_today';
 
-  console.log('[MIDAS Assistant] ShowStatus requested:', kind);
+  logInfo('ShowStatus requested');
 
-  // TODO: Hier echte Status-Abfrage einbauen, z. B. via sb.api.intake.getTodayTotals().
-  // Vorerst nur konservatives Logging:
   try {
-    // Placeholder – später: echte DB-Abfrage + kurze Interpretation.
-    notify('Ich prüfe deinen aktuellen Status.', 'info');
+    notify('Ich pr?fe deinen aktuellen Status.', 'info');
   } catch (err) {
-    console.error('[MIDAS Assistant] show_status – error while reading status:', err);
+    logError('show_status failed', err);
     notify('Beim Lesen deines Status ist ein Fehler aufgetreten.', 'warning');
   }
 }
@@ -250,11 +245,11 @@ async function handleShowStatus(payload, sb, notify) {
 async function handleHighlight(payload, _sb, notify) {
   const target = (payload.target || '').trim();
   if (!target) {
-    console.warn('[MIDAS Assistant] highlight – missing target:', payload);
+    logWarn('highlight ? missing target');
     return;
   }
 
-  console.log('[MIDAS Assistant] Highlight requested:', target);
+  logInfo('Highlight requested');
 
   // TODO: Hier echtes UI-Highlighting verdrahten (CSS-Klasse, kurze Animation o.ä.).
   notify(`Ich markiere den Bereich "${target}".`, 'info');
@@ -267,24 +262,24 @@ async function handleHighlight(payload, _sb, notify) {
 async function handleAskConfirmation(payload, _sb, notify) {
   // Diese Action dient vor allem der Klarheit im Flow; die eigentliche
   // Frage stellt der Assistant bereits in seiner Text-/Voice-Antwort.
-  console.log('[MIDAS Assistant] AskConfirmation:', payload);
+  logInfo('AskConfirmation');
   // Kein direktes notify nötig – der sprachliche Teil kommt aus der KI.
 }
 
 async function handleCloseConversation(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] CloseConversation:', payload);
+  logInfo('CloseConversation');
   // TODO: Hier kannst du später den Voice-Loop explizit schließen (State reset etc.).
   notify('Das Gespräch ist beendet. Ich bin bereit, wenn du mich wieder brauchst.', 'info');
 }
 
 async function handleTransitionToPhotoMode(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] TransitionToPhotoMode:', payload);
+  logInfo('TransitionToPhotoMode');
   // TODO: Textchat-Panel + Kamera öffnen.
   notify('Wechsle in den Foto-Modus. Mach ein Bild deiner Mahlzeit.', 'info');
 }
 
 async function handleTransitionToTextChat(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] TransitionToTextChat:', payload);
+  logInfo('TransitionToTextChat');
   // TODO: Assistant-Textchat-Panel öffnen.
   notify('Wechsle in den Text-Chat.', 'info');
 }
@@ -301,13 +296,10 @@ async function handleSuggestIntake(payload, _sb, notify) {
   const label = (payload.label || '').trim() || 'Mahlzeit';
   const confidence = payload.confidence != null ? safeNumber(payload.confidence, NaN) : null;
 
-  console.log('[MIDAS Assistant] SuggestIntake received:', {
-    label,
-    waterMl,
-    saltG,
-    proteinG,
-    confidence
-  });
+  logInfo(
+    `SuggestIntake received for ${label} (water=${Number.isFinite(waterMl) ? waterMl : '-'} ml, ` +
+      `salt=${Number.isFinite(saltG) ? saltG : '-'} g, protein=${Number.isFinite(proteinG) ? proteinG : '-'} g)`
+  );
 
   // Die eigentliche Frage ("Soll ich das loggen?") stellt der Assistant,
   // hier geben wir nur optional ein kleines UI-Signal.
@@ -317,7 +309,7 @@ async function handleSuggestIntake(payload, _sb, notify) {
 async function handleConfirmIntake(payload, sb, notify) {
   // ConfirmIntake ist ein Wrapper um IntakeSave – entweder übernimmt er
   // direkt die Werte oder er greift auf den letzten Vorschlag zurück.
-  console.log('[MIDAS Assistant] ConfirmIntake:', payload);
+  logInfo('ConfirmIntake');
 
   // Standardfall: Payload enthält bereits intake_save-kompatible Felder.
   await handleIntakeSave(payload, sb, notify);
@@ -328,7 +320,7 @@ async function handleConfirmIntake(payload, sb, notify) {
 // ---------------------------------------------------------------------------
 
 async function handleSystemStatus(payload, sb, notify) {
-  console.log('[MIDAS Assistant] SystemStatus requested:', payload);
+  logInfo('SystemStatus requested');
 
   const online = typeof navigator !== 'undefined' ? navigator.onLine : null;
   const hasSupabase = !!sb;
@@ -359,7 +351,7 @@ async function handleSystemStatus(payload, sb, notify) {
 }
 
 async function handleReadTouchlog(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] ReadTouchlog requested:', payload);
+  logInfo('ReadTouchlog requested');
 
   const snapshot = readLatestTouchlogSnapshot();
   if (!snapshot) {
@@ -367,12 +359,12 @@ async function handleReadTouchlog(payload, _sb, notify) {
     return;
   }
 
-  console.log('[MIDAS Assistant] Touchlog snapshot:', snapshot);
+  logInfo('Touchlog snapshot read');
   notify('Ich habe den Touchlog geprüft.', 'info');
 }
 
 async function handleReadDiagnostics(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] ReadDiagnostics requested:', payload);
+  logInfo('ReadDiagnostics requested');
 
   const diag = readDiagnosticsSnapshot();
   if (!diag) {
@@ -380,12 +372,12 @@ async function handleReadDiagnostics(payload, _sb, notify) {
     return;
   }
 
-  console.log('[MIDAS Assistant] Diagnostics snapshot:', diag);
+  logInfo('Diagnostics snapshot read');
   notify('Ich habe die Diagnosedaten geprüft.', 'info');
 }
 
 async function handleReadBootstrapStatus(payload, _sb, notify) {
-  console.log('[MIDAS Assistant] ReadBootstrapStatus requested:', payload);
+  logInfo('ReadBootstrapStatus requested');
 
   const bootstrap = readBootstrapLogSnapshot();
   if (!bootstrap) {
@@ -393,7 +385,7 @@ async function handleReadBootstrapStatus(payload, _sb, notify) {
     return;
   }
 
-  console.log('[MIDAS Assistant] Bootstrap snapshot:', bootstrap);
+  logInfo('Bootstrap snapshot read');
   notify('Ich habe den Bootstrap-Status geprüft.', 'info');
 }
 
@@ -429,11 +421,11 @@ function defaultSupabaseAccessor() {
 
 function defaultNotify(msg, level = 'info') {
   // Später kannst du das mit deinem echten UI-Toast verbinden.
-  console.log(`[MIDAS Notify][${level}] ${msg}`);
+  logInfo(`[assistant-notify][${level}] ${msg}`);
 }
 
 function defaultOnError(err) {
-  console.error('[MIDAS Assistant] Action dispatch error:', err);
+  logError('Action dispatch error', err);
 }
 
 // ---------------------------------------------------------------------------
@@ -455,7 +447,7 @@ function readLatestTouchlogSnapshot() {
 
     return tryParseJson(raw);
   } catch (err) {
-    console.warn('[MIDAS Assistant] Failed to read touchlog from localStorage:', err);
+    logWarn('Failed to read touchlog from localStorage');
     return null;
   }
 }
@@ -475,7 +467,7 @@ function readBootstrapLogSnapshot() {
 
     return tryParseJson(raw);
   } catch (err) {
-    console.warn('[MIDAS Assistant] Failed to read bootstrap log from localStorage:', err);
+    logWarn('Failed to read bootstrap log from localStorage');
     return null;
   }
 }
@@ -498,7 +490,7 @@ function readDiagnosticsSnapshot() {
 
     return null;
   } catch (err) {
-    console.warn('[MIDAS Assistant] Failed to read diagnostics snapshot:', err);
+    logWarn('Failed to read diagnostics snapshot');
     return null;
   }
 }
@@ -510,4 +502,65 @@ function tryParseJson(raw) {
   } catch {
     return raw;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Diagnostics logging helpers
+// ---------------------------------------------------------------------------
+
+const DEBUG_LOGS_ENABLED = (() => {
+  try {
+    if (typeof window === 'undefined') return false;
+    return !!window.AppModules?.config?.DEV_ALLOW_DEFAULTS;
+  } catch {
+    return false;
+  }
+})();
+
+function getDiagLogger() {
+  if (typeof window === 'undefined') return null;
+  const w = window;
+  return w.AppModules?.diagnostics?.diag || w.diag || null;
+}
+
+function formatError(err) {
+  if (!err) return '';
+  if (err instanceof Error) {
+    return `${err.message}${err.stack ? `\n${err.stack}` : ''}`;
+  }
+  if (typeof err === 'object') {
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+  return String(err);
+}
+
+function logWithLevel(level, message, err) {
+  const suffix = err ? ` ${formatError(err)}` : '';
+  const text = `[assistant-actions][${level}] ${message}${suffix}`;
+  const diagLogger = getDiagLogger();
+  diagLogger?.add?.(text);
+  if (!DEBUG_LOGS_ENABLED) return;
+  const consoleFn =
+    level === 'error'
+      ? console?.error?.bind(console)
+      : level === 'warn'
+        ? console?.warn?.bind(console)
+        : console?.info?.bind(console);
+  consoleFn?.(text, err);
+}
+
+function logInfo(message) {
+  logWithLevel('info', message);
+}
+
+function logWarn(message) {
+  logWithLevel('warn', message);
+}
+
+function logError(message, err) {
+  logWithLevel('error', message, err);
 }

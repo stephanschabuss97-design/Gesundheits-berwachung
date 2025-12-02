@@ -72,8 +72,74 @@ app/core/config.js & assets/js/ui.js.✅
 
 Diese Übersicht liefert dir eine roadmap, welche Stellen für den neuen deterministischen Boot-Prozess angefasst werden müssen. Sobald du loslegen willst, gehen wir Datei für Datei durch und setzen die beschriebenen Anpassungen um.
 
-| 0.2 Cleanup Pass (Light)   | TODO   | Erste Runde: alte Logger/Workarounds raus, doppelte Listener/Guards entschärfen, dead code entfernen, `/core` minimal entschlacken. Nur offensichtliche Altlasten entfernen, keine tiefen Refactors (die kommen in Phase 6).         |
+| 0.2 Cleanup Pass (Light)   | ✅  | Erste Runde: alte Logger/Workarounds raus, doppelte Listener/Guards entschärfen, dead code entfernen, `/core` minimal entschlacken. Nur offensichtliche Altlasten entfernen, keine tiefen Refactors (die kommen in Phase 6).         |
+
+Hier ist die To-do-Liste für Phase 0.2 („Cleanup Pass Light“) mit konkreten Dateien und Arbeiten – exakt an diese Stellen müssen wir ran, bevor wir neue Features anpacken:
+
+assets/js/main.js ✅
+- Zeilen ~1500/1536: Es existieren zwei window.addEventListener('focus', …)-Handler (einer triggert Resume, einer maybeRefreshForTodayChange). Für den Cleanup müssen wir diese Listener zusammenführen, damit der Fokuswechsel nur genau einen Pfad auslöst (sonst laufen Resume + Day-Refresh doppelt und erzeugen unnötige Logs).
+- Im Rahmen desselben Blocks prüfen wir, ob resumeEventHandler im Hidden-State laufen sollte (jetzt feuert jeder Focus auch mitten im Boot – ggf. eine Stage-Prüfung hinzufügen).
+- Außerdem sollten wir den verbleibenden console.error('Boot failed', err); am Ende nur noch über diag.add loggen, sobald Phase 0 fertig ist.
+
+assets/js/boot-auth.js ✅
+- console.info("Auth status:", status) loggt bei jedem Statuswechsel, was wir laut Cleanup-Plan vermeiden wollen. Ziel: über diag loggen oder nur im Debug-Modus, damit Boot nicht von permanenten console-Spam begleitet wird.
+- Prüfen, ob wir die Stage-Aktualisierung (aktueller Guard advanceStageToInitCore) kommentiert dokumentieren, damit keine Doppel-Transitions passieren.
+
+app/modules/hub/index.js ✅
+- Zwischen Zeile ~392 und ~1370 finden sich viele console.info-/console.warn-Statements (z. B. [assistant-chat] setupAssistantChat called, [midas-voice] Assistant reply). Für Phase 0.2 sollen wir diese offensichtlichen console.*-Spuren entfernen oder hinter einem Debug-Flag verstecken (z. B. if (AppModules.config?.DEV_ALLOW_DEFAULTS)), und die relevanten Ereignisse lieber an diag.add melden.
+- Gleiches Modul hat jetzt Boot-Guards. Wir sollten kontrollieren, dass die console.warn('[hub] Supabase webhookKey missing …') Meldungen weiterhin Sinn ergeben; falls nicht, über diag.
+
+app/modules/assistant/actions.js ✅
+- Enthält über 20 console.log-/console.warn-Zeilen (Zeilen 195–400, 430ff). Für den Cleanup entweder über einen dedizierten assistantLogger laufen lassen oder auf diag.add umbauen. Ziel: Production-Konsole abschalten.
+- Gleichzeitig prüfen, ob verwaiste Actions (z. B. TransitionToTextChat, ReadTouchlog) doppelt implementiert sind. Alles, was offensichtlich nie aufgerufen wird, markieren.
+
+app/modules/assistant/index.js ✅
+- Ähnlich wie oben: console.info für Panel-Events → auf diag/Debug umstellen.
+
+assets/js/ui.js ✅
+- Nach unserem letzten Update muss waitForInitUi sicherstellen, dass auch focusTrap / setUnderlayInert keine Logs werfen. Checken, ob hier noch console.warn (missing panel) sinnvoll oder per diag geloggt werden sollte.
+
+assets/js/main.js (zweiter Punkt) ✅
+- ensureModulesReady (Zeile ~800) hat noch eine generische DOM-Fehlermeldung. Für den Cleanup sollten wir den Text kürzen und console.error komplett durch UI-Banner & diag ersetzen, um Boot-Logs sauber zu halten.
+- Zudem startBootProcess() ruft main().catch und loggt via console.error – auch hier diag.
+
+app/core/diag.js ✅
+- Enthält Fallback console.warn / console.info, wenn Diagnostics off sind. Wir sollten dokumentieren, dass das bewusst so bleibt, aber im Cleanup evtl. ein einheitliches Flag (if (global.DIAGNOSTICS_ENABLED)) nutzen und den Rest stumm schalten.
+
+app/modules/capture/index.js & app/modules/doctor/index.js ✅
+- Beide Dateien haben neue Boot-Guards. Für Phase 0.2 müssen wir prüfen, ob es noch alte, ungenutzte Funktionen/Listener gibt (z. B. bindLifestyle, resetCapturePanels), die nie aufgerufen werden – offensichtliche Dead-Ends rausnehmen oder markieren.
+- Außerdem sicherstellen, dass window.AppModules.capture/doctor keine Legacy-Globals (global.renderDoctor) mehr doppelt registrieren – das war die Quelle vergangener Warnungen.
+
+app/supabase/auth/core.js ✅
+- console.info wird hier nicht verwendet, aber reportBootStatus()/markFailed() könnte noch console.* werfen, sobald Diagnostics deaktiviert sind. Im Cleanup verifizieren, dass Boot-Status ausschließlich über bootFlow.report > setConfigStatus kommuniziert wird.
+
+assets/js/data-local.js ✅
+- Enthält mehrere console.warn (z. B. bei fehlenden Indizes). Wir sollen diese nur noch im Dev-Flag ausgeben und sonst über diag/report. Prüfen, ob ensureDbReady bei Fehlern BootFlow bereits markiert – falls nein, in Phase 0.2 hinzufügen.
+
 | 0.3 Auth Flow Fix          | TODO   | Pre-render Auth Gate: App rendert erst nach Supabase-Entscheid (`auth` / `unauth`). Kein klickbares UI im „auth unknown“. Klare `authState`-Übergänge in `app/supabase/auth/core.js` und `assets/js/boot-auth.js`.                     |
+
+Phase 0.3 needs a tighter auth gate. Here’s the file-by-file plan:
+
+assets/js/boot-auth.js
+Enforce pre‑render gate. Right now bootAuth() advances the boot stage as soon as onStatus fires with anything not strictly 'unknown', so the UI can unfreeze while Supabase is still checking. We need to let bootFlow know when status transitions to 'unknown', 'auth', or 'unauth', and only call setStage('INIT_CORE') after the first definite decision. While waiting, keep reporting “Prüfe Session …” so the loader stays up, and once a final state arrives, report “Session ok” or “Nicht angemeldet – Login erforderlich”. Also pass a flag (e.g. bootFlow.lockReason = 'auth-check') so other modules can block interactions until the stage flips.
+
+app/supabase/auth/core.js
+Normalize authState transitions and UI locking. applyAuthUi only toggles the lock for true/false and skips 'unknown'. We need to treat 'unknown' as a locked state: set body.auth-locked, keep login overlay hidden but render a “Bitte warten” message, and surface the lock reason via bootFlow.report. During scheduleAuthGrace the UI should stay inert. Also ensure finalizeAuthState, scheduleAuthGrace, and requireSession all run through a single setAuthState(nextState) helper that notifies bootFlow and boot-auth.js of every state change. That keeps authHooks.onStatus consistent and avoids double transitions.
+
+assets/js/main.js
+Gate boot stages to auth. runBootPhase currently goes straight from AUTH_CHECK to INIT_CORE once ensureModulesReady passes. Update it so runAuthCheckPhase waits for a resolved auth decision (maybe by awaiting a promise exposed by boot-auth.js or AppModules.supabase.authReady). Only after authState becomes 'auth' or 'unauth' should we call setBootStage('INIT_CORE'). Additionally, when authState is 'unknown', resume handlers and interaction logic should early-return to avoid clicks.
+
+app/styles/base.css / app/styles/auth.css
+Visual lock for auth gate. Ensure there’s a style for body.auth-unknown (or reuse auth-locked) that keeps inputs inert and shows a short message on the boot overlay. We already dim via body.auth-locked, but for Phase 0.3 we need a distinct class so UX can show “Supabase prüft Session …”.
+
+app/modules/hub/index.js, app/modules/capture/index.js, etc.
+Honor the new auth gate. Each module that currently checks AppModules.bootFlow?.isStageAtLeast('INIT_UI') should also check supabaseState.authState !== 'unknown' (hooked via a helper exported from app/supabase/auth/core.js). For example, handleCaptureIntake, renderDoctor, hub button handlers, etc., should bail immediately when the new auth gate reports “unknown”.
+
+docs/Voice Assistant roadmap.md / QA docs
+Document the new auth gate. Update the roadmap and QA checklist to mention that the app doesn’t render or accept input until Supabase returns auth/unauth, and add test steps (e.g., “simulate slow Supabase; UI stays locked, boot overlay shows status”).
+
+Once these changes are in place, Phase 0.3’s requirements—pre-render auth gate, no clickable UI while auth status is unknown, and clarified state transitions in app/supabase/auth/core.js plus assets/js/boot-auth.js—will be satisfied.
+
 | 0.4 Voice Safety Init      | TODO   | Voice/Needle bleiben deaktiviert, bis Bootflow durchlaufen + Auth klar. Keine Mic-Prompts/Audio, bevor `state=idle`. Technischer Fokus: `app/modules/hub/index.js`, VAD/Needle-Handler, einfache Guards gegen frühe Klicks.          |
 
 **Codex-Hinweis (Phase 0):**

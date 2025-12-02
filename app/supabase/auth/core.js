@@ -275,7 +275,7 @@ export function watchAuthState() {
       globalWindow?.requestUiRefresh?.().catch((err) =>
         diag.add?.('ui refresh err: ' + (err?.message || err))
       );
-      try { await globalWindow?.refreshCaptureIntake?.(); } catch (_) {}
+      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.(); } catch (_) {}
       try { await globalWindow?.refreshAppointments?.(); } catch (_) {}
       return;
     }
@@ -288,7 +288,7 @@ export function watchAuthState() {
     }
     supabaseState.pendingSignOut = async () => {
       (globalWindow?.teardownRealtime || noopRealtime)();
-      try { await globalWindow?.refreshCaptureIntake?.(); } catch (_) {}
+      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.(); } catch (_) {}
       try { await globalWindow?.refreshAppointments?.(); } catch (_) {}
     };
 

@@ -594,86 +594,6 @@
     }catch(_){ /* ignore */ }
   }
 
-  function bindLifestyle(){
-    if (!isHandlerStageReady()) return;
-    const addWaterBtn = document.getElementById('ls-water-add-btn');
-    const addSaltBtn = document.getElementById('ls-salt-add-btn');
-    const addProtBtn = document.getElementById('ls-protein-add-btn');
-
-    const updateIntake = async ({
-      key,
-      elId,
-      parser,
-      max,
-      successMsg,
-      diagLabel
-    }) => {
-      const el = document.getElementById(elId);
-      const value = parser(el?.value);
-      if (!(value > 0)) {
-        uiError('Bitte gültige Menge eingeben.');
-        return;
-      }
-      const dayIso = todayStr();
-      const totals = {
-        water_ml: __lsTotals.water_ml || 0,
-        salt_g: __lsTotals.salt_g || 0,
-        protein_g: __lsTotals.protein_g || 0
-      };
-      const current = totals[key] || 0;
-      const rawTotal = Math.max(0, Math.min(max, current + value));
-      const nextTotal = roundValue(key, rawTotal);
-      totals[key] = nextTotal;
-      try {
-        await saveIntakeTotalsRpc({ dayIso, totals });
-        __lsTotals[key] = nextTotal;
-        updateLifestyleBars();
-        if (el) el.value = '';
-        uiInfo(successMsg);
-      } catch (e) {
-        uiError('Update fehlgeschlagen: ' + (e?.message || e));
-        try {
-          diag.add?.(`Lifestyle update error (${diagLabel}): ${e?.message || e}`);
-        } catch (logErr) {
-          console.error('diag.add failed', logErr);
-        }
-      }
-    };
-
-    const addWater = () =>
-      updateIntake({
-        key: 'water_ml',
-        elId: 'ls-water-add',
-        parser: (raw) => Number(raw || 0),
-        max: MAX_WATER_ML,
-        successMsg: 'Wasser aktualisiert.',
-        diagLabel: 'water'
-      });
-
-    const addSalt = () =>
-      updateIntake({
-        key: 'salt_g',
-        elId: 'ls-salt-add',
-        parser: (raw) => toNumDE(raw),
-        max: MAX_SALT_G,
-        successMsg: 'Salz aktualisiert.',
-        diagLabel: 'salt'
-      });
-
-    const addProtein = () =>
-      updateIntake({
-        key: 'protein_g',
-        elId: 'ls-protein-add',
-        parser: (raw) => toNumDE(raw),
-        max: MAX_PROTEIN_G,
-        successMsg: 'Protein aktualisiert.',
-        diagLabel: 'protein'
-      });
-
-    if (addWaterBtn) addWaterBtn.addEventListener('click', addWater);
-    if (addSaltBtn) addSaltBtn.addEventListener('click', addSalt);
-    if (addProtBtn) addProtBtn.addEventListener('click', addProtein);
-  }
 
 
   /** MODULE: CAPTURE (Intake)
@@ -737,17 +657,23 @@
     maybeRefreshForTodayChange: maybeRefreshForTodayChange,
     bindIntakeCapture: bindIntakeCapture,
     renderLifestyle: renderLifestyle,
-    bindLifestyle: bindLifestyle,
     resetCapturePanels: resetCapturePanels,
     addCapturePanelKeys: addCapturePanelKeys,
     updateLifestyleBars: updateLifestyleBars,
     fmtDE: fmtDE
   };
-  appModules.capture = Object.assign(appModules.capture || {}, captureApi);
-  Object.entries(captureApi).forEach(([name, fn]) => {
-    if (typeof global[name] === 'undefined') {
-      global[name] = fn;
+  appModules.capture = appModules.capture || {};
+  Object.assign(appModules.capture, captureApi);
+
+  ['fmtDE', 'updateLifestyleBars'].forEach((key) => {
+    if (typeof captureApi[key] !== 'function') return;
+    if (typeof global[key] === 'undefined') {
+      Object.defineProperty(global, key, {
+        value: captureApi[key],
+        writable: false,
+        configurable: true,
+        enumerable: false
+      });
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
-

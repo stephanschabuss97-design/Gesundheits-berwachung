@@ -389,7 +389,9 @@
       const input = form.querySelector('#hubMessage');
       const value = input?.value?.trim();
       if (value) {
-        console.info('[hub-chat]', value, '(stub: Assistant folgt)');
+        if (appModules.config?.DEV_ALLOW_DEFAULTS) {
+          diag.add?.(`[hub-chat] stub send: ${value}`);
+        }
         input.value = '';
       }
     });
@@ -438,28 +440,32 @@
   let assistantChatSetupAttempts = 0;
   const ASSISTANT_CHAT_MAX_ATTEMPTS = 10;
   const ASSISTANT_CHAT_RETRY_DELAY = 250;
+  const debugLog = (msg, payload) => {
+    if (!appModules.config?.DEV_ALLOW_DEFAULTS) return;
+    diag.add?.(`[hub:debug] ${msg}` + (payload ? ` ${JSON.stringify(payload)}` : ''));
+  };
 
   const setupAssistantChat = (hub) => {
-    console.info('[assistant-chat] setupAssistantChat called');
+    debugLog('assistant-chat setup');
     if (assistantChatCtrl) {
-      console.info('[assistant-chat] controller already initialised');
+      debugLog('assistant-chat controller already initialised');
       return;
     }
     const panel = doc?.getElementById('hubAssistantPanel');
     if (!panel) {
       assistantChatSetupAttempts += 1;
-      console.warn('[assistant-chat] panel missing', {
-        attempt: assistantChatSetupAttempts,
-      });
+      if (assistantChatSetupAttempts === 1) {
+        diag.add?.('[assistant-chat] panel missing, retrying …');
+      }
       if (assistantChatSetupAttempts < ASSISTANT_CHAT_MAX_ATTEMPTS) {
         global.setTimeout(() => setupAssistantChat(hub), ASSISTANT_CHAT_RETRY_DELAY);
       } else {
-        console.error('[assistant-chat] panel missing after retries');
+        diag.add?.('[assistant-chat] panel missing after retries');
       }
       return;
     }
     assistantChatSetupAttempts = 0;
-    console.info('[assistant-chat] panel found');
+    debugLog('assistant-chat panel found');
     const chatEl = panel.querySelector('#assistantChat');
     const form = panel.querySelector('#assistantChatForm');
     const input = panel.querySelector('#assistantMessage');
@@ -488,24 +494,17 @@
       sending: false,
     };
 
-    console.info('[assistant-chat] ctrl ready', {
-      hasForm: !!form,
-      hasInput: !!input,
-      hasSendBtn: !!sendBtn,
-    });
+    debugLog('assistant-chat controller ready');
 
     form?.addEventListener(
       'submit',
       (event) => {
-        console.info('[assistant-chat] form submit event', {
-          defaultPrevented: event.defaultPrevented,
-          type: event.type,
-        });
+        debugLog('assistant-chat form submit');
       },
       true,
     );
     sendBtn?.addEventListener('click', () => {
-      console.info('[assistant-chat] send button click');
+      debugLog('assistant-chat send button click');
     });
 
     form?.addEventListener('submit', handleAssistantChatSubmit);
@@ -513,7 +512,7 @@
     photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
     cameraBtn?.addEventListener('click', handleAssistantCameraClick);
     resetAssistantChat();
-    console.info('[assistant-chat] setup complete');
+    debugLog('assistant-chat setup complete');
   };
 
   const handleAssistantCameraClick = () => {
@@ -556,7 +555,7 @@
     if (!assistantChatCtrl) return;
     if (!assistantChatCtrl.sessionId) {
       assistantChatCtrl.sessionId = `text-${Date.now()}`;
-      console.info('[assistant-chat] new session', assistantChatCtrl.sessionId);
+      debugLog('assistant-chat new session');
     }
   };
 
@@ -565,13 +564,13 @@
     if (!assistantChatCtrl) return;
     const value = assistantChatCtrl.input?.value?.trim();
     if (!value) return;
-    console.info('[assistant-chat] submit', { value });
+    debugLog('assistant-chat submit');
     sendAssistantChatMessage(value);
   };
 
   const sendAssistantChatMessage = async (text) => {
     if (!assistantChatCtrl || assistantChatCtrl.sending) return;
-    console.info('[assistant-chat] send start', { text });
+    debugLog('assistant-chat send start');
     ensureAssistantSession();
     appendAssistantMessage('user', text);
     if (assistantChatCtrl.input) {
@@ -597,7 +596,7 @@
       }
     } finally {
       setAssistantSending(false);
-      console.info('[assistant-chat] send end');
+      debugLog('assistant-chat send end');
     }
   };
 
@@ -689,7 +688,6 @@
     };
     let response;
     const headers = await buildFunctionJsonHeaders();
-    console.log('[assistant-chat] headers', headers, payload);
     try {
       response = await fetch(MIDAS_ENDPOINTS.assistant, {
         method: 'POST',
@@ -1000,7 +998,9 @@
       voiceCtrl.vadSilenceTimer = global.setTimeout(() => {
         voiceCtrl.vadSilenceTimer = null;
         if (!voiceCtrl || voiceCtrl.status !== 'listening') return;
-        console.info('[midas-voice] Auto-stop nach Stille');
+        if (appModules.config?.DEV_ALLOW_DEFAULTS) {
+          diag.add?.('[midas-voice] Auto-stop nach Stille');
+        }
         stopVoiceRecording();
       }, VAD_SILENCE_MS);
     }
@@ -1030,7 +1030,7 @@
       return;
     }
     if (voiceCtrl.status === 'thinking') {
-      console.info('[hub] voice is busy processing');
+      diag.add?.('[hub] voice is busy processing');
       return;
     }
     if (voiceCtrl.status === 'idle') {
@@ -1122,11 +1122,11 @@
         type: recorder?.mimeType || 'audio/webm',
       });
       voiceCtrl.chunks = [];
-      console.info(
-        '[midas-voice] Aufnahme abgeschlossen:',
-        blob.type,
-        `${(blob.size / 1024).toFixed(1)} KB`,
-      );
+      if (appModules.config?.DEV_ALLOW_DEFAULTS) {
+        diag.add?.(
+          `[midas-voice] Aufnahme abgeschlossen: ${blob.type}, ${(blob.size / 1024).toFixed(1)} KB`
+        );
+      }
       await processVoiceBlob(blob);
     } catch (err) {
       console.error('[hub] voice processing failed', err);
@@ -1143,7 +1143,7 @@
         setVoiceState('idle');
         return;
       }
-      console.info('[midas-voice] Transcript:', transcript);
+      diag.add?.(`[midas-voice] Transcript: ${transcript}`);
       if (
         voiceCtrl?.conversationMode &&
         shouldEndConversationFromTranscript(transcript)
@@ -1209,16 +1209,14 @@
     }
     const loader = (async () => {
       if (typeof global.getConf !== 'function') {
-        console.warn('[hub] getConf missing - cannot load Supabase key');
+        diag.add?.('[hub] getConf missing - cannot load Supabase key');
         return null;
       }
       try {
-        console.info('[assistant-chat] loading webhookKey via getConf');
         const stored = await global.getConf('webhookKey');
         const raw = String(stored || '').trim();
-        console.info('[assistant-chat] webhookKey present?', !!raw);
         if (!raw) {
-          console.warn('[hub] Supabase webhookKey missing - voice API locked');
+          diag.add?.('[hub] Supabase webhookKey missing - voice API locked');
           return null;
         }
         const bearer = raw.startsWith('Bearer ') ? raw : `Bearer ${raw}`;
@@ -1246,7 +1244,7 @@
     }
     const authHeaders = await getSupabaseFunctionHeaders();
     if (!authHeaders) {
-      console.warn('[hub] Supabase headers missing for assistant call');
+      diag.add?.('[hub] Supabase headers missing for assistant call');
       setVoiceState('error', 'Konfiguration fehlt');
       setTimeout(() => setVoiceState('idle'), 2600);
       throw new Error('supabase-headers-missing');
@@ -1270,9 +1268,13 @@
           role: 'assistant',
           content: replyText,
         });
-        console.info('[midas-voice] Assistant reply:', replyText);
+        diag.add?.(`[midas-voice] Assistant reply: ${replyText}`);
         if (assistantResponse.actions?.length) {
-          console.info('[midas-voice] Assistant actions:', assistantResponse.actions);
+          if (appModules.config?.DEV_ALLOW_DEFAULTS) {
+            diag.add?.(
+              `[midas-voice] Assistant actions: ${assistantResponse.actions.join(', ')}`
+            );
+          }
           if (
             voiceCtrl.conversationMode &&
             assistantResponse.actions.some((action) => END_ACTIONS.includes(action))
@@ -1282,7 +1284,7 @@
         }
         await synthesizeAndPlay(replyText);
       } else {
-        console.info('[midas-voice] Assistant reply empty');
+        diag.add?.('[midas-voice] Assistant reply empty');
       }
       const allowResume = voiceCtrl.conversationMode && !voiceCtrl.conversationEndPending;
       setVoiceState('idle');
@@ -1342,7 +1344,7 @@
       if (rawText) {
         console.warn('[hub] assistant payload missing reply, snippet:', rawText.slice(0, 160));
       }
-      console.info('[midas-voice] Assistant reply empty, using fallback.');
+      diag.add?.('[midas-voice] Assistant reply empty, using fallback.');
       reply = VOICE_FALLBACK_REPLY;
     }
     const actions = Array.isArray(data?.actions) ? [...data.actions] : [];

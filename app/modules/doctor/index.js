@@ -20,9 +20,29 @@
     if (!bootFlow?.isStageAtLeast) return true;
     return bootFlow.isStageAtLeast('INIT_MODULES');
   };
+  const DEBUG_DOCTOR_LOGS =
+    typeof appModules?.config?.DEV_ALLOW_DEFAULTS === 'boolean'
+      ? appModules.config.DEV_ALLOW_DEFAULTS
+      : false;
+  const logDoctorConsole = (level, ...args) => {
+    if (!DEBUG_DOCTOR_LOGS) return;
+    try {
+      global.console?.[level]?.(...args);
+    } catch (_) {
+      /* noop */
+    }
+  };
   let __doctorScrollSnapshot = { top: 0, ratio: 0 };
   const getSupabaseApi = () => global.AppModules?.supabase || {};
-  const toast = global.toast || appModules.ui?.toast || ((msg) => console.info('[doctor]', msg));
+  const toast =
+    global.toast ||
+    appModules.ui?.toast ||
+    ((msg) => {
+      try {
+        diag.add?.(`[doctor:toast] ${msg}`);
+      } catch (_) {}
+      logDoctorConsole('info', '[doctor]', msg);
+    });
   const escapeAttr = (value = '') =>
     String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
   const TRENDPILOT_SEVERITY_META = {
@@ -41,8 +61,8 @@
 
   // SUBMODULE: access-control @internal - Unlock- und Authentifizierungslogik
   const fallbackRequireDoctorUnlock = async () => {
-    diag.add?.('[doctor] requireDoctorUnlock missing – blocking access');
-    console.warn('[doctor] requireDoctorUnlock not available; denying unlock');
+    diag.add?.('[doctor] requireDoctorUnlock missing - blocking access');
+    logDoctorConsole('warn', '[doctor] requireDoctorUnlock not available; denying unlock');
     return false;
   };
   const getAuthGuardState = () => {
@@ -67,9 +87,9 @@
     const detail = err?.message || err;
     diag.add?.(`[doctor] ${msg}: ${detail}`);
     if (err) {
-      console.error(`[doctor] ${msg}`, err);
+      logDoctorConsole('error', `[doctor] ${msg}`, err);
     } else {
-      console.error(`[doctor] ${msg}`);
+      logDoctorConsole('error', `[doctor] ${msg}`);
     }
   };
 
@@ -412,7 +432,8 @@ async function exportDoctorJson(){
       // Diagnostics only: export still runs so auth wrapper can trigger re-login if needed.
     }
   } catch(err) {
-    console.error('isLoggedInFast check failed', err);
+    diag.add?.('[doctor] export auth check failed: ' + (err?.message || err));
+    logDoctorConsole('error', '[doctor] export auth check failed', err);
   }
   if (!isDoctorUnlockedSafe()) {
     setAuthPendingAfterUnlock('export');
@@ -428,11 +449,6 @@ async function exportDoctorJson(){
     renderDoctor,
     exportDoctorJson
   };
-  appModules.doctor = Object.assign({}, appModules.doctor, doctorApi);
-  if (typeof global.renderDoctor === 'undefined') {
-    global.renderDoctor = renderDoctor;
-  }
-  if (typeof global.exportDoctorJson === 'undefined') {
-    global.exportDoctorJson = exportDoctorJson;
-  }
+  appModules.doctor = appModules.doctor || {};
+  Object.assign(appModules.doctor, doctorApi);
 })(typeof window !== 'undefined' ? window : globalThis);

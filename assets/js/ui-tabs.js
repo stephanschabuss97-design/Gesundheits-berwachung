@@ -119,8 +119,9 @@
       await global.requestUiRefresh?.({ reason: 'tab:doctor' });
     } else if (name === 'capture') {
       try {
-        await global.refreshCaptureIntake?.();
-        global.resetCapturePanels?.();
+        const captureModule = global.AppModules?.capture;
+        await captureModule?.refreshCaptureIntake?.();
+        captureModule?.resetCapturePanels?.();
         global.AppModules?.bp?.updateBpCommentWarnings?.();
       } catch (err) {
         console.warn('[uiTabs:setTab] Capture refresh failed:', err);

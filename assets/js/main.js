@@ -21,7 +21,7 @@ const getSupabaseApi = () => {
   const api = window.AppModules?.supabase;
   if (!api) {
     if (!supabaseMissingLogged) {
-      console.error('[BOOT] Supabase (AppModules.supabase) nicht geladen – prüfe app/supabase/index.js / Script-Reihenfolge.');
+      logBootDiag('Supabase (AppModules.supabase) nicht geladen – prüfe app/supabase/index.js / Script-Reihenfolge.');
       supabaseMissingLogged = true;
     }
     return null;
@@ -47,6 +47,36 @@ const failBootStage = (message) => {
   } catch (_) {
     /* ignore */
   }
+};
+const logBootDiag = (message, err) => {
+  const suffix = err ? ` (${err?.message || err})` : '';
+  try {
+    diag.add?.(`[boot] ${message}${suffix}`);
+  } catch (_) {
+    /* diag not ready */
+  }
+};
+const showBootErrorBanner = (text) => {
+  if (document.readyState === 'loading') return false;
+  const errBox = document.getElementById('err');
+  if (errBox) {
+    errBox.textContent = text;
+    errBox.style.display = 'block';
+    return true;
+  }
+  if (document.body) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    div.style.background = '#ff6b6b';
+    div.style.color = '#121417';
+    div.style.padding = '12px';
+    div.style.margin = '16px';
+    div.style.borderRadius = '8px';
+    div.style.fontWeight = '600';
+    document.body.appendChild(div);
+    return true;
+  }
+  return false;
 };
 
 // SUBMODULE: createSupabaseFn @internal - erstellt sichere Wrapper für Supabase-Funktionsaufrufe
@@ -242,7 +272,7 @@ async function initCorePhase() {
   setInputValue('#to', todayIso);
   setTab('capture');
   try {
-    window.AppModules.capture.resetCapturePanels?.();
+    window.AppModules.capture?.resetCapturePanels?.();
     window.AppModules.bp.updateBpCommentWarnings?.();
   } catch (_) {}
   try { addCapturePanelKeys?.(); } catch(_){ }
@@ -254,7 +284,7 @@ async function initModulesPhase() {
   bindAuthButtons();
   if (getSupabaseState()?.sbClient) watchAuthState();
   try {
-    await window.AppModules.capture.refreshCaptureIntake();
+    await window.AppModules.capture?.refreshCaptureIntake?.();
   } catch(_) {}
   await maybeRefreshForTodayChange({ force: true, source: 'boot' });
   AppModules.captureGlobals.setLastKnownToday(todayStr());
@@ -292,7 +322,7 @@ async function initModulesPhase() {
     });
   }
 
-  window.AppModules.capture.bindIntakeCapture();
+  window.AppModules.capture?.bindIntakeCapture?.();
   try {
     if (hasSupabaseFn('cleanupOldIntake') && await isLoggedInFast()) {
       await cleanupOldIntake();
@@ -433,7 +463,11 @@ async function runUiRefresh(){
 
       await runUiSubStep('doctor', doc, async () => { await doctorModule?.renderDoctor?.(); });
       // appointments substep entfernt
-      await runUiSubStep('lifestyle', lifestyle && typeof window.AppModules.capture?.renderLifestyle === 'function', async () => { await window.AppModules.capture.renderLifestyle(); });
+      await runUiSubStep(
+        'lifestyle',
+        lifestyle && typeof window.AppModules.capture?.renderLifestyle === 'function',
+        async () => { await window.AppModules.capture?.renderLifestyle?.(); }
+      );
       await runUiSubStep('chart', chart && !!chartPanel?.draw, async () => { await chartPanel?.draw?.(); });
     }
   } finally {
@@ -804,7 +838,7 @@ async function ensureModulesReady() {
       await waitForSupabaseApi({ timeout: 8000 });
       supabaseReady = !!getSupabaseApi();
     } catch (err) {
-      console.warn('[BOOT] SupabaseAPI nicht rechtzeitig geladen', err);
+      logBootDiag('SupabaseAPI nicht rechtzeitig geladen', err);
     }
   }
 
@@ -814,30 +848,10 @@ async function ensureModulesReady() {
     : ['SupabaseAPI'];
   const missing = [...missingGlobals, ...missingSupa];
   if (!missing.length) return true;
-  const message = `Fehler: Module fehlen (${missing.join(', ')})`;
-  let displayed = false;
-  if (document.readyState !== 'loading') {
-    const errBox = document.getElementById('err');
-    if (errBox) {
-      errBox.textContent = message;
-      errBox.style.display = 'block';
-      displayed = true;
-    } else if (document.body) {
-      const div = document.createElement('div');
-      div.textContent = message;
-      div.style.background = '#ff6b6b';
-      div.style.color = '#121417';
-      div.style.padding = '12px';
-      div.style.margin = '16px';
-      div.style.borderRadius = '8px';
-      div.style.fontWeight = '600';
-      document.body.appendChild(div);
-      displayed = true;
-    }
-  }
-  if (!displayed) {
-    console.error(message);
-  }
+  const label = missing.join(', ');
+  const message = `Module fehlen: ${label}`;
+  showBootErrorBanner(message);
+  logBootDiag(`missing deps: ${label}`);
   return false;
 }
 
@@ -1084,7 +1098,7 @@ async function maybeResetIntakeForToday(todayIso){
     if (guardSet) {
       AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
       try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
-      try { window.AppModules.capture.refreshCaptureIntake(); } catch(_) {}
+      try { window.AppModules.capture?.refreshCaptureIntake?.(); } catch(_) {}
     }
   }
 }
@@ -1198,7 +1212,7 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
   }
 
   try {
-    await window.AppModules.capture.refreshCaptureIntake();
+    await window.AppModules.capture?.refreshCaptureIntake?.();
   } catch(_) {}
 
   AppModules.captureGlobals.setLastKnownToday(todayIso);
@@ -1388,8 +1402,8 @@ const dateEl = document.getElementById('date');
         const todayIso = todayStr();
   AppModules.captureGlobals.setDateUserSelected((dateEl.value || '') !== todayIso);
         // was du beim Datum aendern haben willst:
-        await window.AppModules.capture.refreshCaptureIntake();
-        window.AppModules.capture.resetCapturePanels();
+        await window.AppModules.capture?.refreshCaptureIntake?.();
+        window.AppModules.capture?.resetCapturePanels?.();
         window.AppModules.bp.updateBpCommentWarnings?.();
         await window.AppModules.body.prefillBodyInputs();
       } catch(_) {}
@@ -1475,7 +1489,16 @@ document.addEventListener('keydown', (e)=>{
   } catch(_){ }
 });
 
+const shouldHandleResume = () => {
+  const bootFlow = getBootFlow();
+  if (bootFlow?.isStageAtLeast) {
+    return bootFlow.isStageAtLeast('INIT_CORE');
+  }
+  return true;
+};
+
 const resumeEventHandler = (source) => {
+  if (!shouldHandleResume()) return;
   (async () => {
     try {
       await resumeFromBackground(source);
@@ -1485,22 +1508,23 @@ const resumeEventHandler = (source) => {
   })();
 };
 document.addEventListener('visibilitychange', () => {
-  diag.add?.(`[event] visibilitychange -> ${document.visibilityState}`);
   if (document.visibilityState !== 'visible') return;
   resumeEventHandler('visibility');
 });
 
 window.addEventListener('pageshow', (event) => {
-  diag.add?.(`[event] pageshow (persisted=${event.persisted ? 1 : 0})`);
   if (event.persisted || document.visibilityState === 'visible') {
     resumeEventHandler('pageshow');
   }
 });
 
-window.addEventListener('focus', () => {
-  diag.add?.('[event] focus');
+const handleWindowFocus = () => {
+  if (!shouldHandleResume()) return;
   resumeEventHandler('focus');
-});
+  try { maybeRefreshForTodayChange({ source: 'focus' }); } catch(_){ }
+};
+
+window.addEventListener('focus', handleWindowFocus);
 
 /** END MODULE */
 
@@ -1519,8 +1543,10 @@ const startBootProcess = () => {
   if (window.__bootDone) return;
   window.__bootDone = true;
   main().catch((err) => {
-    failBootStage(err?.message || 'Boot fehlgeschlagen.');
-    console.error('Boot failed', err);
+    const message = err?.message || 'Boot fehlgeschlagen.';
+    failBootStage(message);
+    showBootErrorBanner(message);
+    logBootDiag('fatal', err || message);
   });
 };
 

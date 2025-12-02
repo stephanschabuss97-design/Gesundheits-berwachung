@@ -31,6 +31,7 @@ const bootAuth = () => {
       const targetIdx = bootFlow.getStageIndex('INIT_CORE');
       const currentIdx = bootFlow.getStageIndex(current);
       if (currentIdx < targetIdx) {
+        // Stage nur vorziehen, wenn wir uns noch vor INIT_CORE befinden (z. B. nach Auth-Entscheid).
         bootFlow.setStage?.('INIT_CORE');
       }
     } catch (_) {
@@ -39,12 +40,10 @@ const bootAuth = () => {
   };
   SupabaseAPI.initAuth?.({
     onStatus: (status) => {
-      console.info("Auth status:", status);
-      if (status && status !== 'unknown') {
-        reportStatus('Session geprüft');
+      const normalized = status && status !== 'unknown';
+      reportStatus(normalized ? 'Session geprüft' : 'Prüfe Session …');
+      if (normalized) {
         advanceStageToInitCore();
-      } else {
-        reportStatus('Prüfe Session …');
       }
     },
     onLoginOverlay: (visible) => {

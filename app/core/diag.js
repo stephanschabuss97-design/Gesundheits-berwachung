@@ -14,10 +14,21 @@
 // SUBMODULE: namespace init @internal - Initialisiert globales Diagnostics-Modul
 (function (global) {
   const appModules = (global.AppModules = global.AppModules || {});
-  const isDiagnosticsEnabled =
+  const diagnosticsFlag =
     typeof appModules?.config?.DIAGNOSTICS_ENABLED === 'boolean'
       ? appModules.config.DIAGNOSTICS_ENABLED
       : true;
+  global.DIAGNOSTICS_ENABLED = diagnosticsFlag;
+  // Hinweis: Alle Fallback-Logs laufen über logDiagConsole, damit Tests/QA die Konsole komplett stummschalten können.
+  const isDiagnosticsEnabled = !!diagnosticsFlag;
+  const logDiagConsole = (level, ...args) => {
+    if (global.DIAGNOSTICS_ENABLED === false) return;
+    try {
+      global.console?.[level]?.(...args);
+    } catch (_) {
+      /* noop */
+    }
+  };
   if (!isDiagnosticsEnabled) {
     const stubDiag = {
       el: null,
@@ -33,10 +44,12 @@
       diag: stubDiag,
       recordPerfStat() {},
       uiError(msg) {
-        console.warn('[diagnostics disabled] uiError:', msg);
+        const text = String(msg || 'Fehler');
+        logDiagConsole('warn', '[diagnostics disabled] uiError:', text);
       },
       uiInfo(msg) {
-        console.info('[diagnostics disabled] uiInfo:', msg);
+        const text = String(msg || 'OK');
+        logDiagConsole('info', '[diagnostics disabled] uiInfo:', text);
       }
     };
     appModules.diagnostics = diagnosticsApi;
@@ -72,7 +85,7 @@
     try {
       logger?.add?.(message, context);
     } catch (err) {
-      console.warn('[diagnostics] logger forward failed', err);
+      logDiagConsole('warn', '[diagnostics] logger forward failed', err);
     }
   };
 
@@ -81,7 +94,7 @@
     try {
       perf?.record?.(key, startedAt);
     } catch (err) {
-      console.warn('[diagnostics] perf forward failed', err);
+      logDiagConsole('warn', '[diagnostics] perf forward failed', err);
     }
   };
 
@@ -90,14 +103,14 @@
     try {
       monitor()?.heartbeat?.(reason);
     } catch (err) {
-      console.warn('[diagnostics] monitor heartbeat failed', err);
+      logDiagConsole('warn', '[diagnostics] monitor heartbeat failed', err);
     }
   };
   const monitorToggle = (state) => {
     try {
       monitor()?.toggle?.(state);
     } catch (err) {
-      console.warn('[diagnostics] monitor toggle failed', err);
+      logDiagConsole('warn', '[diagnostics] monitor toggle failed', err);
     }
   };
   let diagnosticsListenerAdded = false;
@@ -117,16 +130,16 @@
             errBox.style.display = 'block';
             errBox.textContent = message;
           } else {
-            console.error('[diagnostics:unhandledrejection]', message);
+            logDiagConsole('error', '[diagnostics:unhandledrejection]', message);
           }
           e.preventDefault();
         } catch (err) {
-          console.error('[diagnostics] unhandledrejection handler failed', err);
+          logDiagConsole('error', '[diagnostics] unhandledrejection handler failed', err);
         }
       });
     }
   } catch (err) {
-    console.error('[diagnostics] failed to register unhandledrejection listener', err);
+    logDiagConsole('error', '[diagnostics] failed to register unhandledrejection listener', err);
   }
 
   // SUBMODULE: recordPerfStat @public
@@ -169,7 +182,7 @@
         if (t2) t2.addEventListener('click', toggle);
         if (close) close.addEventListener('click', () => this.hide());
       } catch (err) {
-        console.error('[diagnostics:init] failed', err);
+        logDiagConsole('error', '[diagnostics:init] failed', err);
       }
     },
     show() {
@@ -205,7 +218,7 @@
         errBox.style.display = 'none';
       }, 5000);
     } else {
-      console.error('[uiError]', text);
+      logDiagConsole('error', '[uiError]', text);
     }
   }
 
@@ -222,7 +235,7 @@
         infoBox.style.display = 'none';
       }, 2000);
     } else {
-      console.log('[uiInfo]', text);
+      logDiagConsole('log', '[uiInfo]', text);
     }
   }
 
@@ -235,12 +248,13 @@
     : (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
   Object.entries(diagnosticsApi).forEach(([key, value]) => {
-    if (hasOwn(global, key)) {
-      console.warn(
-        `[diagnostics] global property conflict: '${key}' already defined as ${typeof global[key]}`
-      );
-      return;
-    }
+      if (hasOwn(global, key)) {
+        logDiagConsole(
+          'warn',
+          `[diagnostics] global property conflict: '${key}' already defined as ${typeof global[key]}`
+        );
+        return;
+      }
     Object.defineProperty(global, key, {
       value,
       writable: false,
@@ -255,14 +269,14 @@
       try {
         getDiagnosticsLayer().perf?.addDelta?.(key, delta);
       } catch (err) {
-        console.warn('[diagnostics] perfStatsProxy.add failed', err);
+        logDiagConsole('warn', '[diagnostics] perfStatsProxy.add failed', err);
       }
     },
     snap(key) {
       try {
         return getDiagnosticsLayer().perf?.snapshot?.(key) || { count: 0 };
       } catch (err) {
-        console.warn('[diagnostics] perfStatsProxy.snap failed', err);
+        logDiagConsole('warn', '[diagnostics] perfStatsProxy.snap failed', err);
         return { count: 0 };
       }
     }
@@ -276,6 +290,6 @@
       enumerable: false
     });
   } else {
-    console.warn('[diagnostics] global perfStats already defined, keeping existing reference');
+    logDiagConsole('warn', '[diagnostics] global perfStats already defined, keeping existing reference');
   }
 })(window);
