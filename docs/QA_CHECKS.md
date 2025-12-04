@@ -20,6 +20,28 @@
 
 ---
 
+## Phase 4.1 ? Vitals & Doctor Panel (2025-12-06)
+
+**Scope:** Ein Orbit-Eintrag f?r Vitals + Buttons *Arzt-Ansicht* / *Diagramm* im Panel; Chart schlie?t zuerst zur?ck zur Liste.
+
+**Smoke**
+- [ ] Orbit zeigt nur noch einen Vitals-Button (Doctor-Orbit entf?llt). Tippen ?ffnet immer das Vitals-Panel.
+- [ ] Buttons *Arzt-Ansicht* und *Diagramm* unter Datum/Messzeitpunkt funktionieren: erster ? `requireDoctorUnlock()` + Liste, zweiter ? Guard + direktes Chart.
+- [ ] Chart schlie?en (X) blendet zuerst zur?ck zur Arzt-Liste; erst das zweite X kehrt zum Hub zur?ck.
+
+**Sanity**
+- [ ] `openDoctorPanel({ startMode })` akzeptiert `list`/`chart`; Touch-Log meldet `[hub] openDoctorPanel openFlow start ?` nur einmal je ?ffnung.
+- [ ] Abbruch des Guards (`unlock result=cancelled`) hinterl?sst kein offenes Panel.
+- [ ] Solange Doctor offen ist, blockiert das Hub-Lock weitere Orbit-Klicks (`body:has(.hub-panel.is-visible)` aktiv).
+- [ ] Fallback `forceClosePanel` sollte nicht auftauchen; falls doch ? Fail & Bug notieren.
+
+**Regression**
+- [ ] Capture-Saves (Blutdruck/K?rper) laufen unver?ndert; neue Buttons beeinflussen Formulare nicht.
+- [ ] Trendpilot-Block, Export JSON und Diagrammsteuerung funktionieren wie zuvor.
+- [ ] Andere Panels (Assistant, Appointments, Capture Intake) schlie?en normal; keine neuen ARIA-Warnungen in DevTools.
+
+---
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

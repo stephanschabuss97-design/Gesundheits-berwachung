@@ -121,12 +121,12 @@
             <button
               type="button"
               class="hub-icon"
-              data-hub-module="doctor"
+              data-hub-module="vitals"
               aria-pressed="false"
               data-orbit-pos="north"
             >
               <span aria-hidden="true">??</span>
-              <span class="sr-only">Arzt-Ansicht</span>
+              <span class="sr-only">Vitals &amp; Arztbereich</span>
             </button>
             <button
               type="button"
@@ -155,16 +155,6 @@
             >
               <span aria-hidden="true">??</span>
               <span class="sr-only">GPT Voice (bald)</span>
-            </button>
-            <button
-              type="button"
-              class="hub-icon"
-              data-hub-module="vitals"
-              aria-pressed="false"
-              data-orbit-pos="s"
-            >
-              <span aria-hidden="true">??</span>
-              <span class="sr-only">Vitalwerte</span>
             </button>
             <button
               type="button"
@@ -326,6 +316,7 @@
             type="button"
             class="hub-panel-close"
             data-panel-close
+            data-close-mode="instant"
             aria-label="Fenster schliessen"
           >
             &times;
@@ -383,6 +374,7 @@
       class="hub-panel"
       id="hubDoctorPanel"
       data-hub-panel="doctor"
+      data-close-mode="instant"
       role="region"
       aria-labelledby="hubDoctorTitle"
       aria-hidden="true"
@@ -395,6 +387,7 @@
             type="button"
             class="hub-panel-close"
             data-panel-close
+            data-close-mode="instant"
             aria-label="Fenster schliessen"
           >
             &times;
@@ -473,6 +466,14 @@
                     <option value="M">Morgens</option>
                     <option value="A">Abends</option>
                   </select>
+                </div>
+                <div class="hub-vitals-actions hub-vitals-actions-inline" role="group" aria-label="Aktionen fuer Arztbereich">
+                  <button class="btn ghost" id="vitalsDoctorBtn" type="button">
+                    Arzt-Ansicht
+                  </button>
+                  <button class="btn ghost" id="vitalsChartBtn" type="button">
+                    Diagramm
+                  </button>
                 </div>
               </div>
               <div class="card-nested bp-pane active" data-context="M">

@@ -348,26 +348,7 @@ docs/QA_CHECKS.md: Testfälle aufnehmen (Foto hochladen, Analyse-Ergebnis ersche
 **Ziel:**
 MIDAS als Alltags-Tool vollständig machen, bevor der Butler & Persistent Login kommen.
 
-### 4.1 Copy Utilities
-
-* **Ziel:** Daten aus Intakes/Doctor/Terminen schnell kopierbar machen (z. B. für Arztbesuch oder Chat).
-* UI-Schwerpunkt: Panels, in denen Tages-/Zeitreihen angezeigt werden (z. B. Capture, Doctor, ggf. Intakes).
-
-**Anforderungen:**
-
-* Intake Copy Button im UI (z. B. in Capture/Doctor/Intakes-Ansicht).
-* Formate:
-
-  * Menschlich lesbarer Text (für Arzt/Chat/Notizen).
-  * Parsebarer Einzeiler, z. B.:  
-    `INTAKE|2025-11-28|13:05|water_ml=500|salt_g=2.1|protein_g=52`.
-
-* **Codex-Hinweis:**  
-  Nur bestehende Daten lesen und Formatstrings generieren. Keine neue Business-Logik und keine zusätzlichen DB-Tabellen.
-
----
-
-### 4.2 Vitals & Doctor – Panel-Konsolidierung
+### 4.1 Vitals & Doctor – Panel-Konsolidierung ✅
 
 **Ziel:**
 Nur noch **ein** Hub-Entry für Blutdruck/Körper, aber schneller Einstieg in Arzt-Ansicht **und** Chart.
@@ -416,7 +397,23 @@ Nur noch **ein** Hub-Entry für Blutdruck/Körper, aber schneller Einstieg in Ar
 
 ---
 
-### 4.3 Termin- & Arztmodul (Termine + Übersicht)
+Für Phase 4.1 greifen wir in drei Bereiche ein:
+
+Hub-Layout (app/modules/hub/index.js) ✅
+Orbit-Konfiguration anpassen: Vitals-Button wird der einzige Eintrag für Blutdruck/Körper; Doctor-Icon entfällt.
+Handler aktualisieren, damit der Vitals-Button immer das Vitals-/Body-Panel öffnet (keine separaten Buttons mehr für Doctor).
+
+Capture/Vitals-Panel (vermutlich app/modules/capture/index.js + zugehöriges Template) ✅
+Zwei neue Buttons im Panel-Header oder oberhalb der Eingabefelder:
+„Arzt-Ansicht“ → ruft requireDoctorUnlock() auf und öffnet die klassische Doctor-View.
+„Diagramm“ → ebenfalls Guard, setzt ein Flag bzw. übergibt einen Modus, damit Doctor-View direkt im Chart startet.
+Logik für die Button-Actions (z. B. AppModules.capture?.openDoctorView({ startMode: 'list' | 'chart' })).
+
+Doctor-Module (app/modules/doctor/index.js + Chartmodul) ✅
+Öffnen via Parameter: wenn startMode === 'chart', nach Unlock sofort das Chart zeigen.
+Schließen (X) eines Chart-Panels sollte zunächst die Doctor-Ansicht zeigen (nicht direkt zum Hub springen), sodass der Nutzer im „medizinischen Raum“ bleibt.
+
+### 4.2 Termin- & Arztmodul (Termine + Übersicht)
 
 **Ziel:**
 Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor-UI, ohne den Hub zu überladen.
@@ -494,7 +491,7 @@ Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor
 
 ---
 
-### 4.4 Health-Profil & Persona Layer (Supabase)
+### 4.3 Health-Profil & Persona Layer (Supabase)
 
 **Ziel:**
 Stephan-spezifische Gesundheitsdaten und Limits zentral in Supabase halten, statt sie hart in Prompts zu kodieren.
@@ -558,7 +555,7 @@ Stephan-spezifische Gesundheitsdaten und Limits zentral in Supabase halten, stat
 - In dieser Phase nur Tabellen + Edge Function-Kontext erweitern.
 - Keine neuen großen UI-Bereiche bauen – ein einfaches Profil-Panel reicht.
 
-### .4 Hybrid Panel Animation (Hub Performance Mode)
+### 4.4 Hybrid Panel Animation (Hub Performance Mode)
 
 Ziel:
 Die Hub-Panels werden für Mobile/Tablet (Performance Mode) und Desktop (cineastisch, aber leicht) optimiert.
@@ -616,6 +613,7 @@ Aus dem beratenden Assistant wird ein Butler, der nach einer klaren "Ja/Nein"-Be
 * Keine Always-On-Experimente, kein Streaming ? Voice ist nur eine bequeme Eingabehilfe, die die gleichen Confirm-Regeln respektiert.
 
 > **Zusammenfassung:** Phase?5 konzentriert sich auf den zuverl?ssigen Suggest/Confirm-Pfad und den kontrollierten Einsatz von Allowed Actions. Voice bleibt sekund?r und nutzt exakt dieselben Mechanismen wie der Textchat.
+
 ## Phase 6 – Deep Cleanup & Refactor
 
 **Ziel:**

@@ -1560,6 +1560,7 @@ if (applyBtn) {
 const doctorChartBtn = document.getElementById('doctorChartBtn');
 if (doctorChartBtn) {
 doctorChartBtn.addEventListener("click", async ()=>{
+  diag.add?.('[doctor] chart open button clicked');
   try {
     const logged = await isLoggedInFast();
     if (!logged) {
@@ -1576,7 +1577,11 @@ doctorChartBtn.addEventListener("click", async ()=>{
     setAuthPendingAfterUnlock(null);
   }
   const chartPanel = getChartPanel();
+  if (!chartPanel) {
+    diag.add?.('[doctor] chart panel missing');
+  }
   chartPanel?.show?.();
+  diag.add?.('[doctor] chart show requested');
   await requestUiRefresh({ reason: 'doctor:chart-open', chart: true });
 });
 } else {
@@ -1589,6 +1594,7 @@ document.addEventListener('keydown', (e)=>{
   try {
     const chartPanel = getChartPanel();
     if (chartPanel?.open) {
+      diag.add?.('[doctor] chart hide via Escape');
       chartPanel.hide();
       e.preventDefault();
       return;

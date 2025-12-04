@@ -732,6 +732,22 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
   width: 100%;
 }
 
+.hub-vitals-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.hub-vitals-actions .btn {
+  min-width: 140px;
+}
+
+.hub-vitals-actions-inline {
+  margin-left: auto;
+}
+
 .hub-vitals-bp {
   display: flex;
   flex-direction: column;
@@ -883,6 +899,11 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
 
   .hub-hero {
     padding-top: 4px;
+  }
+
+  .hub-vitals-actions-inline {
+    width: 100%;
+    margin: 4px 0 0;
   }
 }
 

@@ -599,6 +599,32 @@
     wire('cap-water-add-btn',   'water');
     wire('cap-salt-add-btn',    'salt');
     wire('cap-protein-add-btn', 'protein');
+
+    const openDoctorPanel = (startMode) => {
+      const hubMod = global.AppModules?.hub;
+      if (typeof hubMod?.openDoctorPanel !== 'function') {
+        diag.add?.('[capture] hub.openDoctorPanel missing');
+        return;
+      }
+      try {
+        hubMod.openDoctorPanel({ startMode });
+      } catch (err) {
+        diag.add?.('[capture] openDoctorPanel error: ' + (err?.message || err));
+      }
+    };
+
+    const wireDoctorAccessButton = (id, startMode) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      const replacement = btn.cloneNode(true);
+      btn.replaceWith(replacement);
+      replacement.disabled = false;
+      if (!replacement.type) replacement.type = 'button';
+      replacement.addEventListener('click', () => openDoctorPanel(startMode));
+    };
+
+    wireDoctorAccessButton('vitalsDoctorBtn', 'list');
+    wireDoctorAccessButton('vitalsChartBtn', 'chart');
   }
 
   function setProgState(el, state){

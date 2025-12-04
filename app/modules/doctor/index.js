@@ -490,6 +490,44 @@ async function exportDoctorJson(){
     renderDoctor,
     exportDoctorJson
   };
+
+  function bindHubDoctorCloseButton() {
+    try {
+      const doc = global.document;
+      if (!doc) return;
+      const panel = doc.getElementById('hubDoctorPanel');
+      if (!panel) return;
+      const btn = panel.querySelector('[data-panel-close]');
+      if (!btn || btn.dataset.hubDoctorCloseBound === '1') return;
+      btn.dataset.hubDoctorCloseBound = '1';
+      btn.addEventListener('click', (event) => {
+        const hub = global.AppModules?.hub;
+        const closeFn = hub?.closePanel;
+        if (typeof closeFn !== 'function') {
+          diag.add?.('[doctor] hub.closePanel missing');
+          return;
+        }
+        let closed = closeFn('doctor');
+        if (!closed && typeof hub?.forceClosePanel === 'function') {
+          diag.add?.('[doctor] closePanel fallback -> forceClosePanel');
+          closed = hub.forceClosePanel('doctor', { instant: true });
+        }
+        if (closed) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, { capture: true });
+    } catch (_) {
+      /* noop */
+    }
+  }
+
+  if (global.document?.readyState === 'loading') {
+    global.document.addEventListener('DOMContentLoaded', bindHubDoctorCloseButton, { once: true });
+  } else {
+    bindHubDoctorCloseButton();
+  }
+
   appModules.doctor = appModules.doctor || {};
   Object.assign(appModules.doctor, doctorApi);
 })(typeof window !== 'undefined' ? window : globalThis);

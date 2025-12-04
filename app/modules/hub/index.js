@@ -120,6 +120,7 @@
   let activePanel = null;
   let setSpriteStateFn = null;
   let doctorUnlockWaitCancel = null;
+  let openDoctorPanelWithGuard = null;
   let voiceCtrl = null;
   let assistantChatCtrl = null;
   let supabaseFunctionHeadersPromise = null;
@@ -143,9 +144,33 @@
     }
   };
 
-  const closeActivePanel = ({ skipButtonSync = false } = {}) => {
+  const getChartPanel = () => global.AppModules?.charts?.chartPanel;
+
+  const closeActivePanel = ({ skipButtonSync = false, instant = false } = {}) => {
     if (!activePanel) return;
     const panel = activePanel;
+    const panelName = panel.dataset?.hubPanel || 'unknown';
+    diag.add?.(`[hub] close panel ${panelName} instant=${instant}`);
+    if (panelName === 'doctor') {
+      if (typeof doctorUnlockWaitCancel === 'function') {
+        diag.add?.('[hub] doctor close -> cancel pending unlock wait');
+        try { doctorUnlockWaitCancel(false); } catch (_) {}
+      }
+      const chartPanel = getChartPanel();
+      if (chartPanel?.open) {
+        diag.add?.('[hub] doctor close -> chart still open, hiding chart first');
+        try {
+          chartPanel.hide();
+        } catch (err) {
+          console.warn('[hub] chartPanel.hide failed', err);
+        }
+      }
+    }
+
+    const activeEl = doc?.activeElement;
+    if (activeEl && typeof activeEl.blur === 'function' && panel.contains(activeEl)) {
+      try { activeEl.blur(); } catch (_) {}
+    }
 
     const finish = () => {
       panel.removeEventListener('animationend', handleAnimationEnd);
@@ -156,6 +181,9 @@
       panel.classList.remove('hub-panel-closing', 'hub-panel-open', 'is-visible');
       panel.hidden = true;
       panel.setAttribute('aria-hidden', 'true');
+      panel.setAttribute('inert', '');
+      panel.setAttribute('inert', '');
+      panel.setAttribute('inert', '');
       activePanel = null;
       doc.removeEventListener('keydown', handlePanelEsc);
       setSpriteStateFn?.('idle');
@@ -169,12 +197,24 @@
       finish();
     };
 
+    if (instant) {
+      finish();
+      return;
+    }
+
     panel.classList.remove('hub-panel-open');
     panel.classList.add('hub-panel-closing');
     panel.setAttribute('aria-hidden', 'true');
     panel.hidden = false;
     panel.addEventListener('animationend', handleAnimationEnd);
     panel._hubCloseTimer = global.setTimeout(finish, 1200);
+  };
+  const forceClosePanelByName = (panelName, { instant = true } = {}) => {
+    const target = doc?.querySelector(`[data-hub-panel="${panelName}"]`);
+    if (!target) return false;
+    activePanel = target;
+    closeActivePanel({ skipButtonSync: false, instant });
+    return true;
   };
 
   const setupOrbitHotspots = (hub) => {
@@ -216,6 +256,7 @@
     if (!doc) return null;
     const panel = doc.querySelector(`[data-hub-panel="${panelName}"]`);
     if (!panel) return null;
+    diag.add?.(`[hub] openPanel ${panelName}`);
     if (activePanel === panel) return panel;
     if (activePanel) {
       closeActivePanel({ skipButtonSync: true });
@@ -227,6 +268,7 @@
     }
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
+    panel.removeAttribute('inert');
     panel.classList.add('is-visible');
     // force reflow before animation to ensure restart
     void panel.offsetWidth; // eslint-disable-line no-unused-expressions
@@ -247,8 +289,18 @@
     panels.forEach((panel) => {
       panel.hidden = true;
       panel.setAttribute('aria-hidden', 'true');
+      panel.setAttribute('inert', '');
+      const closeMode = panel.dataset.closeMode || '';
       panel.querySelectorAll('[data-panel-close]').forEach((btn) => {
-        btn.addEventListener('click', () => closeActivePanel());
+        const mode = btn.dataset.closeMode || closeMode;
+        btn.addEventListener('click', (event) => {
+          event?.preventDefault();
+          event?.stopPropagation();
+          diag.add?.(
+            `[hub] close button ${panel.dataset.hubPanel || 'unknown'} mode=${mode}`
+          );
+          closeActivePanel({ instant: mode === 'instant' });
+        });
       });
     });
   };
@@ -256,12 +308,18 @@
   const ensureDoctorUnlocked = async () => {
     const supa = getSupabaseApi();
     const unlockFn = supa?.requireDoctorUnlock;
-    if (typeof unlockFn !== 'function') return true;
+    if (typeof unlockFn !== 'function') {
+      diag.add?.('[hub] doctor unlock bypassed (no guard fn)');
+      return true;
+    }
     try {
+      diag.add?.('[hub] doctor unlock start');
       const ok = await unlockFn();
+      diag.add?.(`[hub] doctor unlock result=${ok ? 'ok' : 'cancelled'}`);
       return !!ok;
     } catch (err) {
       console.warn('[hub] doctor unlock failed', err);
+      diag.add?.('[hub] doctor unlock failed: ' + (err?.message || err));
       return false;
     }
   };
@@ -269,38 +327,55 @@
   const waitForDoctorUnlock = ({ guardState, timeout = 60000 } = {}) =>
     new Promise((resolve) => {
       const state = guardState || getSupabaseApi()?.authGuardState;
+      diag.add?.(
+        `[hub] waitForDoctorUnlock start timeout=${timeout} state=${state ? 'yes' : 'no'}`
+      );
       if (!state) {
+        diag.add?.('[hub] waitForDoctorUnlock aborted (no guardState)');
         resolve(false);
         return;
       }
       if (state.doctorUnlocked) {
+        diag.add?.('[hub] waitForDoctorUnlock skip (already unlocked)');
         resolve(true);
         return;
       }
       const interval = 200;
       let elapsed = 0;
-      doctorUnlockWaitCancel?.(false);
+      if (doctorUnlockWaitCancel) {
+        diag.add?.('[hub] waitForDoctorUnlock cancelling previous wait');
+        doctorUnlockWaitCancel(false);
+      }
       let finished = false;
-      const cleanup = (result) => {
+      let timerId = null;
+      let cancelFn;
+      const cleanup = (result, reason = 'resolved') => {
         if (finished) return;
         finished = true;
-        global.clearInterval(timerId);
-        if (doctorUnlockWaitCancel === cleanup) {
+        diag.add?.(
+          `[hub] waitForDoctorUnlock finish reason=${reason} result=${result ? 'success' : 'fail'}`
+        );
+        if (timerId) {
+          global.clearInterval(timerId);
+          timerId = null;
+        }
+        if (doctorUnlockWaitCancel === cancelFn) {
           doctorUnlockWaitCancel = null;
         }
         resolve(result);
       };
-      const timerId = global.setInterval(() => {
+      cancelFn = (result = false) => cleanup(result, 'manual-cancel');
+      timerId = global.setInterval(() => {
         if (state.doctorUnlocked) {
-          cleanup(true);
+          cleanup(true, 'state-change');
           return;
         }
         elapsed += interval;
         if (elapsed >= timeout) {
-          cleanup(false);
+          cleanup(false, 'timeout');
         }
       }, interval);
-      doctorUnlockWaitCancel = cleanup;
+      doctorUnlockWaitCancel = cancelFn;
     });
 
   const isBootReady = () => doc?.body?.dataset?.bootStage === 'idle';
@@ -439,18 +514,36 @@
 
     bindAssistantButton();
     const doctorPanelHandler = openPanelHandler('doctor');
-    bindButton('[data-hub-module="doctor"]', async (btn) => {
+    const openDoctorPanel = async ({ triggerButton = null, onOpened, startMode = 'list' } = {}) => {
+      const openFlow = async () => {
+        diag.add?.('[hub] openDoctorPanel openFlow start', { startMode });
+        await doctorPanelHandler(triggerButton);
+        if (startMode === 'chart') {
+          const chartBtn = doc?.getElementById('doctorChartBtn');
+          if (chartBtn) {
+            chartBtn.click();
+          } else {
+            diag.add?.('[hub] doctor chart button missing for chart mode');
+          }
+        }
+        if (typeof onOpened === 'function') {
+          await onOpened();
+        }
+      };
       if (await ensureDoctorUnlocked()) {
-        await doctorPanelHandler(btn);
-        return;
+        await openFlow();
+        return true;
       }
       const supa = getSupabaseApi();
       const guardState = supa?.authGuardState;
       const unlockedAfter = await waitForDoctorUnlock({ guardState });
       if (unlockedAfter) {
-        await doctorPanelHandler(btn);
+        await openFlow();
+        return true;
       }
-    }, { sync: false });
+      return false;
+    };
+    openDoctorPanelWithGuard = openDoctorPanel;
     bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
   };
@@ -2039,5 +2132,21 @@
     activateHubLayout();
   }
 
-  appModules.hub = Object.assign(appModules.hub || {}, { activateHubLayout });
+  appModules.hub = Object.assign(appModules.hub || {}, {
+    activateHubLayout,
+    openDoctorPanel: (options) => {
+      if (openDoctorPanelWithGuard) {
+        return openDoctorPanelWithGuard(options);
+      }
+      return Promise.resolve(false);
+    },
+    closePanel: (panelName) => {
+      if (panelName && activePanel?.dataset?.hubPanel !== panelName) {
+        return false;
+      }
+      closeActivePanel({ instant: true });
+      return true;
+    },
+    forceClosePanel: (panelName, opts) => forceClosePanelByName(panelName, opts),
+  });
 })(typeof window !== 'undefined' ? window : globalThis);
