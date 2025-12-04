@@ -263,6 +263,43 @@ UI-Schwerpunkt: pp/modules/hub/index.js (plus optionale Assistant-Templates/Sty
 | Task | Status | Beschreibung |
 | --- | --- | --- |
 | **3.1 Assistant Text UI** | ? | Hub-Center-Button (Short Press) ?ffnet ssistant-text. Panel l?dt still die heutigen Intake-Totals und (sobald verf?gbar) die n?chsten Termine, zeigt sie im Header und nutzt /midas-assistant f?r Antworten. |
+
+Für 3.1 brauchen wir im Wesentlichen zwei Stränge: Frontend (Hub/Assistant-Panel) und die bereits vorhandenen Supabase Functions, die Antworten liefern. Hier die Datei- und Aufgabenübersicht:
+
+index.html (Hub-Panel-Markup) ✅
+- Panel assistant-text existiert bereits, muss aber um den Butler-Header erweitert werden (Intake-Pills + Termin-Teaser).
+- Platz für Suggest/Confirm-Card vorbereiten (auch wenn Phase 5 erst speichert, brauchen wir hier die Slots).
+
+app/modules/hub/index.js ✅
+Enthält schon assistantChatCtrl, Buttons, Camera-Flow, Session-Handling.
+Anpassungen:
+Beim Öffnen des Panels (openPanelHandler('assistant-text')) still Intake- und Termin-Snapshot laden (z. B. via AppModules.capture + späteres Termin-Modul) und im Header speichern.
+Neues renderAssistantHeader() das die Werte in DOM schreibt.
+Sicherstellen, dass MIDAS_ENDPOINTS.assistant weiterhin genutzt wird, aber Voice-spezifische Teile nur noch beim Long-Press greifen.
+Short/Long-Press-Mapping auf den Center-Button umsetzen (derzeit zwei Buttons [data-hub-module="assistant-text"]/assistant-voice).
+Logging/diag-Hooks aktualisieren (Phase 0.5 Vorgaben beachten).
+
+app/styles/hub.css / evtl. neue assistant-spezifische CSS ✅
+Styles für Butler-Header (Pills + Terminliste), Chat-Bubbles, Buttons.
+Responsive Verhalten (Panelbreite, Scroll).
+
+assets/js/data-local.js & vorhandene Intake-Helper ✅
+Für den Header brauchen wir einen leichtgewichtigen Helper fetchTodayIntakeTotals() (evtl. bereits in capture-Module) – prüfen, ob wir vorhandene AppModules.capture.refreshCaptureIntake oder AppModules.captureGlobals anzapfen können, ohne zusätzliche Requests zu verursachen.
+
+Termin-Daten (Phase 4 Vorbereitung) ✅
+Solange kein Terminmodul existiert, kann ein Platzhalter/Mock (z. B. AppModules.appointments?.getUpcoming(2)) eingebaut werden. Später gegen echte API austauschen.
+
+app/modules/assistant/index.js / actions.js ✅
+Falls zusätzliche Helper für Chat-/Fotoanzeige nötig sind (z. B. Formatierungen, Suggest-Card-Rendering), hier kapseln, damit der Hub-Code nicht weiter anwächst.
+
+Supabase Functions (Backend, anderes Repo C:\Users\steph\Projekte\midas-backend\supabase\functions): ✅
+midas-assistant/index.ts: Schon vorhanden, liefert { reply, actions, meta }. Für Phase 3.1 genügt Endpunkt wie er ist.
+midas-vision/index.ts: Fotoanalyse-Endpunkt; Frontend muss nur Base64-Upload → Response darstellen.
+
+Docs/QA (begleitend) ✅
+docs/modules/Assistant Module Overview.md und docs/QA_CHECKS.md später anpassen, sobald UI final ist.
+Damit haben wir die Ziel-Dateien und To-dos für 3.1 (reines UI/context building, keine Speichervorgänge) im Blick. Sobald wir loslegen, arbeiten wir nacheinander: Markup → Logic (Hub) → Styles → optionale Helpers → QA/Doku.
+
 | **3.2 Foto-Analyse (UI)** | ? | Kamera/File ? Base64 ? /midas-vision ? Anzeige der Analyse (Wasser/Salz/Protein + Empfehlung) im selben Chat inkl. aktueller Intake-Pills. Reine Darstellung, kein Speichern. |
 | **3.3 Diktiermodus (Input only)** | PLANNED | Web Speech API dient als optionaler Eingabehelfer und f?llt nur das Textfeld. Kein Voice-Loop, keine Aktionen. |
 | **3.4 Hub Center Mapping** | TODO | Center-Button vereint beide Modi: **Short Press** ?ffnet Text, **Long Press (~700?ms)** startet den bestehenden Voice-Loop (Desktop/Touch identisch, inkl. Cancel bei fr?hem mouseup/	ouchend). |

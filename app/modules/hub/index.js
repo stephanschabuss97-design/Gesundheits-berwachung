@@ -362,7 +362,77 @@
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
     bindButton('[data-hub-module="vitals"]', openPanelHandler('vitals'), { sync: false });
-    bindButton('[data-hub-module="assistant-text"]', openPanelHandler('assistant-text'), { sync: false });
+    const openAssistantPanel = async (btn) => {
+      await openPanelHandler('assistant-text')(btn);
+      if (activePanel?.dataset?.hubPanel !== 'assistant-text') return;
+      refreshAssistantContext({ reason: 'assistant:panel-open' });
+    };
+
+    const bindAssistantButton = () => {
+      const btn = hub.querySelector('[data-hub-module="assistant-text"]');
+      if (!btn) return;
+      const LONG_PRESS_MS = 650;
+      let pressTimer = null;
+      let longPressTriggered = false;
+      let swallowNextClick = false;
+
+      const resetTimer = () => {
+        if (pressTimer) {
+          global.clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      const markClickSwallowed = () => {
+        swallowNextClick = true;
+        global.setTimeout(() => {
+          swallowNextClick = false;
+        }, 0);
+      };
+
+      const triggerVoice = () => {
+        if (longPressTriggered) return;
+        longPressTriggered = true;
+        markClickSwallowed();
+        handleVoiceTrigger();
+      };
+
+      const handlePointerDown = (event) => {
+        if (!isBootReady()) return;
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        longPressTriggered = false;
+        resetTimer();
+        pressTimer = global.setTimeout(triggerVoice, LONG_PRESS_MS);
+      };
+
+      const handlePointerUp = (event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        if (!pressTimer) return;
+        resetTimer();
+        if (longPressTriggered) return;
+        markClickSwallowed();
+        openAssistantPanel(btn);
+      };
+
+      const cancelPointerHold = () => {
+        resetTimer();
+      };
+
+      btn.addEventListener('pointerdown', handlePointerDown);
+      btn.addEventListener('pointerup', handlePointerUp);
+      btn.addEventListener('pointerleave', cancelPointerHold);
+      btn.addEventListener('pointercancel', cancelPointerHold);
+      btn.addEventListener('click', (event) => {
+        if (swallowNextClick) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        openAssistantPanel(btn);
+      });
+    };
+
+    bindAssistantButton();
     const doctorPanelHandler = openPanelHandler('doctor');
     bindButton('[data-hub-module="doctor"]', async (btn) => {
       if (await ensureDoctorUnlocked()) {
@@ -375,9 +445,6 @@
       if (unlockedAfter) {
         await doctorPanelHandler(btn);
       }
-    }, { sync: false });
-    bindButton('[data-hub-module="assistant-voice"]', () => {
-      handleVoiceTrigger();
     }, { sync: false });
     bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
@@ -438,6 +505,212 @@
     hub.appendChild(pills);
   };
 
+  const getCaptureFormatFn = () => {
+    const fmt = appModules.capture?.fmtDE;
+    if (typeof fmt === 'function') return fmt;
+    return (value, digits = 1) => {
+      const num = Number(value) || 0;
+      return num.toFixed(digits).replace('.', ',');
+    };
+  };
+
+  const updateAssistantPill = (key, text, isActive) => {
+    const pill = assistantChatCtrl?.pills?.[key];
+    if (!pill) return;
+    pill.value.textContent = text;
+    if (isActive) pill.root.classList.remove('muted');
+    else pill.root.classList.add('muted');
+  };
+
+  const renderAssistantIntakeTotals = (snapshot) => {
+    const logged = !!snapshot?.logged;
+    const totals = snapshot?.totals || {};
+    const fmt = getCaptureFormatFn();
+    const waterText = logged ? `${Math.round(Number(totals.water_ml) || 0)} ml` : '-- ml';
+    const saltText = logged ? `${fmt(totals.salt_g, 1)} g` : '-- g';
+    const proteinText = logged ? `${fmt(totals.protein_g, 1)} g` : '-- g';
+    updateAssistantPill('water', waterText, logged);
+    updateAssistantPill('salt', saltText, logged);
+    updateAssistantPill('protein', proteinText, logged);
+  };
+
+  const renderAssistantAppointments = (items) => {
+    const refs = assistantChatCtrl?.appointments;
+    if (!refs?.container) return;
+    const hasItems = Array.isArray(items) && items.length > 0;
+    if (refs.list) {
+      if (hasItems) {
+        refs.list.hidden = false;
+        refs.list.innerHTML = items
+          .map(
+            (item) =>
+              `<li><span>${item.label || ''}</span><span>${item.detail || ''}</span></li>`,
+          )
+          .join('');
+      } else {
+        refs.list.hidden = true;
+        refs.list.innerHTML = '';
+      }
+    }
+    if (refs.empty) {
+      if (hasItems) refs.empty.setAttribute('hidden', 'true');
+      else {
+        refs.empty.removeAttribute('hidden');
+        refs.empty.textContent = 'Keine Termine geladen.';
+      }
+    }
+  };
+
+  const APPOINTMENT_DATE_FORMAT = new Intl.DateTimeFormat('de-AT', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit'
+  });
+  const APPOINTMENT_TIME_FORMAT = new Intl.DateTimeFormat('de-AT', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const formatAppointmentDateTime = (value) => {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const dayLabel = APPOINTMENT_DATE_FORMAT.format(date).replace(/\.$/, '');
+    const timeLabel = APPOINTMENT_TIME_FORMAT.format(date);
+    return `${dayLabel} • ${timeLabel}`;
+  };
+
+  const normalizeAppointmentItems = (items, limit = 2) => {
+    if (!Array.isArray(items)) return [];
+    const normalized = [];
+    items.some((raw, index) => {
+      if (!raw) return false;
+      const id =
+        raw.id ||
+        raw.appointment_id ||
+        raw.remote_id ||
+        raw.slug ||
+        `appt-${index}`;
+      let label =
+        raw.label ||
+        raw.title ||
+        raw.name ||
+        raw.doctor ||
+        raw.summary ||
+        raw.type ||
+        '';
+      let detail =
+        raw.detail ||
+        raw.subtitle ||
+        raw.when ||
+        raw.dateLabel ||
+        '';
+      if (!detail && (raw.start || raw.date)) {
+        detail = formatAppointmentDateTime(raw.start || raw.date);
+      } else if (!detail && raw.day && raw.time) {
+        detail = `${raw.day} • ${raw.time}`;
+      }
+      if (!label && detail) label = 'Termin';
+      if (!label && !detail) return false;
+      normalized.push({ id, label, detail });
+      return normalized.length >= limit;
+    });
+    return normalized.slice(0, limit);
+  };
+
+  const buildMockAppointments = (limit = 2) => {
+    const now = new Date();
+    const createItem = (offsetDays, time, label) => {
+      const clone = new Date(now);
+      clone.setDate(clone.getDate() + offsetDays);
+      const detail = `${APPOINTMENT_DATE_FORMAT.format(clone).replace(/\.$/, '')} • ${time}`;
+      return {
+        id: `mock-${label}-${time}`.toLowerCase().replace(/\s+/g, '-'),
+        label,
+        detail
+      };
+    };
+    const mocks = [
+      createItem(1, '07:45', 'Hausarzt – Kontrolle'),
+      createItem(3, '13:30', 'Nephrologie – Blutdruck')
+    ];
+    return mocks.slice(0, limit);
+  };
+
+  const fetchAssistantAppointments = async ({ limit = 2, reason } = {}) => {
+    const provider = appModules.appointments;
+    let normalized = [];
+    if (provider) {
+      const getter =
+        typeof provider.getUpcoming === 'function'
+          ? provider.getUpcoming
+          : typeof provider.getUpcomingAppointments === 'function'
+            ? provider.getUpcomingAppointments
+            : null;
+      if (getter) {
+        try {
+          const result = await getter.call(provider, limit, { reason });
+          normalized = normalizeAppointmentItems(result, limit);
+        } catch (err) {
+          diag.add?.(
+            `[assistant-context] appointments fetch failed: ${err?.message || err}`,
+          );
+        }
+      } else if (Array.isArray(provider.upcoming)) {
+        normalized = normalizeAppointmentItems(provider.upcoming, limit);
+      } else if (Array.isArray(provider.mockUpcoming)) {
+        normalized = normalizeAppointmentItems(provider.mockUpcoming, limit);
+      }
+    }
+    if (!normalized.length) {
+      normalized = buildMockAppointments(limit);
+    }
+    return normalized;
+  };
+
+  const loadAssistantIntakeSnapshot = async ({ reason, forceRefresh = false } = {}) => {
+    const captureApi = appModules.capture || {};
+    let snapshot = null;
+    if (typeof captureApi.fetchTodayIntakeTotals === 'function') {
+      try {
+        snapshot = await captureApi.fetchTodayIntakeTotals({
+          reason,
+          forceRefresh,
+        });
+      } catch (err) {
+        diag.add?.(
+          `[assistant-context] intake fetch failed: ${err?.message || err}`,
+        );
+      }
+    }
+    if (!snapshot && typeof captureApi.getCaptureIntakeSnapshot === 'function') {
+      snapshot = captureApi.getCaptureIntakeSnapshot();
+    }
+    if (!snapshot && global.AppModules?.captureGlobals?.captureIntakeState) {
+      const state = global.AppModules.captureGlobals.captureIntakeState;
+      snapshot = {
+        dayIso: state.dayIso,
+        logged: !!state.logged,
+        totals: {
+          water_ml: Number(state.totals?.water_ml) || 0,
+          salt_g: Number(state.totals?.salt_g) || 0,
+          protein_g: Number(state.totals?.protein_g) || 0,
+        },
+      };
+    }
+    return snapshot;
+  };
+
+  const refreshAssistantContext = async ({ reason, forceRefresh = false } = {}) => {
+    if (!assistantChatCtrl?.panel) return;
+    const [snapshot, appointments] = await Promise.all([
+      loadAssistantIntakeSnapshot({ reason, forceRefresh }),
+      fetchAssistantAppointments({ limit: 2, reason }),
+    ]);
+    renderAssistantIntakeTotals(snapshot);
+    renderAssistantAppointments(appointments);
+  };
+
   let assistantChatSetupAttempts = 0;
   const ASSISTANT_CHAT_MAX_ATTEMPTS = 10;
   const ASSISTANT_CHAT_RETRY_DELAY = 250;
@@ -473,6 +746,17 @@
     const sendBtn = panel.querySelector('#assistantSendBtn');
     const cameraBtn = panel.querySelector('#assistantCameraBtn');
     const clearBtn = panel.querySelector('#assistantClearChat');
+    const pillsWrap = panel.querySelector('#assistantIntakePills');
+    const buildPillRef = (key) => {
+      const root = pillsWrap?.querySelector(`[data-pill="${key}"]`);
+      if (!root) return null;
+      const value = root.querySelector('[data-pill-value]');
+      if (!value) return null;
+      return { root, value };
+    };
+    const appointmentsContainer = panel.querySelector('#assistantAppointments');
+    const appointmentsList = panel.querySelector('#assistantAppointmentsList');
+    const appointmentsEmpty = appointmentsContainer?.querySelector('[data-appointments-empty]');
 
     const photoInput = doc.createElement('input');
     photoInput.type = 'file';
@@ -490,6 +774,16 @@
       cameraBtn,
       clearBtn,
       photoInput,
+      pills: {
+        water: buildPillRef('water'),
+        salt: buildPillRef('salt'),
+        protein: buildPillRef('protein'),
+      },
+      appointments: {
+        container: appointmentsContainer,
+        list: appointmentsList,
+        empty: appointmentsEmpty,
+      },
       messages: [],
       sessionId: null,
       sending: false,

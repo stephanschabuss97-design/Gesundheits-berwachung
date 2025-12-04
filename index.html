@@ -120,15 +120,6 @@
           <div class="hub-orbit-icons" role="toolbar" aria-label="Module navigation">
             <button
               type="button"
-              class="hub-icon hub-core-trigger"
-              data-hub-module="assistant-voice"
-              aria-pressed="false"
-              data-orbit-pos="core"
-            >
-              <span class="sr-only">MIDAS Voice Chat</span>
-            </button>
-            <button
-              type="button"
               class="hub-icon"
               data-hub-module="doctor"
               aria-pressed="false"
@@ -145,7 +136,7 @@
               aria-pressed="false"
             >
               <span aria-hidden="true">??</span>
-              <span class="sr-only">Assistant Chat</span>
+              <span class="sr-only">Assistant Chat tippen, Voice halten</span>
             </button>
             <button
               type="button"
@@ -240,6 +231,39 @@
           </div>
         </header>
         <div class="hub-panel-body">
+          <section class="assistant-context" aria-live="polite">
+            <div class="assistant-pills" id="assistantIntakePills">
+              <div class="assistant-pill muted" data-pill="water">
+                <span class="label">Wasser</span>
+                <span class="value" data-pill-value>-- ml</span>
+              </div>
+              <div class="assistant-pill muted" data-pill="salt">
+                <span class="label">Salz</span>
+                <span class="value" data-pill-value>-- g</span>
+              </div>
+              <div class="assistant-pill muted" data-pill="protein">
+                <span class="label">Protein</span>
+                <span class="value" data-pill-value>-- g</span>
+              </div>
+            </div>
+            <div class="assistant-appointments" id="assistantAppointments">
+              <p class="muted small" data-appointments-empty>Keine Termine geladen.</p>
+              <ul class="assistant-appointments-list" id="assistantAppointmentsList" hidden></ul>
+            </div>
+          </section>
+          <section class="assistant-suggest-card" id="assistantSuggestCard" hidden aria-live="polite">
+            <header>
+              <p class="muted small">Vorschlag</p>
+              <button type="button" class="btn ghost tiny" id="assistantSuggestDismiss" aria-label="Vorschlag verwerfen">&times;</button>
+            </header>
+            <div class="assistant-suggest-body" id="assistantSuggestBody">
+              <p class="muted">Noch kein Vorschlag.</p>
+            </div>
+            <div class="assistant-suggest-actions">
+              <button type="button" class="btn ghost" id="assistantSuggestNoBtn">Nein</button>
+              <button type="button" class="btn primary" id="assistantSuggestYesBtn">Ja, speichern</button>
+            </div>
+          </section>
           <div class="assistant-chat" id="assistantChat" aria-live="polite">
             <div class="assistant-chat-empty">
               <p class="muted">Starte eine Unterhaltung oder schicke ein Foto deines Essens.</p>

@@ -362,6 +362,42 @@
     }
   }, 150);
 
+  const cloneIntakeTotals = (source) => ({
+    water_ml: Number(source?.water_ml) || 0,
+    salt_g: Number(source?.salt_g) || 0,
+    protein_g: Number(source?.protein_g) || 0
+  });
+
+  function getCaptureIntakeSnapshot(){
+    const dayIso = captureIntakeState.dayIso || todayStr();
+    return {
+      dayIso,
+      logged: !!captureIntakeState.logged,
+      totals: cloneIntakeTotals(captureIntakeState.totals || {})
+    };
+  }
+
+  async function fetchTodayIntakeTotals(options = {}){
+    const todayIso = todayStr();
+    const stateDay = captureIntakeState.dayIso || '';
+    const hasFreshData =
+      stateDay === todayIso &&
+      captureIntakeState.totals &&
+      typeof captureIntakeState.totals === 'object';
+
+    if (!options.forceRefresh && hasFreshData) {
+      return getCaptureIntakeSnapshot();
+    }
+
+    try {
+      await refreshCaptureIntake(options.reason || 'assistant:intake-header');
+    } catch (err) {
+      diag.add?.('[capture] fetchTodayIntakeTotals failed: ' + (err?.message || err));
+    }
+
+    return getCaptureIntakeSnapshot();
+  }
+
   // SUBMODULE: refreshCaptureIntake @extract-candidate - laedt Intake-Daten und synchronisiert Pills/UI
   const normalizeRefreshReason = (value, fallback = 'manual') => {
     if (typeof value === 'string' && value.trim()) return value.trim();
@@ -709,6 +745,8 @@
   const captureApi = {
     clearCaptureIntakeInputs: clearCaptureIntakeInputs,
     refreshCaptureIntake: refreshCaptureIntake,
+    fetchTodayIntakeTotals: fetchTodayIntakeTotals,
+    getCaptureIntakeSnapshot: getCaptureIntakeSnapshot,
     handleCaptureIntake: handleCaptureIntake,
     setCaptureIntakeDisabled: setCaptureIntakeDisabled,
     prepareIntakeStatusHeader: prepareIntakeStatusHeader,
