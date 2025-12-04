@@ -763,7 +763,6 @@
     const photoInput = doc.createElement('input');
     photoInput.type = 'file';
     photoInput.accept = 'image/*';
-    photoInput.capture = 'environment';
     photoInput.hidden = true;
     panel.appendChild(photoInput);
 
@@ -833,7 +832,11 @@
     const file = event?.target?.files?.[0];
     if (!file) return;
     if (file.size > MAX_ASSISTANT_PHOTO_BYTES) {
-      appendAssistantMessage('system', 'Das Foto ist zu groß (max. ca. 6 MB).');
+      const maxMb = (MAX_ASSISTANT_PHOTO_BYTES / (1024 * 1024)).toFixed(1);
+      diag.add?.(
+        `[assistant-vision] foto zu groß: ${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      );
+      appendAssistantMessage('system', `Das Foto ist zu groß (max. ca. ${maxMb} MB).`);
       return;
     }
     try {
@@ -841,6 +844,7 @@
       await sendAssistantPhotoMessage(dataUrl, file);
     } catch (err) {
       console.error('[assistant-chat] foto konnte nicht gelesen werden', err);
+      diag.add?.(`[assistant-vision] foto konnte nicht gelesen werden: ${err?.message || err}`);
       appendAssistantMessage('system', 'Das Foto konnte nicht gelesen werden.');
     }
   };
@@ -1178,19 +1182,55 @@
   const readFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (err) => reject(err);
-      reader.readAsDataURL(file);
+      const cleanup = () => {
+        reader.onload = null;
+        reader.onerror = null;
+      };
+      const fallbackToBuffer = () => {
+        cleanup();
+        file
+          .arrayBuffer()
+          .then((buffer) => {
+            resolve(arrayBufferToDataUrl(buffer, file.type));
+          })
+          .catch((bufferErr) => reject(bufferErr));
+      };
+      reader.onload = () => {
+        cleanup();
+        resolve(reader.result);
+      };
+      reader.onerror = (err) => {
+        diag.add?.(`[assistant-vision] FileReader fehler: ${err?.message || err}`);
+        fallbackToBuffer();
+      };
+      try {
+        reader.readAsDataURL(file);
+      } catch (err) {
+        diag.add?.(`[assistant-vision] FileReader exception: ${err?.message || err}`);
+        fallbackToBuffer();
+      }
     });
 
-  const handleAssistantChatClick = (event) => {
+  const arrayBufferToDataUrl = (buffer, mime = 'application/octet-stream') => {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk);
+    }
+    const base64 = global.btoa(binary);
+    return `data:${mime || 'application/octet-stream'};base64,${base64}`;
+  };
+
+  function handleAssistantChatClick(event) {
     const retryBtn = event.target.closest('button[data-assistant-retry-id]');
     if (retryBtn) {
       event.preventDefault();
       const messageId = retryBtn.getAttribute('data-assistant-retry-id');
       retryAssistantPhoto(messageId);
     }
-  };
+  }
 
   const retryAssistantPhoto = (messageId) => {
     if (!messageId || !assistantChatCtrl) return;
