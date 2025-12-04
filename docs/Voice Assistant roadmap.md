@@ -253,27 +253,22 @@ Später greift diese Persona zusätzlich auf das Health-Profil aus Phase 4.4 zu 
 
 ---
 
-## Phase 3 – Assistant UI – Textchat & Fotoanalyse
+## Phase 3 ? Assistant UI ? Textchat & Fotoanalyse
 
 **Ziel:**
-Assistant-Panel & Foto-Flow im Hub. Der Assistant kann beraten und analysieren, aber noch keine Daten schreiben.
+Textchat wird zur prim?ren Assistant-Oberfl?che. Beim ?ffnen des Panels l?dt MIDAS automatisch Intakes und Termine, damit jede Antwort ? inklusive Fotoanalysen ? den Tageskontext kennt. Voice bleibt als Long-Press-Shortcut verf?gbar, ist aber kein Hauptfeature mehr. Speichern findet in dieser Phase nicht statt.
 
-UI-Schwerpunkt: `app/modules/hub/index.js`, eventuell eigene Assistant-Templates/Styles.
+UI-Schwerpunkt: pp/modules/hub/index.js (plus optionale Assistant-Templates/Styles).
 
-| Task                       | Status | Beschreibung |
-| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| 3.1 Assistant Text UI         | ✅       | Hub-Center-Button (Short Press) öffnet Panel `assistant-text`; Session-only History; gleicher Edge Endpoint wie Voice.                                                                                                                                                                       |
-| 3.2 Foto-Analyse (UI)         | ✅       | Kamera/File → Base64 → `/midas-vision` → strukturierte Antwort (Salz/Protein/Wasser + Empfehlung) anzeigen.                                                                                                                                                                                  |
-| 3.3 Diktiermodus (Input only) | PLANNED | Web Speech API als Eingabe-Helfer für den Textchat. Kein Teil des Voice-Loops, keine Actions. Nur Textinput in das vorhandene Textfeld, keine neuen Endpoints.                                                                                                                               |
-| 3.4 Hub Center Mapping        | TODO    | **Short Press:** öffnet Assistant-Text-Panel. **Long Press:** startet Voice-Loop. Einheitliches Long-Press-Handling für Desktop (Maus) & Touch (ca. 700 ms, inkl. Cancel bei frühem `mouseup`/`touchend`) direkt im Hub-Modul.                                                               |
-| 3.5 Butler-Panel Integration  | TODO    | Erweiterung des Assistant-Text-Panels zum „Butler Screen“: Anzeige der heutigen Intake-Pills (Wasser/Salz/Protein) und der nächsten 1–2 Termine direkt im Panelkopf. Daten readonly aus bestehenden Intakes-/Termine-Tabellen laden; kein Speichern, kein Auto-Fill in dieser Phase.           |
+| Task | Status | Beschreibung |
+| --- | --- | --- |
+| **3.1 Assistant Text UI** | ? | Hub-Center-Button (Short Press) ?ffnet ssistant-text. Panel l?dt still die heutigen Intake-Totals und (sobald verf?gbar) die n?chsten Termine, zeigt sie im Header und nutzt /midas-assistant f?r Antworten. |
+| **3.2 Foto-Analyse (UI)** | ? | Kamera/File ? Base64 ? /midas-vision ? Anzeige der Analyse (Wasser/Salz/Protein + Empfehlung) im selben Chat inkl. aktueller Intake-Pills. Reine Darstellung, kein Speichern. |
+| **3.3 Diktiermodus (Input only)** | PLANNED | Web Speech API dient als optionaler Eingabehelfer und f?llt nur das Textfeld. Kein Voice-Loop, keine Aktionen. |
+| **3.4 Hub Center Mapping** | TODO | Center-Button vereint beide Modi: **Short Press** ?ffnet Text, **Long Press (~700?ms)** startet den bestehenden Voice-Loop (Desktop/Touch identisch, inkl. Cancel bei fr?hem mouseup/	ouchend). |
+| **3.5 Butler-Panel Header** | TODO | Kopfbereich zeigt Wasser/Salz/Protein-Pills und die n?chsten 1?2 Termine (read-only). Werte stammen aus bestehenden Tabellen und liefern Kontext f?r jede Antwort. |
 
-> **Hinweis (wichtig für Codex):**
-> **Kein** „Suggest UI“ und **kein** automatisches Speichern in Phase 3.  
-> Alle Flows, die Daten schreiben (`IntakeSave` etc.), kommen gebündelt in Phase 5.
-
----
-
+> **Hinweis:** Kein Suggest-/Auto-Save in Phase?3. S?mtliche Schreibaktionen werden in Phase?5 umgesetzt.
 ## Phase 4 – Domain Features & Utilities
 
 **Ziel:**
@@ -410,7 +405,7 @@ Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor
 
 * **Voice- und KI-Integration (Vorbereitung):**
 
-  * Voice-Queries (Phase 5+), z. B.:
+  * Voice-/Text-Queries (Phase 5+), z. B.:
 
     * „Wann ist mein nächster Termin?“
     * „Zeig mir meine Arzttermine.“
@@ -418,6 +413,10 @@ Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor
   * `DoctorRouting`:
 
     * Deep Links in Maps/Telefon/Notizen für Arzttermine, abgesichert über bestehende Unlocks/Biometrie (nur Vorplanung, Umsetzung kann später kommen).
+
+  * Assistant-Panel:
+
+    * liefert dieselben Termin-Daten an den Butler-Header (Phase 3) und an Kontext-Abfragen des Textchats.
 
 ---
 
@@ -508,169 +507,41 @@ Desktop: edel, aber ohne teure Shadow-Repaints
 
 ---
 
-## Phase 5 – Actions & Flows – Voice Butler / Hybrid Engine
+## Phase 5 ? Actions & Flows ? Butler Layer
 
 **Ziel:**
-Der Assistant wird vom Erklärer zum **Butler**.  
-Voice und Text/Foodcoach können kontrolliert **Daten verändern** (z. B. Intakes loggen, Module öffnen).
+Aus dem beratenden Assistant wird ein Butler, der nach einer klaren "Ja/Nein"-Best?tigung Intakes (und sp?ter weitere Module) aktualisieren kann. Textchat bleibt der Hauptpfad, Voice nutzt dieselben Hooks via Long-Press. Alle ?nderungen laufen ?ber erlaubte Actions und einen gemeinsamen Confirm-Layer. 
 
 ---
 
-### 5.1 Intent Engine (JS Fast Path)
+### 5.1 Suggest & Confirm Layer
 
-* Datei: `app/modules/hub/voice-intent.js` (neu oder bestehend).
-* `detectIntent(transcript)`:
+1. **Kontext bauen:** Beim ?ffnen des Panels l?dt Phase?3 bereits Intakes + Termine; Phase?5 erg?nzt eine Helper-API (ssistantSuggestStore o.??.), die den Snapshot f?r jede Antwort vorh?lt.
+2. **Analyse:** Foto/Text landen bei /midas-vision bzw. /midas-assistant und liefern suggestIntake-Payloads (Wasser/Salz/Protein).
+3. **UI-Card:** Ein wiederverwendbarer Block im Assistant-Panel zeigt ?gesch?tzte Werte? + Frage ?Soll ich das speichern??. Buttons/Tasten: **Ja** / **Nein** (plus optional Voice-Best?tigung).
+4. **Confirm:**
+   - Ja ? ruft IntakeSave (Allowed Action) mit Payload auf, aktualisiert lokale Header-Werte und protokolliert im Touch-Log.
+   - Nein ? verwirft Suggestion, Option ?Nochmals analysieren??.
+5. **Follow-up:** Nach erfolgreichem Save fragt der Butler: ?Willst du eine Empfehlung f?r den restlichen Tag?? ? Ja = generiert Text basierend auf Uhrzeit, Intakes und Terminen.
 
-  * Pattern-/Regex-Matching, kein KI-Roundtrip.
-  * Liefert strukturierte Intent-Objekte, z. B.: `{ type: "OPEN_MODULE", module: "intakes" }`.
+### 5.2 Allowed Actions & Guard Rails
 
-* `executeIntent(intent)`:
+* Whitelist bleibt bestehen (IntakeSave, OpenModule, ShowIntakeStatus, ?), aber wird nun zentral von executeAllowedAction() orchestriert ? unabh?ngig davon, ob der Trigger aus Text oder Voice kommt.
+* Jede Aktion loggt in diag/touch-log, pr?ft Auth/Stage und bricht sauber ab, wenn der Gate (Phase?0/3) nicht ready ist.
+* Keine Intent Engine n?tig: Textchat ruft Actions direkt nach best?tigten Buttons auf; Voice-Loop mappt nur Long-Press ? ??ffne Chat? oder ?best?tige Suggestion?.
 
-  * Ruft DOM-/Supabase-Helper auf (z. B. `openModule("intakes")`, oder Wrapper für `IntakeSave`).
-  * Fehler robust loggen (keine harten Crashes).
+### 5.3 Kontextuelle Empfehlungen
 
-**Beispiele (Fast Path):**
+* Nach jedem Save werden Intakes + Termine aktualisiert und k?nnen als Mini-Report (z.?B. ?Noch 1,2?L Wasser ?brig, morgen Termin um 09:00?) ausgegeben werden.
+* Ein generateDayPlan()-Helper b?ndelt Uhrzeit, Termine und Limits (aus Phase?4.4) und liefert Vorschl?ge/Warnings.
+* Diese Antworten bleiben textbasiert; Voice liest sie lediglich vor, falls aktiv.
 
-* „öffne intakes“ → `openModule("intakes")`
-* „wasser 300 ml“ → `saveWater(300)`
-* „protein 25 gramm“ → `saveIntake({ protein_g: 25 })`
-* „schließ den chat“ → Conversation-Ende (Panel schließen / Voice-Loop beenden)
+### 5.4 Optionaler Voice-Handschlag
 
-Fallback: alles, was nicht erkannt wird, geht wie bisher über `/midas-assistant` (keine Änderung der Backend-API nötig, nur Routing-Logik).
+* Long-Press kann weiterhin eine kurze Voice-Aufnahme starten, aber statt einer separaten Intent Engine wird das Ergebnis wie ein normaler Chat-Input behandelt (z.?B. ?Trag 300 ml Wasser ein? ? erscheint im Chat, Assistant antwortet und erzeugt eine Suggest-Card).
+* Keine Always-On-Experimente, kein Streaming ? Voice ist nur eine bequeme Eingabehilfe, die die gleichen Confirm-Regeln respektiert.
 
----
-
-### 5.2 Allowed Actions
-
-Definierte, geprüfte Actions, die Voice/Text/Foodcoach auslösen dürfen.
-
-**Whiteliste (z. B. `allowedActions.js` oder Ähnliches):**
-
-* `IntakeSave`
-* `OpenModule`
-* `ReadSummary`
-* `ShowIntakeStatus`
-* `StartTextChatWithCamera`
-* `AssistantDiagnostics`
-
-**Regeln:**
-
-* Nur diese Actions dürfen von KI-Output/Intent Engine in konkrete Funktionen übersetzt werden.
-* Alle anderen Befehle → Text-Antwort ohne Seiteneffekt.
-
-**Nicht erlaubt:**
-
-* Chat-Persistenz (Archiv)
-* Self-Updates (Code introspection, Config-Änderungen)
-* Tech-Scanning (Repo-Analyse)
-* medizinische Diagnosen (nur Empfehlung, kein „Diagnose“-Label)
-* Blutdruck & Körperdaten speichern (bleiben manuell im UI)
-
----
-
-### 5.3 Voice-Butler Flows
-
-1. **V1 Quick Intake**
-
-   * Beispiel: „Trag 500 ml Wasser ein.“
-   * Flow:
-
-     * Transcript → `detectIntent` → Intent `IntakeSave`
-     * `executeIntent` ruft Save-Helper auf.
-     * TTS: „Ich habe 500 ml Wasser eingetragen.“
-
-2. **V2 Status & Empfehlung**
-
-   * Beispiel: „Wie schau ich heute aus mit Salz?“
-   * Flow:
-
-     * JS zieht Werte aus Intakes (heute).
-     * KI formuliert Antwort mit Kontext (Health-Profil, Zielbereiche).
-
-3. **V3 UI-Steuerung**
-
-   * Beispiel: „Öffne Intakes.“
-   * Flow:
-
-     * Intent `OpenModule("intakes")`.
-     * Panel-Switch direkt, optionale Bestätigung per Voice/TTS.
-
-4. **V4 Übergabe an Foodcoach**
-
-   * Beispiel: „Ich will mein Essen analysieren.“
-   * Flow:
-
-     * Assistant öffnet Textchat + Kamera.
-     * Erklärt kurz, wie der Foto-Flow funktioniert.
-     * Vision-Call bei Foto-Upload.
-
----
-
-### 5.4 Text/Foodcoach – Auto-Fill Save Layer (Confirm → Save)
-
-* Vision/Text liefern `suggestIntake`-Payload (z. B. `water_ml`, `salt_g`, `protein_g`).
-* Butler entscheidet, ob dieser Vorschlag in einen konkreten Save-Call (Allowed Action `IntakeSave`) übersetzt wird.
-
-**Flow:**
-
-1. Vorschlag generieren (über Vision/Assistant).
-2. Vorschlag in der UI darstellen (siehe 5.5).
-3. Bestätigung einholen („Ja/Nein“ oder Voice).
-4. Auf `IntakeSave` routen oder verwerfen.
-
-**Codex-Hinweis:**
-
-- Kein direktes Auto-Speichern ohne explizite Bestätigung.
-- Die Logik zur Übersetzung von `suggestIntake` → `IntakeSave` sollte zentral gekapselt sein (z. B. Helper `applyIntakeSuggestion(suggest)`).
-
----
-
-### 5.5 Intake Suggest & Confirm UI (gemeinsame UI für Voice & Text)
-
-**Ziel:**
-Eine gemeinsame UI-Schicht für Vorschlag/Bestätigung, die **sowohl vom Voice-Flow als auch vom Text/Foodcoach-Flow** wiederverwendet wird.
-
-**Inhalt:**
-
-* UI-Komponente im Assistant-Bereich (z. B. `assistant-suggest-card`):
-
-  * Zeigt `suggestIntake`:
-
-    * Wasser/Salz/Protein-Werte.
-    * Optional: Kontext („geschätzte Menge für dieses Foto“).
-
-  * Standard-Dialog:
-
-    * Frage: „Soll ich das so loggen?“
-    * Buttons: **„Ja“ / „Nein“**.
-
-* Aktionen:
-
-  * „Ja“ → ruft `IntakeSave` (Allowed Action) mit der Payload auf.
-  * „Nein“ → verwirft die Suggestion, keine Datenänderung.
-
-* **Wiederverwendung im Voice-Flow:**
-
-  * Voice kann denselben Suggest-Mechanismus triggern:  
-    „Das sieht nach ca. 25 g Protein aus. Soll ich das eintragen?“
-  * Bestätigung per Voice („Ja, bitte“) oder per Tap im UI; beide Wege nutzen dieselben Hooks.
-
-* **Wiederverwendung im Text-Flow:**
-
-  * Text-/Foto-Foodcoach zeigt dieselbe Komponente unterhalb der Analyse.
-  * Klicks laufen über dieselben Confirm/Save-Funktionen wie im Voice-Flow.
-
-> **Dev-Sicht:**
-> 5.5 bildet die Brücke zwischen:
->
-> * Vision/Text-Suggestions
-> * Voice-Suggestions
-> * und dem gemeinsamen Save-Layer (`IntakeSave`).
->
-> Alles, inkl. UI-Logik, gehört in **diese Phase**, nicht in Phase 3.
-
----
-
+> **Zusammenfassung:** Phase?5 konzentriert sich auf den zuverl?ssigen Suggest/Confirm-Pfad und den kontrollierten Einsatz von Allowed Actions. Voice bleibt sekund?r und nutzt exakt dieselben Mechanismen wie der Textchat.
 ## Phase 6 – Deep Cleanup & Refactor
 
 **Ziel:**
