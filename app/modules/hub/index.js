@@ -746,6 +746,8 @@
     const sendBtn = panel.querySelector('#assistantSendBtn');
     const cameraBtn = panel.querySelector('#assistantCameraBtn');
     const clearBtn = panel.querySelector('#assistantClearChat');
+    const messageTemplate = panel.querySelector('#assistantMessageTemplate');
+    const photoTemplate = panel.querySelector('#assistantPhotoTemplate');
     const pillsWrap = panel.querySelector('#assistantIntakePills');
     const buildPillRef = (key) => {
       const root = pillsWrap?.querySelector(`[data-pill="${key}"]`);
@@ -764,6 +766,9 @@
     photoInput.capture = 'environment';
     photoInput.hidden = true;
     panel.appendChild(photoInput);
+
+    if (messageTemplate) messageTemplate.remove();
+    if (photoTemplate) photoTemplate.remove();
 
     assistantChatCtrl = {
       panel,
@@ -784,6 +789,10 @@
         list: appointmentsList,
         empty: appointmentsEmpty,
       },
+      templates: {
+        message: messageTemplate?.content?.firstElementChild || null,
+        photo: photoTemplate?.content?.firstElementChild || null,
+      },
       messages: [],
       sessionId: null,
       sending: false,
@@ -802,6 +811,7 @@
       debugLog('assistant-chat send button click');
     });
 
+    chatEl?.addEventListener('click', handleAssistantChatClick);
     form?.addEventListener('submit', handleAssistantChatSubmit);
     clearBtn?.addEventListener('click', () => resetAssistantChat(true));
     photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
@@ -903,10 +913,21 @@
       id: extras.id || `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
       imageData: extras.imageData || null,
       meta: extras.meta || null,
+      type: extras.type || 'text',
+      status: extras.status || null,
+      resultText: extras.resultText || '',
+      retryable: !!extras.retryable,
+      retryPayload: extras.retryPayload || null,
     };
     assistantChatCtrl.messages.push(message);
     renderAssistantChat();
     return message;
+  };
+
+  const cloneAssistantTemplate = (key) => {
+    const tmpl = assistantChatCtrl?.templates?.[key];
+    if (!tmpl) return null;
+    return tmpl.cloneNode(true);
   };
 
   const renderAssistantChat = () => {
@@ -922,28 +943,72 @@
     }
     const frag = doc.createDocumentFragment();
     assistantChatCtrl.messages.forEach((message) => {
-      const bubble = doc.createElement('div');
-      bubble.className = `assistant-bubble assistant-${message.role}`;
+      let bubble;
+      if (message.type === 'photo') {
+        bubble = cloneAssistantTemplate('photo');
+        if (!bubble) {
+          bubble = doc.createElement('div');
+        }
+        bubble.classList.add('assistant-photo-bubble');
+        const figure = bubble.querySelector('.assistant-photo');
+        const img = figure?.querySelector('img');
+        if (img) {
+          img.src = message.imageData || '';
+          img.alt = message.meta?.fileName ? `Foto ${message.meta.fileName}` : 'Hochgeladenes Foto';
+        }
+        const statusEl = bubble.querySelector('.assistant-photo-status');
+        if (statusEl) {
+          const statusText =
+            message.status === 'error'
+              ? 'Analyse fehlgeschlagen.'
+              : message.status === 'done'
+                ? 'Analyse abgeschlossen.'
+                : 'Analyse läuft …';
+          statusEl.textContent = statusText;
+        }
+        const resultEl = bubble.querySelector('.assistant-photo-result');
+        if (resultEl) {
+          resultEl.textContent =
+            message.resultText || (message.status === 'done' ? 'Keine Details verfügbar.' : 'Noch kein Ergebnis.');
+          if (message.status === 'error') {
+            resultEl.classList.remove('muted');
+          } else {
+            resultEl.classList.add('muted');
+          }
+        }
+        bubble.classList.toggle('is-processing', message.status !== 'done' && message.status !== 'error');
+        bubble.classList.toggle('is-error', message.status === 'error');
+        if (message.retryable) {
+          const retryWrap = doc.createElement('div');
+          retryWrap.className = 'assistant-photo-retry';
+          const retryLabel = doc.createElement('span');
+          retryLabel.textContent = 'Erneut versuchen?';
+          const retryBtn = doc.createElement('button');
+          retryBtn.type = 'button';
+          retryBtn.textContent = 'Nochmal analysieren';
+          retryBtn.setAttribute('data-assistant-retry-id', message.id);
+          retryWrap.appendChild(retryLabel);
+          retryWrap.appendChild(retryBtn);
+          bubble.appendChild(retryWrap);
+        }
+      } else {
+        bubble = cloneAssistantTemplate('message');
+        if (!bubble) {
+          bubble = doc.createElement('div');
+          bubble.className = 'assistant-bubble';
+        }
+        const textLine = bubble.querySelector('.assistant-text-line');
+        if (textLine) {
+          textLine.textContent = message.content;
+        } else if (message.content) {
+          const text = doc.createElement('p');
+          text.className = 'assistant-text-line';
+          text.textContent = message.content;
+          bubble.appendChild(text);
+        }
+      }
+      bubble.classList.add(`assistant-${message.role}`);
       bubble.setAttribute('data-role', message.role);
-      if (message.imageData) {
-        bubble.classList.add('assistant-has-image');
-        const figure = doc.createElement('div');
-        figure.className = 'assistant-photo';
-        const img = doc.createElement('img');
-        img.src = message.imageData;
-        img.alt =
-          message.meta?.fileName
-            ? `Foto ${message.meta.fileName}`
-            : 'Hochgeladenes Foto';
-        figure.appendChild(img);
-        bubble.appendChild(figure);
-      }
-      if (message.content) {
-        const text = doc.createElement('p');
-        text.className = 'assistant-text-line';
-        text.textContent = message.content;
-        bubble.appendChild(text);
-      }
       frag.appendChild(bubble);
     });
     container.appendChild(frag);
@@ -1004,19 +1069,39 @@
   const sendAssistantPhotoMessage = async (dataUrl, file) => {
     if (!assistantChatCtrl || assistantChatCtrl.sending) return;
     ensureAssistantSession();
-    const previewMessage = appendAssistantMessage('user', 'Foto wird analysiert …', {
-      imageData: dataUrl,
-      meta: { fileName: file?.name || '' },
-    });
+    const targetMessage =
+      existingMessage ||
+      appendAssistantMessage('user', '', {
+        type: 'photo',
+        status: 'processing',
+        resultText: 'Noch kein Ergebnis.',
+        imageData: dataUrl,
+        meta: { fileName: file?.name || '' },
+        retryPayload: { base64: dataUrl, fileName: file?.name || '' },
+      });
+    if (!targetMessage) return;
+    targetMessage.status = 'processing';
+    targetMessage.resultText = 'Analyse läuft …';
+    targetMessage.retryable = false;
+    targetMessage.retryPayload = targetMessage.retryPayload || { base64: dataUrl, fileName: file?.name || '' };
+    renderAssistantChat();
     setAssistantSending(true);
+    diag.add?.('[assistant-vision] analyse start');
     try {
-      const reply = await fetchAssistantVisionReply(dataUrl, file);
-      if (previewMessage) {
-        previewMessage.content = 'Foto gesendet.';
-      }
-      appendAssistantMessage('assistant', reply);
+      const result = await fetchAssistantVisionReply(dataUrl, file);
+      targetMessage.status = 'done';
+      targetMessage.resultText = formatAssistantVisionResult(result);
+      targetMessage.content = '';
+      targetMessage.retryable = false;
+      diag.add?.('[assistant-vision] analyse success');
     } catch (err) {
       console.error('[assistant-chat] vision request failed', err);
+      diag.add?.(
+        `[assistant-vision] analyse failed: ${err?.message || err}`,
+      );
+      targetMessage.status = 'error';
+      targetMessage.resultText = 'Das Foto konnte nicht analysiert werden.';
+      targetMessage.retryable = true;
       if (err?.message === 'supabase-headers-missing') {
         appendAssistantMessage(
           'system',
@@ -1072,7 +1157,11 @@
     if (!reply) {
       throw new Error('vision-empty');
     }
-    return reply;
+    return {
+      reply,
+      analysis: data?.analysis || data?.meta?.analysis || null,
+      meta: data?.meta || null,
+    };
   };
 
   const buildAssistantPhotoHistory = () => {
@@ -1093,6 +1182,41 @@
       reader.onerror = (err) => reject(err);
       reader.readAsDataURL(file);
     });
+
+  const handleAssistantChatClick = (event) => {
+    const retryBtn = event.target.closest('button[data-assistant-retry-id]');
+    if (retryBtn) {
+      event.preventDefault();
+      const messageId = retryBtn.getAttribute('data-assistant-retry-id');
+      retryAssistantPhoto(messageId);
+    }
+  };
+
+  const retryAssistantPhoto = (messageId) => {
+    if (!messageId || !assistantChatCtrl) return;
+    const message = assistantChatCtrl.messages.find((msg) => msg.id === messageId);
+    if (!message || !message.retryPayload) return;
+    sendAssistantPhotoMessage(message.retryPayload.base64, { name: message.retryPayload.fileName || '' }, message);
+  };
+
+  const formatAssistantVisionResult = (result) => {
+    if (!result) return 'Analyse abgeschlossen.';
+    const parts = [];
+    const analysis = result.analysis || {};
+    if (analysis.water_ml != null) {
+      parts.push(`Wasser: ${Math.round(Number(analysis.water_ml) || 0)} ml`);
+    }
+    if (analysis.salt_g != null) {
+      parts.push(`Salz: ${(Number(analysis.salt_g) || 0).toFixed(1)} g`);
+    }
+    if (analysis.protein_g != null) {
+      parts.push(`Protein: ${(Number(analysis.protein_g) || 0).toFixed(1)} g`);
+    }
+    if (result.reply) {
+      parts.push(result.reply);
+    }
+    return parts.join(' • ') || 'Analyse abgeschlossen.';
+  };
 
   const setupVoiceChat = (hub) => {
     const button = hub.querySelector('[data-hub-module="assistant-voice"]');

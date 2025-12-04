@@ -268,6 +268,20 @@
             <div class="assistant-chat-empty">
               <p class="muted">Starte eine Unterhaltung oder schicke ein Foto deines Essens.</p>
             </div>
+            <template id="assistantMessageTemplate">
+              <div class="assistant-bubble" data-role="assistant">
+                <div class="assistant-text-line"></div>
+              </div>
+            </template>
+            <template id="assistantPhotoTemplate">
+              <div class="assistant-bubble assistant-photo-bubble" data-role="system">
+                <figure class="assistant-photo">
+                  <img src="" alt="Hochgeladenes Foto" loading="lazy">
+                  <figcaption class="assistant-photo-status" aria-live="polite">Analyse läuft …</figcaption>
+                </figure>
+                <div class="assistant-text-line assistant-photo-result muted">Noch kein Ergebnis.</div>
+              </div>
+            </template>
           </div>
           <form class="assistant-input-bar" id="assistantChatForm" autocomplete="off">
             <div class="assistant-input-tools">
@@ -275,11 +289,11 @@
                 type="button"
                 class="assistant-tool-btn"
                 id="assistantCameraBtn"
-                aria-label="Foto aufnehmen"
+                aria-label="Foto aufnehmen oder auswählen"
               >
                 📷
               </button>
-              
+
             </div>
             <input
               type="text"
