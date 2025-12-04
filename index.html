@@ -23,6 +23,21 @@
     <div class="boot-screen__inner">
       <p class="boot-stage-label" data-boot-stage-label>Boot</p>
       <p class="boot-stage-desc">MIDAS startet gleich ...</p>
+      <div
+        id="bootErrorPanel"
+        class="boot-error-panel"
+        role="alert"
+        aria-live="assertive"
+        hidden
+        aria-hidden="true"
+      >
+        <p class="boot-error-title">Boot fehlgeschlagen</p>
+        <p class="boot-error-text" id="bootErrorMessage">Ein Fehler blockiert den Start.</p>
+        <p class="boot-error-detail" id="bootErrorDetail">Details folgen, sobald Touch-Log verf&uuml;gbar ist.</p>
+        <button id="bootErrorDiagBtn" type="button" class="btn ghost">
+          Touch-Log &ouml;ffnen
+        </button>
+      </div>
     </div>
   </div>
   <!-- ANKER: touch-log-fallback -->

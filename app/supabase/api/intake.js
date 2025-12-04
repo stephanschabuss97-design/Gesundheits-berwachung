@@ -29,6 +29,14 @@ const diag =
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
 
+const inflightIntakeLoads = new Map();
+const normalizeReason = (value) => {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  return 'manual';
+};
+
     // SUBMODULE: getConf/todayStr/dayIsoToMidnightIso helpers @internal - Zugriff auf globale Hilfsfunktionen
 const getConf = (...args) => {
   const fn = globalWindow?.getConf;
@@ -59,33 +67,45 @@ const dayIsoToMidnightIso = (dayIso, timeZone) => {
 const isValidDayIso = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
 // SUBMODULE: loadIntakeToday @public - lädt Intake-Daten für den aktuellen Tag (REST-Query)
-export async function loadIntakeToday({ user_id, dayIso }) {
+export async function loadIntakeToday({ user_id, dayIso, reason }) {
   if (!user_id) return null;
-  diag.add?.(`[capture] loadIntakeToday start uid=${maskUid(user_id)} day=${dayIso || ''}`);
+  const normalizedReason = normalizeReason(reason);
   const baseDay = isValidDayIso(dayIso) ? dayIso : todayStr();
+  const key = `${user_id}|${baseDay}|${normalizedReason}`;
+  if (inflightIntakeLoads.has(key)) {
+    return inflightIntakeLoads.get(key);
+  }
 
-  const rows = await sbSelect({
-    table: 'health_events',
-    select: 'id,payload',
-    filters: [
-      ['user_id', `eq.${user_id}`],
-      ['type', 'eq.intake'],
-      ['day', `eq.${baseDay}`]
-    ],
-    order: 'ts.desc',
-    limit: 1
-  });
-  const row = Array.isArray(rows) && rows.length ? rows[0] : null;
-  const payload = row?.payload || {};
-  diag.add?.(
-    `[capture] loadIntakeToday done id=${row?.id || 'null'} payload=${JSON.stringify(payload)}`
-  );
-  return {
-    id: row?.id ?? null,
-    water_ml: Number(payload.water_ml || 0),
-    salt_g: Number(payload.salt_g || 0),
-    protein_g: Number(payload.protein_g || 0)
-  };
+  const requestPromise = (async () => {
+    diag.add?.(
+      `[capture] loadIntakeToday start reason=${normalizedReason} uid=${maskUid(user_id)} day=${baseDay}`
+    );
+    const rows = await sbSelect({
+      table: 'health_events',
+      select: 'id,payload',
+      filters: [
+        ['user_id', `eq.${user_id}`],
+        ['type', 'eq.intake'],
+        ['day', `eq.${baseDay}`]
+      ],
+      order: 'ts.desc',
+      limit: 1
+    });
+    const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+    const payload = row?.payload || {};
+    diag.add?.(
+      `[capture] loadIntakeToday done reason=${normalizedReason} id=${row?.id || 'null'} payload=${JSON.stringify(payload)}`
+    );
+    return {
+      id: row?.id ?? null,
+      water_ml: Number(payload.water_ml || 0),
+      salt_g: Number(payload.salt_g || 0),
+      protein_g: Number(payload.protein_g || 0)
+    };
+  })().finally(() => inflightIntakeLoads.delete(key));
+
+  inflightIntakeLoads.set(key, requestPromise);
+  return requestPromise;
 }
 
 // SUBMODULE: saveIntakeTotals @public - speichert Intake-Daten via REST-POST/PATCH

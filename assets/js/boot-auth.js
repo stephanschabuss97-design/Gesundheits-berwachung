@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /**
  * MODULE: authBoot.js
  * Description: Initialisiert Supabase-Authentifizierung beim Laden der Seite und synchronisiert UI-Status mit dem globalen Auth-State.
@@ -10,7 +10,6 @@
 
 // SUBMODULE: imports @internal - bindet zentrale Supabase-Schnittstelle ein
 import { SupabaseAPI } from "../../app/supabase/index.js";
-const setConfigStatus = SupabaseAPI.setConfigStatus?.bind(SupabaseAPI) ?? (() => {});
 
 const getBootFlow = () => window.AppModules?.bootFlow || null;
 
@@ -24,6 +23,15 @@ const bootAuth = () => {
       /* ignore */
     }
   };
+  const setLockReason = (reason) => {
+    if (!bootFlow) return;
+    if (reason) {
+      bootFlow.lockReason = reason;
+    } else {
+      delete bootFlow.lockReason;
+    }
+  };
+  let stageLifted = false;
   const advanceStageToInitCore = () => {
     try {
       const current = bootFlow?.getStage?.();
@@ -31,21 +39,40 @@ const bootAuth = () => {
       const targetIdx = bootFlow.getStageIndex('INIT_CORE');
       const currentIdx = bootFlow.getStageIndex(current);
       if (currentIdx < targetIdx) {
-        // Stage nur vorziehen, wenn wir uns noch vor INIT_CORE befinden (z. B. nach Auth-Entscheid).
         bootFlow.setStage?.('INIT_CORE');
       }
     } catch (_) {
       /* ignore */
     }
   };
+  const handleAuthStatus = (status) => {
+    const normalized =
+      status === 'auth' || status === 'unauth'
+        ? status
+        : 'unknown';
+    if (normalized === 'unknown') {
+      setLockReason('auth-check');
+      reportStatus('Pr\u00fcfe Session ...');
+      return;
+    }
+    if (normalized === 'auth') {
+      reportStatus('Session ok \u2013 MIDAS entsperrt.');
+    } else {
+      reportStatus('Nicht angemeldet \u2013 Login erforderlich.');
+    }
+    setLockReason(null);
+    if (!stageLifted) {
+      stageLifted = true;
+      advanceStageToInitCore();
+    }
+  };
+
+  // Initial guard während Supabase entscheidet
+  setLockReason('auth-check');
+  reportStatus('Pr\u00fcfe Session ...');
+
   SupabaseAPI.initAuth?.({
-    onStatus: (status) => {
-      const normalized = status && status !== 'unknown';
-      reportStatus(normalized ? 'Session geprüft' : 'Prüfe Session …');
-      if (normalized) {
-        advanceStageToInitCore();
-      }
-    },
+    onStatus: handleAuthStatus,
     onLoginOverlay: (visible) => {
       if (visible) {
         SupabaseAPI.showLoginOverlay?.(true);
@@ -66,7 +93,6 @@ const scheduleBootAuth = () => {
   const bootFlow = getBootFlow();
   if (bootFlow) {
     bootFlow.whenStage('AUTH_CHECK', () => {
-      bootFlow.report?.('Prüfe Session …');
       bootAuth();
     });
     return;

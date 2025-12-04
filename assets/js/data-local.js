@@ -25,6 +25,23 @@ const diagLogger =
   { add() {} };
 const LOG_DEBUG = !!globalWindow?.AppModules?.config?.DEV_ALLOW_DEFAULTS;
 const getBootFlowSafe = () => globalWindow?.AppModules?.bootFlow || null;
+const confLogSeenSuccess = new Set();
+const confLogSuppressed = new Set();
+const resetConfLogCache = () => {
+  confLogSeenSuccess.clear();
+  confLogSuppressed.clear();
+};
+if (globalWindow?.addEventListener) {
+  globalWindow.addEventListener('pageshow', resetConfLogCache);
+  globalWindow.addEventListener('midas:log-reset', resetConfLogCache);
+}
+if (globalWindow?.document?.addEventListener) {
+  globalWindow.document.addEventListener('visibilitychange', () => {
+    if (globalWindow.document.visibilityState === 'visible') {
+      resetConfLogCache();
+    }
+  });
+}
 const logWarn = (message, err, context) => {
   const suffix = err ? ` ${err?.message || err}` : '';
   const detail = context ? ` ${JSON.stringify(context)}` : '';
@@ -39,6 +56,38 @@ const logError = (message, err) => {
   if (LOG_DEBUG) {
     console.error('[dataLocal]', message, err);
   }
+};
+const inflightConfLogs = new Map();
+const logConfStart = (key, message) => {
+  if (confLogSeenSuccess.has(key)) {
+    confLogSuppressed.add(key);
+    return;
+  }
+  confLogSuppressed.delete(key);
+  const entry = inflightConfLogs.get(key);
+  if (entry) {
+    entry.dupes += 1;
+    return;
+  }
+  inflightConfLogs.set(key, { dupes: 0 });
+  diagLogger.add?.(message);
+};
+const logConfDone = (key, message, { success = false } = {}) => {
+  if (confLogSuppressed.has(key)) {
+    confLogSuppressed.delete(key);
+    if (success) confLogSeenSuccess.add(key);
+    return;
+  }
+  const entry = inflightConfLogs.get(key);
+  if (!entry) {
+    diagLogger.add?.(message);
+    if (success) confLogSeenSuccess.add(key);
+    return;
+  }
+  inflightConfLogs.delete(key);
+  const suffix = entry.dupes ? ` (+${entry.dupes})` : '';
+  diagLogger.add?.(`${message}${suffix}`);
+  if (success) confLogSeenSuccess.add(key);
 };
 function fail(reject, e, msg) {
   const err = e?.target?.error || e || new Error('unknown');
@@ -186,18 +235,24 @@ function putConf(key, value) {
 // SUBMODULE: getConf @public - liest Konfigurationseintrag aus Store
 function getConf(key) {
   ensureDbReady();
-  diagLogger.add?.(`[conf] getConf start ${key}`);
+  const logKey = `conf:${key}`;
+  logConfStart(logKey, `[conf] getConf start ${key}`);
   const tx = db.transaction(CONF, 'readonly');
   const req = tx.objectStore(CONF).get(key);
   return wrapIDBRequest(tx, req, {
     actionName: 'getConf',
-    onSuccess: (_, rq) => {
-      const val = rq.result?.value ?? null;
-      diagLogger.add?.(`[conf] getConf done ${key}=${val ? '[set]' : 'null'}`);
-      return val;
-    },
+    onSuccess: (_, rq) => rq.result?.value ?? null,
     resolveOn: 'request'
-  });
+  })
+    .then((val) => {
+      const label = val ? '[set]' : 'null';
+      logConfDone(logKey, `[conf] getConf done ${key}=${label}`, { success: true });
+      return val;
+    })
+    .catch((err) => {
+      logConfDone(logKey, `[conf] getConf failed ${key}`);
+      throw err;
+    });
 }
 
 /* ===== Timezone Helpers ===== */

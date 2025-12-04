@@ -1,25 +1,27 @@
 
-## Phase 4 – MIDAS Orbit & Trendpilot (2025-11-23)
+## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).
 
 **Smoke**
-- [x] Desktop & Android: #captureHub zeigt den Orbit mittig, Aura pulsiert bei Hover/Touch, Orbit-Buttons haben keine sichtbaren Kreise aber reagieren via Sr-Labels. Panels (Intake/Vitals/Doctor) zentrieren sich, hub-panel-zoom-in/out laufen beim Öffnen/Schließen mit identischer Dauer/Easing, Backdrop dimmt sanft.
-- [x] Capture-Header Trendpilot-Pill: WARN/CRIT Tage blenden Datum + Kurztext ein; Tage ohne Meldung verstecken die Pill vollständig. Logging ([trendpilot] severity=...) erscheint einmal pro Tag.
-- [x] Doctor Trendpilot Block: Alle Meldungen in Von/Bis erscheinen (Datum, Text, Status). Buttons „Geplant“, „Erledigt“, „Zurücksetzen“ schreiben doctorStatus in Supabase und UI markiert den aktiven Button.
-- [x] Chart Overlays: Trendpilot-Bänder (gelb/rot) rendern nur an WARN/CRIT Tagen, Legende ergänzt Swatches, Tooltips zeigen ESC-Farben für MAP/Pulsdruck, KPI-Pillen sind synchron.
-- [x] Guard Flow: Erster Klick auf Arzt-Ansicht ? equireDoctorUnlock() (PIN/Biometrie) ? Panel öffnet sich automatisch. Weitere Klicks nutzen uthGuardState ohne erneute Abfrage; ESC/Escape schließt Panel.
-- [x] Diagnostics Flag: DIAGNOSTICS_ENABLED=false deaktiviert pp/diagnostics/* (nur Stub-Logs), 	rue leitet diag.add, ecordPerfStat, Panel-Toggles an Layer weiter.
+- [x] Desktop & Android: #captureHub zeigt den Orbit mittig, Aura pulsiert bei Hover/Touch, Orbit-Buttons haben keine sichtbaren Kreise aber reagieren via Sr-Labels. Panels (Intake/Vitals/Doctor) zentrieren sich, hub-panel-zoom-in/out laufen beim ffnen/Schlieen mit identischer Dauer/Easing, Backdrop dimmt sanft.
+- [x] Capture-Header Trendpilot-Pill: WARN/CRIT Tage blenden Datum + Kurztext ein; Tage ohne Meldung verstecken die Pill vollstndig. Logging ([trendpilot] severity=...) erscheint einmal pro Tag.
+- [x] Doctor Trendpilot Block: Alle Meldungen in Von/Bis erscheinen (Datum, Text, Status). Buttons Geplant, Erledigt, Zurcksetzen schreiben doctorStatus in Supabase und UI markiert den aktiven Button.
+- [x] Chart Overlays: Trendpilot-Bnder (gelb/rot) rendern nur an WARN/CRIT Tagen, Legende ergnzt Swatches, Tooltips zeigen ESC-Farben fr MAP/Pulsdruck, KPI-Pillen sind synchron.
+- [x] Guard Flow: Erster Klick auf Arzt-Ansicht ? 
+equireDoctorUnlock() (PIN/Biometrie) ? Panel ffnet sich automatisch. Weitere Klicks nutzen uthGuardState ohne erneute Abfrage; ESC/Escape schliet Panel.
+- [x] Diagnostics Flag: DIAGNOSTICS_ENABLED=false deaktiviert pp/diagnostics/* (nur Stub-Logs), 	rue leitet diag.add, 
+ecordPerfStat, Panel-Toggles an Layer weiter.
 
 **Sanity**
 - Panel-Lock verhindert Body-Scroll & Orbit-Klicks solange .hub-panel.is-visible; ody:has Regeln arbeiten in allen modernen Browsern, Mobilscroll springt nach Close nicht.
-- CSS-Variablen --midas-aura-boost treiben Aura-Brightening unabhängig von DOM-Position; Touch auf Mobil löst denselben Boost aus wie Hover.
+- CSS-Variablen --midas-aura-boost treiben Aura-Brightening unabhngig von DOM-Position; Touch auf Mobil lst denselben Boost aus wie Hover.
 - Doctor-Modul ruft setSystemCommentDoctorStatus (Plan/Done/Reset) nur bei Statuswechseln auf; Fehler zeigen Toast + Log, UI revertiert Button-Highlight.
-- Trendpilot API Fallback: wenn fetchSystemCommentsRange fehlschlägt ? Chart/Bänder zeigen Placeholder, Capture-Pill bleibt leer, diag-Log [trendpilot] bands failed.
+- Trendpilot API Fallback: wenn fetchSystemCommentsRange fehlschlgt ? Chart/Bnder zeigen Placeholder, Capture-Pill bleibt leer, diag-Log [trendpilot] bands failed.
 - Guard/Resume: Visibility/PageShow/Focus triggern SupabaseAPI.resumeFromBackground, Trendpilot-Pill + Orbit behalten Zustand nach Resume.
 
 **Regression**
-- Capture-Saves, Charts, Arzt-Daily/Befunde, CSV/JSON-Export laufen unverändert; Legacy QA-Checks (Phase 0–3, v0.x–v1.7.x) bleiben weiter unten als Archiv bestehen.
+- Capture-Saves, Charts, Arzt-Daily/Befunde, CSV/JSON-Export laufen unverndert; Legacy QA-Checks (Phase 03, v0.xv1.7.x) bleiben weiter unten als Archiv bestehen.
 ## Phase 2 â€“ Assetsâ†’App Smoke (2025-11-16)
 
 **Scope:** pp/app.css, pp/core/{diag,utils,config,capture-globals}, pp/supabase/index.js (inkl. boot-auth Import-Pfad) â€“ Ziel: sicherstellen, dass Capture/Doctor/Chart/Trendpilot mit neuen Pfaden laufen, bevor Legacy-Assets gelÃ¶scht werden.
@@ -27,12 +29,35 @@
 - [x] **Capture View:** Headless Edge (msedge --headless --dump-dom) zeigt vollstÃ¤ndiges Capture-Markup (Accordion, Buttons, Diagnose-Panel). Keine Script-Errors; Buttons/Toggles vorhanden.
 - [x] **Doctor View + Trendpilot:** DOM-Dump enthÃ¤lt .doctor-view, Trendpilot-Bereich (Trendpilot-Panel, Chart-Button). Tabs aktiv laut Dump (ARIA).
 - [x] **Charts:** SVG-Panel + KPI-Leiste vorhanden, Chart-Skripte geladen; Trendpilot-BÃ¤nder (	rendpilot-band) sichtbar.
+### Auth Gate / Boot Overlay
+- [ ] **Pre-render lock:** Beim Reload zeigt das Bootoverlay `Supabase pr?ft Session ...`, solange `authState === 'unknown'`. `body.auth-unknown` dimmt App (#appMain/Tabs/Hub) und blockiert Klicks.
+- [ ] **Slow Supabase:** DevTools Network Slow 3G ? Reload. Erwartung: Keine Interaktion m?glich, Orbit/HUB Buttons reagieren erst nach Supabase-Entscheid (`auth`/`unauth`).
+- [ ] **Message switch:** Nach Entscheid meldet Bootoverlay `Session ok ? MIDAS entsperrt.` oder `Nicht angemeldet ? Login erforderlich.` und entfernt `body.auth-unknown`.
+- [ ] **Voice gate sichtbar:** Voice-Nadel bleibt gedimmt/gesperrt (`body.voice-locked`, Tooltip â€žVoice aktiviert sich nach dem Startâ€œ), solange bootFlow < IDLE oder `authState === 'unknown'`. Diag loggt `[voice] gate locked/unlocked`.
+- [ ] **Throttle check:** Network â€žSlow 3Gâ€œ, Reload â†’ Klick auf den Voice-Button erzeugt nur `[voice] blocked (auth)` und kein Mikrofon-Prompt.
+- [ ] **Auth drop mitten im Mic:** Voice-Session starten, anschliessend Supabase-Session in anderem Tab beenden. Erwartung: Aufnahme/VAD stoppen sofort, Needle relockt, Assistant meldet â€žVoice deaktiviert â€“ bitte wartenâ€œ, diag zeigt `[vad] stop due to voice gate lock`.
+
 - [x] **Supabase/Auth:** ssets/js/boot-auth.js importiert ../../app/supabase/index.js; window.SupabaseAPI per headless Dump sichtbar. Login-Overlay DOM vorhanden.
 - [x] **Static-Server-Probe:** python -m http.server 8765 + Invoke-WebRequest http://127.0.0.1:8765/app/app.css liefert HTTP 200 â†’ GitHub-Pages-ParitÃ¤t.
 - [x] **Parity-Hashes:** Compare-Object Ã¼ber alte/neue CSS/JS-Paare â†’ keine Diff; Ergebnis in QA_Notes dokumentiert.
 
----
+ ---
 
+## Phase 0.5 â€“ Touchlog Determinism (2025-12-04)
+
+**Scope:** Sicherstellen, dass der Touch-Log ab Phaseâ€¯0.5 deterministisch bleibt (ein Start-/Ende-Paar pro Reason, aggregierte `[auth] request â€¦`-Zeilen, keine Debug-Spam-BlÃ¶cke).
+
+**Smoke**
+- [ ] **Cold Boot:** Diag-Panel Ã¶ffnen, App neu laden. Erwartung: ein `Boot: â€¦`-Summary sowie je Reason (`boot`, `auth:login`, `tab:capture`) genau ein `[capture] refresh start â€¦` und `â€¦ done â€¦`; Mehrfachtrigger dÃ¼rfen hÃ¶chstens als `(xN)` am Ende erscheinen.
+- [ ] **Manuelles Refresh:** Datum wechseln oder `window.requestUiRefresh({ reason: 'qa:manual', doctor: true, chart: true })` ausfÃ¼hren. Touch-Log darf nur ein `[ui] refresh start/end reason=qa:manual` plus je Modul ein Refresh-Paar loggen.
+- [ ] **Resume:** Tab in den Hintergrund schicken, â‰¥3â€¯s warten, zurÃ¼ckkehren. Erwartung: `Resume: start/done` + genau ein `[capture] refresh reason=resume â€¦`; `[auth] request â€¦` erscheint nur aggregiert (`status=200 avg=â€¦ (xN)`).
+
+**Sanity**
+- [ ] `[conf] getConf` und `[auth] getUserId` loggen pro Boot/Resume-Zyklus nur das erste `start`; nach erfolgreichem `done` bleiben Folgeaufrufe stumm.
+- [ ] `[auth] request â€¦` erzeugt pro Tag eine Startzeile und einen Endeintrag mit Durchschnittsdauer; FehlerfÃ¤lle (status â‰ â€¯200) loggen einmalig den Status inkl. Dauer/Grund.
+- [ ] Voice-/Hub-Actions schreiben ausschlieÃŸlich Benutzeraktionen in den Touch-Log. Debug-Spam ist hinter `LOG_HUB_DEBUG` bzw. `DEBUG_TOUCHLOG` deaktiviert.
+
+---
 
 ## v0.1.0 - Prototype
 
@@ -1058,4 +1083,4 @@ Regression
 
 **Checks**
 - Diagnostics-Flag: `DIAGNOSTICS_ENABLED=false` (Config oder `data-diagnostics-enabled`) zwingt `app/core/diag.js` in den Stub-Modus; die neuen `app/diagnostics/{logger,perf,monitor}.js` melden dann nur den Logger-Boot (keine Heartbeats).
-- Diagnostics-Layer Forwarding: Bei aktivem Flag landen `diag.add`-Events zusätzlich in `appModules.diagnosticsLayer.logger.history`, `recordPerfStat` aktualisiert `diagnosticsLayer.perf.snapshot(...)` und das Öffnen/Schließen des Diagnose-Panels toggelt `diagnosticsLayer.monitor` inklusive Heartbeat.
+- Diagnostics-Layer Forwarding: Bei aktivem Flag landen `diag.add`-Events zustzlich in `appModules.diagnosticsLayer.logger.history`, `recordPerfStat` aktualisiert `diagnosticsLayer.perf.snapshot(...)` und das ffnen/Schlieen des Diagnose-Panels toggelt `diagnosticsLayer.monitor` inklusive Heartbeat.

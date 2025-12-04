@@ -1,5 +1,9 @@
 (function initMidasVAD(global) {
   const AudioCtx = global.AudioContext || global.webkitAudioContext;
+  const diag =
+    global.diag ||
+    global.AppModules?.diag ||
+    global.AppModules?.diagnostics || { add() {} };
   const defaults = {
     threshold: 0.015,
     minSpeechFrames: 3,
@@ -25,12 +29,43 @@
     let silenceFrames = options.minSilenceFrames;
     let currentState = 'silence';
     let workletReady = false;
+    let gateUnsub = null;
 
     const ensureAudioCtx = () => {
       if (!audioCtx) {
         audioCtx = new AudioCtx();
       }
       return audioCtx;
+    };
+
+    const getHubVoiceApi = () => global.AppModules?.hub || null;
+    const checkVoiceGate = () => {
+      const api = getHubVoiceApi();
+      const status = api?.getVoiceGateStatus?.();
+      if (!status) return { allowed: true, reason: '' };
+      return status;
+    };
+
+    const subscribeToGate = () => {
+      const api = getHubVoiceApi();
+      if (typeof api?.onVoiceGateChange !== 'function') return null;
+      return api.onVoiceGateChange((status) => {
+        if (!status?.allowed) {
+          diag.add?.('[vad] stop due to voice gate lock');
+          stop();
+        }
+      });
+    };
+
+    const cleanupGateSub = () => {
+      if (typeof gateUnsub === 'function') {
+        try {
+          gateUnsub();
+        } catch (_) {
+          /* ignore */
+        }
+        gateUnsub = null;
+      }
     };
 
     const ensureWorklet = async () => {
@@ -99,6 +134,13 @@
 
     const start = async (stream, onStateChange) => {
       if (!stream) return;
+      const gateStatus = checkVoiceGate();
+      if (!gateStatus.allowed) {
+        diag.add?.('[vad] start blocked: ' + (gateStatus.reason || 'voice-locked'));
+        const err = new Error('voice-not-ready');
+        err.code = 'voice-not-ready';
+        throw err;
+      }
       stateCallback = typeof onStateChange === 'function'
         ? onStateChange
         : () => {};
@@ -113,6 +155,8 @@
         }
       }
       mediaSource = ctx.createMediaStreamSource(stream);
+      cleanupGateSub();
+      gateUnsub = subscribeToGate();
 
       const canUseWorklet = await ensureWorklet();
       if (canUseWorklet) {
@@ -138,6 +182,7 @@
     };
 
     const stop = () => {
+      cleanupGateSub();
       if (workletNode) {
         workletNode.port.onmessage = null;
         workletNode.disconnect();

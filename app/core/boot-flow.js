@@ -31,6 +31,55 @@
     IDLE: 'READY',
     BOOT_ERROR: 'BOOT ERROR'
   };
+  const bootErrorState = {
+    message: '',
+    detail: ''
+  };
+  const getBootErrorPanel = () => doc?.getElementById('bootErrorPanel');
+  const getBootErrorMessageEl = () => doc?.getElementById('bootErrorMessage');
+  const getBootErrorDetailEl = () => doc?.getElementById('bootErrorDetail');
+  const getBootErrorDiagBtn = () => doc?.getElementById('bootErrorDiagBtn');
+  let bootErrorDiagBound = false;
+  const ensureBootErrorDiagBinding = () => {
+    if (bootErrorDiagBound) return;
+    const btn = getBootErrorDiagBtn();
+    if (!btn) return;
+    bootErrorDiagBound = true;
+    btn.addEventListener('click', (event) => {
+      event?.preventDefault();
+      try {
+        const diagPanel =
+          global.AppModules?.diag ||
+          global.diag ||
+          global.AppModules?.diagnostics?.diag;
+        diagPanel?.show?.();
+      } catch (_) {
+        /* noop */
+      }
+    });
+  };
+  const setBootErrorState = (message, detail) => {
+    bootErrorState.message = message || 'Boot fehlgeschlagen.';
+    bootErrorState.detail = detail || '';
+  };
+  const syncBootErrorPanel = () => {
+    const panel = getBootErrorPanel();
+    if (!panel) return;
+    ensureBootErrorDiagBinding();
+    const isError = currentStage === FALLBACK_STAGE_ERROR;
+    panel.hidden = !isError;
+    panel.setAttribute('aria-hidden', isError ? 'false' : 'true');
+    if (!isError) return;
+    const msgEl = getBootErrorMessageEl();
+    if (msgEl) {
+      msgEl.textContent = bootErrorState.message || 'Boot fehlgeschlagen.';
+    }
+    const detailEl = getBootErrorDetailEl();
+    if (detailEl) {
+      detailEl.textContent =
+        bootErrorState.detail || 'Weitere Details im Touch-Log sehen.';
+    }
+  };
 
   /** SUBMODULE: Config-Status Buffer **/
   const pendingConfigStatus = [];
@@ -95,6 +144,7 @@
     if (labelEl) {
       labelEl.textContent = stageLabels[currentStage] || currentStage;
     }
+    syncBootErrorPanel();
   };
 
   const flushWaiters = () => {
@@ -132,7 +182,9 @@
     hangOrigin = stage;
     hangTimer = setTimeout(() => {
       diag.add?.(`[boot] stage timeout @ ${hangOrigin}`);
-      setConfigStatusSafe('Boot hängt, bitte neu laden.', 'error');
+      const timeoutMessage = 'Boot hängt, bitte neu laden.';
+      setBootErrorState(timeoutMessage, `Phase ${hangOrigin} reagiert nicht.`);
+      setConfigStatusSafe(timeoutMessage, 'error');
       commitStage(FALLBACK_STAGE_ERROR, { reason: 'timeout' });
     }, STAGE_HANG_TIMEOUT_MS);
   };
@@ -143,6 +195,9 @@
     const prevStage = currentStage;
     const reasonStr = options.reason ? ` (${options.reason})` : '';
     currentStage = normalized;
+    if (normalized === FALLBACK_STAGE_ERROR && !bootErrorState.message) {
+      setBootErrorState('Boot fehlgeschlagen.', '');
+    }
     diag.add?.(`[boot] stage ${prevStage} -> ${normalized}${reasonStr}`);
     updateDom();
     startHangTimer(normalized);
@@ -188,7 +243,9 @@
     onStageChange,
     isStageAtLeast: (stage) => stageOrder(currentStage) >= stageOrder(stage),
     report: setConfigStatusSafe,
-    markFailed: (message = 'Boot fehlgeschlagen.') => {
+    getLastError: () => ({ ...bootErrorState }),
+    markFailed: (message = 'Boot fehlgeschlagen.', detail = '') => {
+      setBootErrorState(message, detail);
       setConfigStatusSafe(message, 'error');
       return commitStage(FALLBACK_STAGE_ERROR, { reason: 'manual-fail' });
     }

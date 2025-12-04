@@ -56,8 +56,9 @@
   })();
 
   // SUBMODULE: setTab @public - steuert aktiven Tab inkl. Doctor-Auth, Unlock und UI-Refresh
-  async function setTab(name) {
+  async function setTab(name, options = {}) {
     if (!name || typeof name !== 'string') return;
+    const opts = (options && typeof options === 'object') ? options : {};
 
     // Unlock bei gesperrter UI zurücksetzen
     if (name !== 'doctor' && global.document.body.classList.contains('app-locked')) {
@@ -120,7 +121,12 @@
     } else if (name === 'capture') {
       try {
         const captureModule = global.AppModules?.capture;
-        await captureModule?.refreshCaptureIntake?.();
+        if (!opts.skipCaptureRefresh) {
+          const captureReason = typeof opts.captureRefreshReason === 'string' && opts.captureRefreshReason.trim()
+            ? opts.captureRefreshReason.trim()
+            : 'tab:capture';
+          await captureModule?.refreshCaptureIntake?.(captureReason);
+        }
         captureModule?.resetCapturePanels?.();
         global.AppModules?.bp?.updateBpCommentWarnings?.();
       } catch (err) {

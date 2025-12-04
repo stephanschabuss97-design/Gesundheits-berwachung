@@ -43,6 +43,9 @@ app/modules/hub/
 - **Neue Helpers:**
   - `handleVADStateChange(state)` – resets/starts Silence Timer.
   - `forceStopRecording(reason)` – ruft `stopVoiceRecording` + Logging.
+- **Voice Gate (Phase 0.4):**
+  - `AppModules.hub.isVoiceReady()` wird vor `vad.start()` geprüft. Wenn Boot/Auth noch nicht fertig sind, wirft der Controller `voice-not-ready`.
+  - `onVoiceGateChange` Listener stoppen Worklet/Fallback sofort und loggen `[vad] stop due to voice gate lock`, sobald Auth wieder `unknown` meldet (z. B. Session Timeout nach Tabwechsel).
 
 ---
 

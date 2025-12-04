@@ -313,6 +313,41 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   --voice-ring-scale: 0.015;
 }
 
+/* Voice gate lock (boot/auth) */
+body.voice-locked .hub-orbit {
+  filter: brightness(0.35) saturate(0.75);
+  --voice-base-glow: 0.12;
+  --voice-ring-scale: 0;
+}
+
+.hub-core-trigger.is-voice-locked {
+  pointer-events: none;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle, rgba(15, 17, 30, 0.6) 0%, rgba(0, 0, 0, 0) 70%);
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(0, 0, 0, 0.55);
+}
+
+.hub-core-trigger.is-voice-locked::after {
+  content: attr(data-voice-label);
+  position: absolute;
+  inset: auto 10% -46px 10%;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.hub-core-trigger.is-voice-locked:focus-visible::after,
+.hub-core-trigger.is-voice-locked:hover::after,
+body.voice-locked .hub-core-trigger.is-voice-locked::after {
+  opacity: 1;
+}
+
 .hub-orbit[data-voice-state="listening"] .midas-ring-gold {
   animation-duration: 14s;
 }

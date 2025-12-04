@@ -148,20 +148,102 @@
   }
 
   // SUBMODULE: diag logger @public
+  const TOUCHLOG_DUP_MS = 4000;
+  const MAX_LINES = 80;
+  const buildBaseLine = (message, severity) => {
+    const stamp = new Date().toLocaleTimeString();
+    const sevTag = severity && severity !== 'info' ? `[${severity.toUpperCase()}] ` : '';
+    return `[${stamp}] ${sevTag}${message}`;
+  };
+  const createLineEntry = (message, severity, timestamp, eventId) => {
+    const base = buildBaseLine(message, severity);
+    return {
+      base,
+      render: base,
+      count: 1,
+      lastTs: timestamp,
+      eventId,
+      severity
+    };
+  };
+  const formatRender = (entry) => (entry.count <= 1 ? entry.base : `${entry.base} (x${entry.count})`);
   const diag = {
     el: null,
     logEl: null,
     open: false,
     lines: [],
-    add(msg) {
-      logToDiagnosticsLayer(msg, { source: 'diag.add' });
+    eventIndex: new Map(),
+    summaryIndex: new Map(),
+    add(msg, opts = {}) {
+      const normalized = typeof msg === 'string' ? msg : String(msg ?? '');
+      logToDiagnosticsLayer(normalized, { source: 'diag.add' });
       monitorHeartbeat('diag-add');
-      const t = new Date().toLocaleTimeString();
-      this.lines.unshift(`[${t}] ${msg}`);
-      this.lines = this.lines.slice(0, 80);
-      if (this.logEl) {
-        this.logEl.textContent = this.lines.join('\n');
+      const now = performance?.now ? performance.now() : Date.now();
+      const severity = opts.severity || opts.tone || 'info';
+      const reasonKey = opts.reason ? `|${opts.reason}` : '';
+      const eventId = opts.eventId || `${severity}${reasonKey}|${normalized}`;
+      if (opts.summaryKey) {
+        this._addSummaryEntry(normalized, opts, severity, now);
+        return;
       }
+      const existing = this.eventIndex.get(eventId);
+      if (existing && now - existing.lastTs <= TOUCHLOG_DUP_MS) {
+        existing.count += 1;
+        existing.lastTs = now;
+        existing.render = formatRender(existing);
+        this._refreshDom();
+        return;
+      }
+      const entry = createLineEntry(normalized, severity, now, eventId);
+      this.lines.unshift(entry);
+      this.eventIndex.set(eventId, entry);
+      this._enforceLimit();
+      this._refreshDom();
+    },
+    _refreshDom() {
+      if (!this.logEl) return;
+      this.logEl.textContent = this.lines.map((entry) => entry.render).join('\n');
+    },
+    _enforceLimit() {
+      while (this.lines.length > MAX_LINES) {
+        const removed = this.lines.pop();
+        if (!removed) continue;
+        this.eventIndex.delete(removed.eventId);
+        if (removed.summaryKey) {
+          this.summaryIndex.delete(removed.summaryKey);
+        }
+      }
+    },
+    _addSummaryEntry(message, opts, severity, now) {
+      const summaryKey = `summary:${opts.summaryKey}`;
+      let entry = this.summaryIndex.get(summaryKey);
+      const stamp = new Date().toLocaleTimeString();
+      const detail = opts.summaryDetail || message;
+      const label = opts.summaryLabel || opts.summaryKey;
+      if (!entry) {
+        entry = {
+          base: '',
+          render: '',
+          count: 0,
+          lastTs: now,
+          eventId: summaryKey,
+          severity,
+          summaryKey,
+          details: []
+        };
+        this.summaryIndex.set(summaryKey, entry);
+        this.eventIndex.set(summaryKey, entry);
+        this.lines.unshift(entry);
+      }
+        entry.details.unshift(detail);
+        entry.details = entry.details.slice(0, opts.summaryMaxDetails || 3);
+        entry.count += 1;
+        entry.lastTs = now;
+        const sevTag = severity && severity !== 'info' ? `[${severity.toUpperCase()}] ` : '';
+        entry.base = `[${stamp}] ${sevTag}${label}: ${entry.details.join(' • ')}`;
+        entry.render = `${entry.base} (steps=${entry.count})`;
+      this._enforceLimit();
+      this._refreshDom();
     },
     init() {
       try {

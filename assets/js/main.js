@@ -32,6 +32,7 @@ const getSupabaseApi = () => {
 const SUPABASE_READY_EVENT = 'supabase:ready';
 const hasSupabaseFn = (name) => typeof getSupabaseApi()?.[name] === 'function';
 const getSupabaseState = () => getSupabaseApi()?.supabaseState || null;
+const isAuthDecisionKnown = () => getSupabaseState()?.authState !== 'unknown';
 
 const getBootFlow = () => window.AppModules?.bootFlow || null;
 const setBootStage = (stage) => {
@@ -56,6 +57,104 @@ const logBootDiag = (message, err) => {
     /* diag not ready */
   }
 };
+const DEBUG_TOUCHLOG = !!window.DEBUG_TOUCHLOG;
+const touchLog = (message, opts) => {
+  try {
+    diag.add?.(message, opts);
+  } catch (_) {
+    /* diag not ready */
+  }
+};
+const verboseTouchLog = (message, opts) => {
+  if (!DEBUG_TOUCHLOG) return;
+  touchLog(message, opts);
+};
+const logBootPhaseSummary = (phase, status, detail, severity = 'info') => {
+  const suffix = detail ? ` – ${detail}` : '';
+  const summaryDetail = `${phase} ${status}${suffix}`;
+  touchLog(`[boot] ${summaryDetail}`, {
+    eventId: `boot:${phase}:${status}`,
+    summaryKey: 'boot',
+    summaryLabel: 'Boot',
+    summaryDetail,
+    severity
+  });
+};
+const logResumeSummary = (source, status, detail, severity = 'info') => {
+  const suffix = detail ? ` – ${detail}` : '';
+  const summaryDetail = `${source} ${status}${suffix}`;
+  touchLog(`[resume] ${summaryDetail}`, {
+    eventId: `resume:${source}:${status}`,
+    summaryKey: 'resume',
+    summaryLabel: 'Resume',
+    summaryDetail,
+    severity
+  });
+};
+const logUiRefreshSummary = (reasonLabel, status, detail, severity = 'info') => {
+  const reason = reasonLabel || 'unspecified';
+  const suffix = detail ? ` – ${detail}` : '';
+  const summaryDetail = `${reason} ${status}${suffix}`;
+  touchLog(`[ui] refresh ${status} reason=${reason}`, {
+    eventId: `ui:refresh:${reason}:${status}`,
+    summaryKey: 'ui-refresh',
+    summaryLabel: 'UI Refresh',
+    summaryDetail,
+    severity
+  });
+};
+
+const scheduleMicrotask =
+  typeof queueMicrotask === 'function'
+    ? queueMicrotask
+    : (cb) => Promise.resolve().then(cb);
+
+const logOncePerTick = (() => {
+  const seen = new Set();
+  return (key, fn) => {
+    if (!key || typeof fn !== 'function') {
+      try {
+        fn?.();
+      } catch (_) {
+        /* ignore */
+      }
+      return;
+    }
+    if (seen.has(key)) return;
+    seen.add(key);
+    try {
+      fn();
+    } catch (_) {
+      /* logging failure ignored */
+    } finally {
+      scheduleMicrotask(() => seen.delete(key));
+    }
+  };
+})();
+
+const logOnceWithin = (() => {
+  const history = new Map();
+  return (key, ttlMs, fn) => {
+    if (!key || typeof fn !== 'function') {
+      try {
+        fn?.();
+      } catch (_) {
+        /* ignore */
+      }
+      return;
+    }
+    const ttl = Math.max(0, Number(ttlMs) || 0);
+    const now = typeof performance?.now === 'function' ? performance.now() : Date.now();
+    const last = history.get(key) || 0;
+    if (ttl && now - last < ttl) return;
+    history.set(key, now);
+    try {
+      fn();
+    } catch (_) {
+      /* ignore */
+    }
+  };
+})();
 const showBootErrorBanner = (text) => {
   if (document.readyState === 'loading') return false;
   const errBox = document.getElementById('err');
@@ -112,6 +211,7 @@ const bindAppLockButtons = createSupabaseFn('bindAppLockButtons');
 const resumeFromBackground = createSupabaseFn('resumeFromBackground');
 const pushPendingToRemote = createSupabaseFn('pushPendingToRemote', { optional: true });
 const reconcileFromRemote = createSupabaseFn('reconcileFromRemote', { optional: true });
+const waitForAuthDecisionFn = createSupabaseFn('waitForAuthDecision', { optional: true });
 
 const getLockUi = () => {
   const fn = getSupabaseApi()?.lockUi;
@@ -234,29 +334,51 @@ const setInputValue = (selector, value) => {
 
 async function runBootPhase() {
   setBootStage('BOOT');
-  await waitForDomReady();
-  const modulesReady = await ensureModulesReady();
-  if (!modulesReady) {
-    throw new Error('required modules missing');
+  logBootPhaseSummary('BOOT', 'start');
+  try {
+    await waitForDomReady();
+    const modulesReady = await ensureModulesReady();
+    if (!modulesReady) {
+      throw new Error('required modules missing');
+    }
+    diag.init();
+    helpPanel?.init?.();
+    logBootPhaseSummary('BOOT', 'done');
+  } catch (err) {
+    logBootPhaseSummary('BOOT', 'failed', err?.message || err, 'error');
+    throw err;
   }
-  diag.init();
-  helpPanel?.init?.();
 }
 
 async function runAuthCheckPhase(context) {
   setBootStage('AUTH_CHECK');
-  await waitForSupabaseApi();
-  await initDB();
-  await ensureSupabaseClient();
-  context.hasSession = await requireSession();
-  if (context.hasSession) {
-    await afterLoginBoot();
-    await setupRealtime();
+  logBootPhaseSummary('AUTH_CHECK', 'start');
+  try {
+    await waitForSupabaseApi();
+    await initDB();
+    await ensureSupabaseClient();
+    context.hasSession = await requireSession();
+    if (hasSupabaseFn('waitForAuthDecision')) {
+      try {
+        await waitForAuthDecisionFn();
+      } catch (err) {
+        diag.add?.('[boot] waitForAuthDecision failed: ' + (err?.message || err));
+      }
+    }
+    if (context.hasSession) {
+      await afterLoginBoot();
+      await setupRealtime();
+    }
+    logBootPhaseSummary('AUTH_CHECK', 'done', context.hasSession ? 'session active' : 'unauthenticated');
+  } catch (err) {
+    logBootPhaseSummary('AUTH_CHECK', 'failed', err?.message || err, 'error');
+    throw err;
   }
 }
 
 async function initCorePhase() {
   setBootStage('INIT_CORE');
+  logBootPhaseSummary('INIT_CORE', 'start');
   window.AppModules?.uiLayout?.updateStickyOffsets?.();
   bindHeaderShadow();
   await ensureSupabaseClient();
@@ -270,23 +392,25 @@ async function initCorePhase() {
   prepareIntakeStatusHeader();
   setInputValue('#from', new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().slice(0, 10));
   setInputValue('#to', todayIso);
-  setTab('capture');
+  setTab('capture', { skipCaptureRefresh: true });
   try {
     window.AppModules.capture?.resetCapturePanels?.();
     window.AppModules.bp.updateBpCommentWarnings?.();
   } catch (_) {}
   try { addCapturePanelKeys?.(); } catch(_){ }
+  logBootPhaseSummary('INIT_CORE', 'done');
 }
 
 async function initModulesPhase() {
   setBootStage('INIT_MODULES');
+  logBootPhaseSummary('INIT_MODULES', 'start');
   bindTabs();
   bindAuthButtons();
   if (getSupabaseState()?.sbClient) watchAuthState();
-  try {
-    await window.AppModules.capture?.refreshCaptureIntake?.();
-  } catch(_) {}
   await maybeRefreshForTodayChange({ force: true, source: 'boot' });
+  try {
+    await window.AppModules.capture?.refreshCaptureIntake?.('tab:capture');
+  } catch(_) {}
   AppModules.captureGlobals.setLastKnownToday(todayStr());
   scheduleMidnightRefresh();
   scheduleNoonSwitch();
@@ -328,16 +452,19 @@ async function initModulesPhase() {
       await cleanupOldIntake();
     }
   } catch (_) {}
+  logBootPhaseSummary('INIT_MODULES', 'done');
 }
 
 async function initUiAndLiftLockPhase() {
   setBootStage('INIT_UI');
+  logBootPhaseSummary('INIT_UI', 'start');
   await requestUiRefresh({ reason: 'boot:initial' });
   $$('#appMain input, #appMain select, #appMain textarea, #appMain button, nav.tabs button').forEach((el) => {
     el.disabled = false;
   });
   document.body.classList.remove('auth-locked');
   setBootStage('IDLE');
+  logBootPhaseSummary('INIT_UI', 'done');
 
   window.addEventListener('online', async () => {
     try {
@@ -400,7 +527,9 @@ function requestUiRefresh(opts = {}) {
 async function runUiSubStep(label, enabled, fn) {
   if (!enabled) return;
   const start = uiNow();
-  diag.add?.(`[ui] step start ${label}`);
+  logOnceWithin(`ui:step:start:${label}`, 50, () => {
+    verboseTouchLog(`[ui] step start ${label}`);
+  });
   let timeoutId;
   let timedOut = false;
   const timeoutPromise = new Promise((_, reject) => {
@@ -416,19 +545,21 @@ async function runUiSubStep(label, enabled, fn) {
           await fn();
         } catch (err) {
           if (!timedOut) throw err;
-          diag.add?.(`[ui] step late error ${label}: ${err?.message || err}`);
+        touchLog(`[ui] step late error ${label}: ${err?.message || err}`, { severity: 'warn' });
         }
       })(),
       timeoutPromise
     ]);
     const duration = Math.round(uiNow() - start);
-    diag.add?.(`[ui] step end ${label} (${duration} ms)`);
+    logOnceWithin(`ui:step:end:${label}`, 50, () => {
+      verboseTouchLog(`[ui] step end ${label} (${duration} ms)`);
+    });
   } catch (err) {
     const duration = Math.round(uiNow() - start);
     if (err === uiRefreshTimeoutSymbol) {
-      diag.add?.(`[ui] step timeout ${label} (${duration} ms)`);
+      touchLog(`[ui] step timeout ${label} (${duration} ms)`, { severity: 'warn' });
     } else {
-      diag.add?.(`[ui] step error ${label}: ${err?.message || err} (${duration} ms)`);
+      touchLog(`[ui] step error ${label}: ${err?.message || err} (${duration} ms)`, { severity: 'error' });
     }
   } finally {
     clearTimeout(timeoutId);
@@ -448,7 +579,9 @@ async function runUiRefresh(){
   const reasons = state.reasons.size ? Array.from(state.reasons) : (state.lastReason ? [state.lastReason] : []);
   state.reasons.clear();
   const reasonLabel = reasons.length ? reasons.join(',') : 'unspecified';
-  diag.add?.(`[ui] refresh start reason=${reasonLabel}`);
+  logOnceWithin(`ui:refresh:start:${reasonLabel}`, 50, () => {
+    logUiRefreshSummary(reasonLabel, 'start');
+  });
   try {
     while (state.docNeeded || state.chartNeeded || state.lifestyleNeeded) {
       const doc = state.docNeeded;
@@ -461,7 +594,9 @@ async function runUiRefresh(){
       const doctorModule = getDoctorModule();
       const chartPanel = getChartPanel();
 
-      await runUiSubStep('doctor', doc, async () => { await doctorModule?.renderDoctor?.(); });
+      await runUiSubStep('doctor', doc, async () => {
+        await doctorModule?.renderDoctor?.(reasonLabel);
+      });
       // appointments substep entfernt
       await runUiSubStep(
         'lifestyle',
@@ -473,7 +608,9 @@ async function runUiRefresh(){
   } finally {
     state.running = false;
     const duration = Math.round(uiNow() - refreshStart);
-    diag.add?.(`[ui] refresh end reason=${reasonLabel} (${duration} ms)`);
+    logOnceWithin(`ui:refresh:end:${reasonLabel}`, 50, () => {
+      logUiRefreshSummary(reasonLabel, 'end', `${duration} ms`);
+    });
     const resolvers = state.resolvers;
     state.resolvers = [];
     resolvers.forEach(resolve => { try { resolve(); } catch(_){} });
@@ -1098,7 +1235,7 @@ async function maybeResetIntakeForToday(todayIso){
     if (guardSet) {
       AppModules.captureGlobals.setIntakeResetDoneFor(todayIso);
       try { window?.localStorage?.setItem(LS_INTAKE_RESET_DONE_KEY, todayIso); } catch(_) {}
-      try { window.AppModules.capture?.refreshCaptureIntake?.(); } catch(_) {}
+      try { window.AppModules.capture?.refreshCaptureIntake?.('auto:intake-reset'); } catch(_) {}
     }
   }
 }
@@ -1211,8 +1348,10 @@ async function maybeRefreshForTodayChange({ force = false, source = '' } = {}){
     try { await maybeResetIntakeForToday(todayIso); } catch(_) {}
   }
 
+  const normalizedSource = typeof source === 'string' && source.trim() ? source.trim() : '';
+  const refreshReason = normalizedSource || (force ? 'force' : 'auto');
   try {
-    await window.AppModules.capture?.refreshCaptureIntake?.();
+    await window.AppModules.capture?.refreshCaptureIntake?.(refreshReason);
   } catch(_) {}
 
   AppModules.captureGlobals.setLastKnownToday(todayIso);
@@ -1402,7 +1541,7 @@ const dateEl = document.getElementById('date');
         const todayIso = todayStr();
   AppModules.captureGlobals.setDateUserSelected((dateEl.value || '') !== todayIso);
         // was du beim Datum aendern haben willst:
-        await window.AppModules.capture?.refreshCaptureIntake?.();
+        await window.AppModules.capture?.refreshCaptureIntake?.('date-change:user');
         window.AppModules.capture?.resetCapturePanels?.();
         window.AppModules.bp.updateBpCommentWarnings?.();
         await window.AppModules.body.prefillBodyInputs();
@@ -1489,21 +1628,46 @@ document.addEventListener('keydown', (e)=>{
   } catch(_){ }
 });
 
+const isVoiceGateReady = () => {
+  try {
+    const hub = window.AppModules?.hub;
+    if (hub?.isVoiceReady) {
+      return !!hub.isVoiceReady();
+    }
+    if (hub?.getVoiceGateStatus) {
+      return hub.getVoiceGateStatus()?.allowed !== false;
+    }
+  } catch (_err) {
+    /* ignore */
+  }
+  return true;
+};
+
 const shouldHandleResume = () => {
+  if (!isAuthDecisionKnown()) return false;
   const bootFlow = getBootFlow();
-  if (bootFlow?.isStageAtLeast) {
-    return bootFlow.isStageAtLeast('INIT_CORE');
+  if (bootFlow?.isStageAtLeast && !bootFlow.isStageAtLeast('INIT_CORE')) {
+    return false;
+  }
+  if (!isVoiceGateReady()) {
+    touchLog('[resume] skipped – voice gate locked');
+    return false;
   }
   return true;
 };
 
 const resumeEventHandler = (source) => {
-  if (!shouldHandleResume()) return;
+  if (!shouldHandleResume()) {
+    verboseTouchLog(`[resume] skipped ${source}`);
+    return;
+  }
   (async () => {
     try {
+      logResumeSummary(source, 'start');
       await resumeFromBackground(source);
+      logResumeSummary(source, 'done');
     } catch (err) {
-      diag.add?.(`[resume] handler error ${source}: ${err?.message || err}`);
+      logResumeSummary(source, 'failed', err?.message || err, 'error');
     }
   })();
 };
@@ -1542,12 +1706,19 @@ if (doctorExportBtn) {
 const startBootProcess = () => {
   if (window.__bootDone) return;
   window.__bootDone = true;
-  main().catch((err) => {
-    const message = err?.message || 'Boot fehlgeschlagen.';
-    failBootStage(message);
-    showBootErrorBanner(message);
-    logBootDiag('fatal', err || message);
-  });
+  logBootPhaseSummary('BOOTSTRAP', 'start');
+  main()
+    .then(() => {
+      logBootPhaseSummary('BOOTSTRAP', 'done');
+    })
+    .catch((err) => {
+      const message = err?.message || 'Boot fehlgeschlagen.';
+      window.__bootFailed = true;
+      failBootStage(message);
+      showBootErrorBanner(message);
+      logBootDiag('fatal', err || message);
+      logBootPhaseSummary('BOOTSTRAP', 'failed', message, 'error');
+    });
 };
 
 const bootFlowInstance = getBootFlow();

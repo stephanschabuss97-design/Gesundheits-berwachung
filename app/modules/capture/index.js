@@ -17,11 +17,12 @@
   const getSupabaseApi = () => global.AppModules?.supabase || {};
   const getSupabaseState = () => getSupabaseApi().supabaseState || null;
   const getAuthState = () => getSupabaseState()?.authState || 'unauth';
+  const isAuthReady = () => getAuthState() !== 'unknown';
   const wasRecentlyLoggedIn = () => Boolean(getSupabaseState()?.lastLoggedIn);
   const isHandlerStageReady = () => {
     const bootFlow = global.AppModules?.bootFlow;
-    if (!bootFlow?.isStageAtLeast) return true;
-    return bootFlow.isStageAtLeast('INIT_MODULES');
+    if (!bootFlow?.isStageAtLeast) return isAuthReady();
+    return bootFlow.isStageAtLeast('INIT_MODULES') && isAuthReady();
   };
 
   const MAX_WATER_ML = 6000;
@@ -46,6 +47,33 @@
   const getTrendpilotSeverityMeta = (severity) => {
     if (!severity) return null;
     return TREND_PILOT_SEVERITY_META[severity] || null;
+  };
+  const captureRefreshLogInflight = new Map();
+  const captureRefreshKey = (reason, dayIso) =>
+    `${reason || 'manual'}|${dayIso || 'unknown'}`;
+  const logCaptureRefreshStart = (reason, dayIso) => {
+    const key = captureRefreshKey(reason, dayIso);
+    const entry = captureRefreshLogInflight.get(key);
+    if (entry) {
+      entry.count += 1;
+      return key;
+    }
+    captureRefreshLogInflight.set(key, { count: 1 });
+    diag.add?.(`[capture] refresh start reason=${reason} day=${dayIso}`);
+    return key;
+  };
+  const logCaptureRefreshEnd = (reason, dayIso, status = 'done', detail, severity) => {
+    const key = captureRefreshKey(reason, dayIso);
+    const entry = captureRefreshLogInflight.get(key);
+    captureRefreshLogInflight.delete(key);
+    const count = entry?.count || 1;
+    const suffix = count > 1 ? ` (x${count})` : '';
+    const extra = detail ? ` – ${detail}` : '';
+    const opts = severity ? { severity } : undefined;
+    diag.add?.(
+      `[capture] refresh ${status} reason=${reason} day=${dayIso}${extra}${suffix}`,
+      opts
+    );
   };
 
   const formatTrendpilotDay = (dayIso) => {
@@ -193,7 +221,10 @@
     }
 
     try {
-      await refreshCaptureIntake();
+      const normalizedSource = typeof source === 'string' && source.trim() ? source.trim() : '';
+      await refreshCaptureIntake({
+        reason: normalizedSource || (force ? 'force' : 'auto')
+      });
     } catch(_) {}
 
     AppModules.captureGlobals.setLastKnownToday(todayIso);
@@ -332,12 +363,32 @@
   }, 150);
 
   // SUBMODULE: refreshCaptureIntake @extract-candidate - laedt Intake-Daten und synchronisiert Pills/UI
-  async function refreshCaptureIntake(){
+  const normalizeRefreshReason = (value, fallback = 'manual') => {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (value && typeof value === 'object' && typeof value.reason === 'string' && value.reason.trim()) {
+      return value.reason.trim();
+    }
+    return fallback;
+  };
+
+  async function refreshCaptureIntake(reasonOrOptions){
+    const refreshReason = normalizeRefreshReason(reasonOrOptions, 'manual');
     const wrap = document.getElementById('cap-intake-wrap');
-    if (!wrap) return;
     const dayIso = document.getElementById('date')?.value || todayStr();
-    captureIntakeState.dayIso = dayIso;
-    clearCaptureIntakeInputs();
+    logCaptureRefreshStart(refreshReason, dayIso);
+    let refreshLogClosed = false;
+    const closeRefreshLog = (status = 'done', detail, severity) => {
+      if (refreshLogClosed) return;
+      refreshLogClosed = true;
+      logCaptureRefreshEnd(refreshReason, dayIso, status, detail, severity);
+    };
+    if (!wrap) {
+      closeRefreshLog('skipped', 'capture wrapper missing');
+      return;
+    }
+    try {
+      captureIntakeState.dayIso = dayIso;
+      clearCaptureIntakeInputs();
 
   const logged = await isLoggedInFast();
   // Unknown-Phase: so tun, als ob weiter eingeloggt (keine Sperre!)
@@ -349,10 +400,14 @@
     setCaptureIntakeDisabled(true);
     updateCaptureIntakeStatus();
     try{ __lsTotals = { water_ml: 0, salt_g: 0, protein_g: 0 }; updateLifestyleBars(); }catch(_){ }
+    closeRefreshLog('skipped', 'auth required');
     return;
   }
 
   setCaptureIntakeDisabled(false);
+  let refreshStatus = 'done';
+  let refreshDetail = '';
+  let refreshSeverity;
   try{
     const uid = await getUserId();
     // Unknown-Phase: UID kann transient null sein -> NICHT sperren
@@ -361,7 +416,7 @@
       captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
       setCaptureIntakeDisabled(true);
     } else {
-        const totals = await loadIntakeToday({ user_id: uid, dayIso });
+        const totals = await loadIntakeToday({ user_id: uid, dayIso, reason: refreshReason });
         captureIntakeState.totals = totals || { water_ml: 0, salt_g: 0, protein_g: 0 };
         captureIntakeState.logged = true;
         try{ __lsTotals = captureIntakeState.totals; updateLifestyleBars(); }catch(_){ }
@@ -369,13 +424,22 @@
     }catch(e){
       captureIntakeState.totals = { water_ml: 0, salt_g: 0, protein_g: 0 };
       try {
-        diag.add?.('Capture intake load error: ' + (e?.message || e));
+        const errMsg = e?.message || e;
+        refreshStatus = 'error';
+        refreshDetail = errMsg;
+        refreshSeverity = 'error';
+        diag.add?.('Capture intake load error: ' + errMsg);
         updateLifestyleBars();
       } catch(_) { }
     }
 
     __lastKnownToday = todayStr();
     updateCaptureIntakeStatus();
+    closeRefreshLog(refreshStatus, refreshDetail, refreshSeverity);
+  } catch (err) {
+      closeRefreshLog('error', err?.message || err, 'error');
+      throw err;
+    }
   }
 
   // SUBMODULE: handleCaptureIntake @internal - validiert Intake-Eingaben, triggert RPC-Speicherpfad und Refresh-Fallbacks

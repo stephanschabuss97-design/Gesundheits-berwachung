@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * SESSION AGENT – Core logic for the in-app MIDAS assistant.
+ * SESSION AGENT — Core logic for the in-app MIDAS assistant.
  *
  * Responsibilities:
  *  - Manage a short-lived assistant session (one interaction, ggf. 1–2 Rückfragen).
@@ -12,6 +12,13 @@
  *
  * This module is UI-agnostic: no DOM, no event listeners, no rendering.
  */
+
+const globalObject =
+  typeof window !== 'undefined'
+    ? window
+    : typeof globalThis !== 'undefined'
+    ? globalThis
+    : undefined;
 
 /**
  * @typedef {Object} AssistantMessage
@@ -43,6 +50,8 @@
  * @property {(state: AssistantState) => void} [onUpdate] // called whenever state changes
  * @property {() => Promise<any>|any} [getContext] // optional: snapshot of current app context (intakes, vitals, etc.)
  * @property {(actions: AssistantAction[], state: AssistantState) => Promise<void>|void} [dispatchActions]
+ * @property {() => boolean} [isVoiceReady]        // optional gate: returns true when voice UI may run
+ * @property {{ onVoiceGateChange?: (fn: (status: {allowed:boolean, reason?:string}) => void) => () => void }} [voiceGateApi]
  */
 
 /**
@@ -76,9 +85,18 @@ export class AssistantSession {
     this.onUpdate = typeof onUpdate === 'function' ? onUpdate : null;
     this.getContext = typeof getContext === 'function' ? getContext : null;
     this.dispatchActions = typeof dispatchActions === 'function' ? dispatchActions : null;
+    this.voiceGateApi = resolveVoiceGateApi(options.voiceGateApi);
+    this.isVoiceReadyFn =
+      typeof options.isVoiceReady === 'function' ? options.isVoiceReady : deriveVoiceReadyFn(this.voiceGateApi);
+    this.voiceGateUnsub = null;
+    this.voiceLockMessage = 'Voice deaktiviert – bitte warten';
 
     this._isSending = false;
     this._isEnded = false;
+
+    if (this.state.mode === 'voice') {
+      this._bindVoiceGate();
+    }
 
     this._emit();
   }
@@ -109,6 +127,10 @@ export class AssistantSession {
   async sendUserMessage(text) {
     if (this._isEnded) {
       console.warn('[MIDAS Assistant] sendUserMessage called on ended session – ignoring.');
+      return;
+    }
+    if (this.state.mode === 'voice' && !this._isVoiceReady()) {
+      this._handleVoiceGateLock();
       return;
     }
 
@@ -218,6 +240,7 @@ export class AssistantSession {
     this._isEnded = true;
     this.state.status = 'ended';
     this._emit();
+    this._cleanupVoiceGate();
   }
 
   /**
@@ -233,6 +256,62 @@ export class AssistantSession {
         console.error('[MIDAS Assistant] onUpdate handler failed:', err);
       }
     }
+  }
+
+  _isVoiceReady() {
+    if (this.state.mode !== 'voice') return true;
+    try {
+      if (typeof this.isVoiceReadyFn === 'function') {
+        return !!this.isVoiceReadyFn();
+      }
+    } catch (err) {
+      console.warn('[MIDAS Assistant] voiceReady check failed', err);
+    }
+    return true;
+  }
+
+  _bindVoiceGate() {
+    if (this.state.mode !== 'voice') return;
+    if (!this._isVoiceReady()) {
+      this._handleVoiceGateLock();
+    }
+    const api = this.voiceGateApi;
+    if (api && typeof api.onVoiceGateChange === 'function') {
+      try {
+        this.voiceGateUnsub = api.onVoiceGateChange((status) => {
+          if (!status?.allowed) {
+            this._handleVoiceGateLock(status?.reason);
+          }
+        });
+      } catch (err) {
+        console.warn('[MIDAS Assistant] voice gate subscription failed', err);
+      }
+    }
+  }
+
+  _cleanupVoiceGate() {
+    if (typeof this.voiceGateUnsub === 'function') {
+      try {
+        this.voiceGateUnsub();
+      } catch (_) {
+        /* ignore */
+      }
+      this.voiceGateUnsub = null;
+    }
+  }
+
+  _handleVoiceGateLock(reason = '') {
+    if (this._isEnded) return;
+    this.state.status = 'error';
+    this.state.lastError = this.voiceLockMessage;
+    this.state.messages.push({
+      role: 'system',
+      content: this.voiceLockMessage + (reason ? ` (${reason})` : ''),
+      ts: Date.now()
+    });
+    this._emit();
+    this._cleanupVoiceGate();
+    this._isEnded = true;
   }
 }
 
@@ -266,4 +345,34 @@ async function safeReadText(res) {
   } catch {
     return '';
   }
+}
+
+function resolveVoiceGateApi(explicitApi) {
+  if (explicitApi) return explicitApi;
+  return globalObject?.AppModules?.hub || null;
+}
+
+function deriveVoiceReadyFn(api) {
+  if (!api) {
+    return () => true;
+  }
+  if (typeof api.isVoiceReady === 'function') {
+    return () => {
+      try {
+        return !!api.isVoiceReady();
+      } catch {
+        return true;
+      }
+    };
+  }
+  if (typeof api.getVoiceGateStatus === 'function') {
+    return () => {
+      try {
+        return !!api.getVoiceGateStatus()?.allowed;
+      } catch {
+        return true;
+      }
+    };
+  }
+  return () => true;
 }

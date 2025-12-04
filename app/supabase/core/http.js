@@ -33,6 +33,76 @@ const diag =
     globalWindow?.AppModules?.diag ||
     globalWindow?.AppModules?.diagnostics ||
     { add() {} });
+const requestLogSummaries = new Map();
+const getRequestSummary = (label) => {
+  let summary = requestLogSummaries.get(label);
+  if (!summary) {
+    summary = {
+      active: 0,
+      startLogged: false,
+      successCount: 0,
+      successDuration: 0,
+      flushTimer: null
+    };
+    requestLogSummaries.set(label, summary);
+  }
+  return summary;
+};
+const cleanupRequestSummary = (label, summary) => {
+  if (!summary) return;
+  if (summary.active === 0 && !summary.successCount && !summary.flushTimer) {
+    summary.startLogged = false;
+    requestLogSummaries.delete(label);
+  }
+};
+const logRequestStart = (label) => {
+  const summary = getRequestSummary(label);
+  summary.active += 1;
+  if (!summary.startLogged) {
+    diag.add?.(`[auth] request start ${label}`);
+    summary.startLogged = true;
+  }
+};
+const flushSuccessSummary = (label, summary) => {
+  if (!summary || !summary.successCount) return;
+  const avg = Math.round(summary.successDuration / summary.successCount);
+  diag.add?.(
+    `[auth] request end ${label} status=200 avg=${avg} ms (x${summary.successCount})`
+  );
+  summary.successCount = 0;
+  summary.successDuration = 0;
+};
+const scheduleSuccessFlush = (label, summary) => {
+  if (summary.flushTimer) return;
+  summary.flushTimer = setTimeout(() => {
+    summary.flushTimer = null;
+    if (!summary.successCount) {
+      cleanupRequestSummary(label, summary);
+      return;
+    }
+    flushSuccessSummary(label, summary);
+    cleanupRequestSummary(label, summary);
+  }, 25);
+};
+const logRequestSuccess = (label, durationMs) => {
+  const summary = getRequestSummary(label);
+  summary.active = Math.max(0, summary.active - 1);
+  summary.successCount += 1;
+  summary.successDuration += durationMs;
+  scheduleSuccessFlush(label, summary);
+};
+const logRequestFailure = (label, status, durationMs, detail) => {
+  const summary = getRequestSummary(label);
+  summary.active = Math.max(0, summary.active - 1);
+  if (summary.flushTimer) {
+    clearTimeout(summary.flushTimer);
+    summary.flushTimer = null;
+  }
+  flushSuccessSummary(label, summary);
+  const suffix = detail ? ` – ${detail}` : '';
+  diag.add?.(`[auth] request end ${label} status=${status} (${durationMs} ms)${suffix}`);
+  cleanupRequestSummary(label, summary);
+};
 
 // SUBMODULE: util @internal - Sleep-Helper für Backoff-Zeiten
 const sleep = (ms = 0) =>
@@ -111,12 +181,16 @@ export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, ma
   const max = Math.max(0, maxAttempts);
 
   while (true) {
+    const reqLabel = tag || 'request';
+    logRequestStart(reqLabel);
     let res;
+    const reqStart =
+      (typeof performance !== 'undefined' && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now();
     try {
       // Per-request soft timeout to avoid hanging saves (e.g., after resume)
       const REQ_TIMEOUT_MS = 10000;
-      const reqStart = (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
-      diag.add?.(`[auth] request start ${tag || 'request'}`);
       let timeoutId;
       let timedOut = false;
       const timeoutPromise = new Promise((_, reject) => {
@@ -144,6 +218,11 @@ export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, ma
         }
       }
     } catch (err) {
+      const duration =
+        typeof performance !== 'undefined' && typeof performance.now === 'function'
+          ? Math.round(performance.now() - reqStart)
+          : Math.round(Date.now() - reqStart);
+      logRequestFailure(reqLabel, 'error', duration, err?.message || err);
       if (attempts < max) {
         attempts += 1;
         await sleep(200 * attempts);
@@ -152,10 +231,20 @@ export async function fetchWithAuth(makeRequest, { tag = '', retry401 = true, ma
       throw err;
     }
 
+    const duration =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? Math.round(performance.now() - reqStart)
+        : Math.round(Date.now() - reqStart);
     if (!res || typeof res.status !== 'number') {
+      logRequestFailure(reqLabel, 'invalid', duration);
       const err = new Error('invalid-response');
       err.status = 0;
       throw err;
+    }
+    if (res.status === 200) {
+      logRequestSuccess(reqLabel, duration);
+    } else {
+      logRequestFailure(reqLabel, res.status, duration);
     }
 
     if (res.status === 401 || res.status === 403) {

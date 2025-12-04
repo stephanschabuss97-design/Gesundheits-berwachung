@@ -84,6 +84,7 @@ Das Auth-Modul stellt sowohl die klassische Supabase-Auth (Login, Token-Refresh)
 
 - Konsole: `[auth] request start ...`, `[auth] getUserId start/done`, `[auth] request supabase` etc.
 - Touch-Log: `[resume] loggedFast=true`, `[doctor] unlock`, `[guard] passkey`.
+- Touchlog Phase 0.5: `[auth] getConf/getUserId` und `[auth] request ?` werden pro Boot/Resume nur einmal gestartet; Sammel-Eintr?ge zeigen `(xN)` bzw. `avg=` im Touch-Log und dienen als QA-Indikator f?r deterministische Auth-Flows.
 - `diag.add` Einträge, z. B. `[panel] bp save while auth unknown`, `[auth] getSession timeout`.
 - `uiError` (z. B. „Bitte anmelden“) bei Save-Buttons, wenn nicht eingeloggt.
 

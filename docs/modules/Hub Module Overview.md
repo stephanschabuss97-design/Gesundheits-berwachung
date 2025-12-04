@@ -76,6 +76,12 @@ Panels bleiben im DOM; das Hub blendet sie nur ein/aus. Panels öffnen/ schließ
 - **Panel Look**: zentrierte Overlays mit Zoom-In/Out (`hub-panel-zoom-in/out`), Milchglas-Lock via `body:has(.hub-panel.is-visible)`.
 - **Locking**: Aktiviertes Panel dimmt Orbit, blockt Buttons, verhindert Page-Scroll via `body:has(...)`.
 
+### Voice Safety Gate (Phase 0.4)
+
+- JS (`app/modules/hub/index.js`) stellt `AppModules.hub.getVoiceGateStatus/isVoiceReady/onVoiceGateChange` bereit. Gate ist offen, sobald `bootFlow.isStageAtLeast('IDLE') && supabaseState.authState !== 'unknown'`.
+- CSS nutzt `body.voice-locked` + `.hub-core-trigger.is-voice-locked`, um die Nadel zu dimmen, Pointer-Events zu blockieren und den Hinweis „Voice aktiviert sich nach dem Start“ einzublenden.
+- Falls Auth während einer Session zurück auf `unknown` fällt, der Gate Listener stoppt Recorder, VAD, Streams und schreibt `[voice] gate locked` in `diag`.
+
 ---
 
 ## 6. Datenabhängigkeiten

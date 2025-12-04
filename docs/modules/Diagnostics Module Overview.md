@@ -65,12 +65,20 @@ Alle Komponenten lassen sich über `DIAGNOSTICS_ENABLED` deaktivieren (z. B. p
 - `monitor.heartbeat(reason)` landet im Logger (z. B. `diagnostics heartbeat`).
 - `monitor.toggle(state)` protokolliert Panel-Öffnungen / künftige Overlays; diag.show/hide nutzt diese API.
 
+### 3.5 Boot-Error Overlay
+
+- `app/core/boot-flow.js` schreibt Boot-Phasen weiter in das Touch-Log und pflegt zusätzlich einen Fehlerzustand (`setBootErrorState`).
+- Sobald `bootFlow.markFailed()` oder der Stage-Hang-Timer greift, blendet der Bootscreen eine Fehlertafel ein (`#bootErrorPanel`), die automatisch den letzten `diag.add`-Text und Detailhinweis übernimmt.
+- Der Button „Touch-Log öffnen“ im Panel verwendet direkt `diag.show()`, damit QA auch bei blockierter UI sofort die Diagnose-Liste sieht.
+- Damit ist das Diagnostics-Layer jetzt sowohl über den Hub als auch über den Bootscreen erreichbar; QA muss nicht mehr auf `INIT_UI` warten, um Logeinträge zu prüfen.
+
 ---
 
 ## 4. Diagnose / QA Checks
 
 - `DIAGNOSTICS_ENABLED=false` → Stub-API (nur Warnungen), Logger-Ready-Event; QA siehe `docs/QA_CHECKS.md`.
 - Diagnostics-Layer forwarding (QA-Punkt):
+- Touchlog Phase 0.5: `app/core/diag.js` aggregiert identische Messages ?ber ein 4?s-Fenster und bietet Summary-Entries (`Boot: ?`, `Resume: ?`). QA pr?ft, dass nur noch ein Start/Ende pro Reason erscheint und `(xN)` ausschlie?lich am zusammengefassten Eintrag h?ngt.
   - `diag.add` sollte `diagnosticsLayer.logger.history` füllen.
   - `recordPerfStat('drawChart', start)` erzeugt `diagnosticsLayer.perf.snapshot('drawChart')` mit steigender `count`.
   - Öffnen/Schließen des diag-Panels toggelt `diagnosticsLayer.monitor` und erzeugt Heartbeats.

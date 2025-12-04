@@ -114,6 +114,7 @@
     /alles erledigt danke/i
   ];
   const END_ACTIONS = ['endSession', 'closeConversation'];
+  const HUB_DEBUG_ENABLED = !!appModules.config?.LOG_HUB_DEBUG;
 
   let hubButtons = [];
   let activePanel = null;
@@ -389,7 +390,7 @@
       const input = form.querySelector('#hubMessage');
       const value = input?.value?.trim();
       if (value) {
-        if (appModules.config?.DEV_ALLOW_DEFAULTS) {
+        if (HUB_DEBUG_ENABLED) {
           diag.add?.(`[hub-chat] stub send: ${value}`);
         }
         input.value = '';
@@ -441,7 +442,7 @@
   const ASSISTANT_CHAT_MAX_ATTEMPTS = 10;
   const ASSISTANT_CHAT_RETRY_DELAY = 250;
   const debugLog = (msg, payload) => {
-    if (!appModules.config?.DEV_ALLOW_DEFAULTS) return;
+    if (!HUB_DEBUG_ENABLED) return;
     diag.add?.(`[hub:debug] ${msg}` + (payload ? ` ${JSON.stringify(payload)}` : ''));
   };
 
@@ -455,12 +456,12 @@
     if (!panel) {
       assistantChatSetupAttempts += 1;
       if (assistantChatSetupAttempts === 1) {
-        diag.add?.('[assistant-chat] panel missing, retrying …');
+        debugLog('assistant-chat panel missing, retrying …');
       }
       if (assistantChatSetupAttempts < ASSISTANT_CHAT_MAX_ATTEMPTS) {
         global.setTimeout(() => setupAssistantChat(hub), ASSISTANT_CHAT_RETRY_DELAY);
       } else {
-        diag.add?.('[assistant-chat] panel missing after retries');
+        diag.add?.('[assistant-chat] panel missing nach wiederholten Versuchen');
       }
       return;
     }

@@ -75,7 +75,7 @@ Der alte Tab-Router bleibt vorhanden, wird jedoch nur noch für Fallbacks/Legacy 
   - `[ui] refresh start/end reason=...`
   - `[resume] ...`, `[capture] ...`, `[panel] ...`
 - `diag.add` für Fehlerpfade (`capture intake save error`, `chart trendpilot fail`, …).
-- `logDoctorError`, `logChartError` etc. leiten ihre Meldungen an `diag` weiter.
+- BootFlow liefert seit Phase 0.5 einen eigenen Fehlerzustand: jeder Boot-H?nger bzw. markFailed()-Call erzeugt eine Touch-Log-Zeile **und** blendet auf dem Bootscreen ein Fehlermodul mit "Touch-Log ?ffnen"-Button ein, damit QA noch vor INIT_UI an die Logs kommt.
 
 ---
 

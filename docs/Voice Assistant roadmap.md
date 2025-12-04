@@ -116,31 +116,94 @@ app/supabase/auth/core.js ✅
 assets/js/data-local.js ✅
 - Enthält mehrere console.warn (z. B. bei fehlenden Indizes). Wir sollen diese nur noch im Dev-Flag ausgeben und sonst über diag/report. Prüfen, ob ensureDbReady bei Fehlern BootFlow bereits markiert – falls nein, in Phase 0.2 hinzufügen.
 
-| 0.3 Auth Flow Fix          | TODO   | Pre-render Auth Gate: App rendert erst nach Supabase-Entscheid (`auth` / `unauth`). Kein klickbares UI im „auth unknown“. Klare `authState`-Übergänge in `app/supabase/auth/core.js` und `assets/js/boot-auth.js`.                     |
+| 0.3 Auth Flow Fix          | ✅   | Pre-render Auth Gate: App rendert erst nach Supabase-Entscheid (`auth` / `unauth`). Kein klickbares UI im „auth unknown“. Klare `authState`-Übergänge in `app/supabase/auth/core.js` und `assets/js/boot-auth.js`.                     |
 
 Phase 0.3 needs a tighter auth gate. Here’s the file-by-file plan:
 
-assets/js/boot-auth.js
+assets/js/boot-auth.js ✅
 Enforce pre‑render gate. Right now bootAuth() advances the boot stage as soon as onStatus fires with anything not strictly 'unknown', so the UI can unfreeze while Supabase is still checking. We need to let bootFlow know when status transitions to 'unknown', 'auth', or 'unauth', and only call setStage('INIT_CORE') after the first definite decision. While waiting, keep reporting “Prüfe Session …” so the loader stays up, and once a final state arrives, report “Session ok” or “Nicht angemeldet – Login erforderlich”. Also pass a flag (e.g. bootFlow.lockReason = 'auth-check') so other modules can block interactions until the stage flips.
 
-app/supabase/auth/core.js
+app/supabase/auth/core.js ✅
 Normalize authState transitions and UI locking. applyAuthUi only toggles the lock for true/false and skips 'unknown'. We need to treat 'unknown' as a locked state: set body.auth-locked, keep login overlay hidden but render a “Bitte warten” message, and surface the lock reason via bootFlow.report. During scheduleAuthGrace the UI should stay inert. Also ensure finalizeAuthState, scheduleAuthGrace, and requireSession all run through a single setAuthState(nextState) helper that notifies bootFlow and boot-auth.js of every state change. That keeps authHooks.onStatus consistent and avoids double transitions.
 
-assets/js/main.js
+assets/js/main.js ✅
 Gate boot stages to auth. runBootPhase currently goes straight from AUTH_CHECK to INIT_CORE once ensureModulesReady passes. Update it so runAuthCheckPhase waits for a resolved auth decision (maybe by awaiting a promise exposed by boot-auth.js or AppModules.supabase.authReady). Only after authState becomes 'auth' or 'unauth' should we call setBootStage('INIT_CORE'). Additionally, when authState is 'unknown', resume handlers and interaction logic should early-return to avoid clicks.
 
-app/styles/base.css / app/styles/auth.css
+app/styles/base.css / app/styles/auth.css ✅
 Visual lock for auth gate. Ensure there’s a style for body.auth-unknown (or reuse auth-locked) that keeps inputs inert and shows a short message on the boot overlay. We already dim via body.auth-locked, but for Phase 0.3 we need a distinct class so UX can show “Supabase prüft Session …”.
 
 app/modules/hub/index.js, app/modules/capture/index.js, etc.
 Honor the new auth gate. Each module that currently checks AppModules.bootFlow?.isStageAtLeast('INIT_UI') should also check supabaseState.authState !== 'unknown' (hooked via a helper exported from app/supabase/auth/core.js). For example, handleCaptureIntake, renderDoctor, hub button handlers, etc., should bail immediately when the new auth gate reports “unknown”.
 
-docs/Voice Assistant roadmap.md / QA docs
+docs/Voice Assistant roadmap.md / QA docs ✅
 Document the new auth gate. Update the roadmap and QA checklist to mention that the app doesn’t render or accept input until Supabase returns auth/unauth, and add test steps (e.g., “simulate slow Supabase; UI stays locked, boot overlay shows status”).
 
 Once these changes are in place, Phase 0.3’s requirements—pre-render auth gate, no clickable UI while auth status is unknown, and clarified state transitions in app/supabase/auth/core.js plus assets/js/boot-auth.js—will be satisfied.
 
-| 0.4 Voice Safety Init      | TODO   | Voice/Needle bleiben deaktiviert, bis Bootflow durchlaufen + Auth klar. Keine Mic-Prompts/Audio, bevor `state=idle`. Technischer Fokus: `app/modules/hub/index.js`, VAD/Needle-Handler, einfache Guards gegen frühe Klicks.          |
+| 0.4 Voice Safety Init      | ✅   | Voice-Nadel + VAD warten auf bootFlow=IDLE **und** eine entschiedene Supabase-Auth. Auth-Drops stoppen Aufnahme/TTS sofort, Orbit zeigt den Sperrstatus.          |
+
+Phase 0.4 Abschluss:
+
+- app/modules/hub/index.js : Voice-Gate-API (getVoiceGateStatus, isVoiceReady, onVoiceGateChange) blockt Needle/VAD/Resume solange Boot/Auth offen sind und loggt [voice] gate .... Bei Auth-Drop werden Recorder, Streams und Conversations beendet.
+- app/modules/hub/vad/vad.js  + Worklet checken den Gate vor start() und stoppen sofort mit [vad] stop due to voice gate lock, wenn Auth zur?ck auf unknown f?llt.
+- app/modules/assistant/session-agent.js  beendet Voice-Sessions automatisch, sobald der Gate schlie?t, und schreibt die Systemmeldung ?Voice deaktiviert ? bitte warten?, damit keine neuen Prompts starten.
+- app/styles/hub.css liefert body.voice-locked + .hub-core-trigger.is-voice-locked (gedimmte Orbit/Rings, Tooltip ?Voice aktiviert sich nach dem Start?, pointer-events:none).
+- assets/js/main.js pr?ft Voice-Gate pro Visibility/PageShow/Focus-Resume und ?berspringt 
+esumeFromBackground, solange Voice/Boot/Auth blockiert sind.
+- docs/QA_CHECKS.md, dieses Dokument und die Modul-Overviews (Hub, Assistant, VAD) enthalten jetzt die Voice-Safety-Guidelines + QA-Schritte (Slow Supabase, Mid-Session-Logout).
+
+- 0.5: Touchlog Cleanup (Deterministic Event Trace)
+Status: TODO
+Beschreibung:
+Der Touchlog wird bereinigt, dedupliziert und deterministisch gemacht. Ziel: Jeder User-Input wird genau einmal geloggt, in klarer Reihenfolge, ohne Doppel-Events durch parallele Listener oder frühe/late-Boot-Zustände. Alte Workarounds, doppelte Writes, überlagernde Pointer-/Mouse-/Touch-Handler werden entfernt oder vereinheitlicht. Logging läuft ausschließlich über touchLog.add() mit sauberem Event-Typ (tap, longpress, cancel, dragstart, …). Ergebnis: Ein stabiler, minimaler und nachvollziehbarer Input-Trace, der Debugging & QA deutlich vereinfacht.
+
+| 0.5 Touchlog Cleanup (Deterministic Trace) | TODO | Reduziere Touch-Log auf eindeutige Events: keine doppelten [capture] loadIntakeToday, [conf] getConf, [auth] getUserId oder UI-Refresh-Bl?cke w?hrend Boot/Resume. Konzentriert sich auf Log-Pipeline und Guards, keine Feature-?nderungen. **QA-Hinweis:** In docs/QA_CHECKS.md stehen die neuen Smoke-Schritte (Boot, manuelles Refresh, Resume), die sicherstellen, dass pro Reason genau ein Start/Ende geloggt wird. |
+
+Touchlog Cleanup Fokus:
+
+assets/js/main.js ✅
+- Boot/Resume Logging ([ui] refresh start/end, startBootProcess) l?uft derzeit mehrfach; f?ge eine Debounce/Guard-Ebene ein, damit jeder Reason nur einmal pro Boot/Resume protokolliert wird.
+- Erg?nze einen kleinen Log-Deduper (logOncePerTick(key, message)) f?r Boot-Phase, damit identische Zeilen (z. B. [ui] step start doctor) nicht mehrfach erscheinen.
+
+app/modules/hub/index.js ✅
+- Debug-Ausgaben ([hub:debug] assistant-chat setup...) feuern in Bl?cken bei jedem init. Halte sie hinter einem Flag oder logge nur beim ersten Setup.
+- Click-/State-Logs sollen nur Benutzeraktionen (Needle, Panels) erfassen, nicht Hintergrund-Retries.
+
+app/modules/capture/index.js & app/modules/doctor/index.js ✅
+- Boot- und Resume-Hooks rufen 
+efreshCaptureIntake/
+enderDoctor mehrfach; stelle sicher, dass [capture] loadIntakeToday start/done nur ausgegeben wird, wenn der Request tats?chlich anl?uft (kein zweites Mal mit identischem Reason).
+- Erg?nze Reason-Tags (boot/resume/manual) und dedupe pro Reason.
+
+app/supabase/auth/core.js ✅
+- getUserId start/done, conf getConf start/done, [auth] request sbSelect... werden durch parallele Promises doppelt geloggt. F?hre eine in-flight Map ein, die Logs pro Key zusammenfasst (ein Start, ein Done, optional (+N) f?r Re-Runs).
+
+app/core/diag.js ✅
+- Implementiere Touchlog-Throttling: wenn dieselbe Message innerhalb weniger Millisekunden erneut auftaucht, erh?he einen Z?hler statt eine neue Zeile hinzuzuf?gen ([capture] loadIntakeToday done ... (x3)).
+
+app/core/diag.js ✅
+- central touch‑log renderer. Expand the throttle window (e.g. sliding 3‑5 s per message key), add reason-aware hashing, and support severity tags + per-event IDs so repeats render as (xN) even when spaced apart. Also add a small buffer for “summary” entries (boot done, resume done) that collapse multiple internal steps.
+
+assets/js/main.js ✅
+- still orchestrates boot/resume logs. Ensure startBootProcess, runBootPhase, runAuthCheckPhase, and resume handlers emit exactly one “start/end” pair per reason and push a high-level summary instead of step-by-step [ui] step start doctor. Consider moving detailed sub-step logs behind a DEBUG_TOUCHLOG flag.
+
+app/modules/hub/index.js ✅
+- hub debug spam ([hub:debug] assistant-chat …). Wrap all diagnostic chatter behind a runtime flag (e.g. AppModules.config?.LOG_HUB_DEBUG). Only user-facing actions (needle click, tab switch) should hit the touch log; retries/auto-setup should write to diag only when failing.
+
+app/modules/capture/index.js & app/modules/doctor/index.js ✅
+- they still log every refresh start/done. Add dedupe caches keyed by {reason, day} and emit a single [capture] refresh reason=boot … line with (xN) counters when the same refresh fires again before finishing. Similar treatment for doctor view refresh/render logs.
+
+assets/js/data-local.js & app/supabase/auth/core.js ✅
+- we already dedupe concurrent getConf/getUserId, but sequential reads still print each start. Add a per-boot cache: once a key has been read successfully, skip logging further “start” entries unless a new boot/resume cycle begins.
+
+app/supabase/core/http.js ✅
+- throttle [auth] request start/end … lines per tag; multiple identical requests inside boot should collapse into a single entry with (+N) plus timing stats. Include failure details only when status≠200.
+
+docs/QA_CHECKS.md & module overview docs ✅
+- document the new touch-log expectations (one entry per logical action, duplicates collapsed) so QA can verify the enterprise log criteria.
+- roadmap.md (dieser Abschnitt) + docs/QA_CHECKS.md: erg?nze QA-Schritte (Boot einmal, Touchlog durchsichten ? keine Duplikate; Trigger manuelles Refresh ? h?chstens ein Log-Paar pro Reason). Aktualisiere ggf. Module Overviews (Capture, Doctor, Auth, Diagnostics) mit Hinweis auf deterministische Logs.
+
+This pass should leave the touch log with concise, high-level events (boot start/end, auth decision, capture refresh reason, voice gate changes) while detailed retries stay hidden unless explicitly enabled for debugging.
 
 **Codex-Hinweis (Phase 0):**
 
@@ -421,6 +484,27 @@ Stephan-spezifische Gesundheitsdaten und Limits zentral in Supabase halten, stat
 
 - In dieser Phase nur Tabellen + Edge Function-Kontext erweitern.
 - Keine neuen großen UI-Bereiche bauen – ein einfaches Profil-Panel reicht.
+
+### .4 Hybrid Panel Animation (Hub Performance Mode)
+
+Ziel:
+Die Hub-Panels werden für Mobile/Tablet (Performance Mode) und Desktop (cineastisch, aber leicht) optimiert.
+Basierend auf der eigenen „Panel Animation Performance Roadmap“.
+
+Inhalt:
+Neue Mobile Keyframes (zoom-in-mobile, zoom-out-mobile) – nur opacity + transform.
+Media Query <1025px mit Overrides:
+kein backdrop-filter auf Mobile
+leichtere Panel-Shadows
+neue Animationen nur für Mobile
+vereinfachter Orbit/Aura-Effekt bei offenen Panels
+Desktop ≥1025px:
+cineastische Animation mit reduzierten Keyframes (Squash-Grow), ohne Shadow-Animation
+Glow/Elevation via transition statt Keyframes
+Panel-Open/Close über neue Desktop-Keyframes (zoom-in-desktop, zoom-out-desktop)
+Zielwirkung:
+Mobile: ultrasmooth & performant für Alltag
+Desktop: edel, aber ohne teure Shadow-Repaints
 
 ---
 

@@ -39,6 +39,61 @@ const reportBootStatus = (msg, tone = 'info') => {
     /* noop */
   }
 };
+const inflightDiagLogs = new Map();
+const userIdLogSeenSuccess = new Set();
+const userIdLogSuppressed = new Set();
+const resetUserIdLogCache = () => {
+  userIdLogSeenSuccess.clear();
+  userIdLogSuppressed.clear();
+};
+if (globalWindow?.addEventListener) {
+  globalWindow.addEventListener('pageshow', resetUserIdLogCache);
+  globalWindow.addEventListener('midas:log-reset', resetUserIdLogCache);
+}
+if (globalWindow?.document?.addEventListener) {
+  globalWindow.document.addEventListener('visibilitychange', () => {
+    if (globalWindow.document.visibilityState === 'visible') {
+      resetUserIdLogCache();
+    }
+  });
+}
+const logDiagStart = (key, message) => {
+  if (key === 'auth:getUserId' && userIdLogSeenSuccess.has(key)) {
+    userIdLogSuppressed.add(key);
+    return;
+  }
+  if (key === 'auth:getUserId') {
+    userIdLogSuppressed.delete(key);
+  }
+  const entry = inflightDiagLogs.get(key);
+  if (entry) {
+    entry.dupes += 1;
+    return;
+  }
+  inflightDiagLogs.set(key, { dupes: 0 });
+  diag.add?.(message);
+};
+const logDiagEnd = (key, message, { success = false } = {}) => {
+  if (key === 'auth:getUserId' && userIdLogSuppressed.has(key)) {
+    userIdLogSuppressed.delete(key);
+    if (success) userIdLogSeenSuccess.add(key);
+    return;
+  }
+  const entry = inflightDiagLogs.get(key);
+  if (!entry) {
+    diag.add?.(message);
+    if (success && key === 'auth:getUserId') {
+      userIdLogSeenSuccess.add(key);
+    }
+    return;
+  }
+  inflightDiagLogs.delete(key);
+  const suffix = entry.dupes ? ` (+${entry.dupes})` : '';
+  diag.add?.(`${message}${suffix}`);
+  if (success && key === 'auth:getUserId') {
+    userIdLogSeenSuccess.add(key);
+  }
+};
 
     // SUBMODULE: constants @internal - Authentifizierungs-Timing & Defaults
 const AUTH_GRACE_MS = 400;
@@ -139,6 +194,121 @@ const callAuthGuard = (enabled) => {
   }
 };
 
+const normalizeAuthState = (value) => {
+  if (value === 'auth' || value === 'unauth') return value;
+  return 'unknown';
+};
+
+const authStateWaiters = [];
+const removeAuthStateWaiter = (waiter) => {
+  const idx = authStateWaiters.indexOf(waiter);
+  if (idx !== -1) {
+    authStateWaiters.splice(idx, 1);
+  }
+};
+const resolveAuthStateWaiters = (state) => {
+  if (state === 'unknown') return;
+  while (authStateWaiters.length) {
+    const waiter = authStateWaiters.shift();
+    try {
+      waiter.cleanup?.();
+    } catch (_) {}
+    try {
+      waiter.resolve(state);
+    } catch (_) {}
+  }
+};
+
+const updateBootStatusForState = (state) => {
+  if (state === 'auth') {
+    reportBootStatus('');
+    return;
+  }
+  if (state === 'unauth') {
+    reportBootStatus('Nicht angemeldet', 'error');
+    return;
+  }
+  reportBootStatus('Pr\u00fcfe Session ...', 'info');
+};
+
+const updateBootLockForState = (state) => {
+  const bootFlow = getBootFlow();
+  if (!bootFlow) return;
+  if (state === 'unknown') {
+    bootFlow.lockReason = 'auth-check';
+    return;
+  }
+  if (bootFlow.lockReason === 'auth-check') {
+    delete bootFlow.lockReason;
+  }
+};
+
+const applyAuthUi = (state) => {
+  const normalized = normalizeAuthState(state);
+  const isLoggedIn = normalized === 'auth';
+  const body = globalWindow?.document?.body;
+  if (body) {
+    body.classList.toggle('auth-unknown', normalized === 'unknown');
+  }
+  callAuthGuard(isLoggedIn);
+  callDoctorAccess(isLoggedIn);
+  if (normalized === 'auth') {
+    callLoginOverlay(false);
+    return;
+  }
+  if (normalized === 'unauth') {
+    callLoginOverlay(true);
+  } else {
+    callLoginOverlay(false);
+  }
+};
+
+const setAuthState = (nextState, { force = false } = {}) => {
+  const normalized = normalizeAuthState(nextState);
+  if (!force && supabaseState.authState === normalized) {
+    return normalized;
+  }
+  supabaseState.authState = normalized;
+  if (normalized === 'auth') {
+    supabaseState.lastLoggedIn = true;
+  } else if (normalized === 'unauth') {
+    supabaseState.lastLoggedIn = false;
+  }
+  updateBootLockForState(normalized);
+  updateBootStatusForState(normalized);
+  applyAuthUi(normalized);
+  callStatus(normalized);
+  resolveAuthStateWaiters(normalized);
+  return normalized;
+};
+
+export const isAuthDecisionKnown = () => supabaseState.authState !== 'unknown';
+
+export const waitForAuthDecision = ({ signal } = {}) => {
+  const current = normalizeAuthState(supabaseState.authState);
+  if (current !== 'unknown') {
+    return Promise.resolve(current);
+  }
+  return new Promise((resolve, reject) => {
+    const waiter = {
+      resolve(state) {
+        resolve(state);
+      },
+      cleanup: null
+    };
+    if (signal) {
+      const abortHandler = () => {
+        signal.removeEventListener('abort', abortHandler);
+        removeAuthStateWaiter(waiter);
+        reject(signal.reason || new DOMException('Aborted', 'AbortError'));
+      };
+      signal.addEventListener('abort', abortHandler, { once: true });
+      waiter.cleanup = () => signal.removeEventListener('abort', abortHandler);
+    }
+    authStateWaiters.push(waiter);
+  });
+};
+
 // SUBMODULE: authGrace @internal - Grace-Period-Handling und Finalisierung
 const clearAuthGrace = () => {
   if (supabaseState.authGraceTimer) {
@@ -147,25 +317,9 @@ const clearAuthGrace = () => {
   }
 };
 
-const applyAuthUi = (logged) => {
-  callAuthGuard(!!logged);
-  callDoctorAccess(!!logged);
-  if (logged) {
-    callLoginOverlay(false);
-  } else if (supabaseState.authState !== 'unknown') {
-    callLoginOverlay(true);
-  }
-};
-
 export const finalizeAuthState = (logged) => {
   clearAuthGrace();
-  supabaseState.authState = logged ? 'auth' : 'unauth';
-  supabaseState.lastLoggedIn = logged;
-  if (!logged) {
-    reportBootStatus('Nicht angemeldet', 'error');
-  } else {
-    reportBootStatus('');
-  }
+  const nextState = logged ? 'auth' : 'unauth';
   if (logged) {
     supabaseState.pendingSignOut = null;
   } else if (typeof supabaseState.pendingSignOut === 'function') {
@@ -175,13 +329,12 @@ export const finalizeAuthState = (logged) => {
         supabaseState.pendingSignOut = null;
       });
   }
-  applyAuthUi(logged);
-  callStatus(supabaseState.authState);
+  setAuthState(nextState, { force: true });
 };
 
 export const scheduleAuthGrace = () => {
   clearAuthGrace();
-  supabaseState.authState = 'unknown';
+  setAuthState('unknown', { force: true });
   supabaseState.authGraceTimer = setTimeout(async () => {
     try {
       if (!supabaseState.sbClient) {
@@ -204,27 +357,24 @@ export async function requireSession() {
     reportBootStatus('Supabase Client fehlt', 'error');
     getBootFlow()?.markFailed?.('Supabase Client fehlt');
     callUserUi('');
-    callLoginOverlay(true);
-    callAuthGuard(false);
-    callDoctorAccess(false);
-    supabaseState.lastLoggedIn = false;
+    setAuthState('unauth', { force: true });
     return false;
   }
   try {
     const { data: { session } = {} } = await supabaseState.sbClient.auth.getSession();
     const logged = !!session;
-    supabaseState.lastLoggedIn = logged;
     callUserUi(session?.user?.email || '');
     if (logged) {
-      supabaseState.authState = 'auth';
       clearAuthGrace();
     } else if (!supabaseState.authGraceTimer) {
-      supabaseState.authState = 'unauth';
+      setAuthState('unauth');
     }
-    applyAuthUi(logged);
-    callStatus(supabaseState.authState);
+    if (logged) {
+      setAuthState('auth');
+    }
     return logged;
   } catch (_) {
+    setAuthState('unknown');
     return false;
   }
 }
@@ -244,9 +394,10 @@ export async function isLoggedInFast({ timeout = 400 } = {}) {
     if (supabaseState.authState === 'unknown' && !logged && supabaseState.lastLoggedIn) {
       return supabaseState.lastLoggedIn;
     }
-    supabaseState.lastLoggedIn = logged;
     if (supabaseState.authState !== 'unknown') {
-      supabaseState.authState = logged ? 'auth' : 'unauth';
+      setAuthState(logged ? 'auth' : 'unauth');
+    } else {
+      supabaseState.lastLoggedIn = logged;
     }
     return logged;
   } catch (_) {
@@ -275,7 +426,7 @@ export function watchAuthState() {
       globalWindow?.requestUiRefresh?.().catch((err) =>
         diag.add?.('ui refresh err: ' + (err?.message || err))
       );
-      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.(); } catch (_) {}
+      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.('auth:login'); } catch (_) {}
       try { await globalWindow?.refreshAppointments?.(); } catch (_) {}
       return;
     }
@@ -288,7 +439,7 @@ export function watchAuthState() {
     }
     supabaseState.pendingSignOut = async () => {
       (globalWindow?.teardownRealtime || noopRealtime)();
-      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.(); } catch (_) {}
+      try { await globalWindow?.AppModules?.capture?.refreshCaptureIntake?.('auth:logout'); } catch (_) {}
       try { await globalWindow?.refreshAppointments?.(); } catch (_) {}
     };
 
@@ -313,12 +464,18 @@ export async function afterLoginBoot() {
 
 // SUBMODULE: getUserId @public - ermittelt aktuelle User-ID mit Timeout & Fallbacks
 export async function getUserId() {
+  const LOG_KEY = 'auth:getUserId';
   try {
-    diag.add?.('[auth] getUserId start');
+    logDiagStart(LOG_KEY, '[auth] getUserId start');
     const supa = await ensureSupabaseClient();
     if (!supa) {
       const fallback = fallbackUserId('noClient');
-      return fallback ?? null;
+      if (fallback) {
+        logDiagEnd(LOG_KEY, '[auth] getUserId done (fallback)', { success: true });
+        return fallback;
+      }
+      logDiagEnd(LOG_KEY, '[auth] getUserId done null');
+      return null;
     }
     let timeoutId;
     let timedOut = false;
@@ -336,7 +493,10 @@ export async function getUserId() {
       if (timedOut) {
         diag.add?.('[auth] getUserId timeout');
         const fallback = fallbackUserId('timeout');
-        if (fallback) return fallback;
+        if (fallback) {
+          logDiagEnd(LOG_KEY, '[auth] getUserId done (fallback)', { success: true });
+          return fallback;
+        }
       }
       throw err;
     } finally {
@@ -345,17 +505,24 @@ export async function getUserId() {
     const uid = userInfo?.id ?? null;
     if (uid) {
       supabaseState.lastUserId = uid;
-      diag.add?.(`[auth] getUserId done ${maskUid(uid)}`);
+      logDiagEnd(LOG_KEY, `[auth] getUserId done ${maskUid(uid)}`, { success: true });
       return uid;
     }
     const fallbackNoUid = fallbackUserId('noUid');
-    if (fallbackNoUid) return fallbackNoUid;
-    diag.add?.('[auth] getUserId done null');
+    if (fallbackNoUid) {
+      logDiagEnd(LOG_KEY, '[auth] getUserId done (fallback)', { success: true });
+      return fallbackNoUid;
+    }
+    logDiagEnd(LOG_KEY, '[auth] getUserId done null');
     return null;
   } catch (e) {
     diag.add?.('[auth] getUserId error: ' + (e?.message || e));
     const fallbackError = fallbackUserId('error');
-    if (fallbackError) return fallbackError;
+    if (fallbackError) {
+      logDiagEnd(LOG_KEY, '[auth] getUserId done (fallback)', { success: true });
+      return fallbackError;
+    }
+    logDiagEnd(LOG_KEY, '[auth] getUserId done null');
     return null;
   }
 }

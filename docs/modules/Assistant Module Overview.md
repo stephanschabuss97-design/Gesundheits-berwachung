@@ -31,11 +31,12 @@ Deployment über `supabase functions deploy <name> --project-ref jlylmservssinsa
 
 ## 3. Voice-Loop (Frontend)
 
-1. **Start/Stop Input** – `startVoiceRecording()` initiiert `MediaRecorder`, `handleVoiceTrigger()` toggelt Aufnahme / Playback / Busy; VAD überwacht Stille.
-2. **Transcribe** – `transcribeAudio()` baut FormData (`audio`) und ruft `/midas-transcribe`; UI-State → `thinking`.
-3. **Assistant Roundtrip** – `fetchAssistantReply()` sendet History (`voiceCtrl.history`) inkl. `session_id`, erhält Reply + Actions.
-4. **TTS Playback** – `requestTtsAudio()` → Blob-URL, `playVoiceAudio()` setzt `speaking`, Cleanup nach `onended`.
-5. **State Labels & Fallback** – `VOICE_STATE_LABELS` + `VOICE_FALLBACK_REPLY` halten UX stabil (z.B. bei Netzwerkfehlern).
+1. **Start/Stop Input** - `startVoiceRecording()` initiiert `MediaRecorder`, `handleVoiceTrigger()` toggelt Aufnahme / Playback / Busy; VAD überwacht Stille.
+2. **Transcribe** - `transcribeAudio()` baut FormData (`audio`) und ruft `/midas-transcribe`; UI-State → `thinking`.
+3. **Assistant Roundtrip** - `fetchAssistantReply()` sendet History (`voiceCtrl.history`) inkl. `session_id`, erhält Reply + Actions.
+4. **TTS Playback** - `requestTtsAudio()` → Blob-URL, `playVoiceAudio()` setzt `speaking`, Cleanup nach `onended`.
+5. **State Labels & Fallback** - `VOICE_STATE_LABELS` + `VOICE_FALLBACK_REPLY` halten UX stabil (z.B. bei Netzwerkfehlern).
+6. **Voice Gate Hook** (Phase 0.4) - `createAssistantSession` konsumiert `AppModules.hub.isVoiceReady/onVoiceGateChange`. Voice-Sessions starten nur, wenn der Gate offen ist; sobald Auth/Boot zurück auf „unknown“ fällt, erzeugt das Panel die Systemmeldung „Voice deaktiviert – bitte warten“ und beendet die Session ohne weiteres `getUserMedia`.
 
 ---
 

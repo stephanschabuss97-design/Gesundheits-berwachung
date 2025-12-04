@@ -84,6 +84,7 @@ Siehe `docs/modules/Intake Module Overview.md`. Capture-Modul stellt Buttons, Ti
   - `[capture] reset intake ...`
   - `[panel] bp save while auth unknown`
   - `[body] cleared`, `[bp:auto ...]`
+- Touchlog Phase 0.5: `[capture] refresh start/done reason=?` erscheint pro Reason/Tag genau einmal; Mehrfachtrigger landen als `(xN)` am Done-Eintrag. Boot, manuelle Refreshs und Resume sind damit deterministisch pr?fbar.
 - `diag.add` in allen Fehlerpfaden (RPC-Fails, Save-Fails, Auto-Refresh).
 - `uiError` zeigt User-Feedback (Speichern fehlgeschlagen, keine Daten).
 
