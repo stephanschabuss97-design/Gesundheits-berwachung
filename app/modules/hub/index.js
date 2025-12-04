@@ -1070,29 +1070,35 @@
     return reply;
   };
 
-  const sendAssistantPhotoMessage = async (dataUrl, file) => {
+  const sendAssistantPhotoMessage = async (dataUrl, file, existingMessage = null) => {
     if (!assistantChatCtrl || assistantChatCtrl.sending) return;
     ensureAssistantSession();
+    const resolvedDataUrl =
+      dataUrl ||
+      existingMessage?.retryPayload?.base64 ||
+      existingMessage?.imageData ||
+      '';
     const targetMessage =
       existingMessage ||
       appendAssistantMessage('user', '', {
         type: 'photo',
         status: 'processing',
         resultText: 'Noch kein Ergebnis.',
-        imageData: dataUrl,
-        meta: { fileName: file?.name || '' },
-        retryPayload: { base64: dataUrl, fileName: file?.name || '' },
+        imageData: resolvedDataUrl,
+        meta: { fileName: file?.name || existingMessage?.meta?.fileName || '' },
+        retryPayload: { base64: resolvedDataUrl, fileName: file?.name || existingMessage?.meta?.fileName || '' },
       });
     if (!targetMessage) return;
     targetMessage.status = 'processing';
     targetMessage.resultText = 'Analyse läuft …';
     targetMessage.retryable = false;
-    targetMessage.retryPayload = targetMessage.retryPayload || { base64: dataUrl, fileName: file?.name || '' };
+    targetMessage.retryPayload =
+      targetMessage.retryPayload || { base64: resolvedDataUrl, fileName: file?.name || targetMessage.meta?.fileName || '' };
     renderAssistantChat();
     setAssistantSending(true);
     diag.add?.('[assistant-vision] analyse start');
     try {
-      const result = await fetchAssistantVisionReply(dataUrl, file);
+      const result = await fetchAssistantVisionReply(resolvedDataUrl, file);
       targetMessage.status = 'done';
       targetMessage.resultText = formatAssistantVisionResult(result);
       targetMessage.content = '';
