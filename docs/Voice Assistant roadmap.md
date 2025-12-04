@@ -312,7 +312,7 @@ Neue Styles für Foto-Bubbles (Thumbnail, Loading-State, Analyse-Resultbox).
 Responsives Verhalten (Thumbnails nicht zu groß, Buttons bleiben klickbar).
 Zustände für Fehler/Retry (z. B. rote Border, Hinweistext).
 
-app/modules/hub/index.js
+app/modules/hub/index.js ✅
 Bestehenden Kamera-Button (assistantChatCtrl.cameraBtn + verstecktes <input type="file">) verdrahten:
 Aufnahme → lesen als Base64 (z. B. via FileReader).
 Request an /api/midas-vision (bereits vorhandener Endpunkt).
@@ -321,27 +321,28 @@ Response anzeigen (Texte + Werte), ohne etwas zu speichern.
 Fehlerpfad loggen (diag.add('[assistant-vision] …')), UI mit Retry-Option versehen.
 Sicherstellen, dass Intake-Pills nicht erneut abgefragt werden (wir nutzen die vorhandenen Snapshot-Helper).
 
-app/modules/assistant/index.js und/oder actions.js
+app/modules/assistant/index.js und/oder actions.js ✅
 Helfer kapseln, um Vision-Messages in den Chat einzuschieben (z. B. assistantUi.addPhotoMessage({ imageUrl, status, results })).
 Falls wir Formatierungen (z. B. „Wasser: 300 ml“) oder Empfehlungstexte brauchen, hier vorbereiten, damit hub/index.js nur die Daten liefert.
 Optional: Handler für Suggest-Card-Befüllung, falls Vision später Speicherung triggert (Phase 5).
 
-Hilfsfunktionen / Utilities
+Hilfsfunktionen / Utilities ✅
 Falls noch nicht vorhanden: Base64-Konverter (kann in app/modules/assistant/index.js leben oder als kleiner Helper am Dateiende von hub/index.js).
 Timeout-/Abort-Handling (z. B. AbortController) damit Abbrüche sauber laufen.
 
-Backend-Verweis (separates Repo, keine Änderung nötig)
+Backend-Verweis (separates Repo, keine Änderung nötig) ✅
 supabase/functions/midas-vision/index.ts bleibt wie er ist; nur sicherstellen, dass wir denselben Endpoint wie Phase 3.1 nutzen (MIDAS_ENDPOINTS.vision).
 
-Dokumentation / QA
+Dokumentation / QA ✅
 docs/modules/Assistant Module Overview.md: Abschnitt „Foto-Analyse“ ergänzen (Flow, erwartete Werte, keine Speicherung).
 docs/QA_CHECKS.md: Testfälle aufnehmen (Foto hochladen, Analyse-Ergebnis erscheint im Chat, Fehlerfall zeigt Hinweis).
 
 | **3.3 Diktiermodus (Input only)** | PLANNED | Web Speech API dient als optionaler Eingabehelfer und f?llt nur das Textfeld. Kein Voice-Loop, keine Aktionen. |
-| **3.4 Hub Center Mapping** | TODO | Center-Button vereint beide Modi: **Short Press** ?ffnet Text, **Long Press (~700?ms)** startet den bestehenden Voice-Loop (Desktop/Touch identisch, inkl. Cancel bei fr?hem mouseup/	ouchend). |
-| **3.5 Butler-Panel Header** | TODO | Kopfbereich zeigt Wasser/Salz/Protein-Pills und die n?chsten 1?2 Termine (read-only). Werte stammen aus bestehenden Tabellen und liefern Kontext f?r jede Antwort. |
+| **3.4 Hub Center Mapping** | ✅| Center-Button vereint beide Modi: **Short Press** ?ffnet Text, **Long Press (~700?ms)** startet den bestehenden Voice-Loop (Desktop/Touch identisch, inkl. Cancel bei fr?hem mouseup/	ouchend). |
+| **3.5 Butler-Panel Header** | ✅ | Kopfbereich zeigt Wasser/Salz/Protein-Pills und die n?chsten 1?2 Termine (read-only). Werte stammen aus bestehenden Tabellen und liefern Kontext f?r jede Antwort. |
 
 > **Hinweis:** Kein Suggest-/Auto-Save in Phase?3. S?mtliche Schreibaktionen werden in Phase?5 umgesetzt.
+
 ## Phase 4 – Domain Features & Utilities
 
 **Ziel:**

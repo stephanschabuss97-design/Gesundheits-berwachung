@@ -11,6 +11,8 @@
 import { createAssistantSession } from './session-agent.js';
 import { dispatchAssistantActions } from './actions.js';
 
+const assistantUiHelpers = createAssistantUiHelpers();
+
 /**
  * Public factory fuer den Rest der App.
  *
@@ -41,10 +43,14 @@ export function createMidasAssistantSession(options = {}) {
 // Optional: Expose via AppModules for global/legacy access.
 if (typeof window !== 'undefined') {
   window.AppModules = window.AppModules || {};
-  window.AppModules.assistant = {
-    createSession: createMidasAssistantSession
-  };
+  const assistantNamespace = window.AppModules.assistant || {};
+  assistantNamespace.createSession = createMidasAssistantSession;
+  assistantNamespace.ui = assistantUiHelpers;
+  window.AppModules.assistant = assistantNamespace;
+  window.AppModules.assistantUi = assistantUiHelpers;
 }
+
+export { assistantUiHelpers as assistantUi };
 
 const DEBUG_LOGS_ENABLED = (() => {
   if (typeof window === 'undefined') return false;
@@ -89,4 +95,72 @@ function formatError(err) {
     }
   }
   return String(err);
+}
+
+function createAssistantUiHelpers() {
+  const DEFAULT_PHOTO_RESULT_TEXT = 'Noch kein Ergebnis.';
+  const DEFAULT_SUMMARY_TEXT = 'Analyse abgeschlossen.';
+
+  function createPhotoMessageModel({ imageData, fileName }) {
+    return {
+      type: 'photo',
+      status: 'processing',
+      resultText: DEFAULT_PHOTO_RESULT_TEXT,
+      imageData: imageData || '',
+      meta: fileName ? { fileName } : {},
+      retryPayload: {
+        base64: imageData || '',
+        fileName: fileName || ''
+      },
+      retryable: false
+    };
+  }
+
+  function formatVisionResultText(result, options = {}) {
+    const { includeReply = true } = options;
+    if (!result) return DEFAULT_SUMMARY_TEXT;
+    const analysis = result.analysis || {};
+    const metrics = [];
+    const pushMetric = (label, value, suffix, digits = 1) => {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return;
+      metrics.push(`${label}: ${num.toFixed(digits)} ${suffix}`);
+    };
+    pushMetric('Wasser', analysis.water_ml, 'ml', 0);
+    pushMetric('Salz', analysis.salt_g, 'g');
+    pushMetric('Protein', analysis.protein_g, 'g');
+
+    const reply = (result.reply || '').trim();
+    const base = metrics.length ? metrics.join(' • ') : DEFAULT_SUMMARY_TEXT;
+    if (includeReply && reply) {
+      return metrics.length ? `${base} • ${reply}` : reply;
+    }
+    return base;
+  }
+
+  function buildVisionSuggestPayload(result) {
+    if (!result) return null;
+    const analysis = result.analysis || {};
+    const hasAny =
+      analysis.water_ml != null ||
+      analysis.salt_g != null ||
+      analysis.protein_g != null;
+    if (!hasAny && !result.reply) return null;
+    return {
+      title: 'Analyse verfügbar',
+      body: formatVisionResultText(result),
+      metrics: {
+        water_ml: Number(analysis.water_ml) || 0,
+        salt_g: Number(analysis.salt_g) || 0,
+        protein_g: Number(analysis.protein_g) || 0
+      },
+      recommendation: (result.reply || '').trim() || null
+    };
+  }
+
+  return {
+    createPhotoMessageModel,
+    formatVisionResultText,
+    buildVisionSuggestPayload
+  };
 }

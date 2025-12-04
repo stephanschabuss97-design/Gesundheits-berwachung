@@ -1,4 +1,25 @@
 
+## Phase 3.2 – Assistant Fotoanalyse (2025-12-05)
+
+**Scope:** Assistant-Panel Kamera/Galerie Workflow (short press Kamera, long press Galerie), Vision-Upload via `/midas-vision`, reine Darstellung (kein Speichern).
+
+**Smoke**
+- [ ] Kamera-Button **kurz tippen** → OS-Kamera öffnet; Foto aufnehmen, Senden. Erwartung: Foto-Bubble erscheint sofort mit Thumbnail + Text *„Analyse läuft …“*. Nach Serverantwort zeigt der Bubble Wasser/Salz/Protein und die MIDAS-Empfehlung.
+- [ ] **Langer Druck** (~650 ms) auf Kamera-Button → Galerie-/Datei-Dialog. Ausgewähltes Bild wird angezeigt wie oben.
+- [ ] Fehlerfall: Netzwerk deaktivieren oder `/midas-vision` blockieren → Bubble färbt sich rot, Text „Das Foto konnte nicht analysiert werden.“ + Button „Nochmal analysieren“.
+
+**Sanity**
+- [ ] Touch-Log meldet `[assistant-vision] analyse start/success/fail` maximal einmal pro Upload; keine zusätzlichen `[capture] refresh` Einträge.
+- [ ] Retry-Button verwendet denselben Snapshot erneut (kein erneuter Kamera-Dialog erforderlich).
+- [ ] Butler-Header (Intake-Pills & Terminliste) bleibt unverändert; kein zusätzlicher Snapshot-Request beim Foto-Upload.
+
+**Regression**
+- [ ] Textchat (Senden/Empfangen) funktioniert unverändert; Voice-Gate/Needle bleiben gesperrt solange `authState === 'unknown'`.
+- [ ] App-Performance auf Mobil: Foto-Bubble passt sich dem Viewport an (max 70 vw), keine horizontalen Scrollbars.
+- [ ] Kein Speichern: Nach Refresh sind keine zusätzlichen Intake-Werte vorhanden, nur Anzeige im Chat.
+
+---
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

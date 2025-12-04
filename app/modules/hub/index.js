@@ -125,6 +125,11 @@
   let supabaseFunctionHeadersPromise = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
+  const getAssistantUiHelpers = () =>
+    appModules.assistantUi ||
+    appModules.assistant?.ui ||
+    global.AppModules?.assistantUi ||
+    null;
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -814,18 +819,65 @@
     form?.addEventListener('submit', handleAssistantChatSubmit);
     clearBtn?.addEventListener('click', () => resetAssistantChat(true));
     photoInput.addEventListener('change', handleAssistantPhotoSelected, false);
-    cameraBtn?.addEventListener('click', handleAssistantCameraClick);
+    bindAssistantCameraButton(cameraBtn, photoInput);
     resetAssistantChat();
     debugLog('assistant-chat setup complete');
   };
 
-  const handleAssistantCameraClick = () => {
-    if (!assistantChatCtrl?.photoInput) {
-      appendAssistantMessage('system', 'Kamera nicht verfügbar.');
-      return;
-    }
-    assistantChatCtrl.photoInput.value = '';
-    assistantChatCtrl.photoInput.click();
+  const bindAssistantCameraButton = (btn, input) => {
+    if (!btn || !input) return;
+    const LONG_PRESS_MS = 650;
+    let pressTimer = null;
+    let longPressTriggered = false;
+
+    const resetTimer = () => {
+      if (pressTimer) {
+        global.clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    const openSelector = ({ capture }) => {
+      input.value = '';
+      if (capture) {
+        input.setAttribute('capture', capture);
+      } else {
+        input.removeAttribute('capture');
+      }
+      input.click();
+    };
+
+    const handlePointerDown = (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      longPressTriggered = false;
+      resetTimer();
+      pressTimer = global.setTimeout(() => {
+        longPressTriggered = true;
+        openSelector({ capture: null });
+      }, LONG_PRESS_MS);
+    };
+
+    const handlePointerUp = (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (!pressTimer) return;
+      resetTimer();
+      if (!longPressTriggered) {
+        openSelector({ capture: 'environment' });
+      }
+    };
+
+    const cancelPress = () => {
+      resetTimer();
+    };
+
+    btn.addEventListener('pointerdown', handlePointerDown);
+    btn.addEventListener('pointerup', handlePointerUp);
+    btn.addEventListener('pointerleave', cancelPress);
+    btn.addEventListener('pointercancel', cancelPress);
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
   };
 
   const handleAssistantPhotoSelected = async (event) => {
@@ -1078,16 +1130,22 @@
       existingMessage?.retryPayload?.base64 ||
       existingMessage?.imageData ||
       '';
-    const targetMessage =
-      existingMessage ||
-      appendAssistantMessage('user', '', {
+    const assistantUi = getAssistantUiHelpers();
+    const basePayload =
+      assistantUi?.createPhotoMessageModel?.({
+        imageData: resolvedDataUrl,
+        fileName: file?.name || existingMessage?.meta?.fileName || ''
+      }) || {
         type: 'photo',
         status: 'processing',
         resultText: 'Noch kein Ergebnis.',
         imageData: resolvedDataUrl,
         meta: { fileName: file?.name || existingMessage?.meta?.fileName || '' },
         retryPayload: { base64: resolvedDataUrl, fileName: file?.name || existingMessage?.meta?.fileName || '' },
-      });
+        retryable: false
+      };
+    const targetMessage =
+      existingMessage || appendAssistantMessage('user', '', basePayload);
     if (!targetMessage) return;
     targetMessage.status = 'processing';
     targetMessage.resultText = 'Analyse läuft …';
@@ -1246,6 +1304,10 @@
   };
 
   const formatAssistantVisionResult = (result) => {
+    const assistantUi = getAssistantUiHelpers();
+    if (assistantUi?.formatVisionResultText) {
+      return assistantUi.formatVisionResultText(result);
+    }
     if (!result) return 'Analyse abgeschlossen.';
     const parts = [];
     const analysis = result.analysis || {};
