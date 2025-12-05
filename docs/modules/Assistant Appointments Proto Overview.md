@@ -1,42 +1,53 @@
-# Assistant Appointments Proto Overview
+﻿# Assistant Appointments Module Overview
 
-**Status**: Phase 3.1 prototype  
-**Scope**: Context-only appointment teaser for the Assistant panel. No write actions.
+**Status**: Phase 4.2 (Termin- und Arztmodul abgeschlossen)
+**Scope**: Supabase-gestütztes Terminpanel inkl. Butler-Snapshot, Wiederholungen (Nie/Monatlich/Jährlich) und Sync-Events für den Assistant.
 
-## Purpose
-- Provide quick context in the new Assistant Butler header.
-- Mimic the upcoming appointments module until the real Phase 4 implementation lands.
-- Feed the Assistant text chat with the same context that MIDAS reads when preparing meal suggestions.
+## 1. Purpose
+- Termine schnell erfassen (medizinisch oder privat) und sofort im Hub anzeigen.
+- Upcoming-Liste im Assistant-Butler bereitstellen, damit Text-/Foto-Analysen Kontext haben.
+- Grundlage für künftige Aktionen (z. B. Erinnerungen, Butler-Suggests) schaffen.
 
-## UI Surface
-- Lives in the Assistant panel (`assistant-appointments` block).
-- Shows up to 2 items, each rendered as `Label • Datum/Zeit`.
-- Falls back to “Keine Termine geladen.” when nothing is available.
+## 2. UI Surface
+- Orbit Süd-Ost öffnet das Terminpanel #hubAppointmentsPanel.
+- Formularfelder: Terminname, Datum, Wiederholen (Nie/Monatlich/Jährlich), Uhrzeit, Ort/Adresse, Notiz.
+- Buttons: **Termin speichern** (POST/UPSERT) und **Übersicht anzeigen** (scrollt zur Liste).
+- Übersicht zeigt alle Termine in Kartenform (Datum/Zeit, Ort, Status) mit Buttons *Erledigt/Zurücksetzen* und *Löschen*.
+- Unter „Kommende Termine“ werden Live-Schnipsel angezeigt (ersetzt alte Mock-Placeholder).
 
-## Data Flow
-1. `AppModules.hub.refreshAssistantContext()` calls `fetchAssistantAppointments({ limit:2 })`.
-2. The helper looks for:
-   - `AppModules.appointments.getUpcoming(limit, { reason })`
-   - `AppModules.appointments.getUpcomingAppointments(...)`
-   - `AppModules.appointments.upcoming` (`Array`)
-   - `AppModules.appointments.mockUpcoming` (`Array`)
-3. Returned entries are normalized (`{ id, label, detail }`). Invalid entries are skipped.
-4. If no data source is available, a mock list is generated:
-   - `Hausarzt – Kontrolle` (nächster Tag, 07:45)
-   - `Nephrologie – Blutdruck` (drei Tage später, 13:30)
+## 3. Data Flow & Supabase
+- Tabelle ppointments_v2 (SQL → sql/09_Appointments_v2.sql) mit Feldern id, user_id, 	itle, start_at, location, 
+otes, status, epeat_rule, meta, Timestamps.
+- View _appointments_v2_upcoming liefert geplante Termine ab gestern; View läuft mit security_invoker.
+- RLS Policies (select/insert/update/delete) erlauben nur Zugriff auf die eigene user_id.
+- Modul ruft Supabase via ensureSupabaseClient()/getUserId() und normalisiert alle Zeitzonen ins lokale Datum/Zeit-Paar.
 
-## Integration Hooks
-- Hook point for future module: expose `window.AppModules.appointments.getUpcoming(limit, context)` which resolves to an array of `{ id, label, detail?, start?, date? }`.
-- No network requests are triggered from the hub if a snapshot already exists. The real module should own caching and freshness.
-- To disable mocks (once live data exists) simply return a non-empty array from `getUpcoming`.
+## 4. Frontend Module (pp/modules/appointments/index.js)
+- init() bindet Form/Buttons, startet syncAppointments({ reason: 'init' }) und hört auf supabase:ready.
+- CRUD:
+  - insertAppointmentRemote(payload)
+  - updateAppointmentRemote(id, patch)
+  - deleteAppointmentRemote(id)
+- State (state.items) hält alle Termine; enderOverview() bzw. computeUpcomingFromState() treiben Panel + Butler.
+- Öffnen des Panels triggert ppointments.sync({ reason: 'panel-open' }) (via Hub-Binding).
+- Nach jedem Insert/Toggle/Delete feuert das Modul ppointments:changed (CustomEvent) ⇒ Butler aktualisiert Header.
 
-## Diagnostics / QA
-- Touch log entries appear as `[assistant-context] appointments fetch failed …` only when fetches break.
-- QA expectations:
-  - Assistant panel opening shows 0–2 appointments without duplicate log spam.
-  - When the backend module provides data, mocks disappear automatically.
+## 5. Assistant Integration
+- Butler ruft ppModules.appointments.getUpcoming(limit,{ reason }) (Promise). Rückgabe: Array { id, label, detail }.
+- efreshAssistantContext() wartet auf Promise.all([intakeSnapshot, getUpcoming]) und rendert max. zwei Einträge.
+- Keine Mockdaten mehr; QA prüft, dass „Keine Termine geladen.“ nur erscheint, wenn Supabase leer ist oder Credentials fehlen.
 
-## Next Steps (Phase 4+)
-- Replace mock with REST/Realtime backed appointments service.
-- Extend the context so the Assistant can auto-suggest rescheduling or prepping for visits.
-- Wire up a “Termin-Teaser” action chip (tap → opens Doctor/Historie Panel once available).
+## 6. QA Notes
+- Supabase 403 ⇒ Panel zeigt Toast/Diag [appointments] save failed …; Butler bleibt leer.
+- Wiederholungen: Dropdown speichert epeat_rule (
+one, monthly, nnual). Annuale Einträge bleiben als einzelne Zeile (Automatisierung folgt später).
+- Buttons *Erledigt/Zurücksetzen* toggeln status (scheduled ↔ done); 
+otifyChange('toggle') aktualisiert Butler sofort.
+- Löschen entfernt Karte + Butler-Eintrag und feuert 
+otifyChange('delete').
+- Snapshot reagiert auch, wenn Termine aus anderen Geräten gelöscht werden (Realtime optional, aktuell Pull bei Panel-Open + Butler-Refresh).
+
+## 7. Next Steps
+- Reminder/Push (PWA) → Phase 8.
+- Assistant Actions (Termin öffnen, Arzt-Routing) → Phase 5ff.
+- Optional: Repeating-Cron (jährliche Termine automatisch kopieren) sobald Server-Jobs bereitstehen.

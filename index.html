@@ -150,11 +150,12 @@
             <button
               type="button"
               class="hub-icon"
+              data-hub-module="appointments"
+              aria-pressed="false"
               data-orbit-pos="se"
-              disabled
             >
               <span aria-hidden="true">??</span>
-              <span class="sr-only">GPT Voice (bald)</span>
+              <span class="sr-only">Termine &amp; Arztmodule</span>
             </button>
             <button
               type="button"
@@ -299,6 +300,81 @@
     </section>
     <!-- Milchglas-/Lock-Overlay fuer aktive Panels -->
     <div class="hub-backdrop" data-hub-backdrop aria-hidden="true"></div>
+    <!-- HUB-PANEL: Appointments -->
+    <section
+      class="hub-panel"
+      id="hubAppointmentsPanel"
+      data-hub-panel="appointments"
+      role="region"
+      aria-labelledby="hubAppointmentsTitle"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubAppointmentsTitle">Termine</h2>
+          <button
+            type="button"
+            class="hub-panel-close"
+            data-panel-close
+            aria-label="Fenster schliessen"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="hub-panel-body">
+          <form class="appointments-form" id="appointmentsForm" autocomplete="off">
+            <div class="appointments-grid">
+              <label>
+                <span>Terminname</span>
+                <input type="text" id="apptTitle" placeholder="z. B. Kontrollbesuch" required>
+              </label>
+              <label class="appointments-date">
+                <span>Datum</span>
+                <input type="date" id="apptDate" required>
+              </label>
+              <label class="appointments-repeat">
+                <span>Wiederholen</span>
+                <select id="apptRepeatRule">
+                  <option value="none">Nie</option>
+                  <option value="monthly">Monatlich</option>
+                  <option value="annual">Jährlich</option>
+                </select>
+              </label>
+              <label>
+                <span>Uhrzeit</span>
+                <input type="time" id="apptTime">
+              </label>
+              <label>
+                <span>Ort / Adresse</span>
+                <input type="text" id="apptLocation" placeholder="z. B. Ordination Dr. XY">
+              </label>
+            </div>
+            <label class="appointments-notes">
+              <span>Notizen / Vorbereitung</span>
+              <textarea id="apptNotes" rows="2" placeholder="Mitbringen: Befunde, Liste der Medikamente ..."></textarea>
+            </label>
+            <div class="appointments-actions">
+              <button class="btn primary" type="submit">
+                &#x1F4BE; Termin speichern
+              </button>
+              <button class="btn ghost" type="button" id="appointmentsOverviewBtn">
+                Übersicht anzeigen
+              </button>
+            </div>
+          </form>
+          <section class="appointments-overview" id="appointmentsOverview" aria-live="polite">
+            <header class="appointments-overview-header">
+              <h3>Kommende Termine</h3>
+              <p class="muted small" id="appointmentsOverviewSubtitle">Noch keine Einträge.</p>
+            </header>
+            <div class="appointments-columns" id="appointmentsColumns">
+              <!-- dynamische Karten -->
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
     <!-- HUB-PANEL: Intake -->
     <section
       class="hub-panel"
@@ -646,6 +722,7 @@
   <script src="app/diagnostics/perf.js"></script>
   <script src="app/diagnostics/monitor.js"></script>
   <script src="app/modules/hub/vad/vad.js"></script>
+  <script src="app/modules/appointments/index.js"></script>
   <script src="app/modules/hub/index.js"></script>
   <!-- @refactor: moved to assets/js/ui.js -->
   <script src="assets/js/ui.js"></script>

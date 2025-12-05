@@ -413,7 +413,7 @@ Doctor-Module (app/modules/doctor/index.js + Chartmodul) ✅
 Öffnen via Parameter: wenn startMode === 'chart', nach Unlock sofort das Chart zeigen.
 Schließen (X) eines Chart-Panels sollte zunächst die Doctor-Ansicht zeigen (nicht direkt zum Hub springen), sodass der Nutzer im „medizinischen Raum“ bleibt.
 
-### 4.2 Termin- & Arztmodul (Termine + Übersicht)
+### 4.2 Termin- & Arztmodul (Termine + Übersicht) ✅
 
 **Ziel:**
 Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor-UI, ohne den Hub zu überladen.

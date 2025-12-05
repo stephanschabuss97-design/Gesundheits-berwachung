@@ -442,6 +442,18 @@
 
     bindButton('[data-hub-module="intake"]', openPanelHandler('intake'), { sync: false });
     bindButton('[data-hub-module="vitals"]', openPanelHandler('vitals'), { sync: false });
+    bindButton(
+      '[data-hub-module="appointments"]',
+      async (btn) => {
+        await openPanelHandler('appointments')(btn);
+        try {
+          await appModules.appointments?.sync?.({ reason: 'panel-open' });
+        } catch (err) {
+          diag.add?.(`[hub] appointments sync failed: ${err?.message || err}`);
+        }
+      },
+      { sync: false },
+    );
     const openAssistantPanel = async (btn) => {
       await openPanelHandler('assistant-text')(btn);
       if (activePanel?.dataset?.hubPanel !== 'assistant-text') return;
@@ -716,54 +728,23 @@
     return normalized.slice(0, limit);
   };
 
-  const buildMockAppointments = (limit = 2) => {
-    const now = new Date();
-    const createItem = (offsetDays, time, label) => {
-      const clone = new Date(now);
-      clone.setDate(clone.getDate() + offsetDays);
-      const detail = `${APPOINTMENT_DATE_FORMAT.format(clone).replace(/\.$/, '')} • ${time}`;
-      return {
-        id: `mock-${label}-${time}`.toLowerCase().replace(/\s+/g, '-'),
-        label,
-        detail
-      };
-    };
-    const mocks = [
-      createItem(1, '07:45', 'Hausarzt – Kontrolle'),
-      createItem(3, '13:30', 'Nephrologie – Blutdruck')
-    ];
-    return mocks.slice(0, limit);
-  };
-
   const fetchAssistantAppointments = async ({ limit = 2, reason } = {}) => {
     const provider = appModules.appointments;
-    let normalized = [];
-    if (provider) {
-      const getter =
-        typeof provider.getUpcoming === 'function'
-          ? provider.getUpcoming
-          : typeof provider.getUpcomingAppointments === 'function'
-            ? provider.getUpcomingAppointments
-            : null;
-      if (getter) {
-        try {
-          const result = await getter.call(provider, limit, { reason });
-          normalized = normalizeAppointmentItems(result, limit);
-        } catch (err) {
-          diag.add?.(
-            `[assistant-context] appointments fetch failed: ${err?.message || err}`,
-          );
-        }
-      } else if (Array.isArray(provider.upcoming)) {
-        normalized = normalizeAppointmentItems(provider.upcoming, limit);
-      } else if (Array.isArray(provider.mockUpcoming)) {
-        normalized = normalizeAppointmentItems(provider.mockUpcoming, limit);
-      }
+    if (!provider) return [];
+    const getter =
+      typeof provider.getUpcoming === 'function'
+        ? provider.getUpcoming
+        : typeof provider.getUpcomingAppointments === 'function'
+          ? provider.getUpcomingAppointments
+          : null;
+    if (!getter) return [];
+    try {
+      const result = await getter.call(provider, limit, { reason });
+      return normalizeAppointmentItems(result, limit);
+    } catch (err) {
+      diag.add?.(`[assistant-context] appointments fetch failed: ${err?.message || err}`);
+      return [];
     }
-    if (!normalized.length) {
-      normalized = buildMockAppointments(limit);
-    }
-    return normalized;
   };
 
   const loadAssistantIntakeSnapshot = async ({ reason, forceRefresh = false } = {}) => {
@@ -915,6 +896,11 @@
     bindAssistantCameraButton(cameraBtn, photoInput);
     resetAssistantChat();
     debugLog('assistant-chat setup complete');
+    refreshAssistantContext({ reason: 'assistant:init', forceRefresh: false });
+
+    doc?.addEventListener('appointments:changed', () => {
+      refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
+    });
   };
 
   const bindAssistantCameraButton = (btn, input) => {

@@ -41,6 +41,14 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 6. **Voice Gate Hook** – `createAssistantSession` listens to `AppModules.hub.isVoiceReady/onVoiceGateChange`. If auth/boot switches to “unknown”, the session shuts down with the system message “Voice deaktiviert – bitte warten”.
 7. **Foto-Analyse (Phase 3.2)** – Camera button short-press => system camera, long-press => gallery/file picker. Upload pipeline: `handleAssistantPhotoSelected` → `readFileAsDataUrl` (fallback `arrayBufferToDataUrl`). Chat bubble shows thumbnail + “Analyse läuft …”. Once `/midas-vision` responds, `assistantUi.formatVisionResultText()` renders water/salt/protein + recommendation; failures paint the bubble red and expose a retry button. All results are display-only (no saving yet).
 
+### 3.1 Butler Header Context (Phase 4.2)
+
+- `app/modules/appointments/index.js` synchronisiert Supabase `appointments_v2` (CRUD, Repeat-Flag) und stellt `sync()`/`getUpcoming()` plus ein DOM-Event `appointments:changed` bereit.
+- `refreshAssistantContext()` wartet nun auf Intake-Snapshot *und* Termine; Butler-Header zeigt reale Entries (maximal zwei) und fällt nur noch auf «Keine Termine geladen.» zurück, wenn Supabase keine Daten liefert.
+- Der Orbit-Button „Termine“ löst beim Öffnen `appointments.sync({ reason: 'panel-open' })` aus, damit Panel und Butler denselben Stand haben.
+- QA: Assistant-Header reagiert sofort auf Insert/Delete/Done, Touch-Log liefert höchstens einen Refresh pro Event.
+
+
 ---
 
 ## 4. Backend Flow Highlights
@@ -73,11 +81,11 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 
 ## 7. Roadmap Snapshot
 
-- ✅ Phase 1.1–1.4: Voice capture, transcribe, assistant, TTS.
-- ✅ Phase 1.5/1.6: Orbit glow + greeting.
-- ✅ Phase 3.1: Assistant text UI (Butler header, chat input).
-- ✅ Phase 3.2: Foto-Upload via `midas-vision` (display-only). Diktiermodus (Web Speech) still pending.
-- ⏳ Phase 4: Allowed actions (intake save, doctor routing) + appointments module.
-- ⏳ Phase 5+: Suggest/confirm card persistence, streaming TTS, wake word, offline support.
+- ✅ Phase 1.1-1.4: Voice capture, transcribe, assistant, TTS.
+- ✅ Phase 1.5/1.6: Orbit glow + greeting.
+- ✅ Phase 3.1: Assistant text UI (Butler header, chat input).
+- ✅ Phase 3.2: Foto-Upload via `midas-vision` (display-only). Diktiermodus (Web Speech) still pending.
+- ✅ Phase 4.2: Termin-Panel + Butler-Snapshot nutzen `appointments_v2` (Supabase) – keine Mocks mehr.
+- 🔜 Phase 5+: Suggest/confirm card persistence, allowed actions, streaming TTS, wake word, offline support.
 
 Updates follow as future phases land (text enhancements, actions, scheduling).

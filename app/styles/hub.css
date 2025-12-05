@@ -1130,6 +1130,114 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.appointments-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.appointments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.appointments-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appointments-grid input,
+.appointments-grid select,
+.appointments-notes textarea {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--color-text);
+  padding: 12px;
+}
+
+.appointments-grid input:focus,
+.appointments-grid select:focus,
+.appointments-notes textarea:focus {
+  outline: 2px solid rgba(66, 133, 244, 0.6);
+}
+
+.appointments-repeat select {
+  min-width: 160px;
+}
+
+.appointments-notes textarea {
+  width: 100%;
+  min-height: 96px;
+}
+
+.appointments-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.appointments-overview {
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+}
+
+.appointments-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.appointments-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.appointments-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.appointments-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.appointments-card .appointments-meta {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.appointments-card .appointments-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .appointments-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .appointments-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .assistant-photo-status {
   font-size: 0.85rem;
   margin-top: 6px;

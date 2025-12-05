@@ -42,6 +42,26 @@
 
 ---
 
+## Phase 4.2 – Termine & Butler (2025-12-06)
+
+**Scope:** Supabase-Termine (`appointments_v2`), Butler-Header Snapshot, Wiederholer + Sync-Events.
+
+**Smoke**
+- [ ] Orbit Süd-Ost öffnet das Termin-Panel; Speichern legt Eintrag in Supabase an und Karte erscheint unter „Kommende Termine“.
+- [ ] Butler-Header zeigt nach Panel-Save sofort denselben Termin (max. zwei Einträge). "Keine Termine geladen." nur bei leerer Tabelle.
+- [ ] Buttons *Erledigt*/*Zurücksetzen* sowie *Löschen* aktualisieren Kartenstatus ohne Fehl-Toast.
+
+**Sanity**
+- [ ] `appointments_v2` respektiert RLS: fremde Sessions lösen 403 aus, Touch-Log zeigt `[appointments] save failed …`.
+- [ ] Dropdown "Wiederholen" speichert `repeat_rule` (`none`/`monthly`/`annual`) und Karten zeigen den Modus im Metatext.
+- [ ] `appointments:changed` triggert `refreshAssistantContext()` (Insert/Delete/Statuswechsel), Butler aktualisiert ohne Panel.
+- [ ] Touch-Log enthält keinen Hinweis mehr auf Mock-Termine; Butler lädt maximal einmal pro Event.
+
+**Regression**
+- [ ] Panel-Lock/Scroll-Verhalten entspricht anderen Hub-Panels; Schließen (X) setzt Orbit zurück.
+- [ ] Assistant-Foto/Textchat bleiben unverändert (kein Zusatz-Refresh bei jeder Nachricht).
+- [ ] Mockdaten entfernt – nach Reload erscheinen ausschließlich echte Supabase-Einträge.
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).
