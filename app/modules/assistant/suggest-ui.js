@@ -1,13 +1,16 @@
 'use strict';
 
-(function attachAssistantSuggestUi(global) {
+import { assistantSuggestStore } from './suggest-store.js';
+
+(function attachAssistantSuggestUi(global, store) {
   if (typeof document === 'undefined') return;
   const doc = document;
-  const store =
+  const resolvedStore =
+    store ||
     global.AppModules?.assistantSuggestStore ||
     global.assistantSuggestStore ||
     null;
-  if (!store) return;
+  if (!resolvedStore) return;
 
   const card = doc.getElementById('assistantSuggestCard');
   if (!card) return;
@@ -38,7 +41,7 @@
   };
 
   const renderSuggestion = () => {
-    const state = store.getState();
+    const state = resolvedStore.getState();
     const suggestion = state.activeSuggestion;
     if (!suggestion) {
       setVisibility(false);
@@ -59,7 +62,7 @@
   };
 
   const handleAnswer = (accepted) => {
-    const suggestion = store.getState().activeSuggestion;
+    const suggestion = resolvedStore.getState().activeSuggestion;
     if (!suggestion) return;
     global.dispatchEvent(
       new CustomEvent('assistant:suggest-answer', {
@@ -70,7 +73,7 @@
       }),
     );
     if (!accepted) {
-      store.dismissCurrent({ reason: 'user-dismiss' });
+      resolvedStore.dismissCurrent({ reason: 'user-dismiss' });
     }
   };
 
@@ -78,7 +81,7 @@
   dismissBtn?.addEventListener('click', () => handleAnswer(false));
 
   yesBtn?.addEventListener('click', () => {
-    const suggestion = store.getState().activeSuggestion;
+    const suggestion = resolvedStore.getState().activeSuggestion;
     if (!suggestion) return;
     global.dispatchEvent(
       new CustomEvent('assistant:suggest-confirm', {
@@ -89,4 +92,4 @@
 
   global.addEventListener('assistant:suggest-updated', renderSuggestion);
   renderSuggestion();
-})(typeof window !== 'undefined' ? window : globalThis);
+})(typeof window !== 'undefined' ? window : globalThis, assistantSuggestStore);
