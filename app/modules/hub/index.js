@@ -1791,7 +1791,9 @@
   };
 
   const setupVoiceChat = (hub) => {
-    const button = hub.querySelector('[data-hub-module="assistant-voice"]');
+    const button =
+      hub.querySelector('[data-hub-module="assistant-voice"]') ||
+      hub.querySelector('[data-hub-module="assistant-text"]');
     if (!button || !navigator?.mediaDevices?.getUserMedia) {
       return;
     }
