@@ -17,14 +17,11 @@
 (function(global){
   global.AppModules = global.AppModules || {};
   const appModules = global.AppModules;
+  const doc = global.document;
 
 /* Fallbacks nur, wenn extern nicht verfuegbar */
 const safeEnsureSupabaseClient = async () => {
   try { if (typeof ensureSupabaseClient === "function") return await ensureSupabaseClient(); } catch(_) {}
-  return null;
-};
-const safeGetConf = async (k) => {
-  try { if (typeof getConf === "function") return await getConf(k); } catch(_) {}
   return null;
 };
 const getSupabaseApi = () => global.AppModules?.supabase || {};
@@ -108,6 +105,8 @@ const logChartError = (scope, err) => {
 };
 
 // SUBMODULE: chartPanel controller @extract-candidate - steuert Panel-Lifecycle, Datenbeschaffung und Zeichnung
+let profileCache = null;
+
 const chartPanel = {
   el: null,
   svg: null,
@@ -395,19 +394,26 @@ async getFiltered() {
   // Hoehe laden (Konfig oder Fallback 183 cm)
   // SUBMODULE: chartPanel.getHeightCm @internal - liest Nutzerkoerpergroesse aus Supabase/Lokal
   async getHeightCm() {
-    // 1) Supabase-Profil
+    const cachedProfile = profileCache || appModules.profile?.getData?.() || null;
+    if (cachedProfile?.height_cm) {
+      const h = Number(cachedProfile.height_cm);
+      if (Number.isFinite(h) && h > 0) return h;
+    }
     const supa = await safeEnsureSupabaseClient();
     if (supa) {
       try {
-        const { data, error } = await supa.from("user_profile").select("height_cm").single();
-        if (!error && data?.height_cm) return Number(data.height_cm);
+        const { data, error } = await supa
+          .from("user_profile")
+          .select("height_cm")
+          .maybeSingle();
+        if (!error && data?.height_cm) {
+          profileCache = Object.assign({}, cachedProfile, data);
+          const h = Number(data.height_cm);
+          if (Number.isFinite(h) && h > 0) return h;
+        }
       } catch(_) {}
     }
-    // 2) lokale Konfig
-    const v = await safeGetConf("height_cm");
-    const n = Number(v);
-    if (Number.isFinite(n) && n > 0) return n;
-    return 182;
+    return CHART_DEFAULTS.HEIGHT_CM;
   },
 
   // Tooltip
@@ -1607,6 +1613,18 @@ const mkBars = () => {
   appModules.charts = Object.assign({}, appModules.charts, chartsApi);
   global.AppModules = appModules;
   global.chartPanel = chartPanel;
+  if (doc) {
+    doc.addEventListener('profile:changed', (event) => {
+      profileCache = event?.detail?.data || appModules.profile?.getData?.() || null;
+      if (chartPanel.open) {
+        try {
+          chartPanel.draw();
+        } catch (err) {
+          logChartError('profile redraw', err);
+        }
+      }
+    });
+  }
 
   const initChartPanelSafe = () => {
     try {

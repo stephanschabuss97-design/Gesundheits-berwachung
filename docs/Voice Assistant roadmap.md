@@ -491,72 +491,89 @@ Eigenständiges Terminmodul mit Eingabemaske und Übersicht, angelehnt an Doctor
 
 ---
 
-### 4.3 Health-Profil & Persona Layer (Supabase)
+### 4.3 Health-Profil & Persona Layer (Supabase) ✅
 
-**Ziel:**
-Stephan-spezifische Gesundheitsdaten und Limits zentral in Supabase halten, statt sie hart in Prompts zu kodieren.
+**Ziel**
+Pers�nliche CKD-Daten und Limits zentral pflegen, damit Butler/Fotokontext immer aktuelle Werte haben und Updates wie �G3aA1 ? G3aA2� nur einen DB-Eintrag ben�tigen.
 
-**Supabase-Tabelle (z. B. `user_health_profile`):**
+**1. Tabelle erweitern (user_profile)** ✅
+- bestehende Tabelle via sql/10_User_Profile_Ext.sql um folgende Spalten erweitern:
+  - ull_name text
+  - irth_date date
+  - height_cm integer
+  - ckd_stage text
+  - medications jsonb
+  - is_smoker boolean
+  - lifestyle_note text
+  - salt_limit_g numeric
+  - protein_target_min numeric
+  - protein_target_max numeric
+  - updated_at timestamptz default now()
 
-* Primärschlüssel via `user_id` (1:1-Beziehung zu Benutzer).
-* Felder:
+**2. Profil-Panel (ersetzt Hilfe)** ✅
+- Orbit NW �ffnet neues Panel analog zum Terminmodul (Form + �bersicht):
+  - Felder: Name, Geburtsdatum, Gr��e, CKD-Stufe (Dropdown), Medikation, Salz-/Protein-Limits, Nichtraucher-Flag, Lifestyle-Note.
+  - Liste unten zeigt die gespeicherten Werte.
+  - Speichern f�hrt Insert/Update auf user_profile aus und feuert profile:changed.
 
-  * Fixdaten:
+Für das Profil-Panel brauchen wir mehrere Bausteine. Ich würde den Umbau so aufteilen:
 
-    * `birth_date`
-    * `height_cm`
-    * `sex` (falls benötigt)
-    * evtl. `smoker_status` o. ä.
+# Hilfe-Panel in index.html ersetzen ✅
+section mit id="helpPanel" komplett entfernen.
+An derselben Position neues section id="hubProfilePanel" einfügen: Aufbau wie Terminpanel (scroll-wrap, header mit Close-Button, Formular + Übersicht).
+Formular‐Felder:
+Name (profileFullName)
+Geburtsdatum (profileBirthDate)
+Größe (optional readonly, wenn leer Hinweis)
+CKD-Stufe Dropdown (profileCkdStage)
+Medikation (Textarea oder Tag-Input profileMedications)
+Salzlimit (profileSaltLimit)
+Protein-Ziel min/max (profileProteinMin, profileProteinMax)
+Nichtraucher (Checkbox profileIsSmoker)
+Lifestyle-Note (Textarea)
+Buttons: Speichern (profileSaveBtn) und evtl. Zurücksetzen/Refresh.
+Unterhalb des Formulars ein Abschnitt „Aktuelle Daten“ (z. B. <div id="profileOverview">), der nach Save/Synchronisierung befüllt wird.
 
-  * CKD/Diagnose-Status:
+# Orbit-Button neu binden ✅
+Im Hub-Orbit (index.html) statt Hilfe-Button data-hub-module="profile" setzen.
+In app/modules/hub/index.js: neuen Button via bindButton('[data-hub-module="profile"]', openPanelHandler('profile'), { sync:false }) registrieren.
+Optional: Beim Öffnen AppModules.profile?.sync({ reason: 'panel-open' }).
 
-    * `ckd_stage` (z. B. `"G3a1"`)
-    * Weitere relevante Diagnosen (Hypertonie, Dyslipidämie, etc.) als Flags/Felder.
+# Neues Modul app/modules/profile/index.js ✅
+Analoge Struktur wie app/modules/appointments/index.js: init(), ensureRefs(), loadProfile(), saveProfile().
+Supabase via ensureSupabaseClient() + getUserId() nutzen.
+saveProfile entscheidet, ob Insert vs Update (wir können upsert verwenden .upsert({ user_id, ... }, { onConflict: 'user_id' })).
+Nach erfolgreichem Save: Formular reset (oder Werte belassen) + renderOverview().
+notifyChange('profile') → CustomEvent profile:changed.
 
-  * Intake-Grenzen:
+# Styles ✅
+app/styles/hub.css ggf. um .profile-panel erweitern: Grid für Form, Labels, Liste analog Terminpanel.
+Checkbox/Dropdown an Terminpanel-Stil angleichen.
 
-    * `salt_limit_g_per_day`
-    * `protein_target_g_per_day_min`
-    * `protein_target_g_per_day_max`
-    * `water_target_ml_per_day` (optional)
+# Weitere Anpassungen ✅
+app/modules/charts/index.js später an profile:changed hängen.
+Für Assistant genügt es zunächst, wenn wir das Profil-Event zur Verfügung haben; die Edge Function wird separat erweitert.
 
-  * Metadaten:
+Damit haben wir einen klaren Umbauplan und Wissen, welche Dateien angefasst werden müssen (index.html, app/styles/hub.css, app/modules/hub/index.js, neues app/modules/profile/index.js).
 
-    * `updated_at`
-    * `source` (z. B. „Nephro 2025-01“, „Eigenanpassung“)
 
-**Verwendung in Edge Functions:**
+**3. Verbraucher** ✅
+- pp/modules/charts/index.js holt Gr��e ausschlie�lich aus user_profile (Fallback 183?cm entf�llt).
+- midas-assistant (Edge Function) l�dt Profil via JWT + Service-Key oder erh�lt es als Kontext und injiziert JSON (CKD, Limits, Medikation) vor den Chat-Messages.
+- Fotoanalyse nutzt Salz-/Protein-Grenzen f�r Hinweise (�du bist heute bei 4,6?g von 5?g�). Wasserziel bleibt optional/manuell.
 
-* `midas-assistant`:
+**4. Schritte** ✅
+1. SQL-Skript schreiben/ausf�hren, bestehende RLS-Policies behalten.
+2. Hilfe-Panel entfernen, neues Profil-Panel + Modul (pp/modules/profile/index.js) implementieren.
+3. Charts/Butler auf Profil-Werte umstellen.
+4. Assistant-Request um Profil-Kontext erweitern (Frontend oder Edge Function), damit der Prompt nicht mehr hartcodiert werden muss.
 
-  * liest Health-Profil per `user_id` (aus Supabase Session / JWT).
-  * injiziert Health-Kontext als **zusätzlichen System-Block** vor den Chat-Messages, z. B.:  
-    „Stephan hat CKD G3a1, Salzlimit 5–6 g/Tag, Nichtraucher. Passe Empfehlungen entsprechend an und sei konservativ bei Salz-/Proteinvorschlägen.“
-
-* `midas-vision`:
-
-  * nutzt Health-Profil, um Foto-Empfehlungen zu contextualisieren (z. B. Hinweis bei hoher Salzlast).
-
-**UI-Anbindung (später, minimal):**
-
-* Einfaches Profil-Panel:
-
-  * Eingabe/Änderung von CKD-Status, Limits, Lifestyle-Flags.
-  * Jede Änderung erzeugt optional einen Eintrag in System-Notes (Audit).
-
-**Vorteile:**
-
-* Assistant muss Health-Kontext nicht in jedem Prompt neu erklärt bekommen.
-* Änderungen (z. B. G3a1 → G3a2) sind mit einem Datensatz-Update erledigt.
-* Voice & Text greifen auf denselben, sauberen Persona-/Health-Layer zu.
-
-**Codex-Hinweis:**
-
-- In dieser Phase nur Tabellen + Edge Function-Kontext erweitern.
-- Keine neuen großen UI-Bereiche bauen – ein einfaches Profil-Panel reicht.
+**Hinweise**
+- Raucherflag/Geschlecht dienen nur als Kontext (keine medizinische Diagnose).
+- Medikation als JSON-Array erlaubt einfache Pflege.
+- Bei fehlendem Profil blendet das Panel einen Hinweis ein; Assistant f�llt auf konservative Defaults zur�ck.
 
 ### 4.4 Hybrid Panel Animation (Hub Performance Mode)
-
 Ziel:
 Die Hub-Panels werden für Mobile/Tablet (Performance Mode) und Desktop (cineastisch, aber leicht) optimiert.
 Basierend auf der eigenen „Panel Animation Performance Roadmap“.

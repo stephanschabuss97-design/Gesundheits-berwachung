@@ -123,6 +123,7 @@
   let openDoctorPanelWithGuard = null;
   let voiceCtrl = null;
   let assistantChatCtrl = null;
+  let assistantProfileSnapshot = appModules.profile?.getData?.() || null;
   let supabaseFunctionHeadersPromise = null;
 
   const getSupabaseApi = () => appModules.supabase || {};
@@ -454,6 +455,18 @@
       },
       { sync: false },
     );
+    bindButton(
+      '[data-hub-module="profile"]',
+      async (btn) => {
+        await openPanelHandler('profile')(btn);
+        try {
+          await appModules.profile?.sync?.({ reason: 'panel-open' });
+        } catch (err) {
+          diag.add?.(`[hub] profile sync failed: ${err?.message || err}`);
+        }
+      },
+      { sync: false },
+    );
     const openAssistantPanel = async (btn) => {
       await openPanelHandler('assistant-text')(btn);
       if (activePanel?.dataset?.hubPanel !== 'assistant-text') return;
@@ -556,7 +569,6 @@
       return false;
     };
     openDoctorPanelWithGuard = openDoctorPanel;
-    bindButton('#helpToggle', () => {}, { sync: false });
     bindButton('#diagToggle', () => {}, { sync: false });
   };
   const setupChat = (hub) => {
@@ -776,19 +788,36 @@
           protein_g: Number(state.totals?.protein_g) || 0,
         },
       };
-    }
-    return snapshot;
-  };
+      }
+      return snapshot;
+    };
 
-  const refreshAssistantContext = async ({ reason, forceRefresh = false } = {}) => {
-    if (!assistantChatCtrl?.panel) return;
-    const [snapshot, appointments] = await Promise.all([
-      loadAssistantIntakeSnapshot({ reason, forceRefresh }),
-      fetchAssistantAppointments({ limit: 2, reason }),
-    ]);
-    renderAssistantIntakeTotals(snapshot);
-    renderAssistantAppointments(appointments);
-  };
+    const getAssistantProfileSnapshot = () => {
+      if (assistantProfileSnapshot) return assistantProfileSnapshot;
+      const data = appModules.profile?.getData?.();
+      if (data) {
+        assistantProfileSnapshot = data;
+        return assistantProfileSnapshot;
+      }
+      return null;
+    };
+
+    const refreshAssistantContext = async ({ reason, forceRefresh = false } = {}) => {
+      if (!assistantChatCtrl?.panel) return;
+      const [snapshot, appointments] = await Promise.all([
+        loadAssistantIntakeSnapshot({ reason, forceRefresh }),
+        fetchAssistantAppointments({ limit: 2, reason }),
+      ]);
+      renderAssistantIntakeTotals(snapshot);
+      renderAssistantAppointments(appointments);
+      if (assistantChatCtrl) {
+        assistantChatCtrl.context = {
+          intake: snapshot || null,
+          appointments: Array.isArray(appointments) ? appointments : [],
+          profile: getAssistantProfileSnapshot(),
+        };
+      }
+    };
 
   let assistantChatSetupAttempts = 0;
   const ASSISTANT_CHAT_MAX_ATTEMPTS = 10;
@@ -862,19 +891,24 @@
         salt: buildPillRef('salt'),
         protein: buildPillRef('protein'),
       },
-      appointments: {
-        container: appointmentsContainer,
-        list: appointmentsList,
-        empty: appointmentsEmpty,
-      },
-      templates: {
-        message: messageTemplate?.content?.firstElementChild || null,
-        photo: photoTemplate?.content?.firstElementChild || null,
-      },
-      messages: [],
-      sessionId: null,
-      sending: false,
-    };
+        appointments: {
+          container: appointmentsContainer,
+          list: appointmentsList,
+          empty: appointmentsEmpty,
+        },
+        templates: {
+          message: messageTemplate?.content?.firstElementChild || null,
+          photo: photoTemplate?.content?.firstElementChild || null,
+        },
+        messages: [],
+        sessionId: null,
+        sending: false,
+        context: {
+          intake: null,
+          appointments: [],
+          profile: getAssistantProfileSnapshot(),
+        },
+      };
 
     debugLog('assistant-chat controller ready');
 
@@ -898,10 +932,17 @@
     debugLog('assistant-chat setup complete');
     refreshAssistantContext({ reason: 'assistant:init', forceRefresh: false });
 
-    doc?.addEventListener('appointments:changed', () => {
-      refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
-    });
-  };
+      doc?.addEventListener('appointments:changed', () => {
+        refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
+      });
+      doc?.addEventListener('profile:changed', (event) => {
+        assistantProfileSnapshot =
+          event?.detail?.data || appModules.profile?.getData?.() || null;
+        if (assistantChatCtrl?.context) {
+          assistantChatCtrl.context.profile = assistantProfileSnapshot;
+        }
+      });
+    };
 
   const bindAssistantCameraButton = (btn, input) => {
     if (!btn || !input) return;
@@ -1040,24 +1081,73 @@
     }
   };
 
-  const appendAssistantMessage = (role, content, extras = {}) => {
-    if (!assistantChatCtrl) return null;
-    const message = {
-      role: role === 'assistant' ? 'assistant' : role === 'system' ? 'system' : 'user',
-      content: content?.trim?.() || '',
-      id: extras.id || `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
-      imageData: extras.imageData || null,
-      meta: extras.meta || null,
-      type: extras.type || 'text',
-      status: extras.status || null,
-      resultText: extras.resultText || '',
-      retryable: !!extras.retryable,
-      retryPayload: extras.retryPayload || null,
+    const appendAssistantMessage = (role, content, extras = {}) => {
+      if (!assistantChatCtrl) return null;
+      const message = {
+        role: role === 'assistant' ? 'assistant' : role === 'system' ? 'system' : 'user',
+        content: content?.trim?.() || '',
+        id: extras.id || `m-${Date.now()}-${assistantChatCtrl.messages.length}`,
+        imageData: extras.imageData || null,
+        meta: extras.meta || null,
+        type: extras.type || 'text',
+        status: extras.status || null,
+        resultText: extras.resultText || '',
+        retryable: !!extras.retryable,
+        retryPayload: extras.retryPayload || null,
+      };
+      assistantChatCtrl.messages.push(message);
+      renderAssistantChat();
+      return message;
     };
-    assistantChatCtrl.messages.push(message);
-    renderAssistantChat();
-    return message;
-  };
+
+    const buildAssistantContextPayload = () => {
+      const ctx = assistantChatCtrl?.context;
+      if (!ctx) return null;
+      const payload = {};
+      if (ctx.intake?.totals) {
+        payload.intake = {
+          dayIso: ctx.intake.dayIso || null,
+          logged: !!ctx.intake.logged,
+          totals: {
+            water_ml: Number(ctx.intake.totals?.water_ml) || 0,
+            salt_g: Number(ctx.intake.totals?.salt_g) || 0,
+            protein_g: Number(ctx.intake.totals?.protein_g) || 0,
+          },
+        };
+      }
+      if (Array.isArray(ctx.appointments) && ctx.appointments.length) {
+        payload.appointments = ctx.appointments.map((item) => ({
+          id: item.id || null,
+          label: item.label || '',
+          detail: item.detail || '',
+        }));
+      }
+      if (ctx.profile) {
+        const meds = Array.isArray(ctx.profile.medications)
+          ? ctx.profile.medications
+          : typeof ctx.profile.medications === 'string'
+            ? ctx.profile.medications
+                .split(/[\n;,]+/)
+                .map((entry) => entry.trim())
+                .filter(Boolean)
+            : [];
+        payload.profile = {
+          name: ctx.profile.full_name || null,
+          birth_date: ctx.profile.birth_date || null,
+          height_cm: ctx.profile.height_cm ?? null,
+          ckd_stage: ctx.profile.ckd_stage || null,
+          medications: meds,
+          salt_limit_g: ctx.profile.salt_limit_g ?? null,
+          protein_limit_g:
+            ctx.profile.protein_target_max ??
+            ctx.profile.protein_target_min ??
+            null,
+          lifestyle_note: ctx.profile.lifestyle_note || null,
+          smoker_status: ctx.profile.is_smoker ? 'smoker' : 'non-smoker',
+        };
+      }
+      return Object.keys(payload).length ? payload : null;
+    };
 
   const cloneAssistantTemplate = (key) => {
     const tmpl = assistantChatCtrl?.templates?.[key];
@@ -1181,6 +1271,10 @@
           content: msg.content,
         })),
     };
+    const contextPayload = buildAssistantContextPayload();
+    if (contextPayload) {
+      payload.context = contextPayload;
+    }
     let response;
     const headers = await buildFunctionJsonHeaders();
     try {
@@ -1264,24 +1358,28 @@
   };
 
   const fetchAssistantVisionReply = async (dataUrl, file) => {
-    ensureAssistantSession();
-    if (!assistantChatCtrl) {
-      throw new Error('vision-unavailable');
-    }
-    const base64 = (dataUrl.includes(',') ? dataUrl.split(',').pop() : dataUrl)?.trim() || '';
-    if (!base64) {
-      throw new Error('vision-image-missing');
-    }
-    const payload = {
-      session_id: assistantChatCtrl.sessionId ?? `text-${Date.now()}`,
-      mode: 'vision',
-      history: buildAssistantPhotoHistory(),
-      image_base64: base64,
-    };
-    if (!payload.history) {
-      delete payload.history;
-    }
-    if (file?.name) {
+      ensureAssistantSession();
+      if (!assistantChatCtrl) {
+        throw new Error('vision-unavailable');
+      }
+      const base64 = (dataUrl.includes(',') ? dataUrl.split(',').pop() : dataUrl)?.trim() || '';
+      if (!base64) {
+        throw new Error('vision-image-missing');
+      }
+      const payload = {
+        session_id: assistantChatCtrl.sessionId ?? `text-${Date.now()}`,
+        mode: 'vision',
+        history: buildAssistantPhotoHistory(),
+        image_base64: base64,
+      };
+      const contextPayload = buildAssistantContextPayload();
+      if (contextPayload) {
+        payload.context = contextPayload;
+      }
+      if (!payload.history) {
+        delete payload.history;
+      }
+      if (file?.name) {
       payload.meta = { fileName: file.name };
     }
     const headers = await buildFunctionJsonHeaders();

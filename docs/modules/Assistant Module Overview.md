@@ -1,14 +1,14 @@
 # Assistant Module – Functional Overview
 
-This overview captures the current scope of the MIDAS Assistant (voice + text). It mirrors the structure of the Auth Overview and explains frontend/back‑end responsibilities as well as QA expectations.
+This overview captures the current scope of the MIDAS Assistant (voice + text). It mirrors the Auth overview and explains frontend/back‑end responsibilities plus QA considerations.
 
 ---
 
 ## 1. Goal
 
 - End-to-end assistant workflow: Capture → Transcribe → Assistant → (optional) TTS/Playback.
-- Persona “MIDAS”: short, friendly, factual – no blind guesses, no diagnoses.
-- Foundation for the new Assistant panel (text-first) plus the legacy voice loop.
+- Persona **“MIDAS”**: short, friendly, factual – no blind guesses, no Diagnosen.
+- Single Assistant surface for text chat, voice needle and photo analysis.
 
 ---
 
@@ -16,76 +16,77 @@ This overview captures the current scope of the MIDAS Assistant (voice + text). 
 
 | Layer | File | Purpose |
 | --- | --- | --- |
-| Frontend | `app/modules/hub/index.js` | Voice controller, chat orchestration, state machine (`idle/listening/thinking/speaking/error`), playback handling, assistant panel UI, new photo-upload/vision flow. |
-| Frontend | `app/modules/hub/vad/vad.js` / `vad-worklet.js` | Voice-activity detection, auto-stop after silence. |
+| Frontend | `app/modules/hub/index.js` | Voice controller, chat orchestration, state machine (`idle/listening/thinking/speaking/error`), playback handling, assistant panel UI, photo-upload/vision flow und Butler-Kontext-Gluing (Intake, Termine, Profil). |
+| Frontend | `app/modules/hub/vad/vad.js` + `vad-worklet.js` | Voice-activity detection, auto-stop after silence. |
 | Frontend | `index.html` | Assistant panel markup (`data-hub-panel="assistant-text"`), CSP allowances for audio/blob, Butler header. |
 | Frontend | `app/modules/assistant/index.js` | Assistant session factory + UI helpers (vision formatting, photo bubble models). |
-| Frontend | `app/modules/assistant/actions.js` | Processes backend actions (intake suggestions, open module, etc.). |
+| Frontend | `app/modules/assistant/actions.js` | Processes backend actions (intake suggestions, panel jumps, etc.). |
+| Frontend | `app/modules/appointments/index.js` | Terminpanel + Butler Snapshot (Supabase `appointments_v2`, Event `appointments:changed`). |
+| Frontend | `app/modules/profile/index.js` | Health-Profil Panel (`user_profile` CRUD, Event `profile:changed` für Charts & Butler). |
 | Docs | `docs/Voice Assistant roadmap.md` | Phase-by-phase roadmap + QA instructions. |
 | Backend | `supabase/functions/midas-transcribe/index.ts` | Whisper proxy for audio uploads. |
-| Backend | `supabase/functions/midas-assistant/index.ts` | OpenAI Responses gateway for text/voice conversations. |
-| Backend | `supabase/functions/midas-vision/index.ts` | Vision proxy: accepts Base64 photo + history and returns analysis/reply. |
+| Backend | `supabase/functions/midas-assistant/index.ts` | OpenAI Responses gateway für Text/Voice Gespräche. |
+| Backend | `supabase/functions/midas-vision/index.ts` | Vision proxy: Base64 Foto + Kontext -> Analyse. |
 | Backend | `supabase/functions/midas-tts/index.ts` | TTS proxy (`gpt-4o-mini-tts`). |
 
-Edge functions are deployed via `supabase functions deploy <name> --project-ref jlylmservssinsavlkdi`; secrets live in the Supabase Edge secret store.
+Edge functions are deployed via `supabase functions deploy <name> --project-ref jlylmservssinsavlkdi`; secrets leben in der Supabase Edge secret store.
 
 ---
 
 ## 3. Voice & Text Loop (Frontend)
 
-1. **Start/Stop** – `handleVoiceTrigger()` toggles recording; `startVoiceRecording()` sets up `MediaRecorder`, `voiceCtrl` keeps state.
-2. **Transcribe** – `transcribeAudio()` builds `FormData` (`audio`) and calls `/midas-transcribe`; UI switches to `thinking`.
-3. **Assistant Roundtrip** – `fetchAssistantReply()` sends conversation history + `session_id` to `/midas-assistant` (same endpoint for voice + text). Replies include optional `actions`.
-4. **TTS Playback** – `requestTtsAudio()` fetches `/midas-tts`, `playVoiceAudio()` updates the orbit state to `speaking`.
-5. **State Labels & Safety** – `VOICE_STATE_LABELS` + fallback reply keep UX predictable; VAD stops after 1 s silence.
-6. **Voice Gate Hook** – `createAssistantSession` listens to `AppModules.hub.isVoiceReady/onVoiceGateChange`. If auth/boot switches to “unknown”, the session shuts down with the system message “Voice deaktiviert – bitte warten”.
-7. **Foto-Analyse (Phase 3.2)** – Camera button short-press => system camera, long-press => gallery/file picker. Upload pipeline: `handleAssistantPhotoSelected` → `readFileAsDataUrl` (fallback `arrayBufferToDataUrl`). Chat bubble shows thumbnail + “Analyse läuft …”. Once `/midas-vision` responds, `assistantUi.formatVisionResultText()` renders water/salt/protein + recommendation; failures paint the bubble red and expose a retry button. All results are display-only (no saving yet).
+1. **Start/Stop** – `handleVoiceTrigger()` toggelt Aufnahme; `startVoiceRecording()` initialisiert `MediaRecorder`, `voiceCtrl` hält State.
+2. **Transcribe** – `transcribeAudio()` baut `FormData` (`audio`) und ruft `/midas-transcribe`; UI schaltet auf `thinking`.
+3. **Assistant Roundtrip** – `fetchAssistantReply()` sendet History + `session_id` an `/midas-assistant` (gemeinsam für Voice/Text). Antworten enthalten optional `actions`.
+4. **TTS Playback** – `requestTtsAudio()` ruft `/midas-tts`, `playVoiceAudio()` setzt Orbit-State auf `speaking`.
+5. **State Labels & Safety** – `VOICE_STATE_LABELS` + Fallback Reply halten UX konsistent; VAD stoppt nach ~1 s Silence.
+6. **Voice Gate Hook** – `createAssistantSession` hört auf `AppModules.hub.isVoiceReady` / `onVoiceGateChange`. Wenn Boot/Auth auf „unknown“ fällt, wird die Session mit „Voice deaktiviert – bitte warten“ beendet.
+7. **Foto-Analyse (Phase 3.2)** – Camera Button short press → Systemkamera, long press → Galerie. Upload-Pipeline: `handleAssistantPhotoSelected` → `readFileAsDataUrl`. Bubble zeigt Thumbnail + „Analyse läuft…“, nach `/midas-vision`-Antwort werden Wasser/Salz/Protein + Empfehlung gerendert (Anzeige-only).
 
-### 3.1 Butler Header Context (Phase 4.2)
+### 3.1 Butler Header Context (Phase 4.2 + 4.3)
 
-- `app/modules/appointments/index.js` synchronisiert Supabase `appointments_v2` (CRUD, Repeat-Flag) und stellt `sync()`/`getUpcoming()` plus ein DOM-Event `appointments:changed` bereit.
-- `refreshAssistantContext()` wartet nun auf Intake-Snapshot *und* Termine; Butler-Header zeigt reale Entries (maximal zwei) und fällt nur noch auf «Keine Termine geladen.» zurück, wenn Supabase keine Daten liefert.
-- Der Orbit-Button „Termine“ löst beim Öffnen `appointments.sync({ reason: 'panel-open' })` aus, damit Panel und Butler denselben Stand haben.
-- QA: Assistant-Header reagiert sofort auf Insert/Delete/Done, Touch-Log liefert höchstens einen Refresh pro Event.
-
+- `app/modules/appointments/index.js` liefert Upcoming-Termine aus Supabase `appointments_v2` (Repeat-Regeln, Status, Sync-Events).
+- `app/modules/profile/index.js` ersetzt das frühere Hilfe-Panel: Orbit Nord-West öffnet das Formular, speichert in `user_profile` (Name, Geburtsdatum, Größe, CKD-Stufe, Medikation, Salz-/Protein-Limits, Rauchstatus, Lifestyle) und feuert `profile:changed`.
+- `refreshAssistantContext()` wartet auf Intake-Snapshot **und** Termine **und** Profil; Butler-Header zeigt maximal zwei Termine sowie einen Profil-Hinweis („Salzlimit 5 g, CKD G3a A1“) oder fallback „Profil fehlt“.
+- Orbit-Buttons „Termine“ und „Profil“ triggern beim Öffnen `sync({ reason: 'panel-open' })`, damit Panel + Butler denselben Stand haben.
+- QA: Assistant-Header reagiert sofort auf Insert/Delete/Done/Profile-Save; Touch-Log liefert höchstens einen Refresh pro Event.
 
 ---
 
 ## 4. Backend Flow Highlights
 
-- **midas-transcribe**: CORS-friendly, expects `audio` multipart field, proxies to Whisper (`gpt-4o-transcribe`).
-- **midas-assistant**: Shared for voice/text, builds prompts via `buildChatMessages()`, calls OpenAI Responses API, returns `{ reply, actions, meta }`.
-- **midas-vision**: Validates payload `{ image_base64, history?, session_id? }`, enforces ~6 MB limit, generates photo prompt, calls OpenAI Responses (Vision) and returns `{ reply, meta, analysis }`. Client only displays the analysis.
-- **midas-tts**: Accepts `{ text }`, returns Base64 audio (voice `verse`).
-- **Supabase Headers**: GitHub Pages hit the live Supabase REST endpoints (headers from `getConf`); local dev proxies through `/api/midas-*`.
+- **midas-transcribe**: CORS-friendly, erwartet `audio` multipart field, proxied auf Whisper (`gpt-4o-transcribe`).
+- **midas-assistant**: Shared für Voice/Text, baut Prompts via `buildChatMessages()` + Persona/Profil, ruft OpenAI Responses API und liefert `{ reply, actions, meta }`. Profilwerte (CKD, Medikation, Limits) werden seit Phase 4.3 automatisch in den Systemprompt injiziert.
+- **midas-vision**: Validiert `{ image_base64, history?, profile? }`, 6 MB Limit, ruft OpenAI Responses (Vision) und liefert `{ analysis, reply }`. Der Client stellt nur die Analyse dar.
+- **midas-tts**: Nimmt `{ text }`, liefert Base64 Audio (Stimme `verse`).
+- **Supabase Headers**: GitHub Pages benutzen Live-REST-Endpoints (Konfiguration aus `getConf`); lokale Dev-Server proxien `/api/midas-*`.
 
 ---
 
 ## 5. Diagnostics & QA
 
-- Browser console tags: `[midas-voice]`, `[assistant-context]`, `[assistant-vision] …`.
-- Supabase CLI: `supabase functions logs <name> --project-ref jlylmservssinsavlkdi`.
-- Roadmap doc enumerates acceptance steps per phase (e.g., Boot overlay, voice gate, photo upload).
-- QA focus for 3.2: Photo bubble shows thumbnail + “Analyse läuft …”, final text lists water/salt/protein, retry button appears on failure, no duplicate touch-log spam.
+- Console Tags: `[midas-voice]`, `[assistant-context]`, `[assistant-vision]`.
+- Touch Log: `[assistant-context] snapshot start/done`, `[assistant-vision] analyse …`.
+- QA-Pack siehe `docs/QA_CHECKS.md` (Phasen 3.2, 4.1, 4.2, 4.3). Neue Checks (4.3) stellen sicher, dass Profil CRUD + Butler + Charts synchron bleiben.
 
 ---
 
 ## 6. Security & Edge Considerations
 
-- No OpenAI keys/Secrets in the browser; all requests hit Supabase Edge.
-- CSP only allows `self` + `blob:` for audio/media.
-- Graceful fallbacks ensure UI returns to `idle` on network errors.
-- Touch log captures `[assistant-vision]` start/success/fail for later debugging.
+- Keine OpenAI Keys im Browser; alle Aufrufe landen bei Supabase Edge.
+- CSP erlaubt nur `self` + `blob:` für Audio/Media.
+- Graceful fallbacks bringen UI zurück nach `idle`, falls Netzwerk/Edge 500 liefert.
+- Profil-/Termin-Schreibzugriffe laufen über Supabase RLS (user_id bound).
 
 ---
 
 ## 7. Roadmap Snapshot
 
-- ✅ Phase 1.1-1.4: Voice capture, transcribe, assistant, TTS.
-- ✅ Phase 1.5/1.6: Orbit glow + greeting.
-- ✅ Phase 3.1: Assistant text UI (Butler header, chat input).
-- ✅ Phase 3.2: Foto-Upload via `midas-vision` (display-only). Diktiermodus (Web Speech) still pending.
-- ✅ Phase 4.2: Termin-Panel + Butler-Snapshot nutzen `appointments_v2` (Supabase) – keine Mocks mehr.
-- 🔜 Phase 5+: Suggest/confirm card persistence, allowed actions, streaming TTS, wake word, offline support.
+- Phase 3.1: Assistant Text UI (Butler header, chat input).
+- Phase 3.2: Foto-Upload via `midas-vision` (Anzeige-only).
+- Phase 4.1: Vitals/Doctor Konsolidierung (Butler relevanter Kontext).
+- Phase 4.2: Termin-Panel + Butler Snapshot (echte Supabase Daten).
+- Phase 4.3: Health-Profil Panel, Charts lesen Größe aus Supabase, Assistant-Prompts erhalten Persona Kontext.
+- Phase 5+: Suggest/Confirm Card Persistence, Aktionen, Streaming TTS, Wake Word, Offline Support.
 
-Updates follow as future phases land (text enhancements, actions, scheduling).
+Updates folgen sobald weitere Phasen landen.

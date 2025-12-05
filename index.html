@@ -43,21 +43,6 @@
   <!-- ANKER: touch-log-fallback -->
   <pre id="touchLog" class="u-diag-log"></pre>
   <header></header>
-  <!-- Hilfe-Panel -->
-  <div id="help" class="panel" role="dialog" aria-modal="false" aria-labelledby="helpTitle">
-    <header>
-      <h4 id="helpTitle">Hilfe * Was soll ich ankreuzen?</h4>
-      <button class="btn ghost" id="helpClose" type="button">x</button>
-    </header>
-    <div class="content">
-      <strong>&#x1F489; NSAR genommen</strong> ankreuzen, wenn du ein Schmerz-/Entzuendungsmedikament der Klasse NSAR genommen hast.
-      <ul>
-        <li><em>Beispiele (AT, frei):</em> Ibuprofen, Diclofenac, Naproxen.</li>
-        <li><em>Kombo-Achtung:</em> Viele "Erkaeltungs-/Kopfweh"-Mittel enthalten NSAR.</li>
-        <li><em>Bei Nierenkrankheit:</em>NSAR moeglichst vermeiden, Alternativen mit Arzt besprechen.</li>
-      </ul>
-    </div>
-  </div>
   <!-- Diagnose-Panel -->
   <div id="diag" class="panel" role="dialog" aria-modal="false" aria-labelledby="diagTitle">
     <header>
@@ -179,11 +164,12 @@
             <button
               type="button"
               class="hub-icon"
-              id="helpToggle"
+              data-hub-module="profile"
+              aria-pressed="false"
               data-orbit-pos="nw"
             >
-              <span aria-hidden="true">?</span>
-              <span class="sr-only">Hilfe</span>
+              <span aria-hidden="true">??</span>
+              <span class="sr-only">Profil &amp; Gesundheitsdaten</span>
             </button>
           </div>
         </div>
@@ -295,6 +281,137 @@
             >
             <button class="btn primary" type="submit" id="assistantSendBtn">Senden</button>
           </form>
+        </div>
+      </div>
+    </section>
+    <!-- HUB-PANEL: Profil -->
+    <section
+      class="hub-panel"
+      id="hubProfilePanel"
+      data-hub-panel="profile"
+      role="region"
+      aria-labelledby="hubProfileTitle"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="hub-panel-scroll">
+        <header class="hub-panel-header">
+          <h2 id="hubProfileTitle">Profil</h2>
+          <button
+            type="button"
+            class="hub-panel-close"
+            data-panel-close
+            aria-label="Fenster schliessen"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="hub-panel-body">
+          <form class="profile-form" id="profileForm" autocomplete="off">
+            <div class="form-grid">
+              <label class="field-group" for="profileFullName">
+                <span class="label">Name</span>
+                <input
+                  type="text"
+                  id="profileFullName"
+                  placeholder="z. B. Stephan Schabuss"
+                >
+              </label>
+              <label class="field-group" for="profileBirthDate">
+                <span class="label">Geburtsdatum</span>
+                <input type="date" id="profileBirthDate">
+              </label>
+              <label class="field-group" for="profileHeight">
+                <span class="label">Größe (cm)</span>
+                <input
+                  type="number"
+                  id="profileHeight"
+                  inputmode="numeric"
+                  min="120"
+                  max="230"
+                  placeholder="183"
+                >
+                <span class="field-hint muted small">
+                  Wird für BMI/Charts verwendet.
+                </span>
+              </label>
+              <label class="field-group" for="profileCkdStage">
+                <span class="label">CKD-Stufe</span>
+                <select id="profileCkdStage">
+                  <option value="">Bitte auswählen</option>
+                  <option value="G2">G2</option>
+                  <option value="G3aA1">G3a A1</option>
+                  <option value="G3aA2">G3a A2</option>
+                  <option value="G3bA1">G3b A1</option>
+                  <option value="G3bA2">G3b A2</option>
+                  <option value="G4">G4</option>
+                  <option value="G5">G5</option>
+                </select>
+              </label>
+              <label class="field-group" for="profileMedications">
+                <span class="label">Medikation</span>
+                <textarea
+                  id="profileMedications"
+                  rows="3"
+                  placeholder="z. B. Valsartan 160 mg; Forxiga 10 mg"
+                ></textarea>
+              </label>
+              <label class="field-group" for="profileSaltLimit">
+                <span class="label">Salzlimit (g/Tag)</span>
+                <input
+                  type="number"
+                  id="profileSaltLimit"
+                  step="0.1"
+                  min="0"
+                  placeholder="5"
+                >
+              </label>
+              <label class="field-group" for="profileProteinMax">
+                <span class="label">Proteinlimit (g/Tag)</span>
+                <input
+                  type="number"
+                  id="profileProteinMax"
+                  step="1"
+                  min="0"
+                  placeholder="110"
+                >
+                <span class="field-hint muted small">
+                  Butler warnt, sobald das Limit erreicht ist.
+                </span>
+              </label>
+              <label class="field-group" for="profileIsSmoker">
+                <span class="label">Raucherstatus</span>
+                <select id="profileIsSmoker">
+                  <option value="no" selected>Nichtraucher</option>
+                  <option value="yes">Raucher</option>
+                </select>
+              </label>
+              <label class="field-group" for="profileLifestyleNote">
+                <span class="label">Lifestyle-Notiz</span>
+                <textarea
+                  id="profileLifestyleNote"
+                  rows="3"
+                  placeholder="z. B. 1–3× Krafttraining/Woche."
+                ></textarea>
+              </label>
+            </div>
+            <div class="profile-actions">
+              <button type="button" class="btn primary" id="profileSaveBtn">
+                Profil speichern
+              </button>
+              <button type="button" class="btn ghost" id="profileRefreshBtn">
+                Aktualisieren
+              </button>
+            </div>
+          </form>
+          <section class="profile-overview card" aria-live="polite">
+            <header>
+              <h3>Aktuelle Daten</h3>
+            </header>
+            <div id="profileOverview" class="profile-overview-list">
+              <p class="muted small">Noch keine Daten gespeichert.</p>
+            </div>
+          </section>
         </div>
       </div>
     </section>
@@ -723,6 +840,7 @@
   <script src="app/diagnostics/monitor.js"></script>
   <script src="app/modules/hub/vad/vad.js"></script>
   <script src="app/modules/appointments/index.js"></script>
+  <script src="app/modules/profile/index.js"></script>
   <script src="app/modules/hub/index.js"></script>
   <!-- @refactor: moved to assets/js/ui.js -->
   <script src="assets/js/ui.js"></script>
