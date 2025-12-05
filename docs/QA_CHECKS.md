@@ -85,6 +85,28 @@
 - [ ] Touch-Log bleibt sauber: `[profile] save start/done` maximal einmal, keine `[help]`-Einträge mehr.
 - [ ] Assistant Edge Functions (midas-assistant / midas-vision) akzeptieren weiterhin Requests auch wenn kein Profil gespeichert ist (Backend fällt auf Defaults zurück, kein 500er).
 
+---
+
+## Phase 4.4 - Hybrid Panel Animation / Hub Performance Mode (2025-12-08)
+
+**Scope:** Neue Panel-Keyframes für Mobile/Desktop, leichteres Orbit/Aura-Verhalten & Blur-Free Overlay auf Geräten <1025 px.
+
+**Smoke**
+- [ ] Desktop (>1024 px): Panel auf/zu zeigt die cineastische Animation (Squash/Grow ~500 ms); Backdrop bleibt mit Blur & Glow; Orbit dimmt weich mit Blur.
+- [ ] Mobile (<1025 px oder DevTools responsive): Panel öffnet/schließt in <250 ms (nur opacity/translate) ohne Blur & ohne stotternde Shadows; Orbit dimmt nur über opacity (kein Blur). Scrollen während Panel offen blockiert weiterhin Body.
+- [ ] Close-Button reagiert weich (Opacity/Scale) und Panel kehrt korrekt in Hub zurück – keine „hängenden“ Panels sichtbar.
+
+**Sanity**
+- [ ] `document.body.dataset.panelPerf` folgt Media Query (`mobile` bei ≤1024 px, `desktop` sonst). Manuelles Ändern der Fensterbreite löst Animation-Wechsel ohne Reload aus.
+- [ ] Touch-Log enthält weiterhin nur `[hub] openPanel…`/`[hub] close panel…` – keine zusätzlichen Debug-Einträge wegen Animationen.
+- [ ] Voice/Orbit-Aura: Bei offenem Panel auf Mobile keine Pulse-Animationen mehr (nur statischer Glow); Desktop behält Pulse.
+- [ ] Backdrop/Overlay verursachen keine ARIA/DevTools Warnungen (Cloudflare 500er aus Auth debug bleibt unabhängig).
+
+**Regression**
+- [ ] Andere Panels (Assistant, Termine, Profil, Vitals, Doctor) behalten ihre Layouts – nur Animationen wurden reduziert; Inhalte/Scroll bleiben gleich.
+- [ ] Panel-Lock (body overflow hidden) wirkt weiter auf beiden Breakpoints; keine doppelte Scrollbar.
+- [ ] CSS/JS Änderungen erzeugen keine unbenutzten Klassen oder Flash-of-unstyled Content beim Start.
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

@@ -47,6 +47,16 @@
   transition: opacity 260ms ease-out;
 }
 
+body[data-panel-perf="mobile"] .hub::after {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background:
+    linear-gradient(135deg,
+      rgba(4, 6, 16, 0.9),
+      rgba(3, 4, 10, 0.94)
+    );
+}
+
 /* Wenn irgendein Panel sichtbar ist → Milchglas aktiv + Lock */
 body:has(.hub-panel.is-visible) .hub::after {
   opacity: 1;
@@ -62,6 +72,11 @@ body:has(.hub-panel.is-visible) {
 body:has(.hub-panel.is-visible) .hub-orbit {
   filter: brightness(0.55) saturate(0.88) blur(2px);
   transform: scale(0.98);
+}
+
+body[data-panel-perf="mobile"]:has(.hub-panel.is-visible) .hub-orbit {
+  filter: brightness(0.82);
+  transform: scale(0.995);
 }
 
 /* Orbit-Buttons locken, solange Panel aktiv ist */
@@ -231,6 +246,12 @@ body:has(.hub-panel.is-visible) .midas-aura-flow {
   animation:
     midasAuraRotate 36s linear infinite,
     midasAuraPulse 2600ms ease-in-out infinite;
+}
+
+body[data-panel-perf="mobile"]:has(.hub-panel.is-visible) .midas-aura-flow {
+  animation: none;
+  opacity: 0.45;
+  filter: blur(2px);
 }
 
 /* OPTION A — Aura Echo bei Modul-Interaction (Hover/Focus/Active) */
@@ -660,6 +681,14 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
   -webkit-backdrop-filter: blur(18px);
 }
 
+body[data-panel-perf="mobile"] .hub-panel {
+  box-shadow: 0 26px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation-duration: 220ms;
+  background: rgba(10, 12, 20, 0.95);
+}
+
 /* Aktivierungszustand via JS: Panel sichtbar */
 .hub-panel.is-visible {
   display: block;
@@ -668,7 +697,7 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
 /* Etwas cineastischer: langsameres Aufbauen, schnelleres Einrollen
    + Omni-Gel Glow beim Öffnen */
 .hub-panel.hub-panel-open {
-  animation: hub-panel-zoom-in 500ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+  animation: hub-panel-zoom-in-desktop 500ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
   box-shadow:
     0 0 0 1px rgba(140, 190, 255, 0.35),
     0 0 22px rgba(120, 170, 255, 0.55),
@@ -676,7 +705,16 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
 }
 
 .hub-panel.hub-panel-closing {
-  animation: hub-panel-zoom-out 500ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+  animation: hub-panel-zoom-out-desktop 500ms cubic-bezier(0.22, 0.8, 0.25, 1) forwards;
+}
+
+body[data-panel-perf="mobile"] .hub-panel.hub-panel-open {
+  animation: hub-panel-zoom-in-mobile 220ms cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+  box-shadow: 0 20px 32px rgba(0, 0, 0, 0.55);
+}
+
+body[data-panel-perf="mobile"] .hub-panel.hub-panel-closing {
+  animation: hub-panel-zoom-out-mobile 200ms cubic-bezier(0.4, 0, 0.68, 0.2) forwards;
 }
 
 /* Panel-Header & Body bleiben wie gehabt */
@@ -704,7 +742,7 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
   border-radius: 50%;
   font-size: 1.4rem;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
 
 .hub-panel-close:hover,
@@ -918,7 +956,7 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
    ========================================================================== */
 
 /* Öffnen: aus der Mitte, erst als dünner Balken, dann volle Höhe */
-@keyframes hub-panel-zoom-in {
+@keyframes hub-panel-zoom-in-desktop {
   0% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.05);
@@ -967,7 +1005,7 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
 
 /* Schließen: leicht zusammenziehen, dann wieder in den Kern „zurückschnappen“
    + kleines Lichtecho */
-@keyframes hub-panel-zoom-out {
+@keyframes hub-panel-zoom-out-desktop {
 
   /* exakt das Spiegelbild von 100% → 0% */
   0% {
@@ -1235,6 +1273,32 @@ body.voice-locked .hub-core-trigger.is-voice-locked::after {
 
   .appointments-columns {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes hub-panel-zoom-in-mobile {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes hub-panel-zoom-out-mobile {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
   }
 }
 

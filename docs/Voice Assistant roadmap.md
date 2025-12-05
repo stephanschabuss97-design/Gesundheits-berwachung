@@ -518,7 +518,7 @@ Pers�nliche CKD-Daten und Limits zentral pflegen, damit Butler/Fotokontext imm
 
 Für das Profil-Panel brauchen wir mehrere Bausteine. Ich würde den Umbau so aufteilen:
 
-# Hilfe-Panel in index.html ersetzen ✅
+## Hilfe-Panel in index.html ersetzen ✅
 section mit id="helpPanel" komplett entfernen.
 An derselben Position neues section id="hubProfilePanel" einfügen: Aufbau wie Terminpanel (scroll-wrap, header mit Close-Button, Formular + Übersicht).
 Formular‐Felder:
@@ -534,23 +534,23 @@ Lifestyle-Note (Textarea)
 Buttons: Speichern (profileSaveBtn) und evtl. Zurücksetzen/Refresh.
 Unterhalb des Formulars ein Abschnitt „Aktuelle Daten“ (z. B. <div id="profileOverview">), der nach Save/Synchronisierung befüllt wird.
 
-# Orbit-Button neu binden ✅
+## Orbit-Button neu binden ✅
 Im Hub-Orbit (index.html) statt Hilfe-Button data-hub-module="profile" setzen.
 In app/modules/hub/index.js: neuen Button via bindButton('[data-hub-module="profile"]', openPanelHandler('profile'), { sync:false }) registrieren.
 Optional: Beim Öffnen AppModules.profile?.sync({ reason: 'panel-open' }).
 
-# Neues Modul app/modules/profile/index.js ✅
+## Neues Modul app/modules/profile/index.js ✅
 Analoge Struktur wie app/modules/appointments/index.js: init(), ensureRefs(), loadProfile(), saveProfile().
 Supabase via ensureSupabaseClient() + getUserId() nutzen.
 saveProfile entscheidet, ob Insert vs Update (wir können upsert verwenden .upsert({ user_id, ... }, { onConflict: 'user_id' })).
 Nach erfolgreichem Save: Formular reset (oder Werte belassen) + renderOverview().
 notifyChange('profile') → CustomEvent profile:changed.
 
-# Styles ✅
+## Styles ✅
 app/styles/hub.css ggf. um .profile-panel erweitern: Grid für Form, Labels, Liste analog Terminpanel.
 Checkbox/Dropdown an Terminpanel-Stil angleichen.
 
-# Weitere Anpassungen ✅
+## Weitere Anpassungen ✅
 app/modules/charts/index.js später an profile:changed hängen.
 Für Assistant genügt es zunächst, wenn wir das Profil-Event zur Verfügung haben; die Edge Function wird separat erweitert.
 
@@ -573,7 +573,7 @@ Damit haben wir einen klaren Umbauplan und Wissen, welche Dateien angefasst werd
 - Medikation als JSON-Array erlaubt einfache Pflege.
 - Bei fehlendem Profil blendet das Panel einen Hinweis ein; Assistant f�llt auf konservative Defaults zur�ck.
 
-### 4.4 Hybrid Panel Animation (Hub Performance Mode)
+### 4.4 Hybrid Panel Animation (Hub Performance Mode) ✅
 Ziel:
 Die Hub-Panels werden für Mobile/Tablet (Performance Mode) und Desktop (cineastisch, aber leicht) optimiert.
 Basierend auf der eigenen „Panel Animation Performance Roadmap“.
@@ -592,6 +592,34 @@ Panel-Open/Close über neue Desktop-Keyframes (zoom-in-desktop, zoom-out-desktop
 Zielwirkung:
 Mobile: ultrasmooth & performant für Alltag
 Desktop: edel, aber ohne teure Shadow-Repaints
+
+## app/styles/hub.css ✅
+Panels bisher alle via zoom-in/zoom-out Keyframes → neue Sets erzeugen: hub-panel-zoom-in-mobile, hub-panel-zoom-out-mobile (nur opacity + transform: translate3d), sowie hub-panel-zoom-in-desktop, …-desktop (dezente “Squash-Grow”).
+Media Query <1025px:
+body.is-mobilePerformance (oder direkt @media (max-width:1024px)) remove backdrop-filter, lighten shadows (box-shadow -> klein, rgba).
+Setze .hub-panel Animation auf mobile Keyframes, animation-duration kürzer (z.B. 180 ms).
+Orbit/Aura: .hub.is-panel-open → nur opacity dimmen, keine Glow/Blur.
+Desktop (min-width:1025px):
+Keyframes auf die cineastische Variante referenzieren, aber ohne Shadow-Animation (Glow/Elevation via transition).
+Panel‐Close Buttons / Backdrop glätten (z.B. transition: opacity .3s).
+
+## app/styles/base.css (oder app/styles/hub.css falls alle Backdrop-Regeln dort liegen) ✅
+Performance-Mode braucht global body/main Flags: body[data-panel-perf="mobile"].
+Mobile Mode: #hubBackdrop → opacity only, kein blur. Desktop Mode: backdrop-filter: blur(6px) aber transition statt Keyframe.
+
+## app/modules/hub/index.js ✅
+Device Detection: beim Boot const isMobilePanelMode = window.matchMedia('(max-width:1024px)').
+Toggle document.body.dataset.panelPerf = isMobilePanelMode.matches ? 'mobile' : 'desktop'; Listener auf change.
+Optional: bei jedem Panel-Open body.classList.toggle('hub-panel-mobile', ...) damit CSS umschalten kann.
+Orbit/Aura‐Easing: wenn Panel offen und Mobile Mode → setze .hub class (hub--mobile-open) damit CSS die vereinfachten Effekte nutzt.
+
+## app/styles/hub.css – Orbit/Aura spezifisch ✅
+Neue Klasse .hub--panel-open-mobile → disables @keyframes aura-boost, nur opacity.
+Desktop behält die Glow-Animation, aber wechselt auf transition: filter statt Keyframe, um Repaints zu reduzieren.
+
+## QA / Touchlog Bezug (keine Datei, aber Hinweis) ✅
+Nach CSS/JS Anpassungen sicherstellen, dass Touch-Log keine zusätzlichen Meldungen generiert (Animationen laufen rein in CSS; JS ändert nur Body-Dataset).
+Damit haben wir klar, wo wir Hand anlegen: Schwerpunkt liegt auf app/styles/hub.css, ergänzt durch ein kleines Flag in app/modules/hub/index.js (und ggf. app/styles/base.css, falls der Backdrop dort lebt).
 
 ---
 

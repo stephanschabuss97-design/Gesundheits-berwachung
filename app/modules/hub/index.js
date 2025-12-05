@@ -125,6 +125,7 @@
   let assistantChatCtrl = null;
   let assistantProfileSnapshot = appModules.profile?.getData?.() || null;
   let supabaseFunctionHeadersPromise = null;
+  const panelPerfQuery = global.matchMedia?.('(max-width: 1024px)') || null;
 
   const getSupabaseApi = () => appModules.supabase || {};
   const getAssistantUiHelpers = () =>
@@ -402,6 +403,20 @@
     setupChat(hub);
     setupSpriteState(hub);
     doc.body.classList.add('hub-mode');
+    applyPanelPerformanceMode(panelPerfQuery?.matches);
+    if (panelPerfQuery) {
+      const perfListener = (event) => applyPanelPerformanceMode(event.matches);
+      if (typeof panelPerfQuery.addEventListener === 'function') {
+        panelPerfQuery.addEventListener('change', perfListener);
+      } else if (typeof panelPerfQuery.addListener === 'function') {
+        panelPerfQuery.addListener(perfListener);
+      }
+    }
+  };
+
+  const applyPanelPerformanceMode = (isMobile) => {
+    if (!doc?.body) return;
+    doc.body.dataset.panelPerf = isMobile ? 'mobile' : 'desktop';
   };
 
   const setupIconBar = (hub) => {

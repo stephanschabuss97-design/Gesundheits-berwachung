@@ -51,6 +51,12 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 - Orbit-Buttons „Termine“ und „Profil“ triggern beim Öffnen `sync({ reason: 'panel-open' })`, damit Panel + Butler denselben Stand haben.
 - QA: Assistant-Header reagiert sofort auf Insert/Delete/Done/Profile-Save; Touch-Log liefert höchstens einen Refresh pro Event.
 
+### 3.2 Hybrid Panel Animation (Phase 4.4)
+
+- Hub-Panels verwenden einen hybriden Performance-Modus: `body.dataset.panelPerf` wird über eine Media Query gesetzt, Mobile-Geräte (<1025 px) nutzen blur-freie, kurze Keyframes (`hub-panel-zoom-in/out-mobile`), Desktop behält die cineastischen Varianten (`…-desktop`).
+- Orbit/Aura verhalten sich entsprechend: auf Mobile wird bei geöffnetem Panel nur leicht gedimmt, auf Desktop laufen weiterhin Glow-/Pulse-Animationen.
+- QA: Siehe `docs/QA_CHECKS.md` Phase 4.4 – prüft Animationen, Touch-Log und Overlay-Verhalten.
+
 ---
 
 ## 4. Backend Flow Highlights
