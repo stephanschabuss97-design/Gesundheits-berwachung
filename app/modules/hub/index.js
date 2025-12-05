@@ -1069,7 +1069,7 @@
         };
         diag.add?.('[assistant-suggest] confirm flow start');
         const ok = await runAllowedAction('intake_save', payload, {
-          source: suggestion.source || 'suggestion-card',
+          source: 'suggestion-card',
         });
         if (!ok) {
           appendAssistantMessage(

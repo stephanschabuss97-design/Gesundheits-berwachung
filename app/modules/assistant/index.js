@@ -138,22 +138,40 @@ function createAssistantUiHelpers() {
     return base;
   }
 
+  const parseMetricValue = (value) => {
+    if (value == null) return null;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.replace(',', '.');
+      const match = normalized.match(/-?\d+(?:\.\d+)?/);
+      if (match) {
+        const parsed = Number(match[0]);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+    }
+    return null;
+  };
+
   function buildVisionSuggestPayload(result) {
     if (!result) return null;
     const analysis = result.analysis || {};
-    const hasAny =
-      analysis.water_ml != null ||
-      analysis.salt_g != null ||
-      analysis.protein_g != null;
-    if (!hasAny && !result.reply) return null;
+    const metrics = {
+      water_ml: parseMetricValue(analysis.water_ml),
+      salt_g: parseMetricValue(analysis.salt_g),
+      protein_g: parseMetricValue(analysis.protein_g)
+    };
+    const hasMetrics = Object.values(metrics).some((value) =>
+      Number.isFinite(value),
+    );
+    if (!hasMetrics && !result.reply) return null;
     return {
       title: 'Analyse verfügbar',
       body: formatVisionResultText(result),
-      metrics: {
-        water_ml: Number(analysis.water_ml) || 0,
-        salt_g: Number(analysis.salt_g) || 0,
-        protein_g: Number(analysis.protein_g) || 0
-      },
+      metrics,
       recommendation: (result.reply || '').trim() || null
     };
   }
