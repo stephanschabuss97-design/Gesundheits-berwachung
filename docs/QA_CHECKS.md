@@ -153,6 +153,26 @@
 - [ ] `assistant:voice-request` feuert nur bei Warnungen während Voice-Modus; ohne Voice passiert nichts außer Text.
 - [ ] Touchlog bleibt unverändert (keine neuen `[assistant-dayplan]` Spam-Einträge).
 
+---
+
+## Phase 5.4 – Optionaler Voice-Handschlag (2025-12-09)
+
+**Scope:** Long-Press Trigger, Voice-Gate UI, kein Always-On.
+
+**Smoke**
+- [ ] Kurzer Tap auf den Assistant-Button öffnet den Textchat. Long-Press (~650 ms) startet den Voice-Recorder (Needle zeigt `listening`, Orbit pulsiert), Aufnahme endet automatisch nach Stille.
+- [ ] Auth „unknown“ oder Boot < INIT_UI: Voice-Button zeigt `is-voice-locked` (grau, Tooltip „Voice aktiviert sich nach dem Start“), Long-Press startet keine Aufnahme, Chat bleibt gesperrt bis Auth fertig. Nach Login verschwindet der Lock ohne Reload.
+
+**Sanity**
+- [ ] Touchlog/Diag: Voice-Blockade loggt `[hub] voice trigger blocked (auth-check)` o. ä., TTS/Recorder starten erst nachdem `assistantAllowedActions` Stage/Auth freigibt.
+- [ ] `AppModules.hub.getVoiceGateStatus()` liefert `{ allowed:boolean, reason }`, `onVoiceGateChange` feuert bei Stage/Auth-Änderungen (MutationObserver). VAD (`MidasVAD`) stoppt sofort, wenn Gate wieder gelockt wird.
+- [ ] Voice-Transcripts werden wie Textchat behandelt (`assistant:action-request` → Suggest-Card/Confirm). Es gibt keinen Pfad, der direkt `intake_save` ausführt, ohne Confirm-Layer.
+
+**Regression**
+- [ ] Voice-Button `aria-disabled` wechselt mit Gate und wirkt sich nicht auf andere Orbit-Buttons aus.
+- [ ] Keine zusätzlichen `[assistant-actions]` Einträge beim bloßen Long-Press ohne Aufnahme.
+- [ ] Recorder/TTS verhalten sich unverändert auf Desktop und Mobile; kein Always-On/VAD-Streaming aktiv (nur Long-Press).
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

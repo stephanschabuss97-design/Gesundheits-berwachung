@@ -35,6 +35,7 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 
 ## 3. Voice & Text Loop (Frontend)
 
+- Orbit-Hauptbutton (`data-hub-module="assistant-text"`) verhält sich dual: **kurzer Tap** öffnet den Textchat, **Long Press (~650 ms)** startet `handleVoiceTrigger()` (Voice). `body.voice-locked`/`button.is-voice-locked` signalisieren, wenn Boot/Auth (Stage < INIT_UI oder `authState === 'unknown'`) Voice sperren; der Button bleibt dann `aria-disabled="true"` und löst nur den Textchat aus.
 1. **Start/Stop** – `handleVoiceTrigger()` toggelt Aufnahme; `startVoiceRecording()` initialisiert `MediaRecorder`, `voiceCtrl` hält State.
 2. **Transcribe** – `transcribeAudio()` baut `FormData` (`audio`) und ruft `/midas-transcribe`; UI schaltet auf `thinking`.
 3. **Assistant Roundtrip** – `fetchAssistantReply()` sendet History + `session_id` an `/midas-assistant` (gemeinsam für Voice/Text). Antworten enthalten optional `actions`.

@@ -105,3 +105,6 @@ git push origin backup-before-change
 git branch backup-pre-change
 git push origin backup-pre-change
 Damit kannst du jederzeit in Sekunden alles rückgängig machen.
+
+# E) 🌱 Update of Supabase CLI in CMD
+npm update supabase --save-dev

@@ -652,10 +652,10 @@ Damit haben wir klar, wo wir Hand anlegen: Schwerpunkt liegt auf app/styles/hub.
 - [x] Helper `generateDayPlan()` bündelt Uhrzeit, Termine, Limits (Profil) → liefert strukturierte Empfehlungen/Warnungen, die Textchat sowie Voice verwenden können.
 - [x] Antworten bleiben textbasiert; bei aktiver Voice-Konversation wird die Nachricht zusätzlich vorgelesen (gleicher Text).
 
-### 5.4 Optionaler Voice-Handschlag _(pending)_
+### 5.4 Optionaler Voice-Handschlag ✅
 
-- [ ] Long-Press startet Sprachaufnahme; Ergebnis wird als Chat-Input behandelt („Trag 300 ml Wasser ein“ → Suggest-Card).
-- [ ] Keine Always-On-/Streaming-Experimente – Voice bleibt Eingabehilfe und respektiert denselben Confirm-Layer.
+- [x] Long-Press (~650 ms) auf den Assistant-Orbit startet die Sprachaufnahme (`handleVoiceTrigger`), kurzer Tap öffnet weiterhin den Textchat. Voice bleibt gesperrt (CSS `body.voice-locked`) solange Stage < INIT_UI oder `authState === 'unknown'`.
+- [x] Keine Always-On-/Streaming-Experimente – Voice dient als Eingabehilfe, feuert `assistant:action-request` und nutzt denselben Confirm-Layer wie Text/Foto. Gate wird über `AppModules.hub.getVoiceGateStatus/onVoiceGateChange` + VAD-Stop kontrolliert.
 
 > **Zusammenfassung:** Phase 5 fokussiert einen zuverlässigen Suggest/Confirm-Pfad und kontrollierten Allowed-Actions-Einsatz. Voice bleibt sekundär, nutzt aber exakt dieselben Mechanismen wie der Textchat.
 

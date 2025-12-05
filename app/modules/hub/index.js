@@ -125,9 +125,13 @@
   let assistantChatCtrl = null;
   let assistantProfileSnapshot = appModules.profile?.getData?.() || null;
   let supabaseFunctionHeadersPromise = null;
+  const voiceGateListeners = new Set();
+  let voiceGateObserver = null;
+  let lastVoiceGateStatus = { allowed: false, reason: 'booting' };
   const panelPerfQuery = global.matchMedia?.('(max-width: 1024px)') || null;
 
   const getSupabaseApi = () => appModules.supabase || {};
+  const getSupabaseState = () => getSupabaseApi()?.supabaseState || null;
   const getAssistantUiHelpers = () =>
     appModules.assistantUi ||
     appModules.assistant?.ui ||
@@ -382,7 +386,53 @@
       doctorUnlockWaitCancel = cancelFn;
     });
 
-  const isBootReady = () => doc?.body?.dataset?.bootStage === 'idle';
+  const isBootReady = () => {
+    const stage = (doc?.body?.dataset?.bootStage || '').toLowerCase();
+    return stage === 'idle' || stage === 'init_ui';
+  };
+
+  const computeVoiceGateStatus = () => {
+    if (!isBootReady()) {
+      return { allowed: false, reason: 'booting' };
+    }
+    const authState = getSupabaseState()?.authState;
+    if (authState === 'unknown') {
+      return { allowed: false, reason: 'auth-check' };
+    }
+    return { allowed: true, reason: '' };
+  };
+
+  const applyVoiceGateUi = (status) => {
+    if (!doc?.body) return;
+    doc.body.classList.toggle('voice-locked', !status.allowed);
+    if (voiceCtrl?.button) {
+      voiceCtrl.button.classList.toggle('is-voice-locked', !status.allowed);
+      voiceCtrl.button.setAttribute('aria-disabled', status.allowed ? 'false' : 'true');
+    }
+  };
+
+  const notifyVoiceGateStatus = () => {
+    const status = computeVoiceGateStatus();
+    lastVoiceGateStatus = status;
+    applyVoiceGateUi(status);
+    voiceGateListeners.forEach((listener) => {
+      try {
+        listener({ ...status });
+      } catch (err) {
+        diag.add?.(`[voice] gate listener error: ${err?.message || err}`);
+      }
+    });
+    return status;
+  };
+
+  const ensureVoiceGateObserver = () => {
+    if (voiceGateObserver || !doc?.body || typeof MutationObserver === 'undefined') return;
+    voiceGateObserver = new MutationObserver(() => notifyVoiceGateStatus());
+    voiceGateObserver.observe(doc.body, {
+      attributes: true,
+      attributeFilter: ['class', 'data-boot-stage'],
+    });
+  };
 
   const activateHubLayout = () => {
     const config = appModules.config || {};
@@ -414,6 +464,8 @@
         panelPerfQuery.addListener(perfListener);
       }
     }
+    ensureVoiceGateObserver();
+    notifyVoiceGateStatus();
   };
 
   const applyPanelPerformanceMode = (isMobile) => {
@@ -485,6 +537,7 @@
       { sync: false },
     );
     const openAssistantPanel = async (btn) => {
+      if (!isBootReady()) return;
       await openPanelHandler('assistant-text')(btn);
       if (activePanel?.dataset?.hubPanel !== 'assistant-text') return;
       refreshAssistantContext({ reason: 'assistant:panel-open' });
@@ -522,6 +575,11 @@
       const handlePointerDown = (event) => {
         if (!isBootReady()) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
+        const gate = notifyVoiceGateStatus();
+        if (!gate.allowed) {
+          diag.add?.(`[hub] voice trigger blocked (${gate.reason || 'gate'})`);
+          return;
+        }
         longPressTriggered = false;
         resetTimer();
         pressTimer = global.setTimeout(triggerVoice, LONG_PRESS_MS);
@@ -1940,6 +1998,13 @@
   };
 
   const handleVoiceTrigger = () => {
+    const gateStatus = notifyVoiceGateStatus();
+    if (!gateStatus.allowed) {
+      diag.add?.(`[hub] voice trigger blocked (${gateStatus.reason || 'gate'})`);
+      setVoiceState('error', 'Voice deaktiviert – bitte warten');
+      setTimeout(() => setVoiceState('idle'), 1800);
+      return;
+    }
     if (!voiceCtrl) {
       console.warn('[hub] voice controller missing');
       return;
@@ -1976,6 +2041,12 @@
 
   const startVoiceRecording = async () => {
     try {
+      const gate = notifyVoiceGateStatus();
+      if (!gate.allowed) {
+        diag.add?.(`[hub] voice record blocked (${gate.reason || 'gate'})`);
+        setVoiceState('idle');
+        return;
+      }
       clearPendingResume();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const options = {};
@@ -2461,5 +2532,17 @@
       return true;
     },
     forceClosePanel: (panelName, opts) => forceClosePanelByName(panelName, opts),
+    getVoiceGateStatus: () => ({ ...lastVoiceGateStatus }),
+    isVoiceReady: () => !!lastVoiceGateStatus.allowed,
+    onVoiceGateChange: (callback) => {
+      if (typeof callback !== 'function') return () => {};
+      voiceGateListeners.add(callback);
+      try {
+        callback({ ...lastVoiceGateStatus });
+      } catch (err) {
+        diag.add?.(`[voice] gate listener error: ${err?.message || err}`);
+      }
+      return () => voiceGateListeners.delete(callback);
+    },
   });
 })(typeof window !== 'undefined' ? window : globalThis);
