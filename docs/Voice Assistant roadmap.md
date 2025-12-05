@@ -623,41 +623,41 @@ Damit haben wir klar, wo wir Hand anlegen: Schwerpunkt liegt auf app/styles/hub.
 
 ---
 
-## Phase 5 ? Actions & Flows ? Butler Layer
+## Phase 5 – Actions & Flows – Butler Layer
 
-**Ziel:**
-Aus dem beratenden Assistant wird ein Butler, der nach einer klaren "Ja/Nein"-Best?tigung Intakes (und sp?ter weitere Module) aktualisieren kann. Textchat bleibt der Hauptpfad, Voice nutzt dieselben Hooks via Long-Press. Alle ?nderungen laufen ?ber erlaubte Actions und einen gemeinsamen Confirm-Layer. 
+**Status:** TODO  
+**Ziel:** Aus dem beratenden Assistant wird ein Butler, der nach einer klaren Ja/Nein-Bestätigung Intakes (und später weitere Module) aktualisieren kann. Textchat bleibt Hauptpfad, Voice nutzt dieselben Hooks via Long-Press. Alle Änderungen laufen über erlaubte Actions und einen gemeinsamen Confirm-Layer.
 
 ---
 
-### 5.1 Suggest & Confirm Layer
+### 5.1 Suggest & Confirm Layer _(pending)_
 
-1. **Kontext bauen:** Beim ?ffnen des Panels l?dt Phase?3 bereits Intakes + Termine; Phase?5 erg?nzt eine Helper-API (ssistantSuggestStore o.??.), die den Snapshot f?r jede Antwort vorh?lt.
-2. **Analyse:** Foto/Text landen bei /midas-vision bzw. /midas-assistant und liefern suggestIntake-Payloads (Wasser/Salz/Protein).
-3. **UI-Card:** Ein wiederverwendbarer Block im Assistant-Panel zeigt ?gesch?tzte Werte? + Frage ?Soll ich das speichern??. Buttons/Tasten: **Ja** / **Nein** (plus optional Voice-Best?tigung).
-4. **Confirm:**
-   - Ja ? ruft IntakeSave (Allowed Action) mit Payload auf, aktualisiert lokale Header-Werte und protokolliert im Touch-Log.
-   - Nein ? verwirft Suggestion, Option ?Nochmals analysieren??.
-5. **Follow-up:** Nach erfolgreichem Save fragt der Butler: ?Willst du eine Empfehlung f?r den restlichen Tag?? ? Ja = generiert Text basierend auf Uhrzeit, Intakes und Terminen.
+- [ ] **Kontext-Hook:** Helper (`assistantSuggestStore`) hält Intake/Termin/Profil-Snapshot pro Antwort bereit.
+- [ ] **Analyse-Payloads:** Foto/Text (Vision/Assistant) liefern `suggestIntake`-Daten (Wasser/Salz/Protein) + Confidence.
+- [ ] **UI-Card:** Wiederverwendbarer Block im Assistant-Panel zeigt geschätzte Werte + Frage „Soll ich das speichern?“ inkl. Buttons **Ja** / **Nein** (optional Voice-Bestätigung).
+- [ ] **Confirm-Flow:**  
+  - **Ja:** ruft Allowed Action (z. B. IntakeSave) mit Payload auf, aktualisiert Header/Butler und loggt im Touchlog.  
+  - **Nein:** verwirft Suggestion, optional „Nochmals analysieren“.  
+- [ ] **Follow-up:** Nach Save fragt Butler „Empfehlung für den restlichen Tag?“ → generiert Text basierend auf Uhrzeit, Intakes, Terminen.
 
-### 5.2 Allowed Actions & Guard Rails
+### 5.2 Allowed Actions & Guard Rails _(pending)_
 
-* Whitelist bleibt bestehen (IntakeSave, OpenModule, ShowIntakeStatus, ?), aber wird nun zentral von executeAllowedAction() orchestriert ? unabh?ngig davon, ob der Trigger aus Text oder Voice kommt.
-* Jede Aktion loggt in diag/touch-log, pr?ft Auth/Stage und bricht sauber ab, wenn der Gate (Phase?0/3) nicht ready ist.
-* Keine Intent Engine n?tig: Textchat ruft Actions direkt nach best?tigten Buttons auf; Voice-Loop mappt nur Long-Press ? ??ffne Chat? oder ?best?tige Suggestion?.
+- [ ] Whitelist (IntakeSave, OpenModule, ShowIntakeStatus, …) zentral über `executeAllowedAction()` orchestrieren – unabhängig vom Trigger (Text oder Voice).
+- [ ] Jede Aktion loggt diag/touch-log, prüft Auth/Stage und bricht sauber ab, wenn Gates (Phase 0/3) nicht ready sind.
+- [ ] Keine Intent Engine: Textchat löst Actions direkt nach bestätigten Buttons aus; Voice mappt Long-Press nur auf „öffne Chat“ oder „bestätige Suggestion“.
 
-### 5.3 Kontextuelle Empfehlungen
+### 5.3 Kontextuelle Empfehlungen _(pending)_
 
-* Nach jedem Save werden Intakes + Termine aktualisiert und k?nnen als Mini-Report (z.?B. ?Noch 1,2?L Wasser ?brig, morgen Termin um 09:00?) ausgegeben werden.
-* Ein generateDayPlan()-Helper b?ndelt Uhrzeit, Termine und Limits (aus Phase?4.4) und liefert Vorschl?ge/Warnings.
-* Diese Antworten bleiben textbasiert; Voice liest sie lediglich vor, falls aktiv.
+- [ ] Nach jedem Save Mini-Report erzeugen („Noch 1,2 L Wasser übrig, morgen Termin 09:00“).
+- [ ] Helper `generateDayPlan()` bündelt Uhrzeit, Termine, Limits (Profil) → liefert Empfehlungen/Warnings.
+- [ ] Antworten bleiben textbasiert; Voice liest nur vor, falls aktiv.
 
-### 5.4 Optionaler Voice-Handschlag
+### 5.4 Optionaler Voice-Handschlag _(pending)_
 
-* Long-Press kann weiterhin eine kurze Voice-Aufnahme starten, aber statt einer separaten Intent Engine wird das Ergebnis wie ein normaler Chat-Input behandelt (z.?B. ?Trag 300 ml Wasser ein? ? erscheint im Chat, Assistant antwortet und erzeugt eine Suggest-Card).
-* Keine Always-On-Experimente, kein Streaming ? Voice ist nur eine bequeme Eingabehilfe, die die gleichen Confirm-Regeln respektiert.
+- [ ] Long-Press startet Sprachaufnahme; Ergebnis wird als Chat-Input behandelt („Trag 300 ml Wasser ein“ → Suggest-Card).
+- [ ] Keine Always-On-/Streaming-Experimente – Voice bleibt Eingabehilfe und respektiert denselben Confirm-Layer.
 
-> **Zusammenfassung:** Phase?5 konzentriert sich auf den zuverl?ssigen Suggest/Confirm-Pfad und den kontrollierten Einsatz von Allowed Actions. Voice bleibt sekund?r und nutzt exakt dieselben Mechanismen wie der Textchat.
+> **Zusammenfassung:** Phase 5 fokussiert einen zuverlässigen Suggest/Confirm-Pfad und kontrollierten Allowed-Actions-Einsatz. Voice bleibt sekundär, nutzt aber exakt dieselben Mechanismen wie der Textchat.
 
 ## Phase 6 – Deep Cleanup & Refactor
 

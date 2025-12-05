@@ -133,6 +133,10 @@
     appModules.assistant?.ui ||
     global.AppModules?.assistantUi ||
     null;
+  const getAssistantSuggestStore = () =>
+    appModules.assistantSuggestStore ||
+    global.AppModules?.assistantSuggestStore ||
+    null;
 
   const syncButtonState = (target) => {
     hubButtons.forEach((btn) => {
@@ -825,13 +829,22 @@
       ]);
       renderAssistantIntakeTotals(snapshot);
       renderAssistantAppointments(appointments);
+      const contextPayload = {
+        intake: snapshot || null,
+        appointments: Array.isArray(appointments) ? appointments : [],
+        profile: getAssistantProfileSnapshot(),
+      };
       if (assistantChatCtrl) {
-        assistantChatCtrl.context = {
-          intake: snapshot || null,
-          appointments: Array.isArray(appointments) ? appointments : [],
-          profile: getAssistantProfileSnapshot(),
-        };
+        assistantChatCtrl.context = contextPayload;
       }
+      const suggestStore = getAssistantSuggestStore();
+      suggestStore?.setSnapshot?.(
+        {
+          ...contextPayload,
+          updatedAt: Date.now(),
+        },
+        { reason: reason || 'refresh' },
+      );
     };
 
   let assistantChatSetupAttempts = 0;
@@ -950,12 +963,45 @@
       doc?.addEventListener('appointments:changed', () => {
         refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
       });
+      const triggerSuggestFollowup = (detail) => {
+        doc?.dispatchEvent(
+          new CustomEvent('assistant:suggest-followup', {
+            detail,
+          }),
+        );
+      };
       doc?.addEventListener('profile:changed', (event) => {
         assistantProfileSnapshot =
           event?.detail?.data || appModules.profile?.getData?.() || null;
         if (assistantChatCtrl?.context) {
           assistantChatCtrl.context.profile = assistantProfileSnapshot;
         }
+        const store = getAssistantSuggestStore();
+        if (store && assistantChatCtrl?.context) {
+          store.setSnapshot(
+            { ...assistantChatCtrl.context, updatedAt: Date.now() },
+            { reason: 'profile:changed' },
+          );
+        }
+      });
+      global.addEventListener('assistant:suggest-confirm', (event) => {
+        const suggestion = event?.detail?.suggestion;
+        if (!suggestion) return;
+        diag.add?.(
+          `[assistant-suggest] confirm requested source=${suggestion.source || 'unknown'}`,
+        );
+        doc.dispatchEvent(
+          new CustomEvent('assistant:suggest-confirm-request', {
+            detail: { suggestion },
+          }),
+        );
+        const store = getAssistantSuggestStore();
+        store?.dismissCurrent?.({ reason: 'confirm-handled' });
+        triggerSuggestFollowup({ suggestion, followUp: 'day-plan' });
+      });
+      global.addEventListener('assistant:suggest-answer', (event) => {
+        if (event?.detail?.accepted) return;
+        diag.add?.('[assistant-suggest] user dismissed suggestion');
       });
     };
 
@@ -1350,6 +1396,21 @@
       targetMessage.content = '';
       targetMessage.retryable = false;
       diag.add?.('[assistant-vision] analyse success');
+      const suggestionStore = getAssistantSuggestStore();
+      const suggestionPayload = assistantUi?.buildVisionSuggestPayload?.(result);
+      if (suggestionStore && suggestionPayload) {
+        suggestionStore.queueSuggestion(
+          {
+            ...suggestionPayload,
+            source: 'vision',
+            meta: {
+              ...(suggestionPayload.meta || {}),
+              fileName: file?.name || targetMessage.meta?.fileName || '',
+            },
+          },
+          { reason: 'vision-result' },
+        );
+      }
     } catch (err) {
       console.error('[assistant-chat] vision request failed', err);
       diag.add?.(

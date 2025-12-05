@@ -230,7 +230,7 @@
           </section>
           <section class="assistant-suggest-card" id="assistantSuggestCard" hidden aria-live="polite">
             <header>
-              <p class="muted small">Vorschlag</p>
+              <p class="muted small" id="assistantSuggestTitle">Vorschlag</p>
               <button type="button" class="btn ghost tiny" id="assistantSuggestDismiss" aria-label="Vorschlag verwerfen">&times;</button>
             </header>
             <div class="assistant-suggest-body" id="assistantSuggestBody">
@@ -841,6 +841,8 @@
   <script src="app/modules/hub/vad/vad.js"></script>
   <script src="app/modules/appointments/index.js"></script>
   <script src="app/modules/profile/index.js"></script>
+  <script src="app/modules/assistant/suggest-store.js"></script>
+  <script src="app/modules/assistant/suggest-ui.js"></script>
   <script src="app/modules/hub/index.js"></script>
   <!-- @refactor: moved to assets/js/ui.js -->
   <script src="assets/js/ui.js"></script>
