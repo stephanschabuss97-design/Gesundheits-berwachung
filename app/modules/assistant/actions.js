@@ -163,70 +163,139 @@ async function handleSingleAction(action, sb, notify) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Action Handlers – CORE
-// ---------------------------------------------------------------------------
+const MODULE_ALIAS_ENTRIES = [
+  {
+    keys: ['assistant', 'assistant-text', 'chat', 'textchat', 'text-chat', 'butler'],
+    moduleKey: 'assistant-text',
+    label: 'den Assistenten',
+  },
+  {
+    keys: ['intake', 'capture', 'tageserfassung'],
+    moduleKey: 'intake',
+    label: 'die Tageserfassung',
+  },
+  {
+    keys: ['vitals', 'vitaldaten', 'vital'],
+    moduleKey: 'vitals',
+    label: 'deine Vitaldaten',
+  },
+  {
+    keys: ['appointments', 'termin', 'termine', 'calendar'],
+    moduleKey: 'appointments',
+    label: 'deine Termine',
+  },
+  {
+    keys: ['profile', 'profil', 'personaldaten', 'personal', 'gesundheitsprofil'],
+    moduleKey: 'profile',
+    label: 'dein Profil',
+  },
+  {
+    keys: ['doctor', 'arzt', 'arztansicht'],
+    moduleKey: 'doctor',
+    label: 'die Arzt-Ansicht',
+    startMode: 'list',
+  },
+  {
+    keys: ['doctor-chart', 'arzt-chart', 'diagramm', 'chart'],
+    moduleKey: 'doctor',
+    label: 'das Diagramm',
+    startMode: 'chart',
+  },
+  {
+    keys: ['voice', 'voicechat', 'voice-chat', 'sprachchat', 'mikrofon', 'sprechen'],
+    moduleKey: 'assistant-text',
+    label: 'den Sprachmodus',
+    voice: true,
+  },
+];
 
-async function handleIntakeSave(payload, sb, notify) {
-  const hasWater = payload.water_ml != null && payload.water_ml !== '';
-  const hasSalt = payload.salt_g != null && payload.salt_g !== '';
-  const hasProtein = payload.protein_g != null && payload.protein_g !== '';
-
-  const waterMl = hasWater ? safeNumber(payload.water_ml, NaN) : null;
-  const saltG = hasSalt ? safeNumber(payload.salt_g, NaN) : null;
-  const proteinG = hasProtein ? safeNumber(payload.protein_g, NaN) : null;
-
-  const label = (payload.label || '').trim() || null;
-  const note = (payload.note || '').trim() || null;
-
-  if (!hasWater && !hasSalt && !hasProtein) {
-    logWarn('intake_save – no metrics provided');
-    return;
+function normalizeModuleTarget(payload = {}) {
+  const rawInput = `${payload.target ?? payload.module ?? payload.panel ?? ''}`
+    .trim()
+    .toLowerCase();
+  if (!rawInput) return null;
+  let match = MODULE_ALIAS_ENTRIES.find((entry) => entry.keys.includes(rawInput));
+  if (!match && rawInput.startsWith('doctor') && rawInput.includes('chart')) {
+    match = MODULE_ALIAS_ENTRIES.find((entry) => entry.moduleKey === 'doctor' && entry.startMode === 'chart');
   }
+  if (!match) return null;
 
-  if (hasWater && (!Number.isFinite(waterMl) || waterMl <= 0)) {
-    logWarn('intake_save – invalid water_ml');
+  const normalized = {
+    moduleKey: match.moduleKey,
+    label: match.label || `das Modul "${rawInput}"`,
+    debug: rawInput,
+    startMode: match.startMode || null,
+     voice: !!match.voice,
+    message: match.message || null,
+  };
+  const modeHint = `${payload.mode ?? payload.view ?? ''}`.trim().toLowerCase();
+  if (modeHint === 'chart') {
+    normalized.startMode = 'chart';
+  } else if (modeHint === 'list') {
+    normalized.startMode = 'list';
   }
-
-  if (hasSalt && !Number.isFinite(saltG)) {
-    logWarn('intake_save – invalid salt_g');
+  if (payload.voice === true) {
+    normalized.voice = true;
   }
-
-  if (hasProtein && !Number.isFinite(proteinG)) {
-    logWarn('intake_save – invalid protein_g');
-  }
-
-  logInfo('IntakeSave requested');
-
-  // TODO: Hier deine echte Intake-Speicherlogik verdrahten (Supabase / RPCs).
-  // z. B.: await sb.intake.saveAssistantIntake({ waterMl, saltG, proteinG, label, note });
-
-  const parts = [];
-  if (Number.isFinite(waterMl) && waterMl > 0) parts.push(`${waterMl} ml Wasser`);
-  if (Number.isFinite(saltG)) parts.push(`${saltG} g Salz`);
-  if (Number.isFinite(proteinG)) parts.push(`${proteinG} g Protein`);
-
-  const summary = parts.length ? parts.join(', ') : 'deinen Eintrag';
-
-  notify(`Ich habe ${summary} für heute vorgemerkt (Assist-Action).`, 'success');
+  return normalized;
 }
 
-// ---------------------------------------------------------------------------
-// Action Handlers – UI
-// ---------------------------------------------------------------------------
+async function triggerHubModule(moduleKey, options = {}) {
+  if (typeof window === 'undefined') return false;
+  const hubApi = window.AppModules?.hub;
+  if (moduleKey === 'doctor') {
+    const startMode = options.startMode === 'chart' ? 'chart' : 'list';
+    if (hubApi?.openDoctorPanel) {
+      try {
+        const result = await hubApi.openDoctorPanel({ startMode });
+        return !!result;
+      } catch (err) {
+        logError('open_module - doctor panel failed', err);
+        return false;
+      }
+    }
+  }
+
+  const doc = window.document;
+  if (!doc) return false;
+  const button = doc.querySelector(`[data-hub-module="${moduleKey}"]`);
+  if (!button) return false;
+  try {
+    button.click();
+    if (options.voice && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('assistant:voice-request', {
+          detail: { source: options.source || 'allowed-action' },
+        }),
+      );
+    }
+    return true;
+  } catch (err) {
+    logError(`open_module - button click failed (${moduleKey})`, err);
+    return false;
+  }
+}
 
 async function handleOpenModule(payload, _sb, notify) {
-  const target = (payload.target || payload.module || '').trim();
-
-  if (!target) {
-    logWarn('open_module – missing target');
+  const normalized = normalizeModuleTarget(payload);
+  if (!normalized) {
+    logWarn('open_module - missing target');
     return;
   }
 
-  logInfo('OpenModule requested');
+  logInfo(`OpenModule requested (${normalized.debug})`);
 
-  // TODO: Hier echtes UI-Routing verdrahten (z. B. AppModules.hub.openPanel(target)).
-  notify(`Ich öffne das Modul "${target}".`, 'info');
+  const opened = await triggerHubModule(normalized.moduleKey, normalized);
+  if (opened) {
+    const message =
+      normalized.message ||
+      (normalized.voice
+        ? 'Starte Sprachaufnahme.'
+        : `Ich öffne ${normalized.label}.`);
+    notify(message, 'info');
+  } else {
+    notify('Ich konnte das gewünschte Panel nicht öffnen.', 'warning');
+  }
 }
 
 async function handleShowStatus(payload, sb, notify) {

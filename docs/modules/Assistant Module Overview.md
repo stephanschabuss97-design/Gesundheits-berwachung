@@ -57,6 +57,23 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 - Orbit/Aura verhalten sich entsprechend: auf Mobile wird bei geöffnetem Panel nur leicht gedimmt, auf Desktop laufen weiterhin Glow-/Pulse-Animationen.
 - QA: Siehe `docs/QA_CHECKS.md` Phase 4.4 – prüft Animationen, Touch-Log und Overlay-Verhalten.
 
+### 3.3 Suggest & Confirm Layer (Phase 5.1)
+
+- `assistantSuggestStore` (Singleton) sammelt pro Assistant-Roundtrip Snapshots aus Intake (`refreshAssistantContext`), Terminen (`appointments:changed`) und Profil (`profile:changed`) und stellt sie Suggestion-UI sowie Follow-up bereit.
+- Vision/Text-Responses können `actions` wie `suggest_intake`/`confirm_intake` liefern. Diese landen in `app/modules/assistant/actions.js`, das Suggestion-Metriken (Wasser/Salz/Protein + Confidence) extrahiert und den Store füttert.
+- UI: `app/modules/assistant/suggest-ui.js` rendert eine Card mit Titel, Metrics, Empfehlung, Buttons **Ja/Nein** plus Dismiss. Events:
+  - `assistant:suggest-confirm` → Hub `handleSuggestionConfirmRequest()` ruft Allowed Action `intake_save`.
+  - `assistant:suggest-answer` (Nein) verwirft Suggestion + Touchlog.
+- Follow-up: Nach erfolgreichem `intake_save` (egal ob Suggestion oder manuell) feuert `assistant:action-success` → Hub `runIntakeSaveFollowup()` refresht Kontext und generiert den Mini-Report „Resttag“ (Salz/Protein-Budget, nächster Termin). Messaging läuft über `appendAssistantMessage`.
+
+### 3.4 Allowed Actions & Guard Rails (Phase 5.2)
+
+- `app/modules/assistant/allowed-actions.js`: zentrale Whitelist + Guard (Stage ≥ INIT_UI, Auth ≠ unknown, Supabase vorhanden). Enthält Touchlog/Diag-Logging mit Quelle und sendet Erfolg/Fehler als CustomEvent.
+- `runAllowedAction()` (Hub) nutzt den Helper für Textchat, Suggest-Card und Voice. Erfolgreiche Actions emittieren `assistant:action-success` (z.B. Intake-Save) und protokollieren `[assistant-allowed] success action=intake_save source=suggestion-card`.
+- `app/modules/assistant/actions.js` verarbeitet die Action Payloads. `open_module` mappt Klartext (intake, vitals, appointments, profile, doctor/list, doctor/chart, assistant/voice) auf Orbit-Buttons oder `hub.openDoctorPanel({ startMode })`; Alias-Map ist erweiterbar (z.B. „profil“, „personaldaten“, „voicechat“).
+- Weitere Actions wie `show_status`, `highlight`, `ask_confirmation`, `transition_to_*` laufen ebenfalls durch den Helper – kein Intent-Parser mehr nötig.
+- `assistant:action-request` CustomEvents (z.B. Buttons im Chat) und Voice-„bestätigen“-Flows verwenden dieselbe Pipeline, wodurch Stage/Auth/Logging konsistent sind.
+
 ---
 
 ## 4. Backend Flow Highlights

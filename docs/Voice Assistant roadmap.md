@@ -625,26 +625,26 @@ Damit haben wir klar, wo wir Hand anlegen: Schwerpunkt liegt auf app/styles/hub.
 
 ## Phase 5 – Actions & Flows – Butler Layer
 
-**Status:** TODO  
+**Status:** In Arbeit (5.1 & 5.2 ✅, 5.3ff pending)  
 **Ziel:** Aus dem beratenden Assistant wird ein Butler, der nach einer klaren Ja/Nein-Bestätigung Intakes (und später weitere Module) aktualisieren kann. Textchat bleibt Hauptpfad, Voice nutzt dieselben Hooks via Long-Press. Alle Änderungen laufen über erlaubte Actions und einen gemeinsamen Confirm-Layer.
 
 ---
 
-### 5.1 Suggest & Confirm Layer _(pending)_
+### 5.1 Suggest & Confirm Layer ✅
 
-- [ ] **Kontext-Hook:** Helper (`assistantSuggestStore`) hält Intake/Termin/Profil-Snapshot pro Antwort bereit.
-- [ ] **Analyse-Payloads:** Foto/Text (Vision/Assistant) liefern `suggestIntake`-Daten (Wasser/Salz/Protein) + Confidence.
-- [ ] **UI-Card:** Wiederverwendbarer Block im Assistant-Panel zeigt geschätzte Werte + Frage „Soll ich das speichern?“ inkl. Buttons **Ja** / **Nein** (optional Voice-Bestätigung).
-- [ ] **Confirm-Flow:**  
-  - **Ja:** ruft Allowed Action (z. B. IntakeSave) mit Payload auf, aktualisiert Header/Butler und loggt im Touchlog.  
-  - **Nein:** verwirft Suggestion, optional „Nochmals analysieren“.  
-- [ ] **Follow-up:** Nach Save fragt Butler „Empfehlung für den restlichen Tag?“ → generiert Text basierend auf Uhrzeit, Intakes, Terminen.
+- [x] **Kontext-Hook:** `assistantSuggestStore` hält Intake/Termin/Profil-Snapshots (Basis `refreshAssistantContext`) fest und liefert sie Suggest-/Follow-up-Modulen.
+- [x] **Analyse-Payloads:** Foto-/Text-Rückläufe (`suggest_intake`, `confirm_intake`) transportieren Wasser/Salz/Protein + Confidence und schreiben die aktive Suggestion in den Store.
+- [x] **UI-Card:** Assistant-Panel besitzt eine wiederverwendbare Suggest-Card (Titel, Werte, Empfehlung, Buttons **Ja/Nein** + Dismiss). Voice kann dieselben Events feuern.
+- [x] **Confirm-Flow:**  
+  - **Ja:** ruft die Allowed Action `intake_save`, loggt deterministisch (Diag + Touchlog) und entlädt Suggestion + Chat-Nachricht.  
+  - **Nein:** verwirft Suggestion, optional Retry.  
+- [x] **Follow-up:** Nach jedem erfolgreichen Intake-Save (egal ob Suggestion, manuell oder Voice) führt `assistant:action-success` zu einem Kontext-Refresh inkl. Mini-Report („Salzlimit noch 1,2 g“, „Termin morgen 07:45“) per Butler-Nachricht.
 
-### 5.2 Allowed Actions & Guard Rails _(pending)_
+### 5.2 Allowed Actions & Guard Rails ✅
 
-- [ ] Whitelist (IntakeSave, OpenModule, ShowIntakeStatus, …) zentral über `executeAllowedAction()` orchestrieren – unabhängig vom Trigger (Text oder Voice).
-- [ ] Jede Aktion loggt diag/touch-log, prüft Auth/Stage und bricht sauber ab, wenn Gates (Phase 0/3) nicht ready sind.
-- [ ] Keine Intent Engine: Textchat löst Actions direkt nach bestätigten Buttons aus; Voice mappt Long-Press nur auf „öffne Chat“ oder „bestätige Suggestion“.
+- [x] Whitelist/Orchestrator (`executeAllowedAction`) kapselt IntakeSave, OpenModule, ShowStatus, Highlight, Suggest/Confirm etc. inkl. Stage/Auth-Gates und zuverlässigem Logging.
+- [x] Alle Aktionen loggen Touchlog/Diag deterministisch (`source`, `start/success/blocked`) und brechen sauber ab, falls Boot/Auth nicht ready sind oder Supabase fehlt.
+- [x] Kein Intent-Haudrauf: Textchat-Buttons feuern `assistant:action-request`, Voice mappt Long-Press nur auf „Chat öffnen“ bzw. bestätigt Suggestion via Allowed Actions; beide Pfade laufen durch den gleichen Helper.
 
 ### 5.3 Kontextuelle Empfehlungen _(pending)_
 

@@ -107,6 +107,32 @@
 - [ ] Panel-Lock (body overflow hidden) wirkt weiter auf beiden Breakpoints; keine doppelte Scrollbar.
 - [ ] CSS/JS Änderungen erzeugen keine unbenutzten Klassen oder Flash-of-unstyled Content beim Start.
 
+---
+
+## Phase 5.1/5.2 – Butler Suggest & Allowed Actions (2025-12-09)
+
+**Scope:** Suggest-Store + Confirm-Card, Follow-up Advice, Allowed-Actions-Helper mit Stage/Auth Guards.
+
+**Smoke**
+- [ ] Foto/Text-Analyse mit klarer Mahlzeit erzeugt eine Suggest-Card (Titel, Werte, Empfehlung, Buttons). **Ja** schreibt eine Chat-Nachricht „Alles klar – ich habe … vorgemerkt“, schließt die Card und zeigt direkt im Anschluss den Resttag-Hinweis (Salz/Protein/Termin). **Nein** blendet Card aus, Touchlog meldet `[assistant-allowed] blocked action=intake_save source=suggestion-card info=user-dismiss`.
+- [ ] Manueller Intake-Save (Capture Panel) oder Chat-Button `Trag 500 ml ein` ruft Allowed Action `intake_save` → nach Erfolg erscheint dieselbe Follow-up Message (auch ohne Suggestion). `assistant:action-success` ist genau einmal im DevTools Event Log sichtbar.
+- [ ] Voice Long-Press → „Speichere 0,5 Liter Wasser“ löst `assistant:action-request` (`open_module` alias voice) + Suggest-Flow aus. Bestätigung via Voice oder Button feuert denselben Save-Pfad; Needle bleibt gesperrt, solange Stage/Auth unbekannt sind.
+
+**Sanity**
+- [ ] Touchlog zeigt pro Allowed Action deterministische Einträge:
+  - `[assistant-allowed] start action=intake_save source=suggestion-card`
+  - `[assistant-allowed] success action=intake_save source=suggestion-card`
+  - `[assistant-allowed] blocked action=open_module source=voice info=auth-unknown`
+  - `[assistant-allowed] error action=intake_save info=dispatcher-missing`
+- [ ] `assistantSuggestStore` Snapshot aktualisiert bei `appointments:changed` und `profile:changed` – Butler-Header + Dayplan nutzen dieselben Werte (Diag: `[assistant-context] snapshot done reason=appointments:changed`).
+- [ ] `assistant:action-request` CustomEvents (z.B. Buttons im Chat) laufen durch `runAllowedAction`; `executeAllowedAction` validiert Stage/Auth und nutzt Supabase-API. Keine Aktion läuft außerhalb des Helpers.
+- [ ] `open_module` versteht Aliase („Termine“, „Personaldaten“, „Sprachchat“) → Orbit-Button klickt, Touchlog `[assistant-allowed] success action=open_module source=chat`.
+
+**Regression**
+- [ ] Suggest-Card verschwindet bei Panel-Wechsel oder Store-Dismiss; kein persistenter Overlay.
+- [ ] Keine zusätzlichen `[capture] refresh …` durch Suggest-Flow; `refreshAssistantContext` läuft genau einmal pro Save/Folgeevent.
+- [ ] Voice und Textchat teilen sich denselben Guard – Auth-Drop während Suggest-Confirm schließt Voice sofort und Card bleibt blockiert, bis Session wieder gültig ist.
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

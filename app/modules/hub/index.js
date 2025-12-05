@@ -188,8 +188,6 @@
       panel.hidden = true;
       panel.setAttribute('aria-hidden', 'true');
       panel.setAttribute('inert', '');
-      panel.setAttribute('inert', '');
-      panel.setAttribute('inert', '');
       activePanel = null;
       doc.removeEventListener('keydown', handlePanelEsc);
       setSpriteStateFn?.('idle');
@@ -963,18 +961,40 @@
       doc?.addEventListener('appointments:changed', () => {
         refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
       });
+      const runAllowedAction = async (type, payload = {}, { source } = {}) => {
+        const allowedActions = global.AppModules?.assistantAllowedActions;
+        const executeAction = allowedActions?.executeAllowedAction;
+        if (typeof executeAction !== 'function') {
+          diag.add?.('[assistant-actions] allowed helper missing');
+          return false;
+        }
+        const ok = await executeAction(type, payload, {
+          getSupabaseApi: () => appModules.supabase,
+          notify: (msg, level) =>
+            diag.add?.(`[assistant-actions][${level || 'info'}] ${msg}`),
+          source: source || 'hub',
+        });
+        if (!ok) {
+          diag.add?.(
+            `[assistant-actions] action failed type=${type} source=${source || 'unknown'}`,
+          );
+        } else {
+          if (appModules.touchlog?.add) {
+            appModules.touchlog.add(
+              `[assistant-actions] success action=${type} source=${source || 'hub'}`,
+            );
+          }
+          global.dispatchEvent(
+            new CustomEvent('assistant:action-success', {
+              detail: { type, payload, source: source || 'hub' },
+            }),
+          );
+        }
+        return ok;
+      };
+
       const handleSuggestionConfirmRequest = async (suggestion) => {
         if (!suggestion) return;
-        const dispatcher =
-          global.AppModules?.assistantActions?.dispatchAssistantActions;
-        if (typeof dispatcher !== 'function') {
-          diag.add?.('[assistant-suggest] dispatcher missing');
-          appendAssistantMessage(
-            'system',
-            'Ich kann den Vorschlag gerade nicht speichern.',
-          );
-          return;
-        }
         const metrics = suggestion.metrics || {};
         const payload = {
           water_ml: Number.isFinite(metrics.water_ml)
@@ -990,39 +1010,27 @@
           note: suggestion.recommendation || null,
         };
         diag.add?.('[assistant-suggest] confirm flow start');
-        try {
-          await dispatcher(
-            [{ type: 'intake_save', payload }],
-            {
-              getSupabaseApi: () => appModules.supabase,
-              notify: (msg, level) =>
-                diag.add?.(`[assistant-actions][${level || 'info'}] ${msg}`),
-              onError: (err) =>
-                diag.add?.(
-                  `[assistant-actions] error ${err?.message || err}`,
-                ),
-            },
-          );
-          const store = getAssistantSuggestStore();
-          store?.dismissCurrent?.({ reason: 'confirm-success' });
-          appendAssistantMessage(
-            'assistant',
-            buildSuggestionConfirmMessage(payload),
-          );
-          await refreshAssistantContext({
-            reason: 'suggest:confirmed',
-            forceRefresh: true,
-          });
-          renderSuggestionFollowupAdvice(suggestion);
-        } catch (err) {
-          diag.add?.(
-            `[assistant-suggest] confirm flow failed: ${err?.message || err}`,
-          );
+        const ok = await runAllowedAction('intake_save', payload, {
+          source: suggestion.source || 'suggestion-card',
+        });
+        if (!ok) {
           appendAssistantMessage(
             'system',
             'Es gab ein Problem beim Speichern des Vorschlags.',
           );
+          return;
         }
+        const store = getAssistantSuggestStore();
+        store?.dismissCurrent?.({ reason: 'confirm-success' });
+        appendAssistantMessage(
+          'assistant',
+          buildSuggestionConfirmMessage(payload),
+        );
+        await refreshAssistantContext({
+          reason: 'suggest:confirmed',
+          forceRefresh: true,
+        });
+        renderSuggestionFollowupAdvice(suggestion);
       };
 
       const buildSuggestionConfirmMessage = (payload) => {
@@ -1041,6 +1049,26 @@
       };
 
       const renderSuggestionFollowupAdvice = (suggestion) => {
+        const store = getAssistantSuggestStore();
+        const snapshot =
+          store?.getState?.().snapshot || assistantChatCtrl?.context || null;
+        const message = buildDayPlanAdvice(snapshot, suggestion);
+        if (message) {
+          appendAssistantMessage('assistant', message);
+        }
+      };
+      const runIntakeSaveFollowup = async ({ suggestion } = {}) => {
+        try {
+          await refreshAssistantContext({
+            reason: 'intake-saved',
+            forceRefresh: true,
+          });
+        } catch (err) {
+          diag.add?.(
+            `[assistant-followup] context refresh failed: ${err?.message || err}`,
+          );
+          return;
+        }
         const store = getAssistantSuggestStore();
         const snapshot =
           store?.getState?.().snapshot || assistantChatCtrl?.context || null;
@@ -1121,9 +1149,33 @@
         );
         handleSuggestionConfirmRequest(suggestion);
       });
+      global.addEventListener('assistant:action-request', (event) => {
+        const type = event?.detail?.type;
+        if (!type) return;
+        const payload = event.detail.payload || {};
+        const source = event.detail.source || 'event';
+        diag.add?.(`[assistant-actions] request type=${type} source=${source}`);
+        runAllowedAction(type, payload, { source });
+      });
+
       global.addEventListener('assistant:suggest-answer', (event) => {
         if (event?.detail?.accepted) return;
         diag.add?.('[assistant-suggest] user dismissed suggestion');
+      });
+      global.addEventListener('assistant:action-request', (event) => {
+        const type = event?.detail?.type;
+        if (!type) return;
+        const payload = event.detail.payload || {};
+        const source = event.detail.source || 'event';
+        diag.add?.(`[assistant-actions] request type=${type} source=${source}`);
+        runAllowedAction(type, payload, { source });
+      });
+
+      global.addEventListener('assistant:action-success', (event) => {
+        if (event?.detail?.type !== 'intake_save') return;
+        const detailSource = event?.detail?.source || 'unknown';
+        if (detailSource === 'suggestion-card') return;
+        runIntakeSaveFollowup({});
       });
     };
 
