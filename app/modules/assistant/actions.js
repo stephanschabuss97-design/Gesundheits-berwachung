@@ -483,8 +483,7 @@ function safeNumber(val, fallback = 0) {
 
 async function handleIntakeSave(payload, sb, notify) {
   logInfo('IntakeSave requested');
-  const intakeApi = sb?.intake;
-  if (!intakeApi?.saveIntakeTotalsRpc) {
+  if (typeof sb?.saveIntakeTotalsRpc !== 'function') {
     logWarn('saveIntakeTotalsRpc missing');
     notify('Speichern nicht möglich – Supabase-API fehlt.', 'warning');
     return;
@@ -503,7 +502,7 @@ async function handleIntakeSave(payload, sb, notify) {
   };
 
   try {
-    await intakeApi.saveIntakeTotalsRpc({ dayIso, totals });
+    await sb.saveIntakeTotalsRpc({ dayIso, totals });
     notify('Ich habe die Mahlzeit gespeichert.', 'success');
   } catch (err) {
     logError('IntakeSave failed', err);
@@ -531,8 +530,7 @@ function getTodayIso() {
 }
 
 async function fetchCurrentIntakeTotals(sb, dayIso) {
-  const intakeApi = sb?.intake;
-  if (typeof intakeApi?.loadIntakeToday !== 'function') {
+  if (typeof sb?.loadIntakeToday !== 'function') {
     return { water_ml: 0, salt_g: 0, protein_g: 0 };
   }
   const userId = await resolveUserId(sb);
@@ -541,7 +539,7 @@ async function fetchCurrentIntakeTotals(sb, dayIso) {
   }
   try {
     const result =
-      (await intakeApi.loadIntakeToday({
+      (await sb.loadIntakeToday({
         user_id: userId,
         dayIso,
         reason: 'assistant',
@@ -559,13 +557,12 @@ async function fetchCurrentIntakeTotals(sb, dayIso) {
 
 async function resolveUserId(sb) {
   if (!sb) return null;
-  const authApi = sb.auth;
-  if (typeof authApi?.getUserId === 'function') {
+  if (typeof sb.getUserId === 'function') {
     try {
-      const id = await authApi.getUserId();
+      const id = await sb.getUserId();
       if (id) return id;
     } catch (err) {
-      logWarn('getUserId via auth failed');
+      logWarn('getUserId via supabase failed');
     }
   }
   const state = sb.state?.supabaseState;
