@@ -481,6 +481,97 @@ function safeNumber(val, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+async function handleIntakeSave(payload, sb, notify) {
+  logInfo('IntakeSave requested');
+  const intakeApi = sb?.intake;
+  if (!intakeApi?.saveIntakeTotalsRpc) {
+    logWarn('saveIntakeTotalsRpc missing');
+    notify('Speichern nicht möglich – Supabase-API fehlt.', 'warning');
+    return;
+  }
+
+  const dayIso = normalizeDayIso(payload.dayIso || payload.day_iso);
+  const waterDelta = safeNumber(payload.water_ml, NaN);
+  const saltDelta = safeNumber(payload.salt_g, NaN);
+  const proteinDelta = safeNumber(payload.protein_g, NaN);
+
+  const baseTotals = await fetchCurrentIntakeTotals(sb, dayIso);
+  const totals = {
+    water_ml: normalizeTotal(baseTotals.water_ml, waterDelta),
+    salt_g: normalizeTotal(baseTotals.salt_g, saltDelta),
+    protein_g: normalizeTotal(baseTotals.protein_g, proteinDelta),
+  };
+
+  try {
+    await intakeApi.saveIntakeTotalsRpc({ dayIso, totals });
+    notify('Ich habe die Mahlzeit gespeichert.', 'success');
+  } catch (err) {
+    logError('IntakeSave failed', err);
+    notify('Speichern fehlgeschlagen – bitte später erneut versuchen.', 'warning');
+    throw err;
+  }
+}
+
+function normalizeTotal(base, delta) {
+  const baseVal = Number.isFinite(base) ? base : 0;
+  const deltaVal = Number.isFinite(delta) ? delta : 0;
+  const sum = baseVal + deltaVal;
+  return sum < 0 ? 0 : sum;
+}
+
+function normalizeDayIso(value) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  return getTodayIso();
+}
+
+function getTodayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function fetchCurrentIntakeTotals(sb, dayIso) {
+  const intakeApi = sb?.intake;
+  if (typeof intakeApi?.loadIntakeToday !== 'function') {
+    return { water_ml: 0, salt_g: 0, protein_g: 0 };
+  }
+  const userId = await resolveUserId(sb);
+  if (!userId) {
+    return { water_ml: 0, salt_g: 0, protein_g: 0 };
+  }
+  try {
+    const result =
+      (await intakeApi.loadIntakeToday({
+        user_id: userId,
+        dayIso,
+        reason: 'assistant',
+      })) || {};
+    return {
+      water_ml: Number(result.water_ml) || 0,
+      salt_g: Number(result.salt_g) || 0,
+      protein_g: Number(result.protein_g) || 0,
+    };
+  } catch (err) {
+    logWarn('loadIntakeToday failed, fallback to base totals');
+    return { water_ml: 0, salt_g: 0, protein_g: 0 };
+  }
+}
+
+async function resolveUserId(sb) {
+  if (!sb) return null;
+  const authApi = sb.auth;
+  if (typeof authApi?.getUserId === 'function') {
+    try {
+      const id = await authApi.getUserId();
+      if (id) return id;
+    } catch (err) {
+      logWarn('getUserId via auth failed');
+    }
+  }
+  const state = sb.state?.supabaseState;
+  return state?.user?.id || state?.lastUserId || null;
+}
+
 function defaultSupabaseAccessor() {
   if (typeof window === 'undefined') return null;
   return window.AppModules && window.AppModules.supabase
