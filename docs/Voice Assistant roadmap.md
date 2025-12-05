@@ -646,11 +646,11 @@ Damit haben wir klar, wo wir Hand anlegen: Schwerpunkt liegt auf app/styles/hub.
 - [x] Alle Aktionen loggen Touchlog/Diag deterministisch (`source`, `start/success/blocked`) und brechen sauber ab, falls Boot/Auth nicht ready sind oder Supabase fehlt.
 - [x] Kein Intent-Haudrauf: Textchat-Buttons feuern `assistant:action-request`, Voice mappt Long-Press nur auf „Chat öffnen“ bzw. bestätigt Suggestion via Allowed Actions; beide Pfade laufen durch den gleichen Helper.
 
-### 5.3 Kontextuelle Empfehlungen _(pending)_
+### 5.3 Kontextuelle Empfehlungen ✅
 
-- [ ] Nach jedem Save Mini-Report erzeugen („Noch 1,2 L Wasser übrig, morgen Termin 09:00“).
-- [ ] Helper `generateDayPlan()` bündelt Uhrzeit, Termine, Limits (Profil) → liefert Empfehlungen/Warnings.
-- [ ] Antworten bleiben textbasiert; Voice liest nur vor, falls aktiv.
+- [x] Nach jedem Save erzeugt `generateDayPlan()` einen Mini-Report („Noch 1,2 g Salz, morgen Termin 07:45“).
+- [x] Helper `generateDayPlan()` bündelt Uhrzeit, Termine, Limits (Profil) → liefert strukturierte Empfehlungen/Warnungen, die Textchat sowie Voice verwenden können.
+- [x] Antworten bleiben textbasiert; bei aktiver Voice-Konversation wird die Nachricht zusätzlich vorgelesen (gleicher Text).
 
 ### 5.4 Optionaler Voice-Handschlag _(pending)_
 

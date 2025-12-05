@@ -133,6 +133,26 @@
 - [ ] Keine zusätzlichen `[capture] refresh …` durch Suggest-Flow; `refreshAssistantContext` läuft genau einmal pro Save/Folgeevent.
 - [ ] Voice und Textchat teilen sich denselben Guard – Auth-Drop während Suggest-Confirm schließt Voice sofort und Card bleibt blockiert, bis Session wieder gültig ist.
 
+---
+
+## Phase 5.3 – Kontextuelle Empfehlungen (2025-12-09)
+
+**Scope:** Day-Plan Helper + Follow-up Advice nach jedem Intake-Save.
+
+**Smoke**
+- [ ] Suggest-Card „Ja“ → Chat zeigt nach Speichern einen Mini-Report (Salz/Protein-Budget, nächster Termin). Gleiche Nachricht erscheint, wenn Capture Intake speichert oder Voice (Long-Press) einen Save bestätigt.
+- [ ] Voice-Konversation aktiv: Nach Save wird derselbe Text per TTS vorgelesen, ohne dass zusätzliche Aktionen nötig sind.
+
+**Sanity**
+- [ ] `generateDayPlan()` nutzt Profil-Defaults (5 g Salz, 110 g Protein), wenn keine Limits gesetzt sind – Logs zeigen keine `NaN`.
+- [ ] Termin-Erinnerung nutzt den nächsten Termin in den kommenden 24 h; Format entspricht `formatAppointmentDateTime`.
+- [ ] Snapshot-Events (`appointments:changed`, `profile:changed`) aktualisieren den Day-Plan Output unmittelbar (kein alter Termin/Limit).
+
+**Regression**
+- [ ] Keine zusätzliche Suggest-Card entsteht; Chat erhält nur die Follow-up-Meldung, Card bleibt geschlossen.
+- [ ] `assistant:voice-request` feuert nur bei Warnungen während Voice-Modus; ohne Voice passiert nichts außer Text.
+- [ ] Touchlog bleibt unverändert (keine neuen `[assistant-dayplan]` Spam-Einträge).
+
 ## Phase 4  MIDAS Orbit & Trendpilot (2025-11-23)
 
 **Scope:** Neuer MIDAS Orbit Hub (Aura/Lens/Stage), panel locking, biometrischer Doctor-Unlock, Trendpilot-Schweregrade (Capture + Arzt), Diagnostics-Layer-Flag und Supabase-APIs (fetchSystemCommentsRange, setSystemCommentDoctorStatus).

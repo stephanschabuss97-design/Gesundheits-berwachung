@@ -74,6 +74,12 @@ Edge functions are deployed via `supabase functions deploy <name> --project-ref 
 - Weitere Actions wie `show_status`, `highlight`, `ask_confirmation`, `transition_to_*` laufen ebenfalls durch den Helper – kein Intent-Parser mehr nötig.
 - `assistant:action-request` CustomEvents (z.B. Buttons im Chat) und Voice-„bestätigen“-Flows verwenden dieselbe Pipeline, wodurch Stage/Auth/Logging konsistent sind.
 
+### 3.5 Day Plan Helper (Phase 5.3)
+
+- `app/modules/assistant/day-plan.js` exportiert `generateDayPlan(snapshot, options)`. Snapshot = Intake totals, Termine (geordnet), Profil; Option erlaubt eigenen DateFormatter.
+- Output: `{ lines, hasWarnings }` – Zeilen enthalten Salz/Protein-Differenzen (Standard 5 g/110 g, falls kein Profil), Termin-Merker und optional Suggestion-Recommendation.
+- `runIntakeSaveFollowup()` (Hub) nutzt den Helper für jeden Intake-Save, schreibt Chat-Meldung und löst bei Voice-Konversation zusätzlich eine `assistant:voice-request` mit identischem Text aus.
+
 ---
 
 ## 4. Backend Flow Highlights

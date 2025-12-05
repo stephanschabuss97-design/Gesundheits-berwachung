@@ -1052,9 +1052,18 @@
         const store = getAssistantSuggestStore();
         const snapshot =
           store?.getState?.().snapshot || assistantChatCtrl?.context || null;
-        const message = buildDayPlanAdvice(snapshot, suggestion);
-        if (message) {
-          appendAssistantMessage('assistant', message);
+        if (!snapshot) return;
+        const planner = global.AppModules?.assistantDayPlan;
+        const generator = planner?.generateDayPlan;
+        if (typeof generator !== 'function') return;
+        const { lines } = generator(
+          { ...snapshot, suggestion },
+          {
+            dateFormatter: (date) => formatAppointmentDateTime(date.toISOString?.() || date),
+          },
+        );
+        if (lines?.length) {
+          appendAssistantMessage('assistant', lines.join(' '));
         }
       };
       const runIntakeSaveFollowup = async ({ suggestion } = {}) => {
@@ -1072,59 +1081,29 @@
         const store = getAssistantSuggestStore();
         const snapshot =
           store?.getState?.().snapshot || assistantChatCtrl?.context || null;
-        const message = buildDayPlanAdvice(snapshot, suggestion);
-        if (message) {
-          appendAssistantMessage('assistant', message);
+        if (!snapshot) return;
+        const planner = global.AppModules?.assistantDayPlan;
+        const generator = planner?.generateDayPlan;
+        if (typeof generator !== 'function') return;
+        const { lines, hasWarnings } = generator(
+          { ...snapshot, suggestion },
+          {
+            dateFormatter: (date) => formatAppointmentDateTime(date.toISOString?.() || date),
+          },
+        );
+        if (lines?.length) {
+          appendAssistantMessage('assistant', lines.join(' '));
         }
-      };
-
-      const buildDayPlanAdvice = (context, suggestion) => {
-        if (!context) return null;
-        const profile = context.profile || {};
-        const totals = context.intake?.totals || {};
-        const lines = [];
-        if (
-          Number.isFinite(profile.salt_limit_g) &&
-          Number.isFinite(totals.salt_g)
-        ) {
-          const diff = profile.salt_limit_g - totals.salt_g;
-          if (diff > 0) {
-            lines.push(
-              `Für Salz bleiben dir heute noch ${diff.toFixed(1)} g Luft.`,
-            );
-          } else {
-            lines.push(
-              `Achte auf Salz – du liegst bereits ${Math.abs(diff).toFixed(
-                1,
-              )} g über deinem Limit.`,
-            );
-          }
-        }
-        if (
-          Number.isFinite(profile.protein_target_max) &&
-          Number.isFinite(totals.protein_g)
-        ) {
-          const diff = profile.protein_target_max - totals.protein_g;
-          if (diff > 0) {
-            lines.push(`Protein: ${diff.toFixed(0)} g wären noch möglich.`);
-          } else {
-            lines.push(
-              `Protein-Ziel erreicht – zusätzliche Portionen sind optional.`,
-            );
-          }
-        }
-        const nextAppointment = context.appointments?.[0];
-        if (nextAppointment?.label) {
-          lines.push(
-            `Merker: ${nextAppointment.label} am ${formatAppointmentDateTime(
-              nextAppointment.start,
-            )}.`,
+        if (hasWarnings && voiceCtrl?.conversationMode) {
+          global.dispatchEvent(
+            new CustomEvent('assistant:voice-request', {
+              detail: {
+                source: 'day-plan',
+                text: lines.join(' '),
+              },
+            }),
           );
         }
-        if (!lines.length && suggestion?.recommendation) {
-          lines.push(suggestion.recommendation);
-        }
-        return lines.join(' ');
       };
 
       doc?.addEventListener('profile:changed', (event) => {
