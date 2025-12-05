@@ -564,3 +564,10 @@ function logWarn(message) {
 function logError(message, err) {
   logWithLevel('error', message, err);
 }
+
+if (typeof window !== 'undefined') {
+  window.AppModules = window.AppModules || {};
+  const namespace = window.AppModules.assistantActions || {};
+  namespace.dispatchAssistantActions = dispatchAssistantActions;
+  window.AppModules.assistantActions = namespace;
+}

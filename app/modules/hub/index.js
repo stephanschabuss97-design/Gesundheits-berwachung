@@ -963,13 +963,142 @@
       doc?.addEventListener('appointments:changed', () => {
         refreshAssistantContext({ reason: 'appointments:changed', forceRefresh: true });
       });
-      const triggerSuggestFollowup = (detail) => {
-        doc?.dispatchEvent(
-          new CustomEvent('assistant:suggest-followup', {
-            detail,
-          }),
-        );
+      const handleSuggestionConfirmRequest = async (suggestion) => {
+        if (!suggestion) return;
+        const dispatcher =
+          global.AppModules?.assistantActions?.dispatchAssistantActions;
+        if (typeof dispatcher !== 'function') {
+          diag.add?.('[assistant-suggest] dispatcher missing');
+          appendAssistantMessage(
+            'system',
+            'Ich kann den Vorschlag gerade nicht speichern.',
+          );
+          return;
+        }
+        const metrics = suggestion.metrics || {};
+        const payload = {
+          water_ml: Number.isFinite(metrics.water_ml)
+            ? Number(metrics.water_ml)
+            : undefined,
+          salt_g: Number.isFinite(metrics.salt_g)
+            ? Number(metrics.salt_g)
+            : undefined,
+          protein_g: Number.isFinite(metrics.protein_g)
+            ? Number(metrics.protein_g)
+            : undefined,
+          label: suggestion.title || 'Mahlzeit',
+          note: suggestion.recommendation || null,
+        };
+        diag.add?.('[assistant-suggest] confirm flow start');
+        try {
+          await dispatcher(
+            [{ type: 'intake_save', payload }],
+            {
+              getSupabaseApi: () => appModules.supabase,
+              notify: (msg, level) =>
+                diag.add?.(`[assistant-actions][${level || 'info'}] ${msg}`),
+              onError: (err) =>
+                diag.add?.(
+                  `[assistant-actions] error ${err?.message || err}`,
+                ),
+            },
+          );
+          const store = getAssistantSuggestStore();
+          store?.dismissCurrent?.({ reason: 'confirm-success' });
+          appendAssistantMessage(
+            'assistant',
+            buildSuggestionConfirmMessage(payload),
+          );
+          await refreshAssistantContext({
+            reason: 'suggest:confirmed',
+            forceRefresh: true,
+          });
+          renderSuggestionFollowupAdvice(suggestion);
+        } catch (err) {
+          diag.add?.(
+            `[assistant-suggest] confirm flow failed: ${err?.message || err}`,
+          );
+          appendAssistantMessage(
+            'system',
+            'Es gab ein Problem beim Speichern des Vorschlags.',
+          );
+        }
       };
+
+      const buildSuggestionConfirmMessage = (payload) => {
+        const parts = [];
+        if (Number.isFinite(payload.water_ml) && payload.water_ml > 0) {
+          parts.push(`${payload.water_ml.toFixed(0)} ml Wasser`);
+        }
+        if (Number.isFinite(payload.salt_g)) {
+          parts.push(`${payload.salt_g.toFixed(1)} g Salz`);
+        }
+        if (Number.isFinite(payload.protein_g)) {
+          parts.push(`${payload.protein_g.toFixed(1)} g Protein`);
+        }
+        const list = parts.length ? parts.join(', ') : 'deine Werte';
+        return `Alles klar – ich habe ${list} für heute vorgemerkt.`;
+      };
+
+      const renderSuggestionFollowupAdvice = (suggestion) => {
+        const store = getAssistantSuggestStore();
+        const snapshot =
+          store?.getState?.().snapshot || assistantChatCtrl?.context || null;
+        const message = buildDayPlanAdvice(snapshot, suggestion);
+        if (message) {
+          appendAssistantMessage('assistant', message);
+        }
+      };
+
+      const buildDayPlanAdvice = (context, suggestion) => {
+        if (!context) return null;
+        const profile = context.profile || {};
+        const totals = context.intake?.totals || {};
+        const lines = [];
+        if (
+          Number.isFinite(profile.salt_limit_g) &&
+          Number.isFinite(totals.salt_g)
+        ) {
+          const diff = profile.salt_limit_g - totals.salt_g;
+          if (diff > 0) {
+            lines.push(
+              `Für Salz bleiben dir heute noch ${diff.toFixed(1)} g Luft.`,
+            );
+          } else {
+            lines.push(
+              `Achte auf Salz – du liegst bereits ${Math.abs(diff).toFixed(
+                1,
+              )} g über deinem Limit.`,
+            );
+          }
+        }
+        if (
+          Number.isFinite(profile.protein_target_max) &&
+          Number.isFinite(totals.protein_g)
+        ) {
+          const diff = profile.protein_target_max - totals.protein_g;
+          if (diff > 0) {
+            lines.push(`Protein: ${diff.toFixed(0)} g wären noch möglich.`);
+          } else {
+            lines.push(
+              `Protein-Ziel erreicht – zusätzliche Portionen sind optional.`,
+            );
+          }
+        }
+        const nextAppointment = context.appointments?.[0];
+        if (nextAppointment?.label) {
+          lines.push(
+            `Merker: ${nextAppointment.label} am ${formatAppointmentDateTime(
+              nextAppointment.start,
+            )}.`,
+          );
+        }
+        if (!lines.length && suggestion?.recommendation) {
+          lines.push(suggestion.recommendation);
+        }
+        return lines.join(' ');
+      };
+
       doc?.addEventListener('profile:changed', (event) => {
         assistantProfileSnapshot =
           event?.detail?.data || appModules.profile?.getData?.() || null;
@@ -990,14 +1119,7 @@
         diag.add?.(
           `[assistant-suggest] confirm requested source=${suggestion.source || 'unknown'}`,
         );
-        doc.dispatchEvent(
-          new CustomEvent('assistant:suggest-confirm-request', {
-            detail: { suggestion },
-          }),
-        );
-        const store = getAssistantSuggestStore();
-        store?.dismissCurrent?.({ reason: 'confirm-handled' });
-        triggerSuggestFollowup({ suggestion, followUp: 'day-plan' });
+        handleSuggestionConfirmRequest(suggestion);
       });
       global.addEventListener('assistant:suggest-answer', (event) => {
         if (event?.detail?.accepted) return;
