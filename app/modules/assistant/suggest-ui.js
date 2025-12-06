@@ -41,7 +41,7 @@ import { assistantSuggestStore } from './suggest-store.js';
     if (Number.isFinite(metrics.protein_g)) {
       parts.push(`Protein ${metrics.protein_g.toFixed(1)} g`);
     }
-    return parts.join(' • ');
+    return parts.join(' | ');
   };
 
   const removeBlock = () => {
@@ -95,12 +95,10 @@ import { assistantSuggestStore } from './suggest-store.js';
 
     const text = doc.createElement('p');
     text.className = 'assistant-confirm-text';
-    const metricsText = formatMetrics(suggestion.metrics);
-    const recText = suggestion.recommendation || suggestion.body || '';
-    const lines = [];
-    if (metricsText) lines.push(metricsText);
-    if (recText) lines.push(recText);
-    text.textContent = lines.join(' • ') || 'Analyse verfügbar.';
+    const promptMetrics = formatMetrics(suggestion.metrics);
+    text.textContent = promptMetrics
+      ? `Soll ich das speichern? (${promptMetrics})`
+      : 'Soll ich das speichern?';
 
     const actions = doc.createElement('div');
     actions.className = 'assistant-confirm-actions';

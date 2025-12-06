@@ -1186,15 +1186,6 @@
         );
         handleSuggestionConfirmRequest(suggestion);
       });
-      global.addEventListener('assistant:action-request', (event) => {
-        const type = event?.detail?.type;
-        if (!type) return;
-        const payload = event.detail.payload || {};
-        const source = event.detail.source || 'event';
-        diag.add?.(`[assistant-actions] request type=${type} source=${source}`);
-        runAllowedAction(type, payload, { source });
-      });
-
       global.addEventListener('assistant:suggest-answer', (event) => {
         if (event?.detail?.accepted) return;
         diag.add?.('[assistant-suggest] user dismissed suggestion');
