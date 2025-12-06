@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 import { assistantSuggestStore } from './suggest-store.js';
 
@@ -12,19 +12,23 @@ import { assistantSuggestStore } from './suggest-store.js';
     null;
   if (!resolvedStore) return;
 
-  const card = doc.getElementById('assistantSuggestCard');
-  if (!card) return;
+  const chatContainer = doc.getElementById('assistantChat');
+  if (!chatContainer) return;
 
-  const titleEl = doc.getElementById('assistantSuggestTitle');
-  const bodyEl = doc.getElementById('assistantSuggestBody');
-  const yesBtn = doc.getElementById('assistantSuggestYesBtn');
-  const noBtn = doc.getElementById('assistantSuggestNoBtn');
-  const dismissBtn = doc.getElementById('assistantSuggestDismiss');
+  const legacyCard = doc.getElementById('assistantSuggestCard');
+  if (legacyCard) {
+    legacyCard.hidden = true;
+    legacyCard.setAttribute('aria-hidden', 'true');
+  }
 
-  const setVisibility = (visible) => {
-    card.hidden = !visible;
-    card.setAttribute('aria-hidden', String(!visible));
+  const escapeSelector = (value = '') => {
+    if (global.CSS?.escape) return global.CSS.escape(value);
+    return String(value).replace(/"/g, '\"');
   };
+
+  let currentBlock = null;
+  let currentSuggestionId = null;
+  let currentButtons = { yes: null, no: null };
 
   const formatMetrics = (metrics = {}) => {
     const parts = [];
@@ -37,58 +41,117 @@ import { assistantSuggestStore } from './suggest-store.js';
     if (Number.isFinite(metrics.protein_g)) {
       parts.push(`Protein ${metrics.protein_g.toFixed(1)} g`);
     }
-    return parts.join(' · ');
+    return parts.join(' • ');
+  };
+
+  const removeBlock = () => {
+    if (currentBlock?.parentElement) {
+      currentBlock.parentElement.removeChild(currentBlock);
+    }
+    currentBlock = null;
+    currentSuggestionId = null;
+    currentButtons = { yes: null, no: null };
+  };
+
+  const setBusyState = (isBusy) => {
+    if (!currentBlock) return;
+    currentBlock.classList.toggle('is-busy', !!isBusy);
+    if (currentButtons.yes) {
+      currentButtons.yes.disabled = !!isBusy;
+    }
+    if (currentButtons.no) {
+      currentButtons.no.disabled = !!isBusy;
+    }
+  };
+
+  const findBubbleForSuggestion = (suggestion) => {
+    const messageId =
+      suggestion?.messageId ||
+      suggestion?.meta?.messageId ||
+      null;
+    if (!messageId) return null;
+    return doc.querySelector(
+      `[data-assistant-message-id="${escapeSelector(messageId)}"]`,
+    );
   };
 
   const renderSuggestion = () => {
+    removeBlock();
     const state = resolvedStore.getState();
     const suggestion = state.activeSuggestion;
     if (!suggestion) {
-      setVisibility(false);
       return;
     }
-    setVisibility(true);
-    if (titleEl) {
-      titleEl.textContent = suggestion.title || 'Vorschlag';
-    }
-    if (bodyEl) {
-      const metricsText = formatMetrics(suggestion.metrics);
-      const recText = suggestion.recommendation || suggestion.body || '';
-      const lines = [];
-      if (metricsText) lines.push(metricsText);
-      if (recText) lines.push(recText);
-      bodyEl.textContent = lines.join(' · ');
-    }
+    attachInlineConfirm(suggestion);
+  };
+
+  const attachInlineConfirm = (suggestion) => {
+    const targetBubble = findBubbleForSuggestion(suggestion) || chatContainer;
+    if (!targetBubble) return;
+
+    const block = doc.createElement('div');
+    block.className = 'assistant-confirm-block';
+    block.dataset.suggestionId = suggestion.id;
+
+    const text = doc.createElement('p');
+    text.className = 'assistant-confirm-text';
+    const metricsText = formatMetrics(suggestion.metrics);
+    const recText = suggestion.recommendation || suggestion.body || '';
+    const lines = [];
+    if (metricsText) lines.push(metricsText);
+    if (recText) lines.push(recText);
+    text.textContent = lines.join(' • ') || 'Analyse verfügbar.';
+
+    const actions = doc.createElement('div');
+    actions.className = 'assistant-confirm-actions';
+    const noBtn = doc.createElement('button');
+    noBtn.type = 'button';
+    noBtn.className = 'btn ghost';
+    noBtn.textContent = 'Nein';
+    const yesBtn = doc.createElement('button');
+    yesBtn.type = 'button';
+    yesBtn.className = 'btn primary';
+    yesBtn.textContent = 'Ja, speichern';
+
+    actions.appendChild(noBtn);
+    actions.appendChild(yesBtn);
+    block.appendChild(text);
+    block.appendChild(actions);
+
+    noBtn.addEventListener('click', () => handleAnswer(false));
+    yesBtn.addEventListener('click', () => handleAnswer(true));
+
+    currentBlock = block;
+    currentSuggestionId = suggestion.id;
+    currentButtons = { yes: yesBtn, no: noBtn };
+
+    targetBubble.appendChild(block);
+    targetBubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   const handleAnswer = (accepted) => {
-    const suggestion = resolvedStore.getState().activeSuggestion;
-    if (!suggestion) return;
+    const state = resolvedStore.getState();
+    const suggestion = state.activeSuggestion;
+    if (!suggestion || suggestion.id !== currentSuggestionId) return;
+    if (accepted) {
+      setBusyState(true);
+      global.dispatchEvent(
+        new CustomEvent('assistant:suggest-confirm', {
+          detail: { suggestion },
+        }),
+      );
+      return;
+    }
     global.dispatchEvent(
       new CustomEvent('assistant:suggest-answer', {
         detail: {
-          accepted,
+          accepted: false,
           suggestion,
         },
       }),
     );
-    if (!accepted) {
-      resolvedStore.dismissCurrent({ reason: 'user-dismiss' });
-    }
+    resolvedStore.dismissCurrent({ reason: 'user-dismiss' });
   };
-
-  noBtn?.addEventListener('click', () => handleAnswer(false));
-  dismissBtn?.addEventListener('click', () => handleAnswer(false));
-
-  yesBtn?.addEventListener('click', () => {
-    const suggestion = resolvedStore.getState().activeSuggestion;
-    if (!suggestion) return;
-    global.dispatchEvent(
-      new CustomEvent('assistant:suggest-confirm', {
-        detail: { suggestion },
-      }),
-    );
-  });
 
   global.addEventListener('assistant:suggest-updated', renderSuggestion);
   renderSuggestion();

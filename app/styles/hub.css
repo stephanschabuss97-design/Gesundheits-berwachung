@@ -1581,40 +1581,38 @@ body[data-panel-perf="mobile"] .hub-panel.hub-panel-closing {
 }
 
 .assistant-suggest-card {
+  display: none !important;
+}
+
+.assistant-confirm-block {
   border: 1px solid rgba(120, 170, 255, 0.35);
-  background: rgba(15, 18, 30, 0.95);
-  border-radius: 16px;
+  background: rgba(15, 18, 30, 0.9);
+  border-radius: 14px;
   padding: 12px 14px;
-  margin-bottom: 18px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.assistant-suggest-card header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.assistant-suggest-card .muted.small {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
-}
-
-.assistant-suggest-body {
+.assistant-confirm-block .assistant-confirm-text {
   font-size: 0.95rem;
+  line-height: 1.4;
 }
 
-.assistant-suggest-actions {
+.assistant-confirm-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
 }
 
-.assistant-suggest-actions .btn {
+.assistant-confirm-actions .btn {
   min-width: 120px;
+}
+
+.assistant-confirm-block.is-busy .btn {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {

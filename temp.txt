@@ -49,7 +49,6 @@ const createStore = () => {
       createdAt: Date.now(),
       contextSnapshot: payload.contextSnapshot || getSnapshot(),
       meta: payload.meta || {},
-      messageId: payload.messageId || payload.meta?.messageId || null,
     };
   };
 

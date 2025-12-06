@@ -693,6 +693,10 @@ Wenn alle Kernfeatures stehen, Code so aufräumen, dass er langfristig wartbar b
 - In dieser Phase explizit **kein** neues Feature bauen.
 - Fokus: Lesbarkeit, Konsistenz, kleinere Refactors.
 
+
+## Neu eventuelle:
+- Sollten wir vielleicht ein reanalyse button einbauen? Wenn die geschätzten Werte isch falsch anfühlen könnten wir da eine reanalyse starten von dem Bild. Was denkst du über diese Idee?
+
 ---
 
 ## Phase 6.5 – Repo Audit & Dead Code Removal

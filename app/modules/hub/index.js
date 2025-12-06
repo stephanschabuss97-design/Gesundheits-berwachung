@@ -1506,6 +1506,7 @@
       }
       bubble.classList.add(`assistant-${message.role}`);
       bubble.setAttribute('data-role', message.role);
+      bubble.setAttribute('data-assistant-message-id', message.id);
       frag.appendChild(bubble);
     });
     container.appendChild(frag);
@@ -1608,15 +1609,19 @@
       targetMessage.retryable = false;
       diag.add?.('[assistant-vision] analyse success');
       const suggestionStore = getAssistantSuggestStore();
-      const suggestionPayload = assistantUi?.buildVisionSuggestPayload?.(result);
+      const suggestionPayload = assistantUi?.buildVisionSuggestPayload?.(result, {
+        messageId: targetMessage.id,
+      });
       if (suggestionStore && suggestionPayload) {
         suggestionStore.queueSuggestion(
           {
             ...suggestionPayload,
             source: 'vision',
+            messageId: suggestionPayload.messageId || targetMessage.id,
             meta: {
               ...(suggestionPayload.meta || {}),
               fileName: file?.name || targetMessage.meta?.fileName || '',
+              messageId: suggestionPayload.messageId || targetMessage.id,
             },
           },
           { reason: 'vision-result' },

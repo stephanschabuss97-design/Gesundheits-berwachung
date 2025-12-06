@@ -182,3 +182,4 @@ function createAssistantUiHelpers() {
     buildVisionSuggestPayload
   };
 }
+
