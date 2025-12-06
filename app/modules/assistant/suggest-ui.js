@@ -1,4 +1,4 @@
-ï»¿'use strict';
+'use strict';
 
 import { assistantSuggestStore } from './suggest-store.js';
 
@@ -41,7 +41,7 @@ import { assistantSuggestStore } from './suggest-store.js';
     if (Number.isFinite(metrics.protein_g)) {
       parts.push(`Protein ${metrics.protein_g.toFixed(1)} g`);
     }
-    return parts.join(' â€¢ ');
+    return parts.join(' • ');
   };
 
   const removeBlock = () => {
@@ -100,7 +100,7 @@ import { assistantSuggestStore } from './suggest-store.js';
     const lines = [];
     if (metricsText) lines.push(metricsText);
     if (recText) lines.push(recText);
-    text.textContent = lines.join(' â€¢ ') || 'Analyse verfÃ¼gbar.';
+    text.textContent = lines.join(' • ') || 'Analyse verfügbar.';
 
     const actions = doc.createElement('div');
     actions.className = 'assistant-confirm-actions';
@@ -154,5 +154,6 @@ import { assistantSuggestStore } from './suggest-store.js';
   };
 
   global.addEventListener('assistant:suggest-updated', renderSuggestion);
+  global.addEventListener('assistant:chat-rendered', renderSuggestion);
   renderSuggestion();
 })(typeof window !== 'undefined' ? window : globalThis, assistantSuggestStore);

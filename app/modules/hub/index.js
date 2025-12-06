@@ -1427,6 +1427,22 @@
     return tmpl.cloneNode(true);
   };
 
+  const notifyAssistantChatRendered = () => {
+    try {
+      global.dispatchEvent(
+        new CustomEvent('assistant:chat-rendered', {
+          detail: {
+            messageCount: assistantChatCtrl?.messages?.length || 0,
+          },
+        }),
+      );
+    } catch (err) {
+      diag.add?.(
+        `[assistant-chat] notify render failed: ${err?.message || err}`,
+      );
+    }
+  };
+
   const renderAssistantChat = () => {
     if (!assistantChatCtrl?.chatEl) return;
     const container = assistantChatCtrl.chatEl;
@@ -1436,6 +1452,7 @@
       placeholder.className = 'assistant-chat-empty';
       placeholder.innerHTML = '<p class="muted">Starte eine Unterhaltung oder schicke ein Foto deines Essens.</p>';
       container.appendChild(placeholder);
+      notifyAssistantChatRendered();
       return;
     }
     const frag = doc.createDocumentFragment();
@@ -1514,6 +1531,7 @@
       top: container.scrollHeight,
       behavior: 'smooth',
     });
+    notifyAssistantChatRendered();
   };
 
   const setAssistantSending = (state) => {
