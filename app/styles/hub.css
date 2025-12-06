@@ -1593,6 +1593,8 @@ body[data-panel-perf="mobile"] .hub-panel.hub-panel-closing {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-self: flex-start;
+  max-width: min(420px, 90%);
 }
 
 .assistant-confirm-block .assistant-confirm-text {
@@ -1601,9 +1603,9 @@ body[data-panel-perf="mobile"] .hub-panel.hub-panel-closing {
 }
 
 .assistant-confirm-actions {
-  display: flex;
+  display: inline-flex;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .assistant-confirm-actions .btn {

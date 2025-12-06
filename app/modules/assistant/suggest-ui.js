@@ -29,6 +29,7 @@ import { assistantSuggestStore } from './suggest-store.js';
   let currentBlock = null;
   let currentSuggestionId = null;
   let currentButtons = { yes: null, no: null };
+  let dispatchedSuggestionId = null;
 
   const formatMetrics = (metrics = {}) => {
     const parts = [];
@@ -51,6 +52,7 @@ import { assistantSuggestStore } from './suggest-store.js';
     currentBlock = null;
     currentSuggestionId = null;
     currentButtons = { yes: null, no: null };
+    dispatchedSuggestionId = null;
   };
 
   const setBusyState = (isBusy) => {
@@ -102,17 +104,17 @@ import { assistantSuggestStore } from './suggest-store.js';
 
     const actions = doc.createElement('div');
     actions.className = 'assistant-confirm-actions';
-    const noBtn = doc.createElement('button');
-    noBtn.type = 'button';
-    noBtn.className = 'btn ghost';
-    noBtn.textContent = 'Nein';
     const yesBtn = doc.createElement('button');
     yesBtn.type = 'button';
     yesBtn.className = 'btn primary';
     yesBtn.textContent = 'Ja, speichern';
+    const noBtn = doc.createElement('button');
+    noBtn.type = 'button';
+    noBtn.className = 'btn ghost';
+    noBtn.textContent = 'Nein';
 
-    actions.appendChild(noBtn);
     actions.appendChild(yesBtn);
+    actions.appendChild(noBtn);
     block.appendChild(text);
     block.appendChild(actions);
 
@@ -128,10 +130,13 @@ import { assistantSuggestStore } from './suggest-store.js';
   };
 
   const handleAnswer = (accepted) => {
+    if (currentBlock?.classList.contains('is-busy')) return;
     const state = resolvedStore.getState();
     const suggestion = state.activeSuggestion;
     if (!suggestion || suggestion.id !== currentSuggestionId) return;
     if (accepted) {
+      if (dispatchedSuggestionId === suggestion.id) return;
+      dispatchedSuggestionId = suggestion.id;
       setBusyState(true);
       global.dispatchEvent(
         new CustomEvent('assistant:suggest-confirm', {
@@ -153,5 +158,9 @@ import { assistantSuggestStore } from './suggest-store.js';
 
   global.addEventListener('assistant:suggest-updated', renderSuggestion);
   global.addEventListener('assistant:chat-rendered', renderSuggestion);
+  global.addEventListener('assistant:suggest-confirm-reset', () => {
+    dispatchedSuggestionId = null;
+    setBusyState(false);
+  });
   renderSuggestion();
 })(typeof window !== 'undefined' ? window : globalThis, assistantSuggestStore);

@@ -1051,44 +1051,60 @@
         return ok;
       };
 
+      let suggestionConfirmInFlight = false;
+
       const handleSuggestionConfirmRequest = async (suggestion) => {
         if (!suggestion) return;
-        const metrics = suggestion.metrics || {};
-        const payload = {
-          water_ml: Number.isFinite(metrics.water_ml)
-            ? Number(metrics.water_ml)
-            : undefined,
-          salt_g: Number.isFinite(metrics.salt_g)
-            ? Number(metrics.salt_g)
-            : undefined,
-          protein_g: Number.isFinite(metrics.protein_g)
-            ? Number(metrics.protein_g)
-            : undefined,
-          label: suggestion.title || 'Mahlzeit',
-          note: suggestion.recommendation || null,
-        };
-        diag.add?.('[assistant-suggest] confirm flow start');
-        const ok = await runAllowedAction('intake_save', payload, {
-          source: 'suggestion-card',
-        });
-        if (!ok) {
-          appendAssistantMessage(
-            'system',
-            'Es gab ein Problem beim Speichern des Vorschlags.',
-          );
+        if (suggestionConfirmInFlight) {
+          diag.add?.('[assistant-suggest] confirm ignored (busy)');
           return;
         }
-        const store = getAssistantSuggestStore();
-        store?.dismissCurrent?.({ reason: 'confirm-success' });
-        appendAssistantMessage(
-          'assistant',
-          buildSuggestionConfirmMessage(payload),
-        );
-        await refreshAssistantContext({
-          reason: 'suggest:confirmed',
-          forceRefresh: true,
-        });
-        renderSuggestionFollowupAdvice(suggestion);
+        suggestionConfirmInFlight = true;
+        try {
+          const metrics = suggestion.metrics || {};
+          const payload = {
+            water_ml: Number.isFinite(metrics.water_ml)
+              ? Number(metrics.water_ml)
+              : undefined,
+            salt_g: Number.isFinite(metrics.salt_g)
+              ? Number(metrics.salt_g)
+              : undefined,
+            protein_g: Number.isFinite(metrics.protein_g)
+              ? Number(metrics.protein_g)
+              : undefined,
+            label: suggestion.title || 'Mahlzeit',
+            note: suggestion.recommendation || null,
+          };
+          diag.add?.('[assistant-suggest] confirm flow start');
+          const ok = await runAllowedAction('intake_save', payload, {
+            source: 'suggestion-card',
+          });
+          if (!ok) {
+            appendAssistantMessage(
+              'system',
+              'Es gab ein Problem beim Speichern des Vorschlags.',
+            );
+            global.dispatchEvent(
+              new CustomEvent('assistant:suggest-confirm-reset', {
+                detail: { suggestionId: suggestion.id },
+              }),
+            );
+            return;
+          }
+          const store = getAssistantSuggestStore();
+          store?.dismissCurrent?.({ reason: 'confirm-success' });
+          appendAssistantMessage(
+            'assistant',
+            buildSuggestionConfirmMessage(payload),
+          );
+          await refreshAssistantContext({
+            reason: 'suggest:confirmed',
+            forceRefresh: true,
+          });
+          renderSuggestionFollowupAdvice(suggestion);
+        } finally {
+          suggestionConfirmInFlight = false;
+        }
       };
 
       const buildSuggestionConfirmMessage = (payload) => {
